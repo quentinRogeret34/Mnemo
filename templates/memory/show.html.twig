@@ -1,0 +1,21 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Mémoire{% endblock %}
+
+{% block crumbs %}
+    <a href="{{ path('memory_index') }}">Mémoires</a>
+    <span class="crumbs__sep" aria-hidden="true">/</span>
+    <span class="crumbs__current">{{ memory.label }}</span>
+{% endblock %}
+
+{% block body %}
+    <article class="page">
+        <twig:MemoryEditor :memory="memory" />
+
+        <form class="danger-zone" method="post" action="{{ path('memory_delete', {id: memory.id}) }}">
+            <input type="hidden" name="_token" value="{{ csrf_token('delete-memory-' ~ memory.id) }}">
+            <button class="button button--danger" type="submit">Supprimer la mémoire</button>
+            <span class="row__sub">Supprime aussi ses liens. Irréversible.</span>
+        </form>
+    </article>
+{% endblock %}

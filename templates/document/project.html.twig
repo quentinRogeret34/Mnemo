@@ -1,0 +1,28 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Documents · {{ project.name }}{% endblock %}
+
+{% block crumbs %}
+    <a href="{{ path('project_show', {slug: project.slug}) }}">{{ project.name }}</a>
+    <span class="crumbs__sep" aria-hidden="true">/</span>
+    <span class="crumbs__current">Documents</span>
+{% endblock %}
+
+{% block header_actions %}
+    <a class="button" href="{{ path('document_index') }}">Tous les dossiers</a>
+{% endblock %}
+
+{% block body %}
+    <div class="view-head">
+        <h1>Documents</h1>
+        <span class="view-head__meta">{{ documents|length }} rattachés à {{ project.name }}</span>
+    </div>
+
+    {{ include('document/_upload.html.twig', {upload: upload, hint: '.md, .pdf, .docx · 32 Mo max · rattachés à ' ~ project.name}) }}
+
+    {% if documents is empty %}
+        <p class="block__empty">Aucun document rattaché à ce projet. Déposer des fichiers ci-dessus, rattacher un document existant depuis sa page, ou charger la démo : <code>bin/console app:demo {{ project.slug }}</code></p>
+    {% else %}
+        {{ include('document/_rows.html.twig', {documents: documents, show_folder: true, show_projects: false}) }}
+    {% endif %}
+{% endblock %}

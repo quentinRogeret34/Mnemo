@@ -1,0 +1,36 @@
+services:
+  php:
+    build: .
+    environment:
+      SERVER_NAME: ":80"
+    ports:
+      - "8080:80"
+    volumes:
+      - ./:/app
+      - ./docker/php/app.ini:/usr/local/etc/php/conf.d/zz-app.ini:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      database:
+        condition: service_healthy
+
+  database:
+    image: pgvector/pgvector:pg18
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-app}
+      POSTGRES_USER: ${POSTGRES_USER:-app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-!ChangeMe!}
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-d", "${POSTGRES_DB:-app}", "-U", "${POSTGRES_USER:-app}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - database_data:/var/lib/postgresql
+
+volumes:
+  caddy_data:
+  caddy_config:
+  database_data:

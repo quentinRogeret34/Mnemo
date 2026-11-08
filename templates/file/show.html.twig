@@ -1,0 +1,128 @@
+{% extends 'base.html.twig' %}
+
+{% set parts = file.path|split('/') %}
+{% set origins = {human: 'humain', llm: 'LLM', ast: 'AST', git: 'git', api: 'API'} %}
+
+{% block title %}{{ parts|last }} · {{ project.name }}{% endblock %}
+
+{% block crumbs %}
+    <a href="{{ path('project_code', {slug: project.slug}) }}">Code</a>
+    <span class="crumbs__sep" aria-hidden="true">/</span>
+    <span class="crumbs__current">{{ parts|last }}</span>
+{% endblock %}
+
+{% block header_actions %}
+    <a class="button" href="{{ path('project_code', {slug: project.slug}) }}">Fichiers <kbd class="kbd">⌘K</kbd></a>
+{% endblock %}
+
+{% block body %}
+    <header class="file-head">
+        <h1>{{ parts|last }}</h1>
+        <p class="file-head__path">{{ file.path }}</p>
+        <p class="file-head__meta">
+            <span class="tag">{{ rules|length }} {{ rules|length > 1 ? 'règles métier' : 'règle métier' }}</span>
+            <span class="tag">{{ documents|length }} {{ documents|length > 1 ? 'documents' : 'document' }}</span>
+            <span class="tag">{{ memories|length }} {{ memories|length > 1 ? 'mémoires' : 'mémoire' }}</span>
+            <span class="tag">{{ symbols|length }} symboles</span>
+            <span class="tag">{{ edges.outgoing|length }} dépendances</span>
+            <span class="tag">{{ edges.incoming|length }} usages entrants</span>
+            {% if file.metadata.ref ?? null %}<span class="tag mono">{{ file.metadata.ref|slice(0, 7) }}</span>{% endif %}
+        </p>
+    </header>
+
+    <section aria-labelledby="rules-title">
+        <div class="block__head"><h2 id="rules-title">Règles métier</h2><span class="block__count">{{ rules|length }}</span></div>
+        {% if rules is empty %}
+            <p class="block__empty">Aucune règle métier reliée à ce fichier.</p>
+        {% else %}
+            <ul class="list">
+                {% for rule in rules %}
+                    <li>
+                        <a class="row" href="{{ path('rule_show', {slug: project.slug, code: rule.code}) }}">
+                            <span class="code-chip">{{ rule.code }}</span>
+                            <span class="row__title"><span>{{ rule.title }}</span></span>
+                            <span class="row__meta">
+                                <span class="status status--{{ rule.status }}">{{ rule.status == 'validated' ? 'Validée' : 'À valider' }}</span>
+                                <span>{{ origins[rule.origin] ?? rule.origin }}</span>
+                                <span class="conf conf--{{ rule.confidence|lower }}">{{ rule.confidence }}</span>
+                            </span>
+                        </a>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    </section>
+
+    <section class="block" aria-labelledby="docs-title">
+        <div class="block__head"><h2 id="docs-title">Documentation</h2><span class="block__count">{{ documents|length }}</span></div>
+        {% if documents is empty %}
+            <p class="block__empty">Aucun document relié. Lier un document depuis ses propriétés.</p>
+        {% else %}
+            <ul class="list">
+                {% for document in documents %}
+                    <li>
+                        <a class="row" href="{{ path('document_show', {id: document.id}) }}">
+                            <span class="format format--{{ document.format }}">{{ document.format }}</span>
+                            <span class="row__title"><span>{{ document.title }}</span></span>
+                            <span class="row__meta">
+                                <span>{{ origins[document.origin] ?? document.origin }}</span>
+                                <span class="conf conf--{{ document.confidence|lower }}">{{ document.confidence }}</span>
+                            </span>
+                        </a>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    </section>
+
+    {{ include('memory/_about.html.twig', {memories: memories}) }}
+
+    <section class="graph-panel block" aria-labelledby="graph-title"
+             data-controller="graph"
+             data-graph-url-value="{{ path('file_graph', {slug: project.slug, path: file.path}) }}"
+             data-graph-file-url-value="{{ path('file_show', {slug: project.slug, path: '__PATH__'}) }}">
+        <div class="graph-panel__bar">
+            <h2 id="graph-title" class="graph-panel__title">Voisinage</h2>
+            <fieldset class="segmented">
+                <legend>Profondeur</legend>
+                <label><input type="radio" name="depth" value="1" checked data-action="graph#setDepth"><span>1 saut</span></label>
+                <label><input type="radio" name="depth" value="2" data-action="graph#setDepth"><span>2 sauts</span></label>
+            </fieldset>
+            <p class="graph-panel__legend">
+                <span><span class="legend-line" aria-hidden="true"></span>EXTRACTED</span>
+                <span><span class="legend-line legend-line--dashed" aria-hidden="true"></span>INFERRED</span>
+            </p>
+        </div>
+        <div class="graph-panel__canvas">
+            <div data-graph-target="canvas" role="img" aria-label="Graphe des fichiers liés à {{ file.path }}. Cliquer sur un fichier pour ouvrir sa fiche."></div>
+            <p class="graph-panel__empty" data-graph-target="empty" hidden>Aucune relation avec un autre fichier.</p>
+        </div>
+    </section>
+
+    <div class="sheet">
+        <aside class="sheet__aside" aria-labelledby="symbols-title">
+            <div class="block__head"><h2 id="symbols-title">Symboles</h2><span class="block__count">{{ symbols|length }}</span></div>
+            {% if symbols is empty %}
+                <p class="block__empty">Aucun symbole extrait.</p>
+            {% else %}
+                <ol class="symbols">
+                    {% for symbol in symbols %}
+                        <li><span class="symbols__line">{{ symbol.line ? 'L' ~ symbol.line : '' }}</span><span class="symbols__label">{{ symbol.label }}</span></li>
+                    {% endfor %}
+                </ol>
+            {% endif %}
+        </aside>
+
+        <div class="sheet__main">
+            <section aria-labelledby="outgoing-title">
+                <div class="block__head"><h2 id="outgoing-title">Dépend de</h2><span class="block__count">{{ edges.outgoing|length }}</span></div>
+                {{ include('file/_edges.html.twig', {rows: edges.outgoing, direction: 'outgoing', other_heading: 'Fichier cible', empty: 'Aucune dépendance vers un autre fichier.'}) }}
+            </section>
+
+            <section aria-labelledby="incoming-title">
+                <div class="block__head"><h2 id="incoming-title">Utilisé par</h2><span class="block__count">{{ edges.incoming|length }}</span></div>
+                {{ include('file/_edges.html.twig', {rows: edges.incoming, direction: 'incoming', other_heading: 'Fichier source', empty: "Aucun autre fichier ne l'utilise."}) }}
+            </section>
+        </div>
+    </div>
+{% endblock %}

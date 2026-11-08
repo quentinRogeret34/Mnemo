@@ -1,0 +1,79 @@
+{% extends 'base.html.twig' %}
+
+{% set token = csrf_token('connector-' ~ connector.id) %}
+{% set report = connector.lastReport %}
+
+{% block title %}{{ connector.name }} · Connexions{% endblock %}
+
+{% block crumbs %}
+    <a href="{{ path('connector_index') }}">Connexions</a>
+    <span class="crumbs__sep" aria-hidden="true">/</span>
+    <span class="crumbs__current">{{ connector.name }}</span>
+{% endblock %}
+
+{% block header_actions %}
+    <a class="button" href="{{ path('connector_edit', {id: connector.id}) }}">Modifier</a>
+{% endblock %}
+
+{% block body %}
+    <article class="page">
+        <div class="page__icon"><span class="code-chip">{{ connector.transport.value|upper }}</span></div>
+        <h1 class="page__title">{{ connector.name }}</h1>
+
+        <dl class="props">
+            <dt>{{ connector.transport.value == 'http' ? 'URL' : 'Commande' }}</dt><dd class="mono">{{ connector.endpoint }}</dd>
+            <dt>{{ connector.transport.value == 'http' ? 'En-têtes' : 'Variables' }}</dt>
+            <dd>
+                {% for name, value in connector.credentials %}
+                    <span class="tag mono">{{ name }}: {{ 'env:' in value ? value : '••••••' }}</span>
+                {% else %}<span class="row__sub">aucun</span>{% endfor %}
+            </dd>
+            <dt>Import</dt><dd>{{ connector.mode.label }}{% if connector.tool %} · outil <span class="mono">{{ connector.tool }}</span>{% endif %}</dd>
+            {% if connector.mode.value == 'tool_memories' %}
+                <dt>Liste</dt><dd class="mono">{{ connector.itemsPath ?: '(racine)' }} → {{ connector.textField ?: 'memory | text | content' }}</dd>
+                <dt>Type</dt><dd>{{ include('memory/_type.html.twig', {type: connector.memoryType.value}) }}</dd>
+            {% endif %}
+            {% if connector.arguments is not empty %}<dt>Arguments</dt><dd class="mono">{{ connector.arguments|json_encode }}</dd>{% endif %}
+            <dt>Projet</dt><dd>{{ connector.project ? connector.project.name : 'aucun' }}</dd>
+            <dt>Dossier</dt><dd>{{ connector.folder ? connector.folder.name : 'racine' }}</dd>
+            <dt>Dernier import</dt><dd>{{ include('connector/_status.html.twig') }}</dd>
+        </dl>
+
+        <div class="upload__actions">
+            <form method="post" action="{{ path('connector_sync', {id: connector.id}) }}"><input type="hidden" name="_token" value="{{ token }}"><button class="button button--primary" type="submit">Synchroniser</button></form>
+            <form method="post" action="{{ path('connector_inspect', {id: connector.id}) }}"><input type="hidden" name="_token" value="{{ token }}"><button class="button" type="submit">Tester la connexion</button></form>
+        </div>
+
+        {% if report and report.error %}
+            <p class="form-errors block">Dernier import en échec : {{ report.error }}</p>
+        {% endif %}
+        {% if report and report.skipped is not empty %}
+            <section class="block" aria-labelledby="skipped-title">
+                <div class="block__head"><h2 id="skipped-title">Ignorés au dernier import</h2><span class="block__count">{{ report.skipped|length }}</span></div>
+                <ul class="list">{% for item in report.skipped %}<li class="row"><span></span><span class="row__sub">{{ item }}</span></li>{% endfor %}</ul>
+            </section>
+        {% endif %}
+
+        {% if inspection_error %}
+            <p class="form-errors block" role="alert">Connexion impossible : {{ inspection_error }}</p>
+        {% elseif inspection %}
+            <section class="block" aria-labelledby="inspect-title">
+                <div class="block__head"><h2 id="inspect-title">Serveur {{ inspection.server }}</h2></div>
+                <h3 class="block__sub">Outils <span class="block__count">{{ inspection.tools|length }}</span></h3>
+                <ul class="list">
+                    {% for tool in inspection.tools %}<li class="row"><span class="code-chip">{{ tool.name }}</span><span class="row__sub">{{ tool.description }}</span></li>{% else %}<li class="block__empty">Aucun outil.</li>{% endfor %}
+                </ul>
+                <h3 class="block__sub">Ressources <span class="block__count">{{ inspection.resources|length }}</span></h3>
+                <ul class="list">
+                    {% for resource in inspection.resources %}<li class="row"><span class="code-chip">{{ resource.mime_type ?? '?' }}</span><span class="row__title"><span>{{ resource.name }}</span><span class="row__sub mono">{{ resource.uri }}</span></span></li>{% else %}<li class="block__empty">Aucune ressource.</li>{% endfor %}
+                </ul>
+            </section>
+        {% endif %}
+
+        <form class="danger-zone" method="post" action="{{ path('connector_delete', {id: connector.id}) }}">
+            <input type="hidden" name="_token" value="{{ token }}">
+            <button class="button button--danger" type="submit">Supprimer le connecteur</button>
+            <span class="row__sub">Les documents et mémoires déjà importés sont conservés.</span>
+        </form>
+    </article>
+{% endblock %}

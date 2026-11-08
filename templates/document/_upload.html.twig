@@ -1,0 +1,16 @@
+<section class="upload" aria-label="Ajouter des documents">
+    {{ form_start(upload, {attr: {novalidate: 'novalidate'}}) }}
+        {{ form_widget(upload.files) }}
+        {% if upload.files.vars.errors|length > 0 or upload.vars.errors|length > 0 or upload.files|filter(child => child.vars.errors|length > 0)|length > 0 %}
+            <ul class="form-errors">
+                {% for error in upload.files.vars.errors %}<li>{{ error.message }}</li>{% endfor %}
+                {% for child in upload.files %}{% for error in child.vars.errors %}<li>{{ error.message }}</li>{% endfor %}{% endfor %}
+                {% for error in upload.vars.errors %}<li>{{ error.message }}</li>{% endfor %}
+            </ul>
+        {% endif %}
+        <div class="upload__actions">
+            <button class="button button--primary" type="submit">Ajouter</button>
+            <span>{{ hint }}</span>
+        </div>
+    {{ form_end(upload) }}
+</section>

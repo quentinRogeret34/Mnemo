@@ -1,0 +1,63 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Connexions{% endblock %}
+
+{% block crumbs %}<span class="crumbs__current">Connexions</span>{% endblock %}
+
+{% block header_actions %}
+    <a class="button button--primary" href="{{ path('connector_new') }}">Nouveau connecteur</a>
+{% endblock %}
+
+{% block body %}
+    <div class="view-head">
+        <h1>Connecteurs MCP</h1>
+        <span class="view-head__meta">{{ connectors|length }}</span>
+    </div>
+
+    {% if connectors is empty %}
+        <p class="block__empty">Aucun connecteur. Un connecteur se branche sur un serveur MCP externe (Notion, GitHub, mem0...) et importe ses ressources en documents, ou la réponse d'un de ses outils en document ou en mémoires.</p>
+    {% else %}
+        <ul class="list">
+            {% for connector in connectors %}
+                <li>
+                    <a class="row" href="{{ path('connector_show', {id: connector.id}) }}">
+                        <span class="code-chip">{{ connector.transport.value|upper }}</span>
+                        <span class="row__title"><span>{{ connector.name }}</span><span class="row__sub">{{ connector.mode.label }}{{ connector.project ? ' · ' ~ connector.project.name }}</span></span>
+                        <span class="row__meta">{{ include('connector/_status.html.twig') }}</span>
+                    </a>
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
+    <section class="block" aria-labelledby="presets-title">
+        <div class="block__head"><h2 id="presets-title">Démarrer avec un fournisseur</h2></div>
+        <ul class="presets">
+            {% for key, preset in presets %}
+                <li class="preset">
+                    <div class="preset__head">
+                        <span class="preset__name">{{ preset.label }}</span>
+                        {% if not preset.checked %}<span class="tag tag--demo" title="Nom de l'outil non vérifié sans accès">à vérifier</span>{% endif %}
+                    </div>
+                    <p class="preset__text">{{ preset.description }}</p>
+                    <p class="row__sub">Authentification : {{ preset.auth }}</p>
+                    <a class="button" href="{{ path('connector_new', {preset: key}) }}">Configurer</a>
+                </li>
+            {% endfor %}
+        </ul>
+        <p class="row__sub preset__later">Pas encore possible, OAuth requis : {% for preset in unavailable_presets %}<span title="{{ preset.reason }}">{{ preset.label }}</span>{{ not loop.last ? ', ' }}{% endfor %}.</p>
+    </section>
+
+    <section class="block" aria-labelledby="llm-title">
+        <div class="block__head"><h2 id="llm-title">Modèles de langage</h2></div>
+        <dl class="props props--flat">
+            <dt>Chat</dt><dd><span class="mono">{{ llm.chatPlatform }} / {{ llm.chatModel }}</span></dd>
+            <dt>Embeddings</dt><dd><span class="mono">{{ llm.embeddingPlatform }} / {{ llm.embeddingModel }}</span></dd>
+            {% for platform in constant('App\\Llm\\LlmSettings::PLATFORMS') %}
+                <dt>Clé {{ platform == 'openrouter' ? 'OpenRouter' : 'Mistral' }}</dt>
+                <dd>{% if llm.isConfigured(platform) %}<span class="status status--validated">configurée</span>{% else %}<span class="status">absente</span>{% endif %}</dd>
+            {% endfor %}
+        </dl>
+        <p class="row__sub">Clés dans <code>.env.local</code> (<code>MISTRAL_API_KEY</code>, <code>OPENROUTER_API_KEY</code>), modèles via <code>LLM_PLATFORM</code>, <code>LLM_MODEL</code>, <code>EMBEDDING_PLATFORM</code>, <code>EMBEDDING_MODEL</code>. Vérifier avec <code>bin/console app:llm:check</code>.</p>
+    </section>
+{% endblock %}

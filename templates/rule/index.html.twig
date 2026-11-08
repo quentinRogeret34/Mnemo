@@ -1,0 +1,45 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Règles métier · {{ project.name }}{% endblock %}
+
+{% block crumbs %}
+    <a href="{{ path('project_show', {slug: project.slug}) }}">{{ project.name }}</a>
+    <span class="crumbs__sep" aria-hidden="true">/</span>
+    <span class="crumbs__current">Règles métier</span>
+{% endblock %}
+
+{% block body %}
+    <div class="view-head">
+        <h1>Règles métier</h1>
+        <span class="view-head__meta">{{ rules|length }}</span>
+    </div>
+
+    <nav class="tabs" aria-label="Filtrer par statut">
+        <a href="{{ path('rule_index', {slug: project.slug}) }}" {% if status is null %}aria-current="page"{% endif %}>Toutes</a>
+        <a href="{{ path('rule_index', {slug: project.slug, status: 'to_review'}) }}" {% if status == 'to_review' %}aria-current="page"{% endif %}>À valider</a>
+        <a href="{{ path('rule_index', {slug: project.slug, status: 'validated'}) }}" {% if status == 'validated' %}aria-current="page"{% endif %}>Validées</a>
+    </nav>
+
+    {% if rules is empty %}
+        <p class="block__empty">Aucune règle{{ status ? ' dans ce statut' }}. Les règles viendront de l'extraction des documents métier.</p>
+    {% else %}
+        <ul class="list">
+            {% for rule in rules %}
+                <li>
+                    <a class="row" href="{{ path('rule_show', {slug: project.slug, code: rule.code}) }}">
+                        <span class="code-chip">{{ rule.code }}</span>
+                        <span class="row__title">
+                            <span>{{ rule.title }}</span>
+                            {% if rule.demo %}<span class="tag tag--demo">Démo</span>{% endif %}
+                        </span>
+                        <span class="row__meta">
+                            <span class="status status--{{ rule.status }}">{{ rule.status == 'validated' ? 'Validée' : 'À valider' }}</span>
+                            <span title="Documents sources">{{ rule.documents }} doc.</span>
+                            <span title="Fichiers liés, dont vérifiés">{{ rule.files }} fichiers · {{ rule.verified_files }} vérifiés</span>
+                        </span>
+                    </a>
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+{% endblock %}

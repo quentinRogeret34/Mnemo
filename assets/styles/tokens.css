@@ -1,0 +1,71 @@
+/* Hallmark tokens · theme: custom (vibe: "quiet workspace, Linear shell, Notion pages") · paper oklch(99.2% 0.002 270) · accent oklch(56% 0.15 277) indigo · Inter + JetBrains Mono
+ * axes: light / neutral-sans / cool
+ */
+:root {
+    --color-paper: oklch(99.3% 0.002 270);
+    --color-sidebar: oklch(97.6% 0.003 270);
+    --color-hover: oklch(95.6% 0.004 270);
+    --color-selected: oklch(94% 0.008 277);
+    --color-ink: oklch(23% 0.012 270);
+    --color-ink-2: oklch(38% 0.01 270);
+    --color-muted: oklch(54% 0.01 270);
+    --color-faint: oklch(68% 0.008 270);
+    --color-rule: oklch(92.6% 0.004 270);
+    --color-rule-2: oklch(87% 0.006 270);
+    --color-accent: oklch(56% 0.15 277);
+    --color-accent-hover: oklch(50% 0.15 277);
+    --color-accent-ink: oklch(99% 0.003 277);
+    --color-accent-soft: oklch(95.5% 0.025 277);
+    --color-success: oklch(58% 0.13 155);
+    --color-success-soft: oklch(96% 0.03 155);
+    --color-warning: oklch(64% 0.14 70);
+    --color-warning-soft: oklch(96.5% 0.04 80);
+    --color-danger: oklch(56% 0.17 25);
+    --color-danger-soft: oklch(96% 0.025 25);
+    --color-format-md: oklch(45% 0.01 270);
+    --color-format-pdf: oklch(56% 0.17 25);
+    --color-format-docx: oklch(53% 0.15 255);
+    --color-graphite: oklch(21% 0.008 270);
+    --color-graphite-2: oklch(29% 0.01 270);
+    --color-graphite-rule: oklch(34% 0.01 270);
+    --color-graphite-ink: oklch(93% 0.005 270);
+    --color-graphite-muted: oklch(64% 0.01 270);
+    --color-focus: var(--color-accent);
+
+    --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+    --text-2xs: 0.6875rem;
+    --text-xs: 0.75rem;
+    --text-sm: 0.8125rem;
+    --text-base: 0.875rem;
+    --text-md: 0.9375rem;
+    --text-lg: 1.0625rem;
+    --text-xl: 1.375rem;
+    --text-2xl: clamp(1.5rem, 1.3rem + 0.8vw, 1.875rem);
+
+    --space-3xs: 0.125rem;
+    --space-2xs: 0.25rem;
+    --space-xs: 0.5rem;
+    --space-sm: 0.75rem;
+    --space-md: 1rem;
+    --space-lg: 1.5rem;
+    --space-xl: 2rem;
+    --space-2xl: 3rem;
+    --space-3xl: 4rem;
+
+    --radius-xs: 4px;
+    --radius-sm: 6px;
+    --radius-md: 8px;
+    --rule-width: 1px;
+
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+    --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+    --dur-fast: 100ms;
+    --dur-base: 180ms;
+
+    --sidebar-width: 15rem;
+    --page-measure: 46rem;
+    --gutter: clamp(1rem, 0.6rem + 1.4vw, 2rem);
+}

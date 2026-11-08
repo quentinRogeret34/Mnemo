@@ -1,0 +1,60 @@
+{% extends 'base.html.twig' %}
+
+{% set meta = document.metadata %}
+
+{% block title %}{{ document.label }} · Documents{% endblock %}
+
+{% block crumbs %}
+    <a href="{{ path('document_index') }}">Documents</a>
+    {% if document.folder %}
+        <span class="crumbs__sep" aria-hidden="true">/</span>
+        <a href="{{ path('document_index', {folder: document.folder.id}) }}">{{ document.folder.name }}</a>
+    {% endif %}
+    <span class="crumbs__sep" aria-hidden="true">/</span>
+    <span class="crumbs__current">{{ document.label }}</span>
+{% endblock %}
+
+{% block header_actions %}
+    <a class="button" href="{{ path('document_file', {id: document.id}) }}">{{ meta.format == 'pdf' ? 'Ouvrir le PDF' : 'Télécharger' }}</a>
+{% endblock %}
+
+{% block body %}
+    <article class="page">
+        <div class="page__icon"><span class="format format--{{ meta.format }}">{{ meta.format }}</span></div>
+        <h1 class="page__title">{{ document.label }}</h1>
+
+        <twig:DocumentProperties :document="document" />
+
+        {% if markdown is not null %}
+            <div class="prose">{{ markdown|markdown_to_html }}</div>
+        {% elseif meta.format == 'pdf' %}
+            <iframe class="pdf-frame" src="{{ path('document_file', {id: document.id}) }}" title="{{ document.label }}"></iframe>
+        {% else %}
+            <p class="block__empty">Pas encore d'aperçu pour les fichiers Word. Le texte sera extrait avec l'ingestion des documents.</p>
+        {% endif %}
+
+        <section class="block" aria-labelledby="rules-title">
+            <div class="block__head"><h2 id="rules-title">Règles métier définies</h2><span class="block__count">{{ rules|length }}</span></div>
+            {% if rules is empty %}
+                <p class="block__empty">Aucune règle rattachée à ce document.</p>
+            {% else %}
+                <ul class="list">
+                    {% for rule in rules %}
+                        <li>
+                            <a class="row" href="{{ path('rule_show', {slug: rule.project_slug, code: rule.code}) }}">
+                                <span class="code-chip">{{ rule.code }}</span>
+                                <span class="row__title"><span>{{ rule.title }}</span></span>
+                                <span class="row__meta">
+                                    <span class="status status--{{ rule.status }}">{{ rule.status == 'validated' ? 'Validée' : 'À valider' }}</span>
+                                    <span class="conf conf--{{ rule.confidence|lower }}">{{ rule.confidence }}</span>
+                                </span>
+                            </a>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        </section>
+
+        {{ include('memory/_about.html.twig', {memories: memories}) }}
+    </article>
+{% endblock %}

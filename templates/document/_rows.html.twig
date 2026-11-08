@@ -1,0 +1,19 @@
+<ul class="list">
+    {% for document in documents %}
+        <li>
+            <a class="row" href="{{ path('document_show', {id: document.id}) }}">
+                <span class="format format--{{ document.format }}">{{ document.format }}</span>
+                <span class="row__title">
+                    <span>{{ document.title }}</span>
+                    {% if document.demo %}<span class="tag tag--demo">Démo</span>{% endif %}
+                    {% if show_folder and document.folder %}<span class="row__sub">{{ document.folder }}</span>{% endif %}
+                </span>
+                <span class="row__meta">
+                    {% if show_projects %}<span class="row__projects">{{ document.projects ?? 'aucun projet' }}</span>{% endif %}
+                    <span>{{ document.rules }} {{ document.rules > 1 ? 'règles' : 'règle' }}</span>
+                    <span>{{ document.code_links }} code</span>
+                </span>
+            </a>
+        </li>
+    {% endfor %}
+</ul>

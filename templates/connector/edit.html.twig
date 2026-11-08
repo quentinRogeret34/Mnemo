@@ -1,0 +1,52 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ connector.id ? connector.name : 'Nouveau connecteur' }}{% endblock %}
+
+{% block crumbs %}
+    <a href="{{ path('connector_index') }}">Connexions</a>
+    <span class="crumbs__sep" aria-hidden="true">/</span>
+    <span class="crumbs__current">{{ connector.id ? connector.name : 'Nouveau connecteur' }}</span>
+{% endblock %}
+
+{% block body %}
+    <div class="page">
+        <h1 class="page__title">{{ connector.id ? 'Modifier le connecteur' : 'Nouveau connecteur' }}</h1>
+        {% if preset %}
+            <aside class="callout callout--info" aria-label="Notes sur {{ preset.label }}">
+                <span class="callout__mark" aria-hidden="true"></span>
+                <div>
+                    <p><strong>Prérempli pour {{ preset.label }}.</strong> {% if not preset.checked %}Nom de l'outil non vérifié : tester la connexion après l'enregistrement.{% endif %}</p>
+                    <ul>{% for note in preset.notes %}<li>{{ note }}</li>{% endfor %}</ul>
+                    <p><a class="link" href="{{ preset.docs }}" rel="noopener noreferrer" target="_blank">Documentation {{ preset.label }}</a></p>
+                </div>
+            </aside>
+        {% endif %}
+        {{ form_start(form, {attr: {class: 'form-stack', novalidate: 'novalidate'}}) }}
+            <fieldset>
+                <legend>Serveur</legend>
+                {{ form_row(form.name) }}
+                {{ form_row(form.transport) }}
+                {{ form_row(form.endpoint) }}
+                {{ form_row(form.credentials) }}
+            </fieldset>
+            <fieldset>
+                <legend>Import</legend>
+                {{ form_row(form.mode) }}
+                {{ form_row(form.tool) }}
+                {{ form_row(form.arguments) }}
+                {{ form_row(form.itemsPath) }}
+                {{ form_row(form.textField) }}
+                {{ form_row(form.memoryType) }}
+            </fieldset>
+            <fieldset>
+                <legend>Destination</legend>
+                {{ form_row(form.project) }}
+                {{ form_row(form.folder) }}
+            </fieldset>
+            <div class="upload__actions">
+                <button class="button button--primary" type="submit">Enregistrer</button>
+                <a class="button" href="{{ connector.id ? path('connector_show', {id: connector.id}) : path('connector_index') }}">Annuler</a>
+            </div>
+        {{ form_end(form) }}
+    </div>
+{% endblock %}

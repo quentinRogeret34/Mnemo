@@ -1,0 +1,25 @@
+{
+  "directed": false,
+  "multigraph": false,
+  "graph": {"schema_version": 1, "graphify_version": "0.9.104"},
+  "built_at_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "hyperedges": [],
+  "nodes": [
+    {"id": "src_domain_catalog", "label": "domain/catalog.ts", "file_type": "code", "source_file": "src/domain/catalog.ts", "source_location": "L1", "community": 1, "_origin": "ast"},
+    {"id": "src_domain_catalog_planmerges", "label": "planMerges()", "_callable": true, "file_type": "code", "source_file": "src/domain/catalog.ts", "source_location": "L42", "community": 1, "_origin": "ast"},
+    {"id": "src_domain_catalog_merge", "label": "Merge", "_callable": true, "_callable_class": true, "file_type": "code", "source_file": "src/domain/catalog.ts", "source_location": "L10", "community": 1, "_origin": "ast"},
+    {"id": "src_main", "label": "main.ts", "file_type": "code", "source_file": "src/main.ts", "source_location": "L1", "community": 2, "_origin": "ast"},
+    {"id": "src_main_run", "label": "run()", "_callable": true, "file_type": "code", "source_file": "src/main.ts", "source_location": "L5", "community": 2, "_origin": "ast"},
+    {"id": "svelte", "label": "svelte", "type": "module", "file_type": "code", "source_file": "svelte", "community": 3, "_origin": "ast"},
+    {"id": "ref_hono", "label": "hono", "file_type": "concept", "source_file": "package.json", "source_location": "L3", "community": 3, "_origin": "ast"}
+  ],
+  "links": [
+    {"source": "src_domain_catalog", "target": "src_domain_catalog_planmerges", "relation": "contains", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "src/domain/catalog.ts", "source_location": "L42", "weight": 1.0, "_origin": "ast"},
+    {"source": "src_domain_catalog", "target": "src_domain_catalog_merge", "relation": "contains", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "src/domain/catalog.ts", "source_location": "L10", "weight": 1.0, "_origin": "ast"},
+    {"source": "src_main", "target": "src_main_run", "relation": "contains", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "src/main.ts", "source_location": "L5", "weight": 1.0, "_origin": "ast"},
+    {"source": "src_main", "target": "src_domain_catalog", "relation": "imports_from", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "src/main.ts", "source_location": "L2", "weight": 1.0, "context": "import", "_origin": "ast"},
+    {"source": "src_main_run", "target": "src_domain_catalog_planmerges", "relation": "calls", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "src/main.ts", "source_location": "L6", "weight": 1.0, "context": "call", "_origin": "ast"},
+    {"source": "src_main_run", "target": "src_domain_catalog_merge", "relation": "indirect_call", "confidence": "INFERRED", "confidence_score": 0.85, "source_file": "src/main.ts", "source_location": "L7", "weight": 1.0, "context": "argument", "_origin": "ast"},
+    {"source": "src_main", "target": "svelte", "relation": "imports", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "src/main.ts", "source_location": "L1", "weight": 1.0, "_origin": "ast"}
+  ]
+}

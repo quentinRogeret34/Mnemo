@@ -1,0 +1,18 @@
+{
+  "directed": false,
+  "multigraph": false,
+  "graph": {"schema_version": 1, "graphify_version": "0.9.104"},
+  "built_at_commit": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "hyperedges": [],
+  "nodes": [
+    {"id": "src_domain_catalog", "label": "domain/catalog.ts", "file_type": "code", "source_file": "src/domain/catalog.ts", "source_location": "L1", "community": 1, "_origin": "ast"},
+    {"id": "src_domain_catalog_planmerges", "label": "planMerges()", "_callable": true, "file_type": "code", "source_file": "src/domain/catalog.ts", "source_location": "L50", "community": 1, "_origin": "ast"},
+    {"id": "src_main", "label": "main.ts", "file_type": "code", "source_file": "src/main.ts", "source_location": "L1", "community": 2, "_origin": "ast"},
+    {"id": "src_main_run", "label": "run()", "_callable": true, "file_type": "code", "source_file": "src/main.ts", "source_location": "L5", "community": 2, "_origin": "ast"}
+  ],
+  "links": [
+    {"source": "src_domain_catalog", "target": "src_domain_catalog_planmerges", "relation": "contains", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "src/domain/catalog.ts", "source_location": "L50", "weight": 1.0, "_origin": "ast"},
+    {"source": "src_main", "target": "src_main_run", "relation": "contains", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "src/main.ts", "source_location": "L5", "weight": 1.0, "_origin": "ast"},
+    {"source": "src_main_run", "target": "src_domain_catalog_planmerges", "relation": "calls", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "src/main.ts", "source_location": "L6", "weight": 1.0, "context": "call", "_origin": "ast"}
+  ]
+}

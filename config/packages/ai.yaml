@@ -1,0 +1,19 @@
+ai:
+    # see https://symfony.com/doc/current/ai/components/platform.html
+    platform:
+        openrouter:
+            api_key: '%env(OPENROUTER_API_KEY)%'
+        mistral:
+            api_key: '%env(MISTRAL_API_KEY)%'
+
+    # see https://symfony.com/doc/current/ai/bundles/ai-bundle.html
+    agent:
+
+    # see https://symfony.com/doc/current/ai/components/store.html
+    store:
+        postgres:
+            default:
+                dsn: '%env(AI_STORE_DSN)%'
+                username: '%env(AI_STORE_USER)%'
+                password: '%env(AI_STORE_PASSWORD)%'
+                distance: cosine

@@ -1,0 +1,14 @@
+mcp:
+    servers:
+        default:
+            # Only the tools of this application, not those of third-party bundles.
+            registry: 'App\Mcp\'
+
+            http:
+                path: /mcp
+                # Only localhost is allowed by default. Add hostnames without ports for remote access.
+                # allowed_hosts: ['localhost', 'mcp.example.com']
+
+            # STDIO for local agents: docker compose exec -T php bin/console mcp:server
+            transports:
+                stdio: true

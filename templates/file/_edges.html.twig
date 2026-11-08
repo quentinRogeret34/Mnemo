@@ -1,0 +1,36 @@
+{% if rows is empty %}
+    <p class="section-empty">{{ empty }}</p>
+{% else %}
+    <div class="table-wrap">
+        <table class="edges">
+            <thead>
+                <tr>
+                    <th scope="col">Relation</th>
+                    <th scope="col">Ici</th>
+                    <th scope="col">{{ other_heading }}</th>
+                    <th scope="col">Confiance</th>
+                    <th scope="col">Ligne</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for edge in rows %}
+                    {% set local_label = direction == 'outgoing' ? edge.source_label : edge.target_label %}
+                    {% set local_type = direction == 'outgoing' ? edge.source_type : edge.target_type %}
+                    {% set other_label = direction == 'outgoing' ? edge.target_label : edge.source_label %}
+                    {% set other_type = direction == 'outgoing' ? edge.target_type : edge.source_type %}
+                    {% set other_path = direction == 'outgoing' ? edge.target_path : edge.source_path %}
+                    <tr>
+                        <td class="edges__relation">{{ edge.relation }}</td>
+                        <td class="edges__local">{{ local_type == 'code_file' ? '(fichier)' : local_label }}</td>
+                        <td class="edges__other">
+                            <a href="{{ path('file_show', {slug: project.slug, path: other_path}) }}">{{ other_path }}</a>
+                            {% if other_type != 'code_file' %}<small>{{ other_label }}</small>{% endif %}
+                        </td>
+                        <td><span class="conf conf--{{ edge.confidence|lower }}">{{ edge.confidence }}</span></td>
+                        <td class="edges__evidence" title="{{ edge.evidence }}">{{ edge.evidence ? edge.evidence|split(':')|last : '' }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endif %}

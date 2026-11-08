@@ -1,0 +1,17 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Code · {{ project.name }}{% endblock %}
+
+{% block crumbs %}
+    <a href="{{ path('project_show', {slug: project.slug}) }}">{{ project.name }}</a>
+    <span class="crumbs__sep" aria-hidden="true">/</span>
+    <span class="crumbs__current">Code</span>
+{% endblock %}
+
+{% block body %}
+    <div class="view-head">
+        <h1>Code</h1>
+        <span class="view-head__meta mono">{{ project.repositoryPath }}</span>
+    </div>
+    <twig:FileSearch :project="project" />
+{% endblock %}

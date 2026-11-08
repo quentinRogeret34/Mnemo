@@ -1,0 +1,5 @@
+twig_extra:
+    commonmark:
+        # Uploaded documents are untrusted: raw HTML is escaped and javascript: links are dropped.
+        html_input: escape
+        allow_unsafe_links: false

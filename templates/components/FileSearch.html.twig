@@ -1,0 +1,40 @@
+<div{{ attributes.defaults({class: 'search'}) }}>
+    <label class="search__field">
+        <span class="visually-hidden">Rechercher un fichier ou un symbole</span>
+        <input class="search__input" type="search" value="{{ query }}" data-model="debounce(150)|query" data-search-input
+               placeholder="Chercher un fichier ou un symbole" autocomplete="off" spellcheck="false" autofocus>
+        <kbd class="kbd" aria-hidden="true">⌘K</kbd>
+    </label>
+
+    {% set results = this.results %}
+    <div class="search__results" data-loading="addClass(is-loading)">
+        <p class="search__meta" aria-live="polite">
+            {% if query|trim is empty %}
+                <span>{{ results.total|number_format(0, ',', ' ') }} fichiers</span>
+            {% else %}
+                <span>{{ results.total|number_format(0, ',', ' ') }} {{ results.total > 1 ? 'résultats' : 'résultat' }} pour <code>{{ query|trim }}</code></span>
+            {% endif %}
+            {% if results.total > results.files|length %}
+                <span>{{ results.files|length }} premiers affichés</span>
+            {% endif %}
+        </p>
+
+        {% if results.files is not empty %}
+            <ol class="list">
+                {% for file in results.files %}
+                    {% set parts = file.path|split('/') %}
+                    <li>
+                        <a class="file-row" href="{{ path('file_show', {slug: project.slug, path: file.path}) }}">
+                            <span class="file-row__path">
+                                {%- if parts|length > 1 %}<span class="file-row__dir">{{ parts|slice(0, -1)|join('/') }}/</span>{% endif -%}
+                                <span class="file-row__name">{{ parts|last }}</span>
+                            </span>
+                            <span class="file-row__count num">{{ file.symbols }} symb.</span>
+                            {% if file.matched_symbols %}<span class="file-row__match">{{ file.matched_symbols }}</span>{% endif %}
+                        </a>
+                    </li>
+                {% endfor %}
+            </ol>
+        {% endif %}
+    </div>
+</div>

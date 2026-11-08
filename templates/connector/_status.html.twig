@@ -1,0 +1,8 @@
+{% set report = connector.lastReport %}
+{% if connector.lastRunAt is null %}
+    <span class="status">jamais synchronisé</span>
+{% elseif report.error %}
+    <span class="status status--error" title="{{ report.error }}">échec le {{ connector.lastRunAt|date('d/m/Y H:i') }}</span>
+{% else %}
+    <span class="status status--validated">{{ report.created }} créés · {{ report.updated }} mis à jour · {{ report.unchanged }} inchangés · {{ connector.lastRunAt|date('d/m/Y H:i') }}</span>
+{% endif %}

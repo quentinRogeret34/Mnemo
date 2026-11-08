@@ -1,0 +1,68 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ current ? current.name ~ ' · ' }}Documents{% endblock %}
+
+{% block crumbs %}
+    {% if current %}<a href="{{ path('document_index') }}">Documents</a>{% else %}<span class="crumbs__current">Documents</span>{% endif %}
+    {% for folder in ancestors %}
+        <span class="crumbs__sep" aria-hidden="true">/</span>
+        {% if loop.last %}<span class="crumbs__current">{{ folder.name }}</span>{% else %}<a href="{{ path('document_index', {folder: folder.id}) }}">{{ folder.name }}</a>{% endif %}
+    {% endfor %}
+{% endblock %}
+
+{% block body %}
+    <div class="explorer">
+        <nav class="tree" aria-label="Dossiers">
+            <a class="tree__item" href="{{ path('document_index') }}" {% if current is null %}aria-current="page"{% endif %}>
+                <svg class="nav-item__icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M2 4.5h4.5l1.5 1.5H14v6.5H2z"/></svg>
+                <span class="nav-item__label">Tous les dossiers</span>
+            </a>
+            {% for folder in folders %}
+                <a class="tree__item" style="--depth: {{ folder.depth + 1 }}" href="{{ path('document_index', {folder: folder.id}) }}" {% if current and current.id == folder.id %}aria-current="page"{% endif %}>
+                    <svg class="nav-item__icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M2 4.5h4.5l1.5 1.5H14v6.5H2z"/></svg>
+                    <span class="nav-item__label">{{ folder.name }}</span>
+                    {% if folder.documents > 0 %}<span class="nav-item__count">{{ folder.documents }}</span>{% endif %}
+                </a>
+            {% endfor %}
+        </nav>
+
+        <div class="explorer__content">
+            <div class="view-head">
+                <h1>{{ current ? current.name : 'Documents' }}</h1>
+                <span class="view-head__meta">{{ documents|length }}{{ current is null ? ' à la racine' }}</span>
+            </div>
+
+            {% set children = folders|filter(folder => folder.parent_id == (current ? current.id : null)) %}
+            {% if children is not empty %}
+                <ul class="list list--folders">
+                    {% for folder in children %}
+                        <li>
+                            <a class="row" href="{{ path('document_index', {folder: folder.id}) }}">
+                                <svg class="nav-item__icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M2 4.5h4.5l1.5 1.5H14v6.5H2z"/></svg>
+                                <span class="row__title"><span>{{ folder.name }}</span></span>
+                                <span class="row__meta">{{ folder.documents }} doc.</span>
+                            </a>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+
+            {% if documents is not empty %}
+                {{ include('document/_rows.html.twig', {documents: documents, show_folder: false, show_projects: true}) }}
+            {% elseif children is empty %}
+                <p class="block__empty">Dossier vide. Déposer des fichiers ou créer un sous-dossier.</p>
+            {% endif %}
+
+            <div class="explorer__tools">
+                {{ include('document/_upload.html.twig', {upload: upload, hint: '.md, .pdf, .docx · 32 Mo max · ajoutés dans ' ~ (current ? '« ' ~ current.name ~ ' »' : 'la racine')}) }}
+
+                {{ form_start(folder_form, {attr: {class: 'inline-form', novalidate: 'novalidate'}}) }}
+                    {{ form_label(folder_form.name, null, {label_attr: {class: 'visually-hidden'}}) }}
+                    {{ form_widget(folder_form.name, {attr: {class: 'input'}}) }}
+                    <button class="button" type="submit">Créer le dossier</button>
+                    {% for error in folder_form.name.vars.errors %}<p class="form-errors">{{ error.message }}</p>{% endfor %}
+                {{ form_end(folder_form) }}
+            </div>
+        </div>
+    </div>
+{% endblock %}

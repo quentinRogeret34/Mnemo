@@ -1,0 +1,70 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Mémoires{{ project ? ' · ' ~ project.name }}{% endblock %}
+
+{% block crumbs %}
+    {% if project %}
+        <a href="{{ path('project_show', {slug: project.slug}) }}">{{ project.name }}</a>
+        <span class="crumbs__sep" aria-hidden="true">/</span>
+    {% endif %}
+    <span class="crumbs__current">Mémoires</span>
+{% endblock %}
+
+{% block body %}
+    {% set filters = {project: project ? project.slug : null, q: q ?: null} %}
+    <div class="view-head">
+        <h1>Mémoires</h1>
+        <span class="view-head__meta">{{ memories|length }}{{ project ? ' rattachées à ' ~ project.name }}</span>
+    </div>
+
+    <section class="memory-new" aria-label="Ajouter une mémoire">
+        {{ form_start(form, {attr: {novalidate: 'novalidate'}}) }}
+            {{ form_label(form.text, null, {label_attr: {class: 'visually-hidden'}}) }}
+            {{ form_widget(form.text, {attr: {class: 'input memory-new__text'}}) }}
+            <div class="memory-new__actions">
+                {{ form_label(form.type, null, {label_attr: {class: 'visually-hidden'}}) }}
+                {{ form_widget(form.type, {attr: {class: 'select'}}) }}
+                <button class="button button--primary" type="submit">Ajouter la mémoire</button>
+                <span class="row__sub">{{ project ? 'Rattachée à ' ~ project.name : 'Sans projet, à rattacher ensuite' }}</span>
+            </div>
+            {% for error in form.text.vars.errors %}<p class="form-errors">{{ error.message }}</p>{% endfor %}
+        {{ form_end(form) }}
+    </section>
+
+    <div class="filter-bar">
+        <nav class="tabs" aria-label="Filtrer par type">
+            <a href="{{ path('memory_index', filters|filter(v => v is not null)) }}" {% if type is null %}aria-current="page"{% endif %}>Toutes</a>
+            {% for item in types %}
+                <a href="{{ path('memory_index', (filters|merge({type: item.value}))|filter(v => v is not null)) }}" {% if type == item %}aria-current="page"{% endif %}>{{ item.label }}</a>
+            {% endfor %}
+        </nav>
+        <form class="filter-bar__search" method="get" action="{{ path('memory_index') }}" role="search">
+            {% if project %}<input type="hidden" name="project" value="{{ project.slug }}">{% endif %}
+            {% if type %}<input type="hidden" name="type" value="{{ type.value }}">{% endif %}
+            <input class="input" type="search" name="q" value="{{ q }}" placeholder="Rechercher" aria-label="Chercher dans les mémoires">
+        </form>
+    </div>
+
+    {% if memories is empty %}
+        <p class="block__empty">{{ q or type ? 'Aucune mémoire ne correspond.' : 'Aucune mémoire. En ajouter une ci-dessus ; plus tard, les agents (Claude Code, MCP) les enverront automatiquement.' }}</p>
+    {% else %}
+        <ul class="list">
+            {% for memory in memories %}
+                <li>
+                    <a class="row row--memory" href="{{ path('memory_show', {id: memory.id}) }}">
+                        {{ include('memory/_type.html.twig', {type: memory.type}) }}
+                        <span class="row__title">
+                            <span class="memory-text">{{ memory.text }}</span>
+                            {% if memory.demo %}<span class="tag tag--demo">Démo</span>{% endif %}
+                        </span>
+                        <span class="row__meta">
+                            {% if memory.projects and not project %}<span class="row__projects">{{ memory.projects }}</span>{% endif %}
+                            <span>{{ memory.links }} {{ memory.links > 1 ? 'liens' : 'lien' }}</span>
+                            <span class="num">{{ memory.updated_at|date('d/m/Y') }}</span>
+                        </span>
+                    </a>
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+{% endblock %}
