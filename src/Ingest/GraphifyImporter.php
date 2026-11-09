@@ -7,6 +7,7 @@ use App\Entity\Node;
 use App\Entity\Project;
 use App\Enum\Confidence;
 use App\Enum\EdgeOrigin;
+use App\Enum\EdgeStatus;
 use App\Enum\NodeType;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -108,13 +109,14 @@ final class GraphifyImporter
         foreach ($staleEdges as $edge) {
             $this->entityManager->remove($edge);
         }
+        [$manualEdgesMoved, $manualEdgesLost] = $this->moveManualEdges(array_values($staleNodes), $nodesByGraphifyId);
         foreach ($staleNodes as $node) {
             $this->entityManager->remove($node);
         }
 
         $this->entityManager->flush();
 
-        return new GraphifyImportResult($nodesCreated, $nodesUpdated, \count($staleNodes), $edgesCreated, \count($staleEdges), $commit);
+        return new GraphifyImportResult($nodesCreated, $nodesUpdated, \count($staleNodes), $edgesCreated, \count($staleEdges), $manualEdgesMoved, $manualEdgesLost, $commit);
     }
 
     /**
@@ -131,6 +133,58 @@ final class GraphifyImporter
         $path = $rawNode['source_file'];
 
         return $rawNode['label'] === $path || str_ends_with($path, '/'.$rawNode['label']);
+    }
+
+    /**
+     * Removing a node cascades to its edges in the database, including the links a human or an LLM made or rejected.
+     * Those on a file that graphify now identifies differently are moved to the current file with the same path.
+     *
+     * @param list<Node>          $staleNodes
+     * @param array<string, Node> $currentNodes
+     *
+     * @return array{int, int} moved and lost edges
+     */
+    private function moveManualEdges(array $staleNodes, array $currentNodes): array
+    {
+        if ([] === $staleNodes) {
+            return [0, 0];
+        }
+
+        $files = [];
+        foreach ($currentNodes as $node) {
+            if (NodeType::CodeFile === $node->getType()) {
+                $files[$node->getPath()] = $node;
+            }
+        }
+        $replacement = static fn (Node $node): ?Node => match (true) {
+            !\in_array($node, $staleNodes, true) => $node,
+            NodeType::CodeFile === $node->getType() => $files[$node->getPath()] ?? null,
+            default => null,
+        };
+
+        $edges = $this->entityManager->createQuery('SELECT e FROM App\Entity\Edge e WHERE (e.source IN (:nodes) OR e.target IN (:nodes)) AND e.origin <> :ast')
+            ->setParameters(['nodes' => $staleNodes, 'ast' => EdgeOrigin::Ast])
+            ->getResult();
+
+        $moved = $lost = 0;
+        foreach ($edges as $edge) {
+            $this->entityManager->remove($edge);
+            $source = $replacement($edge->getSource());
+            $target = $replacement($edge->getTarget());
+            if (null === $source || null === $target) {
+                ++$lost;
+                continue;
+            }
+
+            $copy = new Edge($source, $target, $edge->getRelation(), $edge->getConfidence(), $edge->getOrigin(), $edge->getEvidence());
+            if (EdgeStatus::Rejected === $edge->getStatus()) {
+                $copy->reject();
+            }
+            $this->entityManager->persist($copy);
+            ++$moved;
+        }
+
+        return [$moved, $lost];
     }
 
     /**

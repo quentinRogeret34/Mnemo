@@ -79,8 +79,10 @@ final class ConnectorRunnerTest extends KernelTestCase
 
         $report = $this->runner->sync($connector);
         self::assertSame(2, $report['created']);
+        self::assertSame(1, $report['unchanged']);
         self::assertSame(['élément 2 (texte absent ou de plus de 1000 caractères)'], $report['skipped']);
-        self::assertSame(2, $this->runner->sync($connector)['unchanged']);
+        self::assertSame(3, $this->runner->sync($connector)['unchanged']);
+        self::assertSame(2, $this->entityManager->getRepository(Node::class)->count(['type' => NodeType::Memory]));
 
         $memory = $this->entityManager->getRepository(Node::class)->findOneBy(['type' => NodeType::Memory, 'label' => 'Utilise PostgreSQL 18 avec pgvector.']);
         self::assertSame(['type' => 'preference', 'source' => 'connector', 'connector' => 'Fixture'], array_intersect_key($memory->getMetadata(), ['type' => 1, 'source' => 1, 'connector' => 1]));

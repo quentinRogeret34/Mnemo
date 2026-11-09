@@ -130,10 +130,12 @@ final class GraphReader
                 JOIN node s ON s.id = e.source_id
                 JOIN node t ON t.id = e.target_id
                 WHERE s.project_id = :project AND e.status = :active
+                  AND s.type IN (:code) AND t.type IN (:code)
                   AND s.path <> t.path AND (s.path = :path OR t.path = :path)
                 ORDER BY e.relation, t.path, s.path, s.label
                 SQL,
-            ['project' => $project->getId(), 'active' => EdgeStatus::Active->value, 'path' => $path],
+            ['project' => $project->getId(), 'active' => EdgeStatus::Active->value, 'path' => $path, 'code' => [NodeType::CodeFile->value, NodeType::Symbol->value]],
+            ['code' => ArrayParameterType::STRING],
         );
 
         $edges = ['outgoing' => [], 'incoming' => []];
@@ -152,7 +154,6 @@ final class GraphReader
     public function neighbourhood(Project $project, string $path, int $depth): array
     {
         $paths = [$path => true];
-        $links = [];
 
         for ($hop = 0; $hop < $depth; ++$hop) {
             $links = $this->fileLinks($project, array_keys($paths));
@@ -171,7 +172,7 @@ final class GraphReader
         }
 
         $edges = [];
-        foreach ($links as $link) {
+        foreach ($this->fileLinks($project, array_keys($paths)) as $link) {
             if (!isset($paths[$link['source_path']], $paths[$link['target_path']])) {
                 continue;
             }
@@ -214,11 +215,12 @@ final class GraphReader
                     JOIN node s ON s.id = e.source_id
                     JOIN node t ON t.id = e.target_id
                     WHERE s.project_id = :project AND e.status = :active AND s.path <> t.path
+                      AND s.type IN (:code) AND t.type IN (:code)
                       AND (s.path IN (:paths) OR t.path IN (:paths))
                     GROUP BY s.path, t.path, e.relation
                     SQL,
-                ['project' => $project->getId(), 'active' => EdgeStatus::Active->value, 'inferred' => Confidence::Inferred->value, 'paths' => $paths],
-                ['paths' => ArrayParameterType::STRING],
+                ['project' => $project->getId(), 'active' => EdgeStatus::Active->value, 'inferred' => Confidence::Inferred->value, 'paths' => $paths, 'code' => [NodeType::CodeFile->value, NodeType::Symbol->value]],
+                ['paths' => ArrayParameterType::STRING, 'code' => ArrayParameterType::STRING],
             ),
         );
     }

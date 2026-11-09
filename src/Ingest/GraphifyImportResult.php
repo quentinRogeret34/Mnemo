@@ -10,6 +10,8 @@ final readonly class GraphifyImportResult
         public int $nodesDeleted,
         public int $edgesCreated,
         public int $edgesDeleted,
+        public int $manualEdgesMoved,
+        public int $manualEdgesLost,
         public ?string $commit,
     ) {
     }

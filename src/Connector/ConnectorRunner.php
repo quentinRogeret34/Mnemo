@@ -14,7 +14,6 @@ use Mcp\Schema\Content\BlobResourceContents;
 use Mcp\Schema\Content\TextContent;
 use Mcp\Schema\Content\TextResourceContents;
 use Mcp\Schema\ResourceDefinition;
-use Symfony\Component\String\Slugger\AsciiSlugger;
 
 /**
  * Imports the content of an external MCP server into the graph. A run is idempotent: an item is identified by
@@ -27,6 +26,13 @@ final class ConnectorRunner
     private const BLOB_FORMATS = [
         'application/pdf' => 'pdf',
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document' => 'docx',
+    ];
+    /**
+     * Types detected in the bytes that each format accepts, as for an upload: the declared mimeType is not trusted.
+     */
+    private const BLOB_CONTENT_TYPES = [
+        'pdf' => ['application/pdf'],
+        'docx' => ['application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/zip'],
     ];
 
     public function __construct(
@@ -97,15 +103,29 @@ final class ConnectorRunner
      */
     private function importResources(Client $client, Connector $connector, array &$report): void
     {
+        $seen = [];
         foreach ($this->resources($client) as $resource) {
             foreach ($client->readResource($resource->uri)->contents as $contents) {
                 $title = $resource->title ?? $resource->name;
                 $mimeType = $contents->mimeType ?? $resource->mimeType ?? 'text/plain';
 
+                // Documents created in this run are not flushed yet, so the lookup by origin cannot see them.
+                if (isset($seen[$contents->uri])) {
+                    $report['skipped'][] = \sprintf('%s (contenu en double)', $contents->uri);
+                    continue;
+                }
+                $seen[$contents->uri] = true;
+
                 if ($contents instanceof TextResourceContents) {
-                    $this->upsertDocument($connector, $resource->uri, $title, 'md', $this->markdown($title, $contents->text, $mimeType), $report);
+                    $this->upsertDocument($connector, $contents->uri, $title, 'md', $this->markdown($title, $contents->text, $mimeType), $report);
                 } elseif ($contents instanceof BlobResourceContents && isset(self::BLOB_FORMATS[$mimeType])) {
-                    $this->upsertDocument($connector, $resource->uri, $title, self::BLOB_FORMATS[$mimeType], (string) base64_decode($contents->blob, true), $report);
+                    $format = self::BLOB_FORMATS[$mimeType];
+                    $bytes = (string) base64_decode($contents->blob, true);
+                    if (!\in_array((new \finfo(\FILEINFO_MIME_TYPE))->buffer($bytes), self::BLOB_CONTENT_TYPES[$format], true)) {
+                        $report['skipped'][] = \sprintf('%s (le contenu ne correspond pas au format %s)', $contents->uri, $mimeType);
+                        continue;
+                    }
+                    $this->upsertDocument($connector, $contents->uri, $title, $format, $bytes, $report);
                 } else {
                     $report['skipped'][] = \sprintf('%s (format %s non pris en charge)', $resource->uri, $mimeType);
                 }
@@ -139,6 +159,8 @@ final class ConnectorRunner
             throw new \RuntimeException(\sprintf('La réponse de l\'outil ne contient pas de liste au chemin "%s".', $connector->getItemsPath() ?? ''));
         }
 
+        // Memories added in this run are not flushed yet, so findByText cannot see them.
+        $seen = [];
         foreach (\array_slice($items, 0, self::MAX_ITEMS) as $index => $item) {
             $text = \is_string($item) ? $item : $this->itemText($item, $connector->getTextField());
             if (null === $text || '' === trim($text) || mb_strlen(trim($text)) > 1000) {
@@ -146,13 +168,15 @@ final class ConnectorRunner
                 continue;
             }
 
-            $memory = $this->memoryStore->findByText($text);
+            $key = mb_strtolower(trim($text));
+            $memory = $seen[$key] ?? $this->memoryStore->findByText($text);
             if (null === $memory) {
                 $memory = $this->memoryStore->add($text, $connector->getMemoryType(), 'connector', ['connector' => $connector->getName()]);
                 ++$report['created'];
             } else {
                 ++$report['unchanged'];
             }
+            $seen[$key] = $memory;
             if (null !== $connector->getProject()) {
                 $memory->addProject($connector->getProject());
             }
@@ -175,22 +199,15 @@ final class ConnectorRunner
             return;
         }
 
-        $file = tempnam(sys_get_temp_dir(), 'connector');
-        file_put_contents($file, $content);
-        try {
-            if (null === $document) {
-                $filename = (new AsciiSlugger())->slug($title)->lower()->toString() ?: 'document';
-                $document = $this->documentStorage->store($connector->getFolder(), new \SplFileInfo($file), $filename.'.'.$format, ['source' => 'connector', 'connector' => $connector->getName(), 'origin' => $origin]);
-                if ('md' !== $format) {
-                    $document->update($title, $document->getPath(), null, $document->getMetadata());
-                }
-                ++$report['created'];
-            } else {
-                $this->documentStorage->replace($document, new \SplFileInfo($file));
-                ++$report['updated'];
+        if (null === $document) {
+            $document = $this->documentStorage->storeContent($connector->getFolder(), $content, $title, $format, ['source' => 'connector', 'connector' => $connector->getName(), 'origin' => $origin]);
+            if ('md' !== $format) {
+                $document->update($title, $document->getPath(), null, $document->getMetadata());
             }
-        } finally {
-            unlink($file);
+            ++$report['created'];
+        } else {
+            $this->documentStorage->replaceContent($document, $content);
+            ++$report['updated'];
         }
 
         $document->setContentHash($hash);

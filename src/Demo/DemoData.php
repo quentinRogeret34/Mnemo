@@ -145,10 +145,9 @@ final class DemoData
         $removed = 0;
         $nodes = [
             ...$this->entityManager->getRepository(Node::class)->findBy(['project' => $project, 'type' => NodeType::BusinessRule]),
-            ...array_filter(
-                $this->entityManager->getRepository(Node::class)->findBy(['type' => [NodeType::Document, NodeType::Memory]]),
-                static fn (Node $node): bool => $node->getProjects()->contains($project),
-            ),
+            ...$this->entityManager->createQuery('SELECT n FROM App\Entity\Node n JOIN n.projects p WHERE n.type IN (:types) AND p = :project')
+                ->setParameters(['types' => [NodeType::Document, NodeType::Memory], 'project' => $project])
+                ->getResult(),
         ];
 
         foreach ($nodes as $node) {

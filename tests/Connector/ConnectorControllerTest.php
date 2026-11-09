@@ -49,7 +49,7 @@ final class ConnectorControllerTest extends WebTestCase
         self::assertSame(['user_id' => 'quentin'], $connector->getArguments());
 
         $crawler = $this->client->submit($crawler->selectButton('Tester la connexion')->form());
-        self::assertSelectorTextContains('[role="alert"]', 'La variable d\'environnement "NOT_USED_BY_THIS_TOOL" n\'est pas définie.');
+        self::assertSelectorTextContains('[role="alert"]', 'La variable d\'environnement "NOT_USED_BY_THIS_TOOL" n\'est pas autorisée.');
 
         $connector->setCredentials([]);
         $this->entityManager->flush();
@@ -59,7 +59,7 @@ final class ConnectorControllerTest extends WebTestCase
 
         $this->client->submit($crawler->selectButton('Synchroniser')->form());
         $this->client->followRedirect();
-        self::assertSelectorTextContains('.flash', 'Import terminé : 2 créés, 0 mis à jour, 0 inchangés, 1 ignorés.');
+        self::assertSelectorTextContains('.flash', 'Import terminé : 2 créés, 0 mis à jour, 1 inchangés, 1 ignorés.');
         self::assertSame(2, $this->entityManager->getRepository(Node::class)->count(['type' => NodeType::Memory]));
 
         $this->client->request('GET', '/connectors');
@@ -122,6 +122,6 @@ final class ConnectorControllerTest extends WebTestCase
         $connector->setEndpoint('php tests/Fixtures/mcp/server.php');
 
         $this->expectExceptionMessage('Les connecteurs STDIO sont désactivés');
-        (new McpClientFactory(false, '/app'))->connect($connector);
+        (new McpClientFactory(false, [], '/app'))->connect($connector);
     }
 }

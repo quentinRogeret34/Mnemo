@@ -50,6 +50,12 @@ final class IngestCodeCommand
             $result->edgesCreated,
             $result->edgesDeleted,
         ));
+        if ($result->manualEdgesMoved > 0) {
+            $io->note(\sprintf('%d manual links moved to the renamed nodes of the same file.', $result->manualEdgesMoved));
+        }
+        if ($result->manualEdgesLost > 0) {
+            $io->warning(\sprintf('%d manual links (documents, memories, rules) removed with the nodes that disappeared.', $result->manualEdgesLost));
+        }
 
         return Command::SUCCESS;
     }

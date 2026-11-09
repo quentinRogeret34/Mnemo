@@ -15,7 +15,6 @@ use Mcp\Capability\Attribute\Schema;
 use Mcp\Exception\ToolCallException;
 use Mcp\Schema\ToolAnnotations;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
-use Symfony\Component\String\Slugger\AsciiSlugger;
 
 final class WriteTools
 {
@@ -115,13 +114,7 @@ final class WriteTools
         }
         $projectEntities = array_map($this->project(...), $projects);
 
-        $file = tempnam(sys_get_temp_dir(), 'mcp-doc');
-        file_put_contents($file, '# '.$title."\n\n".preg_replace('/\A\s*#\s+.+\R/', '', $content, 1));
-        try {
-            $document = $this->documentStorage->store($this->folder($folder), new \SplFileInfo($file), (new AsciiSlugger())->slug($title)->lower().'.md', ['source' => 'mcp']);
-        } finally {
-            unlink($file);
-        }
+        $document = $this->documentStorage->storeContent($this->folder($folder), '# '.$title."\n\n".preg_replace('/\A\s*#\s+.+\R/', '', $content, 1), $title, 'md', ['source' => 'mcp']);
         foreach ($projectEntities as $project) {
             $document->addProject($project);
         }

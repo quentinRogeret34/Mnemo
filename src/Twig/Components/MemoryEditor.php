@@ -101,8 +101,14 @@ final class MemoryEditor
 
             return;
         }
+        $type = MemoryType::tryFrom($this->type);
+        if (null === $type) {
+            $this->error = 'Type de mémoire inconnu.';
 
-        $this->memoryStore->update($this->memory, $text, MemoryType::from($this->type));
+            return;
+        }
+
+        $this->memoryStore->update($this->memory, $text, $type);
         $this->entityManager->flush();
         $this->text = $this->memory->getLabel();
     }
@@ -111,7 +117,7 @@ final class MemoryEditor
     public function toggleProject(#[LiveArg] int $projectId): void
     {
         $project = $this->entityManager->find(Project::class, $projectId) ?? throw new \InvalidArgumentException('Unknown project.');
-        $this->memory->getProjects()->contains($project) ? $this->memory->removeProject($project) : $this->memory->addProject($project);
+        $this->memory->getProjects()->contains($project) ? $this->memoryStore->detachProject($this->memory, $project) : $this->memory->addProject($project);
         $this->entityManager->flush();
     }
 

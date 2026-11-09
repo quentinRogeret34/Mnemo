@@ -74,6 +74,29 @@ final class IngestCodeCommandTest extends KernelTestCase
         self::assertSame(3, $this->entityManager->getRepository(Edge::class)->count());
     }
 
+    public function testManualLinksFollowAFileWhoseIdChanged(): void
+    {
+        $this->command->execute(['project' => 'demo', 'graph' => self::FIXTURES.'/graph-v1.json']);
+        $document = new Node(null, NodeType::Document, 'doc', 'Spécification', 'spec.md', null, ['format' => 'md', 'storage' => 'doc.md']);
+        $this->entityManager->persist($document);
+        $this->entityManager->persist(new Edge($this->findNode('src_domain_catalog'), $document, 'documented_by', Confidence::Verified, EdgeOrigin::Human));
+        $this->entityManager->persist(new Edge($this->findNode('src_domain_catalog_merge'), $document, 'documented_by', Confidence::Verified, EdgeOrigin::Human));
+        $this->entityManager->flush();
+        $this->entityManager->clear();
+
+        $renamed = tempnam(sys_get_temp_dir(), 'graph');
+        file_put_contents($renamed, str_replace(['"src_domain_catalog"', '"src_domain_catalog_merge"'], ['"src/domain/catalog.ts"', '"catalog_merge_v2"'], (string) file_get_contents(self::FIXTURES.'/graph-v1.json')));
+        $this->command->execute(['project' => 'demo', 'graph' => $renamed]);
+        unlink($renamed);
+
+        $this->command->assertCommandIsSuccessful();
+        self::assertStringContainsString('1 manual links moved', $this->display());
+        self::assertStringContainsString('1 manual links (documents, memories, rules) removed', $this->display());
+        $this->entityManager->clear();
+        $edge = $this->entityManager->getRepository(Edge::class)->findOneBy(['relation' => 'documented_by']);
+        self::assertSame('src/domain/catalog.ts', $edge->getSource()->getExternalId());
+    }
+
     public function testFailsOnUnknownProject(): void
     {
         $status = $this->command->execute(['project' => 'missing', 'graph' => self::FIXTURES.'/graph-v1.json']);

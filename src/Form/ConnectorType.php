@@ -32,7 +32,7 @@ final class ConnectorType extends AbstractType
             ->add('credentials', TextareaType::class, [
                 'label' => 'En-têtes HTTP ou variables d\'environnement',
                 'required' => false,
-                'help' => 'Une ligne par valeur, « Nom: valeur ». Écrire « env:NOM » (ex. « Bearer env:GITHUB_MCP_TOKEN ») pour lire un secret dans .env.local au lieu de le stocker en base.',
+                'help' => 'Une ligne par valeur, « Nom: valeur ». Écrire « env:NOM » (ex. « Bearer env:GITHUB_MCP_TOKEN ») pour lire un secret dans .env.local au lieu de le stocker en base. Seules les variables listées dans MCP_CONNECTORS_ENV sont lisibles.',
                 'attr' => ['rows' => 3, 'placeholder' => 'Authorization: env:NOTION_MCP_TOKEN'],
             ])
             ->add('mode', EnumType::class, ['label' => 'Import', 'class' => ConnectorMode::class, 'choice_label' => static fn (ConnectorMode $mode): string => $mode->label()])

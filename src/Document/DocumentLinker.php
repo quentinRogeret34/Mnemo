@@ -4,6 +4,7 @@ namespace App\Document;
 
 use App\Entity\Edge;
 use App\Entity\Node;
+use App\Entity\Project;
 use App\Enum\Confidence;
 use App\Enum\EdgeOrigin;
 use App\Enum\NodeType;
@@ -35,6 +36,20 @@ final class DocumentLinker
         }
 
         $this->entityManager->persist(new Edge($file, $document, self::RELATION, Confidence::Verified, EdgeOrigin::Human, 'lien manuel'));
+    }
+
+    /**
+     * Links from the project's code files are rejected too: only code of the document's projects can be linked.
+     */
+    public function detachProject(Node $document, Project $project): void
+    {
+        $document->removeProject($project);
+        $edges = $this->entityManager->createQuery('SELECT e FROM App\Entity\Edge e JOIN e.source s WHERE e.target = :document AND e.relation = :relation AND s.project = :project')
+            ->setParameters(['document' => $document, 'relation' => self::RELATION, 'project' => $project])
+            ->getResult();
+        foreach ($edges as $edge) {
+            $edge->reject();
+        }
     }
 
     /**

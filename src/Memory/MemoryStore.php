@@ -4,6 +4,7 @@ namespace App\Memory;
 
 use App\Entity\Edge;
 use App\Entity\Node;
+use App\Entity\Project;
 use App\Enum\Confidence;
 use App\Enum\EdgeOrigin;
 use App\Enum\MemoryType;
@@ -82,6 +83,20 @@ final class MemoryStore
         }
 
         $this->entityManager->persist(new Edge($memory, $target, self::RELATION, Confidence::Verified, EdgeOrigin::Human, 'lien manuel'));
+    }
+
+    /**
+     * Links to the project's code and rules are rejected too: they can only be linked from a project the memory is attached to.
+     */
+    public function detachProject(Node $memory, Project $project): void
+    {
+        $memory->removeProject($project);
+        $edges = $this->entityManager->createQuery('SELECT e FROM App\Entity\Edge e JOIN e.target t WHERE e.source = :memory AND e.relation = :relation AND t.project = :project')
+            ->setParameters(['memory' => $memory, 'relation' => self::RELATION, 'project' => $project])
+            ->getResult();
+        foreach ($edges as $edge) {
+            $edge->reject();
+        }
     }
 
     /**

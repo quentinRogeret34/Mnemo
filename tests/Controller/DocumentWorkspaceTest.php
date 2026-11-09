@@ -119,6 +119,7 @@ final class DocumentWorkspaceTest extends WebTestCase
 
         $crawler = $this->client->request('GET', '/projects/demo/files/src/domain/catalog.ts');
         self::assertSame('Contrat cadre', $crawler->filter('section[aria-labelledby="docs-title"] .row__title')->text());
+        self::assertSelectorTextContains('section[aria-labelledby="outgoing-title"]', 'Aucune dépendance');
         $crawler = $this->client->request('GET', '/projects/other');
         self::assertSame('Contrat cadre', $crawler->filter('.content .row__title > span')->first()->text());
 
@@ -131,6 +132,23 @@ final class DocumentWorkspaceTest extends WebTestCase
         $component->call('linkFile', ['fileId' => $file->getId()]);
         $this->entityManager->clear();
         self::assertSame(EdgeStatus::Active, $this->entityManager->find(Edge::class, $edge->getId())->getStatus());
+
+        $component->call('toggleProject', ['projectId' => $this->project->getId()]);
+        $this->entityManager->clear();
+        self::assertSame(EdgeStatus::Rejected, $this->entityManager->find(Edge::class, $edge->getId())->getStatus());
+    }
+
+    public function testDownloadDeclaresTheTypeOfTheFormat(): void
+    {
+        $fake = tempnam(sys_get_temp_dir(), 'doc');
+        file_put_contents($fake, '<html><script>alert(1)</script></html>');
+        $document = self::getContainer()->get(DocumentStorage::class)->store(null, new \SplFileInfo($fake), 'piege.pdf');
+        $this->entityManager->flush();
+
+        $this->client->request('GET', '/documents/'.$document->getId().'/file');
+
+        self::assertResponseHeaderSame('Content-Type', 'application/pdf');
+        self::assertResponseHeaderSame('X-Content-Type-Options', 'nosniff');
     }
 
     public function testCodeOfAProjectTheDocumentIsNotAttachedToCannotBeLinked(): void

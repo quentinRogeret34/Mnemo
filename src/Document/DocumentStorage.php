@@ -8,6 +8,7 @@ use App\Enum\NodeType;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Filesystem\Filesystem;
+use Symfony\Component\String\Slugger\AsciiSlugger;
 use Symfony\Component\Uid\Uuid;
 
 final class DocumentStorage
@@ -55,6 +56,23 @@ final class DocumentStorage
     }
 
     /**
+     * Stores generated content as a document named after its title (not flushed).
+     *
+     * @param array<string, mixed> $metadata
+     */
+    public function storeContent(?Folder $folder, string $content, string $title, string $format, array $metadata = []): Node
+    {
+        $filename = (new AsciiSlugger())->slug($title)->lower()->toString() ?: 'document';
+
+        return $this->withTemporaryFile($content, fn (\SplFileInfo $file): Node => $this->store($folder, $file, $filename.'.'.$format, $metadata));
+    }
+
+    public function replaceContent(Node $document, string $content): void
+    {
+        $this->withTemporaryFile($content, fn (\SplFileInfo $file) => $this->replace($document, $file));
+    }
+
+    /**
      * Replaces the stored file of a document with a new version of the same format (not flushed).
      */
     public function replace(Node $document, \SplFileInfo $source): void
@@ -87,5 +105,23 @@ final class DocumentStorage
     {
         $this->filesystem->remove($this->absolutePath($document));
         $this->entityManager->remove($document);
+    }
+
+    /**
+     * @template T
+     *
+     * @param callable(\SplFileInfo): T $callback
+     *
+     * @return T
+     */
+    private function withTemporaryFile(string $content, callable $callback): mixed
+    {
+        $file = $this->filesystem->tempnam(sys_get_temp_dir(), 'document');
+        $this->filesystem->dumpFile($file, $content);
+        try {
+            return $callback(new \SplFileInfo($file));
+        } finally {
+            $this->filesystem->remove($file);
+        }
     }
 }

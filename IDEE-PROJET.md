@@ -382,7 +382,7 @@ Prochaines étapes proposées, dans l'ordre :
   `clients` de `symfony/mcp-bundle` est statique.
 - LLM : Mistral et / ou OpenRouter, choisis par variables d'environnement
   (`LLM_PLATFORM`, `LLM_MODEL`, `EMBEDDING_PLATFORM`, `EMBEDDING_MODEL`).
-- Secrets des connecteurs : références `env:NOM` lues dans `.env.local`.
+- Secrets des connecteurs : références `env:NOM` lues dans `.env.local`, limitées aux variables listées dans `MCP_CONNECTORS_ENV`.
 
 ### Encore ouvertes
 

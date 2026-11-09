@@ -91,7 +91,7 @@ final class DocumentProperties
     public function toggleProject(#[LiveArg] int $projectId): void
     {
         $project = $this->entityManager->find(Project::class, $projectId) ?? throw new \InvalidArgumentException('Unknown project.');
-        $this->document->getProjects()->contains($project) ? $this->document->removeProject($project) : $this->document->addProject($project);
+        $this->document->getProjects()->contains($project) ? $this->documentLinker->detachProject($this->document, $project) : $this->document->addProject($project);
         $this->entityManager->flush();
     }
 

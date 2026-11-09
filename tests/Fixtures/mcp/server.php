@@ -17,6 +17,7 @@ Server::builder()
             ['id' => 'a1', 'memory' => 'Préfère les tests fonctionnels aux tests unitaires.'],
             ['id' => 'a2', 'memory' => 'Utilise PostgreSQL 18 avec pgvector.'],
             ['id' => 'a3'],
+            ['id' => 'a4', 'memory' => 'utilise PostgreSQL 18 avec pgvector.'],
         ]]),
         'get_memories',
         description: 'mem0-like memory listing',

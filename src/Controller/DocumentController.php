@@ -98,12 +98,22 @@ final class DocumentController extends AbstractController
     public function download(int $id): BinaryFileResponse
     {
         $document = $this->findDocument($id);
+        $format = $document->getMetadata()['format'];
 
-        return $this->file(
+        $response = $this->file(
             $this->documentStorage->absolutePath($document),
             $document->getPath(),
-            'pdf' === $document->getMetadata()['format'] ? ResponseHeaderBag::DISPOSITION_INLINE : ResponseHeaderBag::DISPOSITION_ATTACHMENT,
+            'pdf' === $format ? ResponseHeaderBag::DISPOSITION_INLINE : ResponseHeaderBag::DISPOSITION_ATTACHMENT,
         );
+        // Without a declared type the response would be sniffed from the bytes, and HTML passed off as a PDF would run inline.
+        $response->headers->set('Content-Type', match ($format) {
+            'pdf' => 'application/pdf',
+            'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            default => 'text/markdown; charset=UTF-8',
+        });
+        $response->headers->set('X-Content-Type-Options', 'nosniff');
+
+        return $response;
     }
 
     private function handleUpload(FormInterface $form, Request $request, ?Folder $folder, ?Project $project): bool
