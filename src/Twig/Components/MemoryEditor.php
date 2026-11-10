@@ -31,6 +31,14 @@ final class MemoryEditor
     #[LiveProp(writable: true)]
     public string $linkQuery = '';
 
+    /**
+     * Decision record, shown for decisions only: context, decision, alternatives, consequences.
+     *
+     * @var array<string, string>
+     */
+    #[LiveProp(writable: true)]
+    public array $adr = [];
+
     public ?string $error = null;
 
     public function __construct(
@@ -45,11 +53,22 @@ final class MemoryEditor
         $this->memory = $memory;
         $this->text = $memory->getLabel();
         $this->type = $memory->getMetadata()['type'];
+        $this->adr = $this->storedAdr();
     }
 
     public function isDirty(): bool
     {
-        return trim($this->text) !== $this->memory->getLabel() || $this->type !== $this->memory->getMetadata()['type'];
+        return trim($this->text) !== $this->memory->getLabel()
+            || $this->type !== $this->memory->getMetadata()['type']
+            || (MemoryType::Decision->value === $this->type && array_map('trim', $this->adr) !== $this->storedAdr());
+    }
+
+    /**
+     * @return array<string, string> field => label, in display order
+     */
+    public function getAdrFields(): array
+    {
+        return ['context' => 'Contexte', 'decision' => 'Décision', 'alternatives' => 'Alternatives écartées', 'consequences' => 'Conséquences'];
     }
 
     /**
@@ -109,8 +128,20 @@ final class MemoryEditor
         }
 
         $this->memoryStore->update($this->memory, $text, $type);
+        if (MemoryType::Decision === $type) {
+            $this->memoryStore->setAdr($this->memory, array_map('strval', $this->adr));
+        }
         $this->entityManager->flush();
         $this->text = $this->memory->getLabel();
+        $this->adr = $this->storedAdr();
+    }
+
+    /**
+     * @return array<string, string> every field, empty when not filled
+     */
+    private function storedAdr(): array
+    {
+        return array_merge(array_fill_keys(MemoryStore::ADR_FIELDS, ''), $this->memory->getMetadata()['adr'] ?? []);
     }
 
     #[LiveAction]

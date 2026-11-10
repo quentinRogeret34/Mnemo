@@ -6,7 +6,9 @@ use App\Document\DocumentStorage;
 use App\Entity\Node;
 use App\Entity\Project;
 use App\Enum\NodeType;
+use App\Graph\CapabilityDetector;
 use App\Graph\GraphReader;
+use App\Export\MemoryBlockExporter;
 use App\Graph\KnowledgeReader;
 use Doctrine\ORM\EntityManagerInterface;
 use Mcp\Capability\Attribute\McpTool;
@@ -25,17 +27,21 @@ final class ReadTools
         private readonly GraphReader $graphReader,
         private readonly DocumentStorage $documentStorage,
         private readonly UrlGeneratorInterface $urlGenerator,
+        private readonly CapabilityDetector $capabilityDetector,
+        private readonly MemoryBlockExporter $memoryBlockExporter,
     ) {
     }
 
     /**
-     * @return list<array{slug: string, name: string, documents: int, memories: int, rules: int, rules_to_review: int, files: int}>
+     * @return list<array{slug: string, name: string, documents: int, memories: int, rules: int, rules_to_review: int, files: int, capabilities: list<string>}>
      */
-    #[McpTool(name: 'list_projects', description: 'List the projects (one per git repository) known by the knowledge graph, with counts of documents, memories, business rules and code files.', annotations: new ToolAnnotations(readOnlyHint: true))]
+    #[McpTool(name: 'list_projects', description: 'List the projects (one per git repository) known by the knowledge graph, with counts of documents, memories, business rules and code files, and the capabilities detected in the code paths (api, ui, database...).', annotations: new ToolAnnotations(readOnlyHint: true))]
     public function listProjects(): array
     {
         return array_map(
-            fn (Project $project): array => ['slug' => $project->getSlug(), 'name' => $project->getName()] + $this->knowledgeReader->counts($project),
+            fn (Project $project): array => ['slug' => $project->getSlug(), 'name' => $project->getName()]
+                + $this->knowledgeReader->counts($project)
+                + ['capabilities' => array_map(static fn (array $item): string => $item['capability']->value, $this->capabilityDetector->detect($project))],
             $this->entityManager->getRepository(Project::class)->findBy([], ['name' => 'ASC']),
         );
     }
@@ -116,6 +122,21 @@ final class ReadTools
             'code' => array_map(static fn (array $link): array => ['project' => $link['project_slug'], 'path' => $link['path']], $this->knowledgeReader->documentCodeLinks($document)),
             'memories' => $this->knowledgeReader->memoriesAbout($id),
             'note' => self::UNTRUSTED,
+        ];
+    }
+
+    /**
+     * @param string $project project slug
+     *
+     * @return array{block: string, files: list<string>, instructions: string}
+     */
+    #[McpTool(name: 'memory_block', description: 'The project memory (conventions, decisions, validated business rules) as a Markdown block for the agent context files. Write it into CLAUDE.md, AGENTS.md or .github/copilot-instructions.md, replacing any previous block between the same markers.', annotations: new ToolAnnotations(readOnlyHint: true))]
+    public function memoryBlock(string $project): array
+    {
+        return [
+            'block' => $this->memoryBlockExporter->render($this->project($project)),
+            'files' => MemoryBlockExporter::CONTEXT_FILES,
+            'instructions' => \sprintf('Replace the text between %s and %s (markers included) with the block, or append the block if the file has none. Leave the rest of the file untouched.', MemoryBlockExporter::OPEN, MemoryBlockExporter::CLOSE),
         ];
     }
 

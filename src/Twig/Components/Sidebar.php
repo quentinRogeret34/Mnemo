@@ -31,6 +31,11 @@ final class Sidebar
         return $this->knowledgeReader->memoryCount();
     }
 
+    public function getPendingProposals(): int
+    {
+        return $this->knowledgeReader->pendingProposals();
+    }
+
     /**
      * @return array{documents: int, memories: int, rules: int, rules_to_review: int, files: int}|null
      */

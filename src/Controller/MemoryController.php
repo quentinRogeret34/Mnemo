@@ -8,7 +8,9 @@ use App\Enum\MemoryType;
 use App\Enum\NodeType;
 use App\Form\MemoryFormType;
 use App\Graph\KnowledgeReader;
+use App\Llm\LlmUnavailable;
 use App\Memory\MemoryStore;
+use App\Verify\MemoryVerifier;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -23,6 +25,7 @@ final class MemoryController extends AbstractController
         private readonly KnowledgeReader $knowledgeReader,
         private readonly MemoryStore $memoryStore,
         private readonly EntityManagerInterface $entityManager,
+        private readonly MemoryVerifier $memoryVerifier,
     ) {
     }
 
@@ -32,6 +35,7 @@ final class MemoryController extends AbstractController
         #[MapQueryParameter] ?string $project = null,
         #[MapQueryParameter] ?string $type = null,
         #[MapQueryParameter] string $q = '',
+        #[MapQueryParameter] bool $archived = false,
     ): Response {
         $projectEntity = null === $project ? null : ($this->entityManager->getRepository(Project::class)->findOneBy(['slug' => $project]) ?? throw $this->createNotFoundException(\sprintf('Project "%s" not found.', $project)));
         $memoryType = null === $type ? null : MemoryType::tryFrom($type);
@@ -53,7 +57,8 @@ final class MemoryController extends AbstractController
             'type' => $memoryType,
             'q' => trim($q),
             'types' => MemoryType::cases(),
-            'memories' => $this->knowledgeReader->memories($projectEntity, $memoryType?->value, $q),
+            'archived' => $archived,
+            'memories' => $this->knowledgeReader->memories($projectEntity, $memoryType?->value, $q, $archived),
             'form' => $form,
         ], new Response(status: $form->isSubmitted() ? Response::HTTP_UNPROCESSABLE_ENTITY : Response::HTTP_OK));
     }
@@ -61,7 +66,12 @@ final class MemoryController extends AbstractController
     #[Route('/memories/{id}', name: 'memory_show', requirements: ['id' => '\d+'], methods: ['GET'])]
     public function show(int $id): Response
     {
-        return $this->render('memory/show.html.twig', ['memory' => $this->findMemory($id)]);
+        $memory = $this->findMemory($id);
+
+        return $this->render('memory/show.html.twig', [
+            'memory' => $memory,
+            'supersession' => $this->knowledgeReader->supersession($memory),
+        ]);
     }
 
     #[Route('/memories/{id}/delete', name: 'memory_delete', requirements: ['id' => '\d+'], methods: ['POST'])]
@@ -77,6 +87,31 @@ final class MemoryController extends AbstractController
         $this->addFlash('success', 'Mémoire supprimée.');
 
         return $this->redirectToRoute('memory_index');
+    }
+
+    #[Route('/memories/{id}/verify', name: 'memory_verify', requirements: ['id' => '\d+'], methods: ['POST'])]
+    public function verify(int $id, Request $request): Response
+    {
+        $memory = $this->findMemory($id);
+        if (!$this->isCsrfTokenValid('verify-memory-'.$id, $request->getPayload()->getString('_token'))) {
+            throw new AccessDeniedHttpException('Invalid CSRF token.');
+        }
+
+        $project = $memory->getProjects()->first();
+        if (false === $project) {
+            $this->addFlash('error', 'Rattacher la mémoire à un projet pour la vérifier contre son graphe.');
+
+            return $this->redirectToRoute('memory_show', ['id' => $id]);
+        }
+
+        try {
+            $verification = $this->memoryVerifier->verify($memory, $project);
+            $this->addFlash('success', \sprintf('Vérification terminée : %s.', ['verified' => 'vérifiée', 'refuted' => 'réfutée', 'conflict' => 'sources en conflit', 'unverified' => 'non vérifiable'][$verification['verdict']]));
+        } catch (LlmUnavailable|\UnexpectedValueException $exception) {
+            $this->addFlash('error', $exception->getMessage());
+        }
+
+        return $this->redirectToRoute('memory_show', ['id' => $id]);
     }
 
     private function findMemory(int $id): Node

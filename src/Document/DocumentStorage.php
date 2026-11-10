@@ -67,6 +67,61 @@ final class DocumentStorage
         return $this->withTemporaryFile($content, fn (\SplFileInfo $file): Node => $this->store($folder, $file, $filename.'.'.$format, $metadata));
     }
 
+    /**
+     * Creates or updates the document imported from the same origin (a connector item, a repository file...).
+     * A non-Markdown document keeps the given title, a Markdown one takes its first heading. Not flushed.
+     *
+     * @param array<string, mixed> $metadata
+     *
+     * @return array{Node, 'created'|'updated'|'unchanged'}
+     */
+    public function upsertContent(string $origin, ?Folder $folder, string $content, string $title, string $format, array $metadata = []): array
+    {
+        $hash = hash('sha256', $content);
+        $id = $this->entityManager->getConnection()->fetchOne(
+            'SELECT id FROM node WHERE type = :document AND metadata->>\'origin\' = :origin',
+            ['document' => NodeType::Document->value, 'origin' => $origin],
+        );
+        $document = false === $id ? null : $this->entityManager->find(Node::class, $id);
+
+        if (null !== $document && $hash === $document->getContentHash()) {
+            return [$document, 'unchanged'];
+        }
+
+        if (null === $document) {
+            $document = $this->storeContent($folder, $content, $title, $format, ['origin' => $origin] + $metadata);
+            if ('md' !== $format) {
+                $document->update($title, $document->getPath(), null, $document->getMetadata());
+            }
+            $status = 'created';
+        } else {
+            $this->replaceContent($document, $content);
+            $status = 'updated';
+        }
+        $document->setContentHash($hash);
+
+        return [$document, $status];
+    }
+
+    /**
+     * Folder from a slash-separated path, created if missing (not flushed). An empty path is the root.
+     */
+    public function folder(?string $path): ?Folder
+    {
+        $folder = null;
+        foreach (array_filter(array_map('trim', explode('/', (string) $path)), 'strlen') as $name) {
+            // A folder created in this loop is not flushed yet and cannot have children to look up.
+            $child = null !== $folder && null === $folder->getId() ? null : $this->entityManager->getRepository(Folder::class)->findOneBy(['name' => $name, 'parent' => $folder]);
+            if (null === $child) {
+                $child = new Folder($name, $folder);
+                $this->entityManager->persist($child);
+            }
+            $folder = $child;
+        }
+
+        return $folder;
+    }
+
     public function replaceContent(Node $document, string $content): void
     {
         $this->withTemporaryFile($content, fn (\SplFileInfo $file) => $this->replace($document, $file));

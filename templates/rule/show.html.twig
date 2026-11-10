@@ -73,6 +73,38 @@
             {% endif %}
         </section>
 
+        {% set areas = meta.shadow_areas ?? [] %}
+        <section class="block" aria-labelledby="shadow-title">
+            <div class="block__head"><h2 id="shadow-title">Zones d'ombre</h2><span class="block__count">{{ areas|length }}</span></div>
+            {% if meta.shadow_checked_at is not defined %}
+                <p class="block__empty">Jamais analysée : ce que la règle laisse deviner au développeur (hypothèses, termes ambigus, cas limites...).</p>
+            {% elseif areas is empty %}
+                <p class="block__empty">Aucune zone d'ombre trouvée.</p>
+            {% else %}
+                <ul class="shadow-areas">
+                    {% for area in areas %}
+                        <li class="shadow-area shadow-area--{{ area.severity }}">
+                            <div class="shadow-area__head">
+                                <span class="code-chip">{{ categories[area.category] ?? area.category }}</span>
+                                <span class="shadow-area__severity">{{ {blocker: 'Bloquant', major: 'Majeur', minor: 'Mineur'}[area.severity] ?? area.severity }}</span>
+                            </div>
+                            <p class="shadow-area__gap">{{ area.gap }}</p>
+                            {% if area.question %}<p class="shadow-area__question">{{ area.question }}</p>{% endif %}
+                            <form method="post" action="{{ path('rule_shadow_resolve', {slug: project.slug, code: rule.externalId, index: loop.index0}) }}">
+                                <input type="hidden" name="_token" value="{{ csrf_token('rule-shadow-' ~ rule.id) }}">
+                                <button class="button" type="submit">Résolue</button>
+                            </form>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+            <form class="inline-form" method="post" action="{{ path('rule_shadow', {slug: project.slug, code: rule.externalId}) }}">
+                <input type="hidden" name="_token" value="{{ csrf_token('rule-shadow-' ~ rule.id) }}">
+                <button class="button" type="submit">{{ meta.shadow_checked_at is defined ? 'Réanalyser' : 'Analyser' }}</button>
+                {% if meta.shadow_checked_at is defined %}<span class="row__sub">Dernière analyse le {{ meta.shadow_checked_at|date('d/m/Y H:i') }} ; réanalyser remplace la liste.</span>{% endif %}
+            </form>
+        </section>
+
         {{ include('memory/_about.html.twig', {memories: memories}) }}
     </article>
 {% endblock %}

@@ -130,6 +130,23 @@ final class MemoryTest extends WebTestCase
         self::assertSame(0, $this->entityManager->getRepository(Edge::class)->count(['relation' => 'about']));
     }
 
+    public function testDecisionRecordIsEditedAndShown(): void
+    {
+        $memory = $this->givenMemory();
+        $component = $this->createLiveComponent('MemoryEditor', ['memory' => $memory]);
+
+        $component->set('adr.context', '  Recalcul trop lent sur les gros paniers.  ');
+        $component->set('adr.decision', 'Recalcul à chaque ajout, en mémoire.');
+        $component->call('save');
+
+        $this->entityManager->clear();
+        $memory = $this->entityManager->find(Node::class, $memory->getId());
+        self::assertSame(['context' => 'Recalcul trop lent sur les gros paniers.', 'decision' => 'Recalcul à chaque ajout, en mémoire.'], $memory->getMetadata()['adr']);
+
+        $crawler = $this->client->request('GET', '/memories/'.$memory->getId());
+        self::assertSame('Recalcul trop lent sur les gros paniers.', $crawler->filter('#adr-context')->text());
+    }
+
     private function givenMemory(): Node
     {
         $memory = self::getContainer()->get(MemoryStore::class)->add('Panier : remises recalculées.', MemoryType::Decision, 'manual');

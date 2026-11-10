@@ -11,7 +11,7 @@
 {% endblock %}
 
 {% block body %}
-    {% set filters = {project: project ? project.slug : null, q: q ?: null} %}
+    {% set filters = {project: project ? project.slug : null, q: q ?: null, archived: archived ? 1 : null} %}
     <div class="view-head">
         <h1>Mémoires</h1>
         <span class="view-head__meta">{{ memories|length }}{{ project ? ' rattachées à ' ~ project.name }}</span>
@@ -38,26 +38,33 @@
                 <a href="{{ path('memory_index', (filters|merge({type: item.value}))|filter(v => v is not null)) }}" {% if type == item %}aria-current="page"{% endif %}>{{ item.label }}</a>
             {% endfor %}
         </nav>
+        <nav class="tabs" aria-label="Filtrer par statut">
+            <a href="{{ path('memory_index', (filters|merge({archived: null, type: type ? type.value : null}))|filter(v => v is not null)) }}" {% if not archived %}aria-current="page"{% endif %}>Actives</a>
+            <a href="{{ path('memory_index', (filters|merge({archived: 1, type: type ? type.value : null}))|filter(v => v is not null)) }}" {% if archived %}aria-current="page"{% endif %}>Archivées</a>
+        </nav>
         <form class="filter-bar__search" method="get" action="{{ path('memory_index') }}" role="search">
             {% if project %}<input type="hidden" name="project" value="{{ project.slug }}">{% endif %}
             {% if type %}<input type="hidden" name="type" value="{{ type.value }}">{% endif %}
+            {% if archived %}<input type="hidden" name="archived" value="1">{% endif %}
             <input class="input" type="search" name="q" value="{{ q }}" placeholder="Rechercher" aria-label="Chercher dans les mémoires">
         </form>
     </div>
 
     {% if memories is empty %}
-        <p class="block__empty">{{ q or type ? 'Aucune mémoire ne correspond.' : 'Aucune mémoire. En ajouter une ci-dessus ; plus tard, les agents (Claude Code, MCP) les enverront automatiquement.' }}</p>
+        <p class="block__empty">{{ q or type or archived ? 'Aucune mémoire ne correspond.' : 'Aucune mémoire. En ajouter une ci-dessus ; plus tard, les agents (Claude Code, MCP) les enverront automatiquement.' }}</p>
     {% else %}
         <ul class="list">
             {% for memory in memories %}
                 <li>
-                    <a class="row row--memory" href="{{ path('memory_show', {id: memory.id}) }}">
+                    <a class="row row--memory{{ memory.status != 'active' ? ' row--archived' }}" href="{{ path('memory_show', {id: memory.id}) }}">
                         {{ include('memory/_type.html.twig', {type: memory.type}) }}
                         <span class="row__title">
                             <span class="memory-text">{{ memory.text }}</span>
                             {% if memory.demo %}<span class="tag tag--demo">Démo</span>{% endif %}
                         </span>
                         <span class="row__meta">
+                            {{ include('memory/_verdict.html.twig', {verdict: memory.verdict}) }}
+                            {% if memory.status != 'active' %}<span class="tag">{{ memory.status == 'superseded' ? 'remplacée' : 'retirée' }}</span>{% endif %}
                             {% if memory.projects and not project %}<span class="row__projects">{{ memory.projects }}</span>{% endif %}
                             <span>{{ memory.links }} {{ memory.links > 1 ? 'liens' : 'lien' }}</span>
                             <span class="num">{{ memory.updated_at|date('d/m/Y') }}</span>

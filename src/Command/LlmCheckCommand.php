@@ -2,6 +2,7 @@
 
 namespace App\Command;
 
+use App\Llm\Chat;
 use App\Llm\LlmSettings;
 use Symfony\AI\Platform\Message\Message;
 use Symfony\AI\Platform\Message\MessageBag;
@@ -16,6 +17,7 @@ final class LlmCheckCommand
 {
     public function __construct(
         private readonly LlmSettings $settings,
+        private readonly Chat $chat,
     ) {
     }
 
@@ -34,6 +36,20 @@ final class LlmCheckCommand
                 ->invoke($this->settings->chatModel, new MessageBag(Message::ofUser('Réponds uniquement par le mot OK.')))
                 ->getResult();
             $io->success(\sprintf('Answer: %s', $result instanceof TextResult ? trim($result->getContent()) : $result::class));
+        } catch (\Throwable $exception) {
+            $io->error($exception->getMessage());
+            $failed = true;
+        }
+
+        $io->section('Structured output (JSON schema)');
+        try {
+            $answer = $this->chat->ask('Tu es un test de connexion.', 'Renvoie le mot OK dans le champ "status".', [
+                'type' => 'object',
+                'properties' => ['status' => ['type' => 'string']],
+                'required' => ['status'],
+                'additionalProperties' => false,
+            ]);
+            $io->success(\sprintf('Answer: %s', json_encode($answer, \JSON_UNESCAPED_UNICODE)));
         } catch (\Throwable $exception) {
             $io->error($exception->getMessage());
             $failed = true;

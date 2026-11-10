@@ -9,8 +9,53 @@
 {% endblock %}
 
 {% block body %}
+    {% set status = memory.metadata.status ?? 'active' %}
     <article class="page">
+        {% if status != 'active' %}
+            <p class="archived-banner" role="status">
+                <strong>{{ status == 'superseded' ? 'Remplacée' : 'Retirée' }}</strong>
+                {% for item in supersession.replaced_by %}par <a href="{{ path('memory_show', {id: item.id}) }}">{{ item.text }}</a>{{ not loop.last ? ', ' }}{% endfor %}
+                <span class="row__sub">Archivée : n'apparaît plus dans la recherche ni chez les agents.</span>
+            </p>
+        {% endif %}
+
         <twig:MemoryEditor :memory="memory" />
+
+        {% if supersession.replaces is not empty %}
+            <section class="block" aria-labelledby="replaces-title">
+                <div class="block__head"><h2 id="replaces-title">Remplace</h2><span class="block__count">{{ supersession.replaces|length }}</span></div>
+                <ul class="list">
+                    {% for item in supersession.replaces %}
+                        <li><a class="row row--memory row--archived" href="{{ path('memory_show', {id: item.id}) }}"><span class="row__title"><span class="memory-text">{{ item.text }}</span></span></a></li>
+                    {% endfor %}
+                </ul>
+            </section>
+        {% endif %}
+
+        {% set verification = memory.metadata.verification ?? null %}
+        <section class="block" aria-labelledby="verification-title">
+            <div class="block__head">
+                <h2 id="verification-title">Vérification</h2>
+                {% if verification %}{{ include('memory/_verdict.html.twig', {verdict: verification.verdict}) }}{% endif %}
+            </div>
+            {% if verification %}
+                {% if verification.text != memory.label %}<p class="row__sub">Le texte a changé depuis : à revérifier.</p>{% endif %}
+                <p class="verification__reason">{{ verification.reason }}</p>
+                {% if verification.sources is not empty %}
+                    <p class="row__sub">Sources : {% for source in verification.sources %}{{ source.label }}{{ not loop.last ? ', ' }}{% endfor %}</p>
+                {% endif %}
+                <p class="row__sub">{{ {graph: 'Graphe du code, sans LLM', knowledge: 'Règles, documents et code liés, un appel LLM', none: 'Aucune source'}[verification.tier] ?? verification.tier }} · {{ verification.at|date('d/m/Y H:i') }}</p>
+            {% else %}
+                <p class="block__empty">Jamais vérifiée contre le graphe.</p>
+            {% endif %}
+            {% if status == 'active' %}
+                <form class="inline-form" method="post" action="{{ path('memory_verify', {id: memory.id}) }}">
+                    <input type="hidden" name="_token" value="{{ csrf_token('verify-memory-' ~ memory.id) }}">
+                    <button class="button" type="submit">Vérifier</button>
+                    <span class="row__sub">Chemins cités contre le graphe du code, puis règles et documents liés.</span>
+                </form>
+            {% endif %}
+        </section>
 
         <form class="danger-zone" method="post" action="{{ path('memory_delete', {id: memory.id}) }}">
             <input type="hidden" name="_token" value="{{ csrf_token('delete-memory-' ~ memory.id) }}">
