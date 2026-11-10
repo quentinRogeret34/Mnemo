@@ -8,6 +8,7 @@ use App\Enum\EdgeStatus;
 use App\Enum\NodeType;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 
 final class KnowledgeReader
 {
@@ -24,7 +25,7 @@ final class KnowledgeReader
         return array_map('intval', $this->connection->fetchAssociative(
             <<<'SQL'
                 SELECT (SELECT COUNT(*) FROM node_project np JOIN node d ON d.id = np.node_id WHERE np.project_id = :project AND d.type = :document) AS documents,
-                       (SELECT COUNT(*) FROM node_project np JOIN node m ON m.id = np.node_id WHERE np.project_id = :project AND m.type = :memory) AS memories,
+                       (SELECT COUNT(*) FROM node_project np JOIN node m ON m.id = np.node_id WHERE np.project_id = :project AND m.type = :memory AND COALESCE(m.metadata->>'status', 'active') = 'active') AS memories,
                        COUNT(*) FILTER (WHERE type = :rule) AS rules,
                        COUNT(*) FILTER (WHERE type = :rule AND metadata->>'status' = 'to_review') AS rules_to_review,
                        COUNT(*) FILTER (WHERE type = :file) AS files
@@ -36,24 +37,28 @@ final class KnowledgeReader
 
     public function memoryCount(): int
     {
-        return (int) $this->connection->fetchOne('SELECT COUNT(*) FROM node WHERE type = :memory', ['memory' => NodeType::Memory->value]);
+        return (int) $this->connection->fetchOne("SELECT COUNT(*) FROM node m WHERE m.type = :memory AND COALESCE(m.metadata->>'status', 'active') = 'active'", ['memory' => NodeType::Memory->value]);
     }
 
     /**
-     * @return list<array{id: int, text: string, type: string, source: ?string, demo: bool, created_at: string, updated_at: string, projects: ?string, links: int}>
+     * Active memories, or the archived ones (superseded or retracted) when asked.
+     *
+     * @return list<array{id: int, text: string, type: string, source: ?string, status: string, verdict: ?string, demo: bool, created_at: string, updated_at: string, projects: ?string, links: int}>
      */
-    public function memories(?Project $project = null, ?string $type = null, string $query = ''): array
+    public function memories(?Project $project = null, ?string $type = null, string $query = '', bool $archived = false): array
     {
         return array_map(
             static fn (array $row): array => ['id' => (int) $row['id'], 'demo' => (bool) $row['demo'], 'links' => (int) $row['links']] + $row,
             $this->connection->fetchAllAssociative(
                 <<<'SQL'
                     SELECT m.id, m.label AS text, m.metadata->>'type' AS type, m.metadata->>'source' AS source,
+                           COALESCE(m.metadata->>'status', 'active') AS status, m.metadata->'verification'->>'verdict' AS verdict,
                            COALESCE((m.metadata->>'demo')::boolean, false) AS demo, m.created_at, m.updated_at,
                            (SELECT string_agg(p.name, ', ' ORDER BY p.name) FROM node_project np JOIN project p ON p.id = np.project_id WHERE np.node_id = m.id) AS projects,
                            (SELECT COUNT(*) FROM edge e WHERE e.source_id = m.id AND e.relation = 'about' AND e.status = :active) AS links
                     FROM node m
                     WHERE m.type = :memory
+                      AND (COALESCE(m.metadata->>'status', 'active') = 'active') <> :archived
                       AND (CAST(:project AS int) IS NULL OR EXISTS (SELECT 1 FROM node_project np WHERE np.node_id = m.id AND np.project_id = :project))
                       AND (CAST(:type AS text) IS NULL OR m.metadata->>'type' = :type)
                       AND (:query = '' OR m.label ILIKE :like)
@@ -66,7 +71,9 @@ final class KnowledgeReader
                     'type' => $type,
                     'query' => trim($query),
                     'like' => '%'.addcslashes(trim($query), '\\%_').'%',
+                    'archived' => $archived,
                 ],
+                ['archived' => ParameterType::BOOLEAN],
             ),
         );
     }
@@ -127,19 +134,21 @@ final class KnowledgeReader
     }
 
     /**
-     * Memories linked to a code file, document or rule.
+     * Active memories linked to a code file, document or rule, with their decision record and verification verdict.
      *
-     * @return list<array{id: int, text: string, type: string, demo: bool}>
+     * @return list<array{id: int, text: string, type: string, demo: bool, verdict: ?string, adr: ?array<string, string>}>
      */
     public function memoriesAbout(int $nodeId): array
     {
         return array_map(
-            static fn (array $row): array => ['id' => (int) $row['id'], 'demo' => (bool) $row['demo']] + $row,
+            static fn (array $row): array => ['id' => (int) $row['id'], 'demo' => (bool) $row['demo'], 'adr' => null === $row['adr'] ? null : json_decode($row['adr'], true)] + $row,
             $this->connection->fetchAllAssociative(
                 <<<'SQL'
-                    SELECT m.id, m.label AS text, m.metadata->>'type' AS type, COALESCE((m.metadata->>'demo')::boolean, false) AS demo
+                    SELECT m.id, m.label AS text, m.metadata->>'type' AS type, COALESCE((m.metadata->>'demo')::boolean, false) AS demo,
+                           m.metadata->'verification'->>'verdict' AS verdict, m.metadata->'adr' AS adr
                     FROM edge e JOIN node m ON m.id = e.source_id
                     WHERE e.target_id = :node AND e.relation = 'about' AND e.status = :active AND m.type = :memory
+                      AND COALESCE(m.metadata->>'status', 'active') = 'active'
                     ORDER BY m.updated_at DESC
                     SQL,
                 ['node' => $nodeId, 'active' => EdgeStatus::Active->value, 'memory' => NodeType::Memory->value],
@@ -289,16 +298,17 @@ final class KnowledgeReader
     }
 
     /**
-     * @return list<array{code: string, title: string, statement: ?string, status: ?string, demo: bool, documents: int, files: int, verified_files: int}>
+     * @return list<array{code: string, title: string, statement: ?string, status: ?string, demo: bool, documents: int, files: int, verified_files: int, shadow_areas: int}>
      */
     public function rules(Project $project, ?string $status = null): array
     {
         return array_map(
-            static fn (array $row): array => ['demo' => (bool) $row['demo'], 'documents' => (int) $row['documents'], 'files' => (int) $row['files'], 'verified_files' => (int) $row['verified_files']] + $row,
+            static fn (array $row): array => ['demo' => (bool) $row['demo'], 'documents' => (int) $row['documents'], 'files' => (int) $row['files'], 'verified_files' => (int) $row['verified_files'], 'shadow_areas' => (int) $row['shadow_areas']] + $row,
             $this->connection->fetchAllAssociative(
                 <<<'SQL'
                     SELECT r.external_id AS code, r.label AS title, r.metadata->>'statement' AS statement, r.metadata->>'status' AS status,
                            COALESCE((r.metadata->>'demo')::boolean, false) AS demo,
+                           COALESCE(json_array_length(r.metadata->'shadow_areas'), 0) AS shadow_areas,
                            (SELECT COUNT(*) FROM edge e WHERE e.target_id = r.id AND e.relation = 'defines' AND e.status = :active) AS documents,
                            (SELECT COUNT(*) FROM edge e WHERE e.source_id = r.id AND e.relation = 'implemented_by' AND e.status = :active) AS files,
                            (SELECT COUNT(*) FROM edge e WHERE e.source_id = r.id AND e.relation = 'implemented_by' AND e.status = :active AND e.confidence = 'VERIFIED') AS verified_files
@@ -383,12 +393,13 @@ final class KnowledgeReader
                 <<<SQL
                     SELECT id, type, label, path, code, project_slug, snippet FROM (
                     SELECT DISTINCT ON (n.id) n.id, n.type, n.label, n.path, n.external_id AS code, p.slug AS project_slug,
-                           CASE WHEN n.type = :rule THEN n.metadata->>'statement' WHEN s.id IS NOT NULL THEN 'symbol: ' || s.label END AS snippet,
+                           CASE WHEN n.type = :rule THEN n.metadata->>'statement' WHEN n.type = :memory THEN n.metadata->'adr'->>'decision' WHEN s.id IS NOT NULL THEN 'symbol: ' || s.label END AS snippet,
                            CASE n.type WHEN :memory THEN 0 WHEN :rule THEN 1 WHEN :document THEN 2 ELSE 3 END AS rank
                     FROM node n
                     LEFT JOIN project p ON p.id = n.project_id
                     LEFT JOIN node s ON n.type = :file AND s.project_id = n.project_id AND s.path = n.path AND s.type = :symbol AND s.label ILIKE :like
                     WHERE n.type IN (:types)
+                      AND (n.type <> :memory OR COALESCE(n.metadata->>'status', 'active') = 'active')
                       AND (
                           n.label ILIKE :like OR n.path ILIKE :like OR s.id IS NOT NULL
                           OR (n.type = :rule AND (n.external_id ILIKE :like OR n.metadata->>'statement' ILIKE :like))
@@ -415,6 +426,83 @@ final class KnowledgeReader
                 ],
                 ['types' => ArrayParameterType::STRING],
             ),
+        );
+    }
+
+    /**
+     * Nodes sharing words with the text, best first: a keyword stand-in for semantic search until vectors exist.
+     * Only active memories are returned; memories without any project are shared by all projects.
+     *
+     * @param list<string> $types   node types among memory, document, business_rule
+     * @param list<int>    $exclude node ids to leave out
+     *
+     * @return list<array{id: int, type: string, label: string, code: string, path: ?string, statement: ?string}>
+     */
+    public function related(string $text, Project $project, array $types, int $limit, array $exclude = []): array
+    {
+        preg_match_all('/[\p{L}\p{N}_]{4,}/u', mb_strtolower($text), $words);
+        // Prefixes stand in for stemming in any language: "remises" and "remise" both match "remise:*".
+        $words = \array_slice(array_values(array_unique(array_map(
+            static fn (string $word): string => mb_substr($word, 0, max(4, min(6, mb_strlen($word) - 1))).':*',
+            $words[0],
+        ))), 0, 40);
+        if ([] === $words || [] === $types) {
+            return [];
+        }
+
+        return array_map(
+            static fn (array $row): array => ['id' => (int) $row['id']] + $row,
+            $this->connection->fetchAllAssociative(
+                <<<SQL
+                    SELECT n.id, n.type, n.label, n.external_id AS code, n.path, n.metadata->>'statement' AS statement
+                    FROM node n, to_tsquery('simple', :query) q,
+                         to_tsvector('simple', n.label || ' ' || COALESCE(n.metadata->>'statement', '') || ' ' || COALESCE(n.metadata->'adr'->>'decision', '')) v
+                    WHERE n.type IN (:types) AND v @@ q AND n.id NOT IN (:exclude)
+                      AND (n.type <> :memory OR COALESCE(n.metadata->>'status', 'active') = 'active')
+                      AND (
+                          n.project_id = :project
+                          OR EXISTS (SELECT 1 FROM node_project np WHERE np.node_id = n.id AND np.project_id = :project)
+                          OR (n.type = :memory AND NOT EXISTS (SELECT 1 FROM node_project np WHERE np.node_id = n.id))
+                      )
+                    ORDER BY ts_rank(v, q) DESC, n.id
+                    LIMIT $limit
+                    SQL,
+                ['query' => implode(' | ', $words), 'types' => $types, 'exclude' => [0, ...$exclude], 'memory' => NodeType::Memory->value, 'project' => $project->getId()],
+                ['types' => ArrayParameterType::STRING, 'exclude' => ArrayParameterType::INTEGER],
+            ),
+        );
+    }
+
+    /**
+     * Memories this one replaces, and the ones that replace it ("supersedes" edges).
+     *
+     * @return array{replaces: list<array{id: int, text: string, status: string}>, replaced_by: list<array{id: int, text: string, status: string}>}
+     */
+    public function supersession(Node $memory): array
+    {
+        $rows = $this->connection->fetchAllAssociative(
+            <<<'SQL'
+                SELECT CASE WHEN e.source_id = :memory THEN 'replaces' ELSE 'replaced_by' END AS direction,
+                       m.id, m.label AS text, COALESCE(m.metadata->>'status', 'active') AS status
+                FROM edge e JOIN node m ON m.id = CASE WHEN e.source_id = :memory THEN e.target_id ELSE e.source_id END
+                WHERE (e.source_id = :memory OR e.target_id = :memory) AND e.relation = 'supersedes' AND e.status = :active
+                ORDER BY m.created_at
+                SQL,
+            ['memory' => $memory->getId(), 'active' => EdgeStatus::Active->value],
+        );
+        $result = ['replaces' => [], 'replaced_by' => []];
+        foreach ($rows as $row) {
+            $result[$row['direction']][] = ['id' => (int) $row['id'], 'text' => $row['text'], 'status' => $row['status']];
+        }
+
+        return $result;
+    }
+
+    public function pendingProposals(?Project $project = null): int
+    {
+        return (int) $this->connection->fetchOne(
+            'SELECT COUNT(*) FROM proposal WHERE status = :pending AND (CAST(:project AS int) IS NULL OR project_id = :project)',
+            ['pending' => 'pending', 'project' => $project?->getId()],
         );
     }
 }

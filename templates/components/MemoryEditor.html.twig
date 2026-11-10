@@ -12,6 +12,16 @@
         </div>
     {% endif %}
 
+    {% if type == 'decision' %}
+        <section class="adr" aria-labelledby="adr-title">
+            <h2 id="adr-title" class="block__sub">Fiche de décision</h2>
+            {% for field, label in this.adrFields %}
+                <label class="adr__label" for="adr-{{ field }}">{{ label }}</label>
+                <textarea id="adr-{{ field }}" class="adr__text" data-model="adr[{{ field }}]" rows="2" maxlength="4000">{{ adr[field] ?? '' }}</textarea>
+            {% endfor %}
+        </section>
+    {% endif %}
+
     <dl class="props">
         <dt><label for="memory-type">Type</label></dt>
         <dd>
@@ -72,7 +82,8 @@
             </span>
         </dd>
 
-        <dt>Source</dt><dd>{{ {manual: 'saisie manuelle', demo: 'démo'}[meta.source] ?? meta.source }}</dd>
+        <dt>Source</dt><dd>{{ {manual: 'saisie manuelle', demo: 'démo', learn: 'extraite par LLM', aidd: 'banque AIDD', mcp: 'agent (MCP)', connector: 'connecteur'}[meta.source] ?? meta.source }}{% if meta.learned_from is defined %} · {{ meta.learned_from.kind }} « {{ meta.learned_from.label }} »{% endif %}</dd>
+        {% if meta.evidence is defined %}<dt>Preuve</dt><dd><q>{{ meta.evidence }}</q></dd>{% endif %}
         <dt>Créée le</dt><dd>{{ memory.createdAt|date('d/m/Y à H:i') }}</dd>
         <dt>Modifiée le</dt><dd>{{ memory.updatedAt|date('d/m/Y à H:i') }}</dd>
         {% if meta.demo ?? false %}<dt>Origine</dt><dd><span class="tag tag--demo">Démo</span></dd>{% endif %}

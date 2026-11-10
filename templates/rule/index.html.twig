@@ -34,6 +34,7 @@
                         </span>
                         <span class="row__meta">
                             <span class="status status--{{ rule.status }}">{{ rule.status == 'validated' ? 'Validée' : 'À valider' }}</span>
+                            {% if rule.shadow_areas > 0 %}<span title="Zones d'ombre à lever avec le métier">{{ rule.shadow_areas }} zones d'ombre</span>{% endif %}
                             <span title="Documents sources">{{ rule.documents }} doc.</span>
                             <span title="Fichiers liés, dont vérifiés">{{ rule.files }} fichiers · {{ rule.verified_files }} vérifiés</span>
                         </span>

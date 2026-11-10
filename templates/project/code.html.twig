@@ -13,5 +13,10 @@
         <h1>Code</h1>
         <span class="view-head__meta mono">{{ project.repositoryPath }}</span>
     </div>
+    {% if capabilities is not empty %}
+        <p class="capabilities" aria-label="Capacités détectées dans les chemins du code">
+            {% for item in capabilities %}<span class="tag" title="{{ item.evidence|join('\n') }}">{{ item.capability.label }}</span>{% endfor %}
+        </p>
+    {% endif %}
     <twig:FileSearch :project="project" />
 {% endblock %}

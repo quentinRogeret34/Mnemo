@@ -1,0 +1,50 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Jardinage · {{ project.name }}{% endblock %}
+
+{% block crumbs %}
+    <a href="{{ path('project_show', {slug: project.slug}) }}">{{ project.name }}</a>
+    <span class="crumbs__sep" aria-hidden="true">/</span>
+    <span class="crumbs__current">Jardinage</span>
+{% endblock %}
+
+{% block body %}
+    <div class="view-head">
+        <h1>Jardinage</h1>
+        <span class="view-head__meta">{{ findings|length }} {{ findings|length > 1 ? 'constats' : 'constat' }}</span>
+    </div>
+    <p class="page__lede">Ce qui a dérivé dans la connaissance du projet. Ce contrôle ne modifie rien : chaque correction se fait depuis la fiche concernée ou dans <a class="link" href="{{ path('proposal_index', {project: project.slug}) }}">À valider</a>{% if pending > 0 %} ({{ pending }} en attente){% endif %}.</p>
+
+    <form class="inline-form" method="post" action="{{ path('garden_duplicates', {slug: project.slug}) }}">
+        <input type="hidden" name="_token" value="{{ csrf_token('garden-' ~ project.slug) }}">
+        <button class="button" type="submit">Chercher doublons et contradictions</button>
+        <span class="row__sub">Un appel LLM par lot de mémoires ; les paires trouvées arrivent dans À valider.</span>
+    </form>
+
+    {% if findings is empty %}
+        <p class="block__empty">Rien n'a dérivé.</p>
+    {% endif %}
+
+    {% for finding in findings %}
+        <section class="block" aria-labelledby="finding-{{ finding.key }}">
+            <div class="block__head"><h2 id="finding-{{ finding.key }}">{{ finding.title }}</h2><span class="block__count">{{ finding.count }}</span></div>
+            <p class="row__sub">{{ finding.hint }}</p>
+            <ul class="list">
+                {% for item in finding.items %}
+                    <li>
+                        {% if item.type == 'memory' %}
+                            <a class="row row--memory" href="{{ path('memory_show', {id: item.id}) }}"><span class="row__title"><span class="memory-text">{{ item.label }}</span></span></a>
+                        {% elseif item.type == 'business_rule' %}
+                            <a class="row" href="{{ path('rule_show', {slug: project.slug, code: item.code}) }}"><span class="row__title"><span class="code-chip">{{ item.code }}</span> {{ item.label }}</span></a>
+                        {% elseif item.type == 'document' %}
+                            <a class="row" href="{{ path('document_show', {id: item.id}) }}"><span class="row__title">{{ item.label }}</span></a>
+                        {% else %}
+                            <span class="row"><span class="row__title mono">{{ item.label }}</span></span>
+                        {% endif %}
+                    </li>
+                {% endfor %}
+            </ul>
+            {% if finding.count > finding.items|length %}<p class="row__sub">Et {{ finding.count - finding.items|length }} autres.</p>{% endif %}
+        </section>
+    {% endfor %}
+{% endblock %}

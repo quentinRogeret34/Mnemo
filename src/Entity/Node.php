@@ -85,6 +85,17 @@ class Node
         return true;
     }
 
+    /**
+     * For annotations computed by the system (verification, analysis): they are not an edit of the node, so the
+     * modification date, which tells when an annotation is stale, stays as it is.
+     *
+     * @param array<string, mixed> $metadata
+     */
+    public function annotate(array $metadata): void
+    {
+        $this->metadata = $metadata;
+    }
+
     public function getId(): ?int
     {
         return $this->id;

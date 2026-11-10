@@ -1,0 +1,2 @@
+{% set labels = {verified: 'Vérifiée', refuted: 'Réfutée', conflict: 'Sources en conflit', unverified: 'Non vérifiable'} %}
+{% if verdict %}<span class="verdict verdict--{{ verdict }}" title="Vérification contre le graphe">{{ labels[verdict] ?? verdict }}</span>{% endif %}

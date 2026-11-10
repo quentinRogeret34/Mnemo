@@ -9,7 +9,9 @@ use App\Entity\Project;
 use App\Enum\Confidence;
 use App\Enum\EdgeOrigin;
 use App\Enum\NodeType;
+use App\Entity\Proposal;
 use App\Ingest\GraphifyImporter;
+use App\Tests\LlmTestTrait;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
@@ -17,6 +19,8 @@ use Symfony\Component\Filesystem\Filesystem;
 
 final class McpServerTest extends WebTestCase
 {
+    use LlmTestTrait;
+
     private KernelBrowser $client;
     private EntityManagerInterface $entityManager;
     private string $sessionId;
@@ -51,7 +55,7 @@ final class McpServerTest extends WebTestCase
         $tools = $this->rpc('tools/list')['tools'];
 
         self::assertEqualsCanonicalizing(
-            ['list_projects', 'search', 'file_context', 'get_document', 'add_memory', 'import_document'],
+            ['list_projects', 'search', 'file_context', 'get_document', 'add_memory', 'import_document', 'learn', 'memory_block'],
             array_column($tools, 'name'),
         );
     }
@@ -96,6 +100,23 @@ final class McpServerTest extends WebTestCase
 
         $results = $this->tool('search', ['query' => 'tarifaire', 'project' => 'demo'])['results'];
         self::assertSame([['document', 'Grille tarifaire']], array_map(static fn (array $result): array => [$result['type'], $result['label']], $results));
+    }
+
+    public function testLearnQueuesProposalsInsteadOfStoringMemories(): void
+    {
+        $this->client->disableReboot();
+        $this->scriptLlm(static fn (): array => ['candidates' => [[
+            'lesson' => 'Les remises passent toujours par catalog.ts.', 'evidence' => 'vu dans la session', 'type' => 'convention',
+            'durability' => 8, 'reuse' => 8, 'project_fit' => 8, 'risk' => 6, 'files' => ['src/domain/catalog.ts'], 'rules' => ['RG-042'],
+            'adr' => ['context' => '', 'decision' => '', 'alternatives' => '', 'consequences' => ''],
+        ]]]);
+
+        $result = $this->tool('learn', ['text' => 'transcript', 'kind' => 'conversation', 'label' => 'session 1', 'project' => 'demo']);
+
+        self::assertSame(1, $result['proposed']);
+        self::assertStringEndsWith('/proposals?project=demo', $result['proposals_url']);
+        self::assertSame(0, $this->entityManager->getRepository(Node::class)->count(['type' => NodeType::Memory]));
+        self::assertSame(['kind' => 'conversation', 'label' => 'session 1'], $this->entityManager->getRepository(Proposal::class)->findOneBy([])->getPayload()['source']);
     }
 
     public function testToolErrorsAreReportedToTheAgent(): void

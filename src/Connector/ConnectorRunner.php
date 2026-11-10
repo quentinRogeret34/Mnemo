@@ -4,10 +4,8 @@ namespace App\Connector;
 
 use App\Document\DocumentStorage;
 use App\Entity\Connector;
-use App\Entity\Node;
 use App\Enum\ConnectorMode;
 use App\Memory\MemoryStore;
-use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
 use Mcp\Client;
 use Mcp\Schema\Content\BlobResourceContents;
@@ -40,7 +38,6 @@ final class ConnectorRunner
         private readonly DocumentStorage $documentStorage,
         private readonly MemoryStore $memoryStore,
         private readonly EntityManagerInterface $entityManager,
-        private readonly Connection $connection,
     ) {
     }
 
@@ -188,29 +185,19 @@ final class ConnectorRunner
      */
     private function upsertDocument(Connector $connector, string $key, string $title, string $format, string $content, array &$report): void
     {
-        $origin = 'connector:'.$connector->getId().':'.$key;
-        $hash = hash('sha256', $content);
-        $id = $this->connection->fetchOne("SELECT id FROM node WHERE type = 'document' AND metadata->>'origin' = :origin", ['origin' => $origin]);
-        $document = false === $id ? null : $this->entityManager->find(Node::class, $id);
-
-        if (null !== $document && $hash === $document->getContentHash()) {
-            ++$report['unchanged'];
-
+        [$document, $status] = $this->documentStorage->upsertContent(
+            'connector:'.$connector->getId().':'.$key,
+            $connector->getFolder(),
+            $content,
+            $title,
+            $format,
+            ['source' => 'connector', 'connector' => $connector->getName()],
+        );
+        ++$report[$status];
+        if ('unchanged' === $status) {
             return;
         }
 
-        if (null === $document) {
-            $document = $this->documentStorage->storeContent($connector->getFolder(), $content, $title, $format, ['source' => 'connector', 'connector' => $connector->getName(), 'origin' => $origin]);
-            if ('md' !== $format) {
-                $document->update($title, $document->getPath(), null, $document->getMetadata());
-            }
-            ++$report['created'];
-        } else {
-            $this->documentStorage->replaceContent($document, $content);
-            ++$report['updated'];
-        }
-
-        $document->setContentHash($hash);
         if (null !== $connector->getProject()) {
             $document->addProject($connector->getProject());
         }

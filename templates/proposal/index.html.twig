@@ -1,0 +1,105 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}À valider{{ project ? ' · ' ~ project.name }}{% endblock %}
+
+{% block crumbs %}
+    {% if project %}
+        <a href="{{ path('project_show', {slug: project.slug}) }}">{{ project.name }}</a>
+        <span class="crumbs__sep" aria-hidden="true">/</span>
+    {% endif %}
+    <span class="crumbs__current">À valider</span>
+{% endblock %}
+
+{% block body %}
+    {% set filters = {project: project ? project.slug : null} %}
+    {% set reconciliations = {new: 'Nouvelle mémoire', updates: 'Met à jour', supersedes: 'Remplace', retracts: 'Retire'} %}
+    {% set sources = {conversation: 'conversation', file: 'fichier', diff: 'diff', review: 'revue'} %}
+    <div class="view-head">
+        <h1>À valider</h1>
+        <span class="view-head__meta">{{ proposals|length }} en attente{{ project ? ' pour ' ~ project.name }}</span>
+    </div>
+    <p class="page__lede">Ce que le LLM propose n'entre dans le graphe qu'une fois appliqué ici. Une mémoire remplacée ou retirée est archivée, pas supprimée.</p>
+
+    <div class="filter-bar">
+        <nav class="tabs" aria-label="Filtrer par sorte">
+            <a href="{{ path('proposal_index', filters|filter(v => v is not null)) }}" {% if kind is null %}aria-current="page"{% endif %}>Toutes</a>
+            {% for item in kinds %}
+                <a href="{{ path('proposal_index', (filters|merge({kind: item.value}))|filter(v => v is not null)) }}" {% if kind == item %}aria-current="page"{% endif %}>{{ item.label }}</a>
+            {% endfor %}
+        </nav>
+    </div>
+
+    {% if proposals is empty %}
+        <p class="block__empty">Rien à valider. Les propositions arrivent avec <span class="mono">app:learn</span>, l'outil MCP <span class="mono">learn</span>, le jardinage et la vérification des mémoires.</p>
+    {% else %}
+        <ul class="proposals">
+            {% for proposal in proposals %}
+                {% set p = proposal.payload %}
+                {% set query = {project: project ? project.slug : null, kind: kind ? kind.value : null}|filter(v => v is not null) %}
+                <li class="proposal" id="proposal-{{ proposal.id }}">
+                    <div class="proposal__head">
+                        <span class="code-chip">{{ proposal.kind.label }}</span>
+                        {% if proposal.kind.value == 'learning' %}
+                            <span class="tag">{{ reconciliations[p.reconciliation] ?? p.reconciliation }}</span>
+                            {{ include('memory/_type.html.twig', {type: p.type}) }}
+                            <span class="row__sub num" title="durabilité {{ p.axes.durability }}, réutilisation {{ p.axes.reuse }}, adéquation {{ p.axes.project_fit }}, risque {{ p.axes.risk }}">score {{ p.score }}/10</span>
+                        {% endif %}
+                        {% if proposal.project %}<span class="row__projects">{{ proposal.project.name }}</span>{% endif %}
+                        <span class="row__sub num">{{ proposal.createdAt|date('d/m/Y H:i') }}</span>
+                    </div>
+
+                    <form method="post" action="{{ path('proposal_apply', {id: proposal.id}|merge(query)) }}" class="proposal__body">
+                        <input type="hidden" name="_token" value="{{ csrf_token('proposal-' ~ proposal.id) }}">
+
+                        {% if proposal.kind.value == 'learning' %}
+                            {% if p.reconciliation == 'retracts' %}
+                                <p class="proposal__text">Retirer : <a href="{{ path('memory_show', {id: p.target_id}) }}">{{ p.target_text }}</a></p>
+                            {% else %}
+                                <label class="visually-hidden" for="lesson-{{ proposal.id }}">Texte de la mémoire</label>
+                                <textarea id="lesson-{{ proposal.id }}" name="lesson" class="memory-editor__text" rows="2" maxlength="1000">{{ p.lesson }}</textarea>
+                                {% if p.target_id %}
+                                    <p class="row__sub">{{ p.reconciliation == 'updates' ? 'Remplace le texte de' : 'Archive' }} : <a href="{{ path('memory_show', {id: p.target_id}) }}">{{ p.target_text }}</a></p>
+                                {% endif %}
+                            {% endif %}
+                            <dl class="props props--flat">
+                                <dt>Preuve</dt><dd><q>{{ p.evidence }}</q></dd>
+                                <dt>Source</dt><dd>{{ sources[p.source.kind] ?? p.source.kind }} · {{ p.source.label }}</dd>
+                                {% if p.reason %}<dt>Pourquoi</dt><dd>{{ p.reason }}</dd>{% endif %}
+                                {% if p.files is not empty or p.rules is not empty %}
+                                    <dt>Liens proposés</dt>
+                                    <dd>{% for file in p.files %}<span class="tag mono">{{ file }}</span>{% endfor %}{% for rule in p.rules %}<span class="tag mono">{{ rule }}</span>{% endfor %}</dd>
+                                {% endif %}
+                                {% if p.adr is not empty %}
+                                    <dt>Décision</dt><dd>{{ p.adr.decision ?? '' }}</dd>
+                                {% endif %}
+                            </dl>
+                        {% elseif proposal.kind.value in ['duplicate', 'contradiction'] %}
+                            <fieldset class="proposal__pair">
+                                <legend class="row__sub">{{ proposal.kind.value == 'duplicate' ? 'Garder (l\'autre est fusionnée dedans puis archivée) :' : 'Garder (l\'autre est archivée) :' }}</legend>
+                                {% for side in ['a', 'b'] %}
+                                    <label class="proposal__choice">
+                                        <input type="radio" name="keep" value="{{ attribute(p, side ~ '_id') }}" {% if side == 'a' %}checked{% endif %}>
+                                        <span>{{ attribute(p, side ~ '_text') }}</span>
+                                        <a class="row__sub" href="{{ path('memory_show', {id: attribute(p, side ~ '_id')}) }}">fiche</a>
+                                    </label>
+                                {% endfor %}
+                            </fieldset>
+                            <p class="row__sub">{{ p.reason }}</p>
+                        {% else %}
+                            <p class="proposal__text"><a href="{{ path('memory_show', {id: p.memory_id}) }}">{{ p.memory_text }}</a></p>
+                            <p class="row__sub">Verdict {{ p.verdict }} : {{ p.reason }}</p>
+                            {% if p.sources is not empty %}
+                                <p class="row__sub">Sources : {% for source in p.sources %}{{ source.label }}{{ not loop.last ? ', ' }}{% endfor %}</p>
+                            {% endif %}
+                        {% endif %}
+
+                        <div class="proposal__actions">
+                            <button class="button button--primary" type="submit">{{ proposal.kind.value == 'refuted' ? 'Retirer la mémoire' : 'Appliquer' }}</button>
+                            <button class="button" type="submit" formaction="{{ path('proposal_reject', {id: proposal.id}|merge(query)) }}">Rejeter</button>
+                        </div>
+                    </form>
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+{% endblock %}

@@ -3,11 +3,11 @@
 namespace App\Mcp;
 
 use App\Document\DocumentStorage;
-use App\Entity\Folder;
-use App\Entity\Node;
 use App\Entity\Project;
 use App\Enum\MemoryType;
-use App\Enum\NodeType;
+use App\Learn\Learner;
+use App\Learn\SourceKind;
+use App\Llm\LlmUnavailable;
 use App\Memory\MemoryStore;
 use Doctrine\ORM\EntityManagerInterface;
 use Mcp\Capability\Attribute\McpTool;
@@ -25,7 +25,40 @@ final class WriteTools
         private readonly MemoryStore $memoryStore,
         private readonly DocumentStorage $documentStorage,
         private readonly UrlGeneratorInterface $urlGenerator,
+        private readonly Learner $learner,
     ) {
+    }
+
+    /**
+     * @param string $text    the source: a conversation transcript, a file, a diff or a code review
+     * @param string $kind    kind of source
+     * @param string $label   stable label shown with the proposals, e.g. a branch range or a transcript name
+     * @param string $project slug of the project the learnings belong to
+     *
+     * @return array<string, mixed>
+     */
+    #[McpTool(name: 'learn', description: 'Send a conversation, diff, file or code review to extract the durable learnings (decisions, conventions, pitfalls). Learnings are scored and compared to existing memories, then queued as proposals that a human validates: nothing is stored directly. Call it at the end of a session or after a merge.', annotations: new ToolAnnotations(readOnlyHint: false, destructiveHint: false))]
+    public function learn(
+        string $text,
+        #[Schema(enum: ['conversation', 'file', 'diff', 'review'])]
+        string $kind,
+        #[Schema(minLength: 1, maxLength: 255)]
+        string $label,
+        string $project,
+    ): array {
+        if ('' === trim($text) || \strlen($text) > self::MAX_DOCUMENT_BYTES) {
+            throw new ToolCallException('The source must contain between 1 byte and 1 MB.');
+        }
+        $sourceKind = SourceKind::tryFrom($kind) ?? throw new ToolCallException(\sprintf('Unknown kind "%s".', $kind));
+        $label = mb_substr(trim($label), 0, 255);
+
+        try {
+            $report = $this->learner->learn($sourceKind, '' === $label ? $kind : $label, $text, $this->project($project));
+        } catch (LlmUnavailable $exception) {
+            throw new ToolCallException($exception->getMessage());
+        }
+
+        return $report + ['proposals_url' => $this->urlGenerator->generate('proposal_index', ['project' => $project], UrlGeneratorInterface::ABSOLUTE_URL)];
     }
 
     /**
@@ -68,16 +101,7 @@ final class WriteTools
         }
         $this->entityManager->flush();
 
-        $notFound = [];
-        $nodes = $this->entityManager->getRepository(Node::class);
-        foreach ($files as $path) {
-            $file = [] === $projectEntities ? null : $nodes->findOneBy(['project' => $projectEntities, 'type' => NodeType::CodeFile, 'path' => $path]);
-            null === $file ? $notFound[] = $path : $this->memoryStore->link($memory, $file);
-        }
-        foreach ($rules as $code) {
-            $rule = [] === $projectEntities ? null : $nodes->findOneBy(['project' => $projectEntities, 'type' => NodeType::BusinessRule, 'externalId' => $code]);
-            null === $rule ? $notFound[] = $code : $this->memoryStore->link($memory, $rule);
-        }
+        $notFound = $this->memoryStore->linkReferences($memory, $projectEntities, array_values($files), array_values($rules));
         $this->entityManager->flush();
 
         return [
@@ -114,7 +138,7 @@ final class WriteTools
         }
         $projectEntities = array_map($this->project(...), $projects);
 
-        $document = $this->documentStorage->storeContent($this->folder($folder), '# '.$title."\n\n".preg_replace('/\A\s*#\s+.+\R/', '', $content, 1), $title, 'md', ['source' => 'mcp']);
+        $document = $this->documentStorage->storeContent($this->documentStorage->folder($folder), '# '.$title."\n\n".preg_replace('/\A\s*#\s+.+\R/', '', $content, 1), $title, 'md', ['source' => 'mcp']);
         foreach ($projectEntities as $project) {
             $document->addProject($project);
         }
@@ -131,21 +155,5 @@ final class WriteTools
     {
         return $this->entityManager->getRepository(Project::class)->findOneBy(['slug' => $slug])
             ?? throw new ToolCallException(\sprintf('Unknown project "%s". Call list_projects to see the available slugs.', $slug));
-    }
-
-    private function folder(?string $path): ?Folder
-    {
-        $folder = null;
-        foreach (array_filter(array_map('trim', explode('/', (string) $path)), 'strlen') as $name) {
-            // A folder created in this loop is not flushed yet and cannot have children to look up.
-            $child = null !== $folder && null === $folder->getId() ? null : $this->entityManager->getRepository(Folder::class)->findOneBy(['name' => $name, 'parent' => $folder]);
-            if (null === $child) {
-                $child = new Folder($name, $folder);
-                $this->entityManager->persist($child);
-            }
-            $folder = $child;
-        }
-
-        return $folder;
     }
 }

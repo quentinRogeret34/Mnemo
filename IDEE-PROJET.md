@@ -3,8 +3,10 @@
 Document de reprise. Rédigé le 2026-11-07 à partir d'une session d'exploration,
 mis à jour le 2026-11-08 (connecteurs, synchronisation planifiée, liens manuels,
 wiki généré, état des lieux des produits de type DeepWiki), puis le 2026-11-08 au
-soir après la première session d'implémentation : ce qui existe est décrit en
-§11, l'avancement par étape en §9, les décisions prises en §10.
+soir après la première session d'implémentation, puis le 2026-11-10 (reprise des
+idées du framework AIDD : extraction de mémoire, file de validation, jardinage,
+vérification, zones d'ombre, bloc mémoire). Ce qui existe est décrit en §11,
+l'avancement par étape en §9, les décisions prises en §10.
 
 ## 1. L'idée en une phrase
 
@@ -45,6 +47,12 @@ lien.
 | deepwiki-open (open source, MIT) | Auto-hébergé, GitHub / GitLab / Bitbucket, dépôts privés. Clone, filtre (exclut `vendor/`, `node_modules/`, `docs/`...), embeddings, RAG. Le LLM planifie la structure (overview, architecture, features, données, front, back, déploiement, extensibilité) puis génère chaque page : bloc des fichiers sources, Mermaid, tableaux, citation `Sources: [path:début-fin]()` obligatoire. Chat RAG multi-tour, "Deep Research" (plusieurs itérations), "Codemap" : visite guidée pour une question "comment faire X", en deux appels LLM (squelette puis enrichissement). Cache du wiki en local, multi-fournisseurs LLM. | Format de citation à la ligne, codemap, recherche approfondie |
 | Google Code Wiki | Wiki par dépôt régénéré après chaque changement. Diagrammes d'architecture, de classes et de séquence tenus à jour. Chat qui s'appuie sur le wiki entier. Chaque section et chaque réponse pointe vers les fichiers et définitions. Dépôts publics, extension Gemini CLI annoncée pour les dépôts privés. | Fraîcheur continue, liens vers les définitions |
 | CodeAlmanac (open source, Apache-2.0) | Wiki Markdown versionné dans le dépôt (`almanac/`), relu en revue git. Capte le *pourquoi* : décisions, invariants, incidents passés. Trois agents : `build`, `ingest` (fichiers, diffs, plages de commits, PR / issues GitHub, URL, transcripts d'agents), `garden` (pages périmées, doublons, liens faibles, affirmations non sourcées). Sync des transcripts Claude / Codex toutes les 5 h, garden toutes les 24 h. Lecture sans LLM : `search`, `search --mentions <path>`, `show`, `topics`, `health`, `validate`. Un ingest sans connaissance durable ne change rien. | Jardinage, ingestion planifiée des transcripts, recherche par chemin, no-op valide |
+
+### Outillage de mémoire pour agents (état des lieux au 2026-11-10)
+
+| Produit | Ce qu'il fait | Ce qu'on reprend |
+|---|---|---|
+| AI-Driven Dev Framework (AIDD, open source, MIT) | Plugins Claude Code / Cursor / Copilot / Codex pour tout le cycle de dev, en skills Markdown. Banque de mémoire projet versionnée (`aidd_docs/memory/`, un fichier par capacité, ADR dans `internal/decisions/`), synchronisée dans `CLAUDE.md` / `AGENTS.md` entre marqueurs. Skill `learn` : source, extraction, note sur 4 axes, réconciliation `new` / `covered` / `updates` / `supersedes` / `retracts`, destination. `check` : rapport de dérive sans modification. `fact-check` : vérification du moins cher au plus cher. `shadow-areas` : 7 catégories de trous dans une spec. | Pipeline `learn` (§11), ADR, jardinage, vérification en cascade, zones d'ombre des règles, signaux de capacité, bloc mémoire, import d'une banque AIDD |
 
 Constat :
 
@@ -150,6 +158,15 @@ Implémenté au 2026-11-08 (tables `node`, `edge`, `node_project`, `folder`) :
   `llm`, `human`) pour ne pas la confondre avec le noeud source.
 - Délier passe l'arête en `rejected` (conservée) ; la relier de nouveau la
   repasse `active` / `VERIFIED` / `human`.
+- Une mémoire remplacée ou retirée est archivée, jamais supprimée :
+  `metadata.status` = `active` (défaut) / `superseded` / `retracted`, avec l'arête
+  `Memory -[supersedes]-> Memory` quand elle a un remplaçant. Les mémoires archivées
+  ne sortent plus dans la recherche, chez les agents ni dans le bloc mémoire.
+- Une décision est une mémoire de type `decision` avec une fiche ADR facultative
+  (`metadata.adr` : contexte, décision, alternatives, conséquences).
+- Annotations calculées, sans toucher la date de modification du noeud :
+  `metadata.verification` sur les mémoires (verdict, niveau, sources, texte vérifié),
+  `metadata.shadow_areas` et `shadow_checked_at` sur les règles.
 
 Métadonnées communes d'un noeud indexé : `_text`, `source_type`, `project`,
 `path`, `ref` (sha / version doc), `created_at`, `content_hash`.
@@ -230,7 +247,8 @@ mémoires et les liens validés, pas seulement sur le code.
 - **Serveur MCP** (`symfony/mcp-bundle` 0.15, en place) : `list_projects`,
   `search` (mots-clés pour l'instant), `file_context`, `get_document`,
   `add_memory` (dédup exacte, événements `ADD` / `NONE` comme mem0),
-  `import_document`. HTTP sur `/mcp` et STDIO (`bin/console mcp:server`).
+  `import_document`, `learn` (extraction de mémoire, voir §11), `memory_block`.
+  HTTP sur `/mcp` et STDIO (`bin/console mcp:server`).
   Restent à ajouter : `wiki_structure`, `wiki_page`, `ask`.
 - **Client MCP** (en place) : connecteurs configurables depuis le front vers
   des serveurs MCP tiers, avec des modèles prêts à l'emploi (voir §11).
@@ -352,10 +370,10 @@ MCP, connecteurs MCP, front.
 |---|---|---|
 | 1. Code + git | Import graphify (`app:ingest:code`), fiche fichier (symboles, dépendances, voisinage, règles, docs, mémoires), recherche live | Ingestion git (`git log`), commits sur la fiche. Bloqué : le conteneur ne voit pas les dépôts de l'hôte (monter un dossier en lecture seule ou lancer `git log` côté hôte) |
 | 2. Docs métier | Dépôt md / pdf / docx, dossiers, rattachement à N projets, lecture Markdown et PDF, règles `RG-xxx` (démo), lien document ↔ code éditable | Extraction du texte pdf / docx, extraction des règles par LLM, liens explicites `RG-xxx` dans le code, validation / rejet des liens inférés |
-| 3. Mémoire | Onglet Mémoires façon mem0 (types, historique ADD / UPDATE, liens vers code / docs / règles), `add_memory` MCP, import depuis mem0 par connecteur | Extraction par LLM depuis les transcripts, dédup par LLM, liens `linked_to` entre mémoires |
-| 4. Clients | Serveur MCP (6 outils), HTTP + STDIO | API REST, recherche sémantique, adaptateur Claude Code (hooks), authentification |
+| 3. Mémoire | Onglet Mémoires façon mem0 (types, historique ADD / UPDATE, liens vers code / docs / règles), `add_memory` MCP, import depuis mem0 par connecteur. Au 2026-11-10 : extraction par LLM (`app:learn`, outil `learn`) avec file de validation, archivage (`supersedes`), fiche ADR, doublons et contradictions par LLM, vérification contre le graphe, import d'une banque AIDD | Recherche des voisins par vecteurs (mots-clés aujourd'hui), lecture planifiée des transcripts |
+| 4. Clients | Serveur MCP (8 outils), HTTP + STDIO. Au 2026-11-10 : adaptateur Claude Code dans le plugin `quentin` de la devbox `quentin-dev` (MCP + hooks `SessionStart`, `PostToolUse` Read, `SessionEnd` / `PreCompact` vers `learn`), endpoints `GET /api/context`, `GET /api/file-context`, `POST /api/learn` | API REST complète, recherche sémantique, authentification |
 | 5. Connecteurs | Connecteurs MCP génériques (ressources → documents, outil → document ou mémoires), modèles DeepWiki, Context7, mem0, GitHub, Linear, `app:connector:sync` | Scheduler + Messenger, suppression des éléments disparus, OAuth (Notion, Atlassian, GitLab), connecteurs API directs, écran d'activité |
-| 6. Wiki | Vue graphe de voisinage (1 ou 2 sauts) | Wiki, communautés dans le front, Ask, codemap, jardinage |
+| 6. Wiki | Vue graphe de voisinage (1 ou 2 sauts). Au 2026-11-10 : jardinage (rapport de dérive), zones d'ombre des règles, signaux de capacité (base du plan du wiki) | Wiki, communautés dans le front, Ask, codemap |
 
 Prochaines étapes proposées, dans l'ordre :
 
@@ -384,6 +402,19 @@ Prochaines étapes proposées, dans l'ordre :
   (`LLM_PLATFORM`, `LLM_MODEL`, `EMBEDDING_PLATFORM`, `EMBEDDING_MODEL`).
 - Secrets des connecteurs : références `env:NOM` lues dans `.env.local`, limitées aux variables listées dans `MCP_CONNECTORS_ENV`.
 
+### Prises le 2026-11-10
+
+- Tout ce qu'un LLM propose (mémoire extraite, doublon, contradiction, mémoire
+  réfutée) passe par une file de validation (`/proposals`). Seules les écritures
+  explicites (`add_memory`, formulaire, import déterministe) vont directement en base.
+- Dédup des mémoires par LLM : oui, en deux temps. À l'extraction, réconciliation
+  contre les 5 mémoires les plus proches ; au jardinage, recherche de doublons et
+  contradictions par lots de 40.
+- Une mémoire n'est jamais supprimée par un traitement automatique : elle est archivée.
+- Un verdict de vérification sans source citée parmi celles fournies vaut `unverified`.
+- Le bloc mémoire exporté ne contient que conventions, décisions et règles validées,
+  sans date, pour qu'un export inchangé ne modifie pas le fichier.
+
 ### Encore ouvertes
 
 - Auth : SecurityBundle est installé (exigé par ai-bundle) mais rien n'est
@@ -393,7 +424,6 @@ Prochaines étapes proposées, dans l'ordre :
 - Premier connecteur API direct : GitLab ou GitHub ?
 - OAuth pour les connecteurs MCP (Notion, Atlassian, GitLab) : à implémenter ou
   passer par des serveurs locaux ?
-- Dédup des mémoires : seulement exacte aujourd'hui ; LLM comme mem0 ?
 - Wiki : généré en tâche planifiée ou à la demande ?
 - Wiki : stocké en base seulement, ou exporté aussi en Markdown dans le dépôt
   pour relecture en revue git (approche CodeAlmanac) ?
@@ -409,7 +439,7 @@ Socle :
   plateformes Mistral et OpenRouter configurées, clés absentes.
 - Symfony UX (Twig / Live Components, Stimulus, AssetMapper, Dropzone), Form,
   Validator, SecurityBundle (sans règle d'accès), `symfony/mcp-bundle`.
-- 36 tests (PHPUnit, `bin/phpunit`) ; base de test `app_test`.
+- 64 tests (PHPUnit, `bin/phpunit`) ; base de test `app_test`. Le LLM est simulé en test (`tests/LlmTestTrait.php`).
 
 Front (`http://localhost:8080`) :
 
@@ -422,10 +452,43 @@ Front (`http://localhost:8080`) :
 - Code : recherche live, fiche fichier, vue graphe (Cytoscape.js).
 - Connexions : connecteurs MCP, modèles de fournisseurs, état des LLM.
 
+Ajouts du 2026-11-10 (idées reprises du framework AIDD, voir §2) :
+
+- **Extraction de mémoire** (`app:learn`, outil MCP `learn`) : une source
+  (`conversation`, `file`, `diff`, `review`) ; le LLM extrait les apprentissages
+  durables et les note de 0 à 10 sur 4 axes (durabilité, réutilisation, adéquation
+  au projet, risque) ; sous 4, écarté ; chaque candidat est comparé aux mémoires
+  proches (`new`, `covered`, `updates`, `supersedes`, `retracts`) ; tout ce qui
+  n'est pas `covered` devient une proposition. Liens proposés `INFERRED` / `llm`.
+- **À valider** (`/proposals`) : appliquer (texte modifiable) ou rejeter.
+- **Fiche ADR** sur les décisions, chaîne « remplace / remplacée par ».
+- **Import du contexte d'un dépôt** (`app:ingest:context`) : banque AIDD (une mémoire
+  par puce, une décision par ADR avec ses remplacements, notes et plans en
+  documents) et conventions d'agents (`CLAUDE.md`, `AGENTS.md`, règles Claude /
+  Cursor / Copilot / AIDD) en documents. Sans LLM, ré-import sans effet.
+- **Jardinage** (`/projects/{slug}/garden`, `app:garden [--llm]`) : mémoires
+  orphelines ou déliées, non vérifiées, règles à valider / sans source / sans code /
+  jamais analysées, documents isolés, liens inférés jamais validés. Ne modifie rien.
+- **Vérification** (`app:verify`, bouton sur la fiche mémoire) : chemin cité absent
+  du graphe du code = réfutée sans LLM ; sinon un appel LLM sur les règles,
+  documents et code liés ou proches. Réfutée ou en conflit : proposition de retrait.
+- **Zones d'ombre** (`app:rule:shadow`, bouton sur la fiche règle) : 7 catégories
+  figées, gravité, question à poser au métier.
+- **Capacités** détectées dans les chemins du code (page Code, `list_projects`).
+- **Bloc mémoire** (`app:export:memory-block --write=...`, outil `memory_block`).
+- **Adaptateur Claude Code** (devbox `quentin-dev`, plugin `quentin`) : serveur MCP
+  déclaré pour tous les projets, contexte injecté au démarrage et à chaque lecture de
+  fichier, transcript envoyé à `learn` en fin de session. Endpoints sans
+  authentification, comme le MCP : le projet est trouvé par le chemin de dépôt.
+
 Commandes :
 
 - `app:project:create`, `app:ingest:code` (graph.json de graphify, `--no-debug`
   sur les gros dépôts).
+- `app:learn <projet> <kind> <label> [--file=...]` (sinon entrée standard),
+  `app:ingest:context <projet> <chemin>`, `app:garden <projet> [--llm]`,
+  `app:verify <projet> [--limit=20]`, `app:rule:shadow <projet> [code]`,
+  `app:export:memory-block <projet> [--write=fichier]...`.
 - `app:demo <projet>` / `--clear` : documents, règles et mémoires fictifs.
 - `app:connector:sync [id]`, `app:llm:check`, `mcp:server` (STDIO).
 
@@ -434,6 +497,9 @@ Données de dev : projet `claude-strava-coach` (218 fichiers, 2222 symboles,
 
 ## 12. Références
 
+- AI-Driven Dev Framework (MIT) : https://github.com/ai-driven-dev/framework
+  (`plugins/aidd-context/skills/10-learn`, `02-project-memory`,
+  `plugins/aidd-refine/skills/04-fact-check`, `03-shadow-areas`)
 - mem0 : https://github.com/mem0ai/mem0 (prompts dans `mem0/configs/prompts.py`,
   pipeline dans `mem0/memory/main.py`)
 - graphify : https://github.com/Graphify-Labs/graphify

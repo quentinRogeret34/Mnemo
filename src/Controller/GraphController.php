@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\Project;
+use App\Graph\CapabilityDetector;
 use App\Graph\GraphReader;
 use App\Graph\KnowledgeReader;
 use Symfony\Bridge\Doctrine\Attribute\MapEntity;
@@ -17,6 +18,7 @@ final class GraphController extends AbstractController
     public function __construct(
         private readonly GraphReader $graphReader,
         private readonly KnowledgeReader $knowledgeReader,
+        private readonly CapabilityDetector $capabilityDetector,
     ) {
     }
 
@@ -31,7 +33,7 @@ final class GraphController extends AbstractController
     #[Route('/projects/{slug}/code', name: 'project_code', methods: ['GET'])]
     public function showCode(#[MapEntity(mapping: ['slug' => 'slug'])] Project $project): Response
     {
-        return $this->render('project/code.html.twig', ['project' => $project]);
+        return $this->render('project/code.html.twig', ['project' => $project, 'capabilities' => $this->capabilityDetector->detect($project)]);
     }
 
     #[Route('/projects/{slug}/files/{path}', name: 'file_show', requirements: ['path' => '.+'], methods: ['GET'])]
