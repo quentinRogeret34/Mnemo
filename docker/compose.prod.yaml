@@ -1,8 +1,8 @@
-# Production: docker compose -f compose.prod.yaml --env-file .env.prod.local up -d --build
-# FrankenPHP (Caddy) obtains the HTTPS certificate for SERVER_NAME by itself; ports 80 and 443 must reach the server.
+# Production behind a reverse proxy that terminates HTTPS (Dokploy's Traefik): the php service only listens on port 80
+# of the container network, and SERVER_NAME in the environment is the public domain, used for DEFAULT_URI.
 x-app: &app
   build:
-    context: .
+    context: ..
     target: prod
   restart: unless-stopped
   environment: &app-env
@@ -39,11 +39,10 @@ services:
     <<: *app
     environment:
       <<: *app-env
-      SERVER_NAME: ${SERVER_NAME:?}
-    ports:
-      - "80:80"
-      - "443:443"
-      - "443:443/udp"
+      SERVER_NAME: ":80"
+      SYMFONY_TRUSTED_PROXIES: private_ranges
+    expose:
+      - "80"
     volumes:
       - storage:/app/var/storage
       - locks:/app/var/lock

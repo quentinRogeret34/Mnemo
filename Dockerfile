@@ -8,7 +8,7 @@ ENV COMPOSER_ALLOW_SUPERUSER=1
 
 WORKDIR /app
 
-# Image for a server: code and dependencies inside, no volume. Built by compose.prod.yaml.
+# Image for a server: code and dependencies inside, no volume. Built by docker/compose.prod.yaml.
 FROM base AS prod
 
 ENV APP_ENV=prod

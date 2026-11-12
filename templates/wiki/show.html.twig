@@ -154,14 +154,14 @@ cp .env.prod.dist .env.prod.local
 openssl rand -hex 32    # APP_SECRET
 openssl rand -hex 24    # POSTGRES_PASSWORD</code></pre>
                 <p>Remplir <code>.env.prod.local</code> : domaine (<code>SERVER_NAME</code>), les deux secrets, les clés LLM, les jetons des connecteurs et les identifiants OAuth des fournisseurs de connexion (voir <a href="#utilisateurs">Utilisateurs et groupes</a>). Puis le mot de passe du compte de secours <code>admin</code> :</p>
-                <pre><code>docker compose -f compose.prod.yaml --env-file .env.prod.local build
-docker compose -f compose.prod.yaml --env-file .env.prod.local run --rm --no-deps php bin/console security:hash-password</code></pre>
+                <pre><code>docker compose -f docker/compose.prod.yaml --env-file .env.prod.local build
+docker compose -f docker/compose.prod.yaml --env-file .env.prod.local run --rm --no-deps php bin/console security:hash-password</code></pre>
                 <p>Coller le hachage dans <code>APP_ADMIN_PASSWORD_HASH</code> en doublant chaque <code>$</code> (<code>$$</code>), sinon Compose le lit comme une variable.</p>
 
                 <h3>3. Lancer</h3>
-                <pre><code>docker compose -f compose.prod.yaml --env-file .env.prod.local up -d
-docker compose -f compose.prod.yaml --env-file .env.prod.local exec php bin/console doctrine:migrations:migrate --no-interaction
-docker compose -f compose.prod.yaml --env-file .env.prod.local exec php bin/console app:llm:check</code></pre>
+                <pre><code>docker compose -f docker/compose.prod.yaml --env-file .env.prod.local up -d
+docker compose -f docker/compose.prod.yaml --env-file .env.prod.local exec php bin/console doctrine:migrations:migrate --no-interaction
+docker compose -f docker/compose.prod.yaml --env-file .env.prod.local exec php bin/console app:llm:check</code></pre>
                 <p>Le site répond sur <code>https://&lt;domaine&gt;</code>, derrière <code>/login</code>. Les agents passent par <code>/mcp</code> et <code>/api</code> avec une clé d'API.</p>
 
                 <h3>4. Brancher les projets</h3>
@@ -174,10 +174,10 @@ docker compose -f compose.prod.yaml --env-file .env.prod.local exec php bin/cons
 
                 <h3>5. Mettre à jour et sauvegarder</h3>
                 <pre><code>git pull
-docker compose -f compose.prod.yaml --env-file .env.prod.local up -d --build
-docker compose -f compose.prod.yaml --env-file .env.prod.local exec php bin/console doctrine:migrations:migrate --no-interaction
+docker compose -f docker/compose.prod.yaml --env-file .env.prod.local up -d --build
+docker compose -f docker/compose.prod.yaml --env-file .env.prod.local exec php bin/console doctrine:migrations:migrate --no-interaction
 
-docker compose -f compose.prod.yaml --env-file .env.prod.local exec -T database pg_dump -U app app | gzip &gt; graphe-$(date +%F).sql.gz</code></pre>
+docker compose -f docker/compose.prod.yaml --env-file .env.prod.local exec -T database pg_dump -U app app | gzip &gt; graphe-$(date +%F).sql.gz</code></pre>
                 <p>À sauvegarder : ce dump (graphe, mémoires, vecteurs) et le volume <code>storage</code> (fichiers des documents déposés). Le volume <code>caddy_data</code> garde les certificats.</p>
             </section>
         </article>

@@ -5,3 +5,4 @@ vendor/
 .git/
 .env.*.local
 node_modules/
+docker/.env
