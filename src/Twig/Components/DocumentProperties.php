@@ -9,9 +9,12 @@ use App\Entity\Project;
 use App\Graph\KnowledgeReader;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\UX\LiveComponent\Attribute\AsLiveComponent;
+use App\Security\ProjectScope;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\UX\LiveComponent\Attribute\LiveAction;
 use Symfony\UX\LiveComponent\Attribute\LiveArg;
 use Symfony\UX\LiveComponent\Attribute\LiveProp;
+use Symfony\UX\LiveComponent\Attribute\PostHydrate;
 use Symfony\UX\LiveComponent\DefaultActionTrait;
 
 #[AsLiveComponent]
@@ -32,12 +35,14 @@ final class DocumentProperties
         private readonly EntityManagerInterface $entityManager,
         private readonly KnowledgeReader $knowledgeReader,
         private readonly DocumentLinker $documentLinker,
+        private readonly ProjectScope $projectScope,
     ) {
     }
 
     public function mount(Node $document): void
     {
         $this->document = $document;
+        $this->guard();
         $this->folderId = $document->getFolder()?->getId();
     }
 
@@ -46,7 +51,18 @@ final class DocumentProperties
      */
     public function getProjects(): array
     {
-        return $this->entityManager->getRepository(Project::class)->findBy([], ['name' => 'ASC']);
+        return $this->projectScope->projects();
+    }
+
+    /**
+     * A live action rebuilds the component from the document id sent by the browser: checked again each time.
+     */
+    #[PostHydrate]
+    public function guard(): void
+    {
+        if (!$this->projectScope->allowsNode($this->document)) {
+            throw new NotFoundHttpException('Document not found.');
+        }
     }
 
     /**
@@ -91,6 +107,9 @@ final class DocumentProperties
     public function toggleProject(#[LiveArg] int $projectId): void
     {
         $project = $this->entityManager->find(Project::class, $projectId) ?? throw new \InvalidArgumentException('Unknown project.');
+        if (!$this->projectScope->allows($project)) {
+            throw new \InvalidArgumentException('Unknown project.');
+        }
         $this->document->getProjects()->contains($project) ? $this->documentLinker->detachProject($this->document, $project) : $this->document->addProject($project);
         $this->entityManager->flush();
     }

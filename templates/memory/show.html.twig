@@ -32,6 +32,24 @@
             </section>
         {% endif %}
 
+        {% set visibility = memory.metadata.visibility ?? 'project' %}
+        {% set current = visibility == 'group' ? 'group:' ~ (memory.metadata.group_id ?? '') : visibility %}
+        <section class="block" aria-labelledby="visibility-title">
+            <div class="block__head">
+                <h2 id="visibility-title">Visibilité</h2>
+                <span class="tag">{{ visibility == 'private' ? 'Privée' : (visibility == 'group' ? 'Groupe ' ~ (group ? group.name : 'supprimé') : 'Projet') }}</span>
+            </div>
+            <form class="inline-form" method="post" action="{{ path('memory_visibility', {id: memory.id}) }}">
+                <input type="hidden" name="_token" value="{{ csrf_token('visibility-memory-' ~ memory.id) }}">
+                <label class="visually-hidden" for="visibility">Qui voit cette mémoire</label>
+                <select class="select" id="visibility" name="visibility">
+                    {% for label, value in visibilities %}<option value="{{ value }}" {{ value == current ? 'selected' }}>{{ label }}</option>{% endfor %}
+                </select>
+                <button class="button" type="submit">Changer</button>
+                <span class="row__sub">Projet : tous ceux qui ont accès à ses projets. Groupe : ses membres. Privée : son auteur et ses agents.</span>
+            </form>
+        </section>
+
         {% set verification = memory.metadata.verification ?? null %}
         <section class="block" aria-labelledby="verification-title">
             <div class="block__head">

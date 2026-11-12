@@ -1,27 +1,66 @@
 {% set route = app.request.attributes.get('_route') %}
+{% set scope = project ? {project: project.slug} : {} %}
 <aside{{ attributes.defaults({class: 'sidebar'}) }}>
-    <a class="workspace" href="{{ path('project_index') }}"><span class="workspace__mark" aria-hidden="true">G</span>Graphe projet</a>
+    <a class="workspace" href="{{ path('dashboard') }}"><span class="workspace__mark" aria-hidden="true">G</span>Graphe projet</a>
+
+    <details class="menu menu--switcher" data-controller="menu" data-action="click@window->menu#closeOutside keydown.esc@window->menu#close">
+        <summary class="menu__trigger" aria-label="Changer de projet">
+            <svg class="nav-item__icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M2 4.5h4.5l1.5 1.5H14v6.5H2z"/></svg>
+            <span class="nav-item__label">{{ project ? project.name : 'Tous les projets' }}</span>
+            <svg class="menu__chevron" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M4.5 6.5L8 10l3.5-3.5"/></svg>
+        </summary>
+        <div class="menu__panel">
+            <a class="menu__item" href="{{ path('project_index') }}" {% if not project %}aria-current="true"{% endif %}>Tous les projets</a>
+            {% for item in this.projects %}
+                <a class="menu__item" href="{{ path('project_show', {slug: item.slug}) }}" {% if project and project.id == item.id %}aria-current="true"{% endif %}>
+                    <span class="project-dot" aria-hidden="true"></span>{{ item.name }}
+                </a>
+            {% else %}
+                <span class="menu__note">Aucun projet</span>
+            {% endfor %}
+        </div>
+    </details>
 
     <nav class="nav-group" aria-label="Espace">
+        <a class="nav-item" href="{{ path('dashboard', scope) }}" {% if route == 'dashboard' %}aria-current="page"{% endif %}>
+            <svg class="nav-item__icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M2.5 13.5v-4M6.25 13.5v-8M10 13.5v-5.5M13.5 13.5v-11"/></svg>
+            <span class="nav-item__label">Tableau de bord</span>
+        </a>
+        <a class="nav-item" href="{{ path('activity', scope) }}" {% if route == 'activity' %}aria-current="page"{% endif %}>
+            <svg class="nav-item__icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M1.5 8.5h3l2-5 3 9 2-4h3"/></svg>
+            <span class="nav-item__label">Activité</span>
+        </a>
+        <a class="nav-item" href="{{ path('project_index') }}" {% if route == 'project_index' %}aria-current="page"{% endif %}>
+            <svg class="nav-item__icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M2.5 2.5h4.5v4.5H2.5zM9 2.5h4.5v4.5H9zM2.5 9h4.5v4.5H2.5zM9 9h4.5v4.5H9z"/></svg>
+            <span class="nav-item__label">Projets</span>
+        </a>
+        {% if not this.scoped %}
         <a class="nav-item" href="{{ path('document_index') }}" {% if route in ['document_index', 'document_show'] %}aria-current="page"{% endif %}>
-            <svg class="nav-item__icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M2 4.5h4.5l1.5 1.5H14v6.5H2z"/></svg>
+            <svg class="nav-item__icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M4 1.75h5.25L12.5 5v9.25H4z"/><path d="M9 1.75V5.25h3.5"/></svg>
             <span class="nav-item__label">Tous les documents</span>
         </a>
+        {% endif %}
         <a class="nav-item" href="{{ path('memory_index') }}" {% if route in ['memory_index', 'memory_show'] and not app.request.query.get('project') %}aria-current="page"{% endif %}>
             <svg class="nav-item__icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M8 2.25c-2.6 0-4.5 1.8-4.5 4.1 0 1.4.7 2.5 1.8 3.2v2.2h5.4V9.55c1.1-.7 1.8-1.8 1.8-3.2 0-2.3-1.9-4.1-4.5-4.1zM6.25 14h3.5"/></svg>
-            <span class="nav-item__label">Toutes les mémoires</span>
-            <span class="nav-item__count">{{ this.memoryCount }}</span>
+            <span class="nav-item__label">{{ this.scoped ? 'Mémoires' : 'Toutes les mémoires' }}</span>
+            {% if not this.scoped %}<span class="nav-item__count">{{ this.memoryCount }}</span>{% endif %}
         </a>
-        {% set pending = this.pendingProposals %}
+        <a class="nav-item" href="{{ path('memory_graph', scope) }}" {% if route == 'memory_graph' %}aria-current="page"{% endif %}>
+            <svg class="nav-item__icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><circle cx="8" cy="8" r="2"/><circle cx="3" cy="4" r="1.25"/><circle cx="13" cy="4.5" r="1.25"/><circle cx="12" cy="12.5" r="1.25"/><path d="M6.4 6.8L4 4.8M9.8 7.1l2.1-1.9M9.3 9.5l1.9 2.1"/></svg>
+            <span class="nav-item__label">Graphe des mémoires</span>
+        </a>
+        {% set pending = this.scoped ? 0 : this.pendingProposals %}
         <a class="nav-item" href="{{ path('proposal_index') }}" {% if route == 'proposal_index' %}aria-current="page"{% endif %}>
             <svg class="nav-item__icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M2.5 8.5l3.25 3.25L13.5 4"/></svg>
             <span class="nav-item__label">À valider</span>
             {% if pending > 0 %}<span class="nav-item__count nav-item__count--alert">{{ pending }}</span>{% endif %}
         </a>
+        {% if not this.scoped %}
         <a class="nav-item" href="{{ path('connector_index') }}" {% if route starts with 'connector_' %}aria-current="page"{% endif %}>
             <svg class="nav-item__icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M6 10l4-4M5 7.5L3.5 9a2.5 2.5 0 003.5 3.5L8.5 11M11 8.5L12.5 7A2.5 2.5 0 009 3.5L7.5 5"/></svg>
             <span class="nav-item__label">Connexions</span>
         </a>
+        {% endif %}
     </nav>
 
     {% if project %}
@@ -59,17 +98,27 @@
         </nav>
     {% endif %}
 
-    <nav class="nav-group nav-group--projects" aria-label="Projets">
-        <span class="nav-group__label">Projets</span>
-        {% for item in this.projects %}
-            <a class="nav-item{{ project and project.id == item.id ? ' is-current' }}" href="{{ path('project_show', {slug: item.slug}) }}">
-                <span class="project-dot" aria-hidden="true"></span>
-                <span class="nav-item__label">{{ item.name }}</span>
+    <nav class="nav-group nav-group--foot" aria-label="Aide">
+        <a class="nav-item" href="{{ path('wiki') }}" {% if route == 'wiki' %}aria-current="page"{% endif %}>
+            <svg class="nav-item__icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M2.5 3h4a1.5 1.5 0 011.5 1.5V13a1.25 1.25 0 00-1.25-1.25H2.5zM13.5 3h-4A1.5 1.5 0 008 4.5V13a1.25 1.25 0 011.25-1.25h4.25z"/></svg>
+            <span class="nav-item__label">Wiki</span>
+        </a>
+        <a class="nav-item" href="{{ path('api_key_index') }}" {% if route == 'api_key_index' %}aria-current="page"{% endif %}>
+            <svg class="nav-item__icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><circle cx="5.25" cy="10.75" r="2.75"/><path d="M7.25 8.75L13 3M10.5 5.5l2 2"/></svg>
+            <span class="nav-item__label">Clés d'API</span>
+        </a>
+        {% if is_granted('ROLE_SUPER_ADMIN') %}
+            <a class="nav-item" href="{{ path('admin_users') }}" {% if route == 'admin_users' %}aria-current="page"{% endif %}>
+                <svg class="nav-item__icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><circle cx="6" cy="5.5" r="2.25"/><path d="M2 13c0-2.2 1.8-3.75 4-3.75S10 10.8 10 13M10.5 3.6a2.25 2.25 0 010 3.8M12 9.6c1.3.5 2 1.7 2 3.4"/></svg>
+                <span class="nav-item__label">Utilisateurs</span>
             </a>
-        {% else %}
-            <span class="nav-group__label">Aucun projet</span>
-        {% endfor %}
+        {% endif %}
+        {% if is_granted('IS_AUTHENTICATED') %}
+            <a class="nav-item" href="{{ path('logout') }}">
+                <svg class="nav-item__icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M6.5 2.5h-4v11h4M10.5 5l3 3-3 3M5.5 8h8"/></svg>
+                <span class="nav-item__label">Se déconnecter</span>
+            </a>
+        {% endif %}
+        {% if project %}<p class="sidebar__hint"><kbd class="kbd">⌘K</kbd> chercher dans le code</p>{% endif %}
     </nav>
-
-    {% if project %}<p class="sidebar__hint"><kbd class="kbd">⌘K</kbd> chercher dans le code</p>{% endif %}
 </aside>

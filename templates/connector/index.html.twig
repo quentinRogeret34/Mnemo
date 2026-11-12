@@ -10,18 +10,18 @@
 
 {% block body %}
     <div class="view-head">
-        <h1>Connecteurs MCP</h1>
+        <h1>Connecteurs</h1>
         <span class="view-head__meta">{{ connectors|length }}</span>
     </div>
 
     {% if connectors is empty %}
-        <p class="block__empty">Aucun connecteur. Un connecteur se branche sur un serveur MCP externe (Notion, GitHub, mem0...) et importe ses ressources en documents, ou la réponse d'un de ses outils en document ou en mémoires.</p>
+        <p class="block__empty">Aucun connecteur. Un connecteur lit l'historique d'un dépôt GitHub ou GitLab (commits, pull et merge requests, issues), ou se branche sur un serveur MCP externe (mem0, DeepWiki...) et importe ses ressources en documents ou en mémoires.</p>
     {% else %}
         <ul class="list">
             {% for connector in connectors %}
                 <li>
                     <a class="row" href="{{ path('connector_show', {id: connector.id}) }}">
-                        <span class="code-chip">{{ connector.transport.value|upper }}</span>
+                        <span class="code-chip">{{ connector.mode.forge ? connector.mode.value|upper : connector.transport.value|upper }}</span>
                         <span class="row__title"><span>{{ connector.name }}</span><span class="row__sub">{{ connector.mode.label }}{{ connector.project ? ' · ' ~ connector.project.name }}</span></span>
                         <span class="row__meta">{{ include('connector/_status.html.twig') }}</span>
                     </a>

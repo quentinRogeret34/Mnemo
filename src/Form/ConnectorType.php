@@ -6,6 +6,7 @@ use App\Entity\Connector;
 use App\Entity\Folder;
 use App\Entity\Project;
 use App\Enum\ConnectorMode;
+use App\Enum\ConnectorSchedule;
 use App\Enum\ConnectorTransport;
 use App\Enum\MemoryType;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
@@ -46,6 +47,7 @@ final class ConnectorType extends AbstractType
             ->add('itemsPath', TextType::class, ['label' => 'Chemin de la liste', 'required' => false, 'help' => 'Mode mémoires : chemin de la liste dans la réponse JSON, ex. « results ». Vide si la réponse est la liste.'])
             ->add('textField', TextType::class, ['label' => 'Champ du texte', 'required' => false, 'help' => 'Mode mémoires : champ qui contient le texte. Par défaut : memory, text ou content.'])
             ->add('memoryType', EnumType::class, ['label' => 'Type des mémoires', 'class' => MemoryType::class, 'choice_label' => static fn (MemoryType $type): string => $type->label()])
+            ->add('schedule', EnumType::class, ['label' => 'Synchronisation', 'class' => ConnectorSchedule::class, 'choice_label' => static fn (ConnectorSchedule $schedule): string => $schedule->label(), 'help' => 'Automatique : demande le service worker (docker compose up -d worker).'])
             ->add('project', EntityType::class, ['label' => 'Rattacher au projet', 'class' => Project::class, 'choice_label' => 'name', 'required' => false, 'placeholder' => 'Aucun projet'])
             ->add('folder', EntityType::class, ['label' => 'Dossier des documents', 'class' => Folder::class, 'choice_label' => 'name', 'required' => false, 'placeholder' => 'Racine']);
 

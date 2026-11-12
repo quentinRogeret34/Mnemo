@@ -19,13 +19,13 @@ final class GraphReader
     }
 
     /**
-     * @return list<array{slug: string, name: string, files: int, symbols: int, edges: int, ref: ?string, updated_at: ?string}>
+     * @return list<array{id: int, slug: string, name: string, repository_path: string, files: int, symbols: int, edges: int, ref: ?string, updated_at: ?string}>
      */
     public function projectSummaries(): array
     {
         return $this->connection->fetchAllAssociative(
             <<<'SQL'
-                SELECT p.slug, p.name,
+                SELECT p.id, p.slug, p.name, p.repository_path,
                        COUNT(n.id) FILTER (WHERE n.type = :file) AS files,
                        COUNT(n.id) FILTER (WHERE n.type = :symbol) AS symbols,
                        (SELECT COUNT(*) FROM edge e JOIN node s ON s.id = e.source_id WHERE s.project_id = p.id) AS edges,
@@ -221,6 +221,34 @@ final class GraphReader
                     SQL,
                 ['project' => $project->getId(), 'active' => EdgeStatus::Active->value, 'inferred' => Confidence::Inferred->value, 'paths' => $paths, 'code' => [NodeType::CodeFile->value, NodeType::Symbol->value]],
                 ['paths' => ArrayParameterType::STRING, 'code' => ArrayParameterType::STRING],
+            ),
+        );
+    }
+
+    /**
+     * Latest commits touching the file, with the change requests that include them.
+     *
+     * @return list<array{sha: string, label: string, author: ?string, date: ?string, url: ?string, tickets: list<array{ref: string, title: string, url: ?string}>}>
+     */
+    public function fileHistory(Project $project, string $path, int $limit = 10): array
+    {
+        return array_map(
+            static fn (array $row): array => ['tickets' => json_decode($row['tickets'], true)] + $row,
+            $this->connection->fetchAllAssociative(
+                <<<SQL
+                    SELECT c.external_id AS sha, c.label, c.metadata->>'author' AS author, c.metadata->>'date' AS date, c.metadata->>'url' AS url,
+                           COALESCE((
+                               SELECT json_agg(json_build_object('ref', t.external_id, 'title', t.label, 'url', t.metadata->>'url') ORDER BY t.external_id)
+                               FROM edge i JOIN node t ON t.id = i.source_id
+                               WHERE i.target_id = c.id AND i.relation = 'includes' AND i.status = 'active'
+                           ), '[]') AS tickets
+                    FROM edge e JOIN node c ON c.id = e.source_id JOIN node f ON f.id = e.target_id
+                    WHERE f.project_id = :project AND f.type = :file AND f.path = :path
+                      AND e.relation = 'touches' AND e.status = 'active' AND c.type = :commit
+                    ORDER BY c.metadata->>'date' DESC
+                    LIMIT $limit
+                    SQL,
+                ['project' => $project->getId(), 'file' => NodeType::CodeFile->value, 'commit' => NodeType::Commit->value, 'path' => $path],
             ),
         );
     }

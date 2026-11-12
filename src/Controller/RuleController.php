@@ -49,6 +49,7 @@ final class RuleController extends AbstractController
             'rule' => $rule,
             'categories' => array_combine(array_column(ShadowCategory::cases(), 'value'), array_map(static fn (ShadowCategory $category): string => $category->label(), ShadowCategory::cases())),
             'sources' => $this->knowledgeReader->ruleSources($rule),
+            'mentions' => $this->knowledgeReader->ruleMentions($rule),
             'implementations' => $this->knowledgeReader->ruleImplementations($rule),
             'memories' => $this->knowledgeReader->memoriesAbout($rule->getId()),
         ]);

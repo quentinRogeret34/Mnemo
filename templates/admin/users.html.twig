@@ -1,0 +1,80 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Utilisateurs et groupes{% endblock %}
+
+{% block crumbs %}<span class="crumbs__current">Utilisateurs et groupes</span>{% endblock %}
+
+{% block body %}
+    {% set pending = users|filter(user => user.status.value == 'pending')|length %}
+    <div class="view-head">
+        <h1>Utilisateurs</h1>
+        <span class="view-head__meta">{{ users|length }}{% if pending > 0 %} · {{ pending }} en attente{% endif %}</span>
+    </div>
+    <p class="page__lede">Un compte se crée à la première connexion par GitHub, GitLab ou Google, puis attend ici d'être activé. Un utilisateur ne voit que les projets de ses groupes ; un super admin voit tout et gère cette page.</p>
+
+    {% if users is empty %}
+        <p class="block__empty">Aucun compte. Le premier à se connecter par un fournisseur devient super admin.</p>
+    {% else %}
+        <ul class="admin-list">
+            {% for user in users %}
+                <li class="panel">
+                    <form class="admin-row" method="post" action="{{ path('admin_user_update', {id: user.id}) }}">
+                        <input type="hidden" name="_token" value="{{ csrf_token('admin-user-' ~ user.id) }}">
+                        <div class="admin-row__who">
+                            <span class="row__title"><span>{{ user.name }}</span>{% if user.status.value == 'pending' %}<span class="tag tag--demo">en attente</span>{% endif %}</span>
+                            <span class="row__sub">{{ user.email }} · {{ user.provider }} · {{ user.lastLoginAt ? 'vu le ' ~ user.lastLoginAt|date('d/m/Y') : 'jamais connecté' }}</span>
+                        </div>
+                        <label class="visually-hidden" for="status-{{ user.id }}">Statut de {{ user.name }}</label>
+                        <select class="select" id="status-{{ user.id }}" name="status">
+                            {% for status in enum_cases('App\\Enum\\UserStatus') %}<option value="{{ status.value }}" {{ user.status == status ? 'selected' }}>{{ status.label }}</option>{% endfor %}
+                        </select>
+                        <label class="key-form__check"><input type="checkbox" name="super_admin" value="1" {{ user.superAdmin ? 'checked' }}> Super admin</label>
+                        <fieldset class="key-form__projects">
+                            <legend class="visually-hidden">Groupes de {{ user.name }}</legend>
+                            {% for group in groups %}
+                                <label class="key-form__check"><input type="checkbox" name="groups[]" value="{{ group.id }}" {{ group.users.contains(user) ? 'checked' }}> {{ group.name }}</label>
+                            {% else %}
+                                <span class="row__sub">Aucun groupe</span>
+                            {% endfor %}
+                        </fieldset>
+                        <button class="button {{ user.status.value == 'pending' ? 'button--primary' }}" type="submit">Enregistrer</button>
+                    </form>
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
+    <section class="block" aria-labelledby="groups-title">
+        <div class="block__head"><h2 id="groups-title">Groupes</h2><span class="block__count">{{ groups|length }}</span></div>
+        <p class="row__sub">Un groupe donne à ses membres l'accès à ses projets, et permet de partager une mémoire avec eux seulement.</p>
+        <form class="inline-form admin-group-new" method="post" action="{{ path('admin_group_create') }}">
+            <input type="hidden" name="_token" value="{{ csrf_token('admin-group-create') }}">
+            <label class="visually-hidden" for="group-name">Nom du groupe</label>
+            <input class="input" id="group-name" type="text" name="name" maxlength="100" placeholder="Équipe back" required>
+            <button class="button" type="submit">Créer le groupe</button>
+        </form>
+        <ul class="admin-list">
+            {% for group in groups %}
+                <li class="panel">
+                    <form class="admin-row" method="post" action="{{ path('admin_group_update', {id: group.id}) }}">
+                        <input type="hidden" name="_token" value="{{ csrf_token('admin-group-' ~ group.id) }}">
+                        <div class="admin-row__who">
+                            <span class="row__title"><span>{{ group.name }}</span></span>
+                            <span class="row__sub">{{ group.users|length }} {{ group.users|length > 1 ? 'membres' : 'membre' }}{% if group.users is not empty %} : {{ group.users|map(user => user.name)|join(', ') }}{% endif %}</span>
+                        </div>
+                        <fieldset class="key-form__projects">
+                            <legend class="visually-hidden">Projets du groupe {{ group.name }}</legend>
+                            {% for project in projects %}
+                                <label class="key-form__check"><input type="checkbox" name="projects[]" value="{{ project.slug }}" {{ group.projects.contains(project) ? 'checked' }}> {{ project.name }}</label>
+                            {% else %}
+                                <span class="row__sub">Aucun projet</span>
+                            {% endfor %}
+                        </fieldset>
+                        <button class="button" type="submit">Enregistrer</button>
+                        <button class="button button--danger" type="submit" name="delete" value="1">Supprimer</button>
+                    </form>
+                </li>
+            {% endfor %}
+        </ul>
+    </section>
+{% endblock %}

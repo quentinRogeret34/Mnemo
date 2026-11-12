@@ -10,6 +10,7 @@ use App\Enum\EdgeOrigin;
 use App\Enum\EdgeStatus;
 use App\Enum\MemoryType;
 use App\Enum\NodeType;
+use App\Security\MemoryAccess;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Uid\Uuid;
 
@@ -31,6 +32,7 @@ final class MemoryStore
 
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
+        private readonly MemoryAccess $memoryAccess,
     ) {
     }
 
@@ -45,7 +47,7 @@ final class MemoryStore
     public function findByText(string $text): ?Node
     {
         $id = $this->entityManager->getConnection()->fetchOne(
-            "SELECT id FROM node WHERE type = :memory AND lower(label) = lower(:text) AND COALESCE(metadata->>'status', 'active') = 'active' ORDER BY id LIMIT 1",
+            "SELECT m.id FROM node m WHERE m.type = :memory AND lower(m.label) = lower(:text) AND COALESCE(m.metadata->>'status', 'active') = 'active' AND ".$this->memoryAccess->sql('m').' ORDER BY m.id LIMIT 1',
             ['memory' => NodeType::Memory->value, 'text' => trim($text)],
         );
 
@@ -55,9 +57,9 @@ final class MemoryStore
     public function countActive(Project $project): int
     {
         return (int) $this->entityManager->getConnection()->fetchOne(
-            <<<'SQL'
+            <<<SQL
                 SELECT count(*) FROM node m
-                WHERE m.type = :memory AND COALESCE(m.metadata->>'status', 'active') = 'active'
+                WHERE m.type = :memory AND COALESCE(m.metadata->>'status', 'active') = 'active' AND {$this->memoryAccess->sql('m')}
                   AND EXISTS (SELECT 1 FROM node_project np WHERE np.node_id = m.id AND np.project_id = :project)
                 SQL,
             ['memory' => NodeType::Memory->value, 'project' => $project->getId()],

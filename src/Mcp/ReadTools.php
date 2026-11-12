@@ -10,6 +10,8 @@ use App\Graph\CapabilityDetector;
 use App\Graph\GraphReader;
 use App\Export\MemoryBlockExporter;
 use App\Graph\KnowledgeReader;
+use App\Search\HybridSearch;
+use App\Security\ProjectScope;
 use Doctrine\ORM\EntityManagerInterface;
 use Mcp\Capability\Attribute\McpTool;
 use Mcp\Capability\Attribute\Schema;
@@ -23,12 +25,14 @@ final class ReadTools
 
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
+        private readonly ProjectScope $projectScope,
         private readonly KnowledgeReader $knowledgeReader,
         private readonly GraphReader $graphReader,
         private readonly DocumentStorage $documentStorage,
         private readonly UrlGeneratorInterface $urlGenerator,
         private readonly CapabilityDetector $capabilityDetector,
         private readonly MemoryBlockExporter $memoryBlockExporter,
+        private readonly HybridSearch $hybridSearch,
     ) {
     }
 
@@ -42,7 +46,7 @@ final class ReadTools
             fn (Project $project): array => ['slug' => $project->getSlug(), 'name' => $project->getName()]
                 + $this->knowledgeReader->counts($project)
                 + ['capabilities' => array_map(static fn (array $item): string => $item['capability']->value, $this->capabilityDetector->detect($project))],
-            $this->entityManager->getRepository(Project::class)->findBy([], ['name' => 'ASC']),
+            array_values(array_filter($this->entityManager->getRepository(Project::class)->findBy([], ['name' => 'ASC']), $this->projectScope->allows(...))),
         );
     }
 
@@ -52,9 +56,9 @@ final class ReadTools
      * @param list<string> $types   node types to search
      * @param int          $limit   maximum number of results
      *
-     * @return array{results: list<array<string, mixed>>, note: string}
+     * @return array{results: list<array<string, mixed>>, mode: string, note: string}
      */
-    #[McpTool(name: 'search', description: 'Keyword search in the project knowledge graph: memories, business documents, business rules and code. Returns typed results with ids and URLs; use file_context or get_document to go deeper.', annotations: new ToolAnnotations(readOnlyHint: true))]
+    #[McpTool(name: 'search', description: 'Search the project knowledge graph: memories, business documents, business rules and code. Matches keywords, and meaning too once embeddings are indexed (mode "hybrid"). Returns typed results with ids and URLs; use file_context or get_document to go deeper.', annotations: new ToolAnnotations(readOnlyHint: true))]
     public function search(
         string $query,
         ?string $project = null,
@@ -63,10 +67,12 @@ final class ReadTools
         #[Schema(minimum: 1, maximum: 50)]
         int $limit = 20,
     ): array {
-        $results = $this->knowledgeReader->search($query, null === $project ? null : $this->project($project), $types, max(1, min(50, $limit)));
+        $this->requireProject(null === $project ? [] : [$project]);
+        $found = $this->hybridSearch->search($query, null === $project ? null : $this->project($project), array_values($types), max(1, min(50, $limit)));
 
         return [
-            'results' => array_map(fn (array $result): array => $result + ['url' => $this->url($result)], $results),
+            'results' => array_map(fn (array $result): array => $result + ['url' => $this->url($result)], $found['results']),
+            'mode' => $found['mode'],
             'note' => self::UNTRUSTED,
         ];
     }
@@ -77,7 +83,7 @@ final class ReadTools
      *
      * @return array<string, mixed>
      */
-    #[McpTool(name: 'file_context', description: 'Everything the graph knows about a code file: business rules it implements, documents and memories linked to it, and the files it depends on or that use it. Call it before reading or editing a file.', annotations: new ToolAnnotations(readOnlyHint: true))]
+    #[McpTool(name: 'file_context', description: 'Everything the graph knows about a code file: business rules it implements, documents and memories linked to it, the files it depends on or that use it, and its latest commits with their pull or merge requests. Call it before reading or editing a file.', annotations: new ToolAnnotations(readOnlyHint: true))]
     public function fileContext(string $project, string $path): array
     {
         $projectEntity = $this->project($project);
@@ -94,6 +100,10 @@ final class ReadTools
             'symbols' => array_column($this->graphReader->symbols($projectEntity, $path), 'label'),
             'depends_on' => \array_slice(array_values(array_unique(array_column($edges['outgoing'], 'target_path'))), 0, 30),
             'used_by' => \array_slice(array_values(array_unique(array_column($edges['incoming'], 'source_path'))), 0, 30),
+            'recent_changes' => array_map(
+                static fn (array $commit): array => ['sha' => substr($commit['sha'], 0, 10), 'message' => $commit['label'], 'author' => $commit['author'], 'date' => $commit['date'], 'change_requests' => array_column($commit['tickets'], 'title', 'ref')],
+                $this->graphReader->fileHistory($projectEntity, $path, 5),
+            ),
             'note' => self::UNTRUSTED,
         ];
     }
@@ -108,6 +118,9 @@ final class ReadTools
     {
         $document = $this->entityManager->getRepository(Node::class)->findOneBy(['id' => $id, 'type' => NodeType::Document])
             ?? throw new ToolCallException(\sprintf('Document %d not found.', $id));
+        if (null !== $this->projectScope->slugs() && !$document->getProjects()->exists(fn (int $key, Project $project): bool => $this->projectScope->allows($project))) {
+            throw new ToolCallException(\sprintf('Document %d not found.', $id));
+        }
         $format = $document->getMetadata()['format'];
 
         return [
@@ -140,10 +153,27 @@ final class ReadTools
         ];
     }
 
+    /**
+     * A key limited to some projects cannot read or write outside a project.
+     *
+     * @param list<string> $projects
+     */
+    private function requireProject(array $projects): void
+    {
+        $slugs = $this->projectScope->slugs();
+        if (null !== $slugs && [] === $projects) {
+            throw new ToolCallException(\sprintf('This API key is limited to the projects: %s. Name one of them.', implode(', ', $slugs)));
+        }
+    }
+
     private function project(string $slug): Project
     {
-        return $this->entityManager->getRepository(Project::class)->findOneBy(['slug' => $slug])
-            ?? throw new ToolCallException(\sprintf('Unknown project "%s". Call list_projects to see the available slugs.', $slug));
+        $project = $this->entityManager->getRepository(Project::class)->findOneBy(['slug' => $slug]);
+        if (null === $project || !$this->projectScope->allows($project)) {
+            throw new ToolCallException(\sprintf('Unknown project "%s". Call list_projects to see the available slugs.', $slug));
+        }
+
+        return $project;
     }
 
     /**

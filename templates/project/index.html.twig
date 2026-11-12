@@ -17,19 +17,48 @@ bin/console app:project:create &lt;slug&gt; "&lt;Nom&gt;" &lt;dépôt&gt;
 bin/console app:ingest:code &lt;slug&gt; var/graphify/&lt;slug&gt;/graphify-out/graph.json --no-debug</code></pre>
         </section>
     {% else %}
-        <ul class="list">
+        <ul class="project-list">
             {% for project in projects %}
-                <li>
-                    <a class="row" href="{{ path('project_show', {slug: project.slug}) }}">
-                        <span class="project-dot" aria-hidden="true"></span>
-                        <span class="row__title"><span>{{ project.name }}</span><span class="row__sub">{{ project.slug }}</span></span>
-                        <span class="row__meta">
-                            <span class="num">{{ project.files|number_format(0, ',', ' ') }} fichiers</span>
-                            <span class="num">{{ project.symbols|number_format(0, ',', ' ') }} symboles</span>
-                            <span class="num">{{ project.edges|number_format(0, ',', ' ') }} arêtes</span>
-                            <span class="mono">{{ project.ref ? project.ref|slice(0, 7) : '-' }}</span>
-                        </span>
-                    </a>
+                {% set k = project.knowledge %}
+                <li class="project-card">
+                    <details class="project-card__details">
+                        <summary class="row project-card__summary">
+                            <svg class="project-card__chevron" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M6.5 4.5L10 8l-3.5 3.5"/></svg>
+                            <span class="row__title"><span>{{ project.name }}</span><span class="row__sub">{{ project.slug }}</span></span>
+                            <span class="row__meta">
+                                <span class="num">{{ project.files|number_format(0, ',', ' ') }} fichiers</span>
+                                <span class="num">{{ project.symbols|number_format(0, ',', ' ') }} symboles</span>
+                                <span class="num">{{ project.edges|number_format(0, ',', ' ') }} arêtes</span>
+                                <span class="mono">{{ project.ref ? project.ref|slice(0, 7) : '-' }}</span>
+                            </span>
+                        </summary>
+                        <div class="project-card__body">
+                            <p class="row__sub mono">{{ project.repository_path }}</p>
+                            <div class="project-card__stats">
+                                <a class="stat" href="{{ path('project_show', {slug: project.slug}) }}"><span class="stat__value">{{ k.documents }}</span><span class="stat__label">Documents</span></a>
+                                <a class="stat" href="{{ path('rule_index', {slug: project.slug}) }}"><span class="stat__value">{{ k.rules }}</span><span class="stat__label">Règles métier{% if k.rules_to_review > 0 %} · {{ k.rules_to_review }} à valider{% endif %}</span></a>
+                                <a class="stat" href="{{ path('memory_index', {project: project.slug}) }}"><span class="stat__value">{{ k.memories }}</span><span class="stat__label">Mémoires</span></a>
+                                <a class="stat" href="{{ path('project_code', {slug: project.slug}) }}"><span class="stat__value">{{ k.files|number_format(0, ',', ' ') }}</span><span class="stat__label">Fichiers de code</span></a>
+                                <a class="stat" href="{{ path('proposal_index', {project: project.slug}) }}"><span class="stat__value">{{ project.pending }}</span><span class="stat__label">À valider</span></a>
+                            </div>
+                        </div>
+                    </details>
+                    <a class="button project-card__open" href="{{ path('project_show', {slug: project.slug}) }}">Ouvrir</a>
+                    <details class="menu menu--end" data-controller="menu" data-action="click@window->menu#closeOutside keydown.esc@window->menu#close">
+                        <summary class="button menu__kebab" aria-label="Actions pour {{ project.name }}">
+                            <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true"><circle cx="3.5" cy="8" r="1.25"/><circle cx="8" cy="8" r="1.25"/><circle cx="12.5" cy="8" r="1.25"/></svg>
+                        </summary>
+                        <div class="menu__panel">
+                            <a class="menu__item" href="{{ path('dashboard', {project: project.slug}) }}">Tableau de bord</a>
+                            <a class="menu__item" href="{{ path('project_show', {slug: project.slug}) }}">Documents</a>
+                            <a class="menu__item" href="{{ path('rule_index', {slug: project.slug}) }}">Règles métier</a>
+                            <a class="menu__item" href="{{ path('memory_index', {project: project.slug}) }}">Mémoires</a>
+                            <a class="menu__item" href="{{ path('memory_graph', {project: project.slug}) }}">Graphe des mémoires</a>
+                            <a class="menu__item" href="{{ path('project_code', {slug: project.slug}) }}">Code</a>
+                            <a class="menu__item" href="{{ path('garden_show', {slug: project.slug}) }}">Jardinage</a>
+                            <a class="menu__item" href="{{ path('proposal_index', {project: project.slug}) }}">À valider{% if project.pending > 0 %} ({{ project.pending }}){% endif %}</a>
+                        </div>
+                    </details>
                 </li>
             {% endfor %}
         </ul>

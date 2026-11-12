@@ -4,12 +4,25 @@ services:
     environment:
       SERVER_NAME: ":80"
     ports:
-      - "8080:80"
+      - "127.0.0.1:8080:80"
     volumes:
       - ./:/app
       - ./docker/php/app.ini:/usr/local/etc/php/conf.d/zz-app.ini:ro
       - caddy_data:/data
       - caddy_config:/config
+    depends_on:
+      database:
+        condition: service_healthy
+
+  worker:
+    build: .
+    command: ["php", "bin/console", "messenger:consume", "scheduler_default", "async", "--time-limit=3600", "--memory-limit=256M"]
+    restart: unless-stopped
+    healthcheck:
+      disable: true
+    volumes:
+      - ./:/app
+      - ./docker/php/app.ini:/usr/local/etc/php/conf.d/zz-app.ini:ro
     depends_on:
       database:
         condition: service_healthy

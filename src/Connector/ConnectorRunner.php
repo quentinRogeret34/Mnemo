@@ -4,7 +4,9 @@ namespace App\Connector;
 
 use App\Document\DocumentStorage;
 use App\Entity\Connector;
+use App\Entity\ConnectorRun;
 use App\Enum\ConnectorMode;
+use App\Forge\ForgeImporter;
 use App\Memory\MemoryStore;
 use Doctrine\ORM\EntityManagerInterface;
 use Mcp\Client;
@@ -12,6 +14,7 @@ use Mcp\Schema\Content\BlobResourceContents;
 use Mcp\Schema\Content\TextContent;
 use Mcp\Schema\Content\TextResourceContents;
 use Mcp\Schema\ResourceDefinition;
+use Symfony\Component\Lock\LockFactory;
 
 /**
  * Imports the content of an external MCP server into the graph. A run is idempotent: an item is identified by
@@ -38,6 +41,8 @@ final class ConnectorRunner
         private readonly DocumentStorage $documentStorage,
         private readonly MemoryStore $memoryStore,
         private readonly EntityManagerInterface $entityManager,
+        private readonly ForgeImporter $forgeImporter,
+        private readonly LockFactory $lockFactory,
     ) {
     }
 
@@ -46,6 +51,10 @@ final class ConnectorRunner
      */
     public function inspect(Connector $connector): array
     {
+        if ($connector->getMode()->isForge()) {
+            return ['server' => $this->forgeImporter->describe($connector), 'tools' => [], 'resources' => []];
+        }
+
         $client = $this->clientFactory->connect($connector);
         try {
             $server = $client->getServerInfo();
@@ -70,27 +79,41 @@ final class ConnectorRunner
     /**
      * @return array{created: int, updated: int, unchanged: int, skipped: list<string>, error: ?string}
      */
-    public function sync(Connector $connector): array
+    public function sync(Connector $connector, string $trigger = ConnectorRun::MANUAL): array
     {
         $report = ['created' => 0, 'updated' => 0, 'unchanged' => 0, 'skipped' => [], 'error' => null];
+        $lock = $this->lockFactory->createLock('connector-sync-'.$connector->getId());
+        if (!$lock->acquire()) {
+            return ['error' => 'Une synchronisation de ce connecteur est déjà en cours.'] + $report;
+        }
+        $startedAt = new \DateTimeImmutable();
 
         try {
-            $client = $this->clientFactory->connect($connector);
-            try {
-                match ($connector->getMode()) {
-                    ConnectorMode::Resources => $this->importResources($client, $connector, $report),
-                    ConnectorMode::ToolDocument => $this->importToolDocument($client, $connector, $report),
-                    ConnectorMode::ToolMemories => $this->importToolMemories($client, $connector, $report),
-                };
-            } finally {
-                $client->disconnect();
+            if ($connector->getMode()->isForge()) {
+                $this->forgeImporter->import($connector, $report);
+            } else {
+                $client = $this->clientFactory->connect($connector);
+                try {
+                    match ($connector->getMode()) {
+                        ConnectorMode::Resources => $this->importResources($client, $connector, $report),
+                        ConnectorMode::ToolDocument => $this->importToolDocument($client, $connector, $report),
+                        ConnectorMode::ToolMemories => $this->importToolMemories($client, $connector, $report),
+                    };
+                } finally {
+                    $client->disconnect();
+                }
             }
         } catch (\Throwable $exception) {
             $report['error'] = $exception->getMessage();
         }
 
-        $connector->recordRun($report);
-        $this->entityManager->flush();
+        try {
+            $connector->recordRun($report);
+            $this->entityManager->persist(new ConnectorRun($connector, $trigger, $startedAt, $report));
+            $this->entityManager->flush();
+        } finally {
+            $lock->release();
+        }
 
         return $report;
     }

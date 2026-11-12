@@ -2,3 +2,6 @@ var/
 vendor/
 .env.local
 .quentinDev
+.git/
+.env.*.local
+node_modules/

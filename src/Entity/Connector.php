@@ -3,6 +3,7 @@
 namespace App\Entity;
 
 use App\Enum\ConnectorMode;
+use App\Enum\ConnectorSchedule;
 use App\Enum\ConnectorTransport;
 use App\Enum\MemoryType;
 use Doctrine\DBAL\Types\Types;
@@ -85,6 +86,17 @@ class Connector
     #[ORM\Column(type: Types::JSON, nullable: true)]
     private ?array $lastReport = null;
 
+    #[ORM\Column(length: 10, enumType: ConnectorSchedule::class, options: ['default' => 'manual'])]
+    private ConnectorSchedule $schedule = ConnectorSchedule::Manual;
+
+    /**
+     * Where the last forge import stopped, per resource: only what changed since is fetched.
+     *
+     * @var array<string, string>|null
+     */
+    #[ORM\Column(type: Types::JSON, nullable: true)]
+    private ?array $cursor = null;
+
     #[ORM\Column]
     private \DateTimeImmutable $createdAt;
 
@@ -96,6 +108,16 @@ class Connector
     #[Assert\Callback]
     public function validateTool(ExecutionContextInterface $context): void
     {
+        if ($this->mode->isForge()) {
+            if (null === $this->project) {
+                $context->buildViolation('Un connecteur de forge alimente un projet : le choisir.')->atPath('project')->addViolation();
+            }
+            if (!\is_string($this->arguments['repository'] ?? null) || '' === trim($this->arguments['repository'])) {
+                $context->buildViolation('Indiquer le dépôt, ex. {"repository": "owner/repo"}.')->atPath('arguments')->addViolation();
+            }
+
+            return;
+        }
         if (ConnectorMode::Resources !== $this->mode && null === $this->tool) {
             $context->buildViolation('Indiquer l\'outil à appeler.')->atPath('tool')->addViolation();
         }
@@ -258,6 +280,28 @@ class Connector
     {
         $this->lastRunAt = new \DateTimeImmutable();
         $this->lastReport = $report;
+    }
+
+    public function getSchedule(): ConnectorSchedule
+    {
+        return $this->schedule;
+    }
+
+    public function setSchedule(ConnectorSchedule $schedule): void
+    {
+        $this->schedule = $schedule;
+    }
+
+    /** @return array<string, string> */
+    public function getCursor(): array
+    {
+        return $this->cursor ?? [];
+    }
+
+    /** @param array<string, string> $cursor */
+    public function setCursor(array $cursor): void
+    {
+        $this->cursor = $cursor;
     }
 
     public function getCreatedAt(): \DateTimeImmutable

@@ -12,3 +12,12 @@ mcp:
             # STDIO for local agents: docker compose exec -T php bin/console mcp:server
             transports:
                 stdio: true
+
+when@prod:
+    mcp:
+        servers:
+            default:
+                http:
+                    # The host check guards a local server against DNS rebinding. A deployed server is reached by
+                    # its domain and guarded by API keys (APP_ACCESS_ROLE=ROLE_USER) instead.
+                    allowed_hosts: false

@@ -9,42 +9,81 @@
 {% endblock %}
 
 {% block body %}
+    {% set groups = {
+        memories: {label: 'Mémoires', clean: 'Toutes rattachées, liées et vérifiées.'},
+        rules: {label: 'Règles métier', clean: 'Toutes validées, sourcées, reliées au code et analysées.'},
+        documents: {label: 'Documents', clean: 'Tous reliés à une règle, du code ou une mémoire.'},
+        links: {label: 'Liens inférés', clean: 'Aucun lien proposé par le LLM en attente de confirmation.'},
+    } %}
+    {% set total = findings|reduce((sum, finding) => sum + finding.count, 0) %}
     <div class="view-head">
         <h1>Jardinage</h1>
-        <span class="view-head__meta">{{ findings|length }} {{ findings|length > 1 ? 'constats' : 'constat' }}</span>
+        <span class="view-head__meta">{{ total }} {{ total > 1 ? 'éléments à entretenir' : 'élément à entretenir' }}</span>
     </div>
-    <p class="page__lede">Ce qui a dérivé dans la connaissance du projet. Ce contrôle ne modifie rien : chaque correction se fait depuis la fiche concernée ou dans <a class="link" href="{{ path('proposal_index', {project: project.slug}) }}">À valider</a>{% if pending > 0 %} ({{ pending }} en attente){% endif %}.</p>
+    <p class="page__lede">Le jardinage est l'entretien de la connaissance du projet : repérer ce qui n'est plus relié, plus vérifié ou jamais relu, avant que les agents ne s'appuient dessus. Cette page ne modifie rien.</p>
 
-    <form class="inline-form" method="post" action="{{ path('garden_duplicates', {slug: project.slug}) }}">
-        <input type="hidden" name="_token" value="{{ csrf_token('garden-' ~ project.slug) }}">
-        <button class="button" type="submit">Chercher doublons et contradictions</button>
-        <span class="row__sub">Un appel LLM par lot de mémoires ; les paires trouvées arrivent dans À valider.</span>
-    </form>
+    <ol class="steps">
+        <li class="steps__item"><span class="steps__title">Repérer</span><span class="row__sub">Des contrôles sans LLM listent ci-dessous ce qui a dérivé, par famille.</span></li>
+        <li class="steps__item">
+            <span class="steps__title">Comparer</span>
+            <span class="row__sub">Un passage LLM cherche les mémoires en double ou qui se contredisent.</span>
+            <form method="post" action="{{ path('garden_duplicates', {slug: project.slug}) }}">
+                <input type="hidden" name="_token" value="{{ csrf_token('garden-' ~ project.slug) }}">
+                <button class="button" type="submit">Chercher doublons et contradictions</button>
+            </form>
+        </li>
+        <li class="steps__item">
+            <span class="steps__title">Corriger</span>
+            <span class="row__sub">Chaque correction se décide à la main, depuis la fiche concernée ou dans la file de validation.</span>
+            <a class="button" href="{{ path('proposal_index', {project: project.slug}) }}">À valider{% if pending > 0 %} ({{ pending }} en attente){% endif %}</a>
+        </li>
+    </ol>
 
-    {% if findings is empty %}
-        <p class="block__empty">Rien n'a dérivé.</p>
-    {% endif %}
+    <section class="tiles" aria-label="État par famille">
+        {% for key, group in groups %}
+            {% set count = findings|filter(finding => finding.group == key)|reduce((sum, finding) => sum + finding.count, 0) %}
+            <a class="tile tile--link{{ count == 0 ? ' tile--clean' }}" href="#group-{{ key }}">
+                <span class="tile__label">{{ group.label }}</span>
+                <span class="tile__value">{{ count }}</span>
+                <span class="tile__sub">{{ count == 0 ? 'Rien à entretenir' : 'à entretenir' }}</span>
+            </a>
+        {% endfor %}
+    </section>
 
-    {% for finding in findings %}
-        <section class="block" aria-labelledby="finding-{{ finding.key }}">
-            <div class="block__head"><h2 id="finding-{{ finding.key }}">{{ finding.title }}</h2><span class="block__count">{{ finding.count }}</span></div>
-            <p class="row__sub">{{ finding.hint }}</p>
-            <ul class="list">
-                {% for item in finding.items %}
-                    <li>
-                        {% if item.type == 'memory' %}
-                            <a class="row row--memory" href="{{ path('memory_show', {id: item.id}) }}"><span class="row__title"><span class="memory-text">{{ item.label }}</span></span></a>
-                        {% elseif item.type == 'business_rule' %}
-                            <a class="row" href="{{ path('rule_show', {slug: project.slug, code: item.code}) }}"><span class="row__title"><span class="code-chip">{{ item.code }}</span> {{ item.label }}</span></a>
-                        {% elseif item.type == 'document' %}
-                            <a class="row" href="{{ path('document_show', {id: item.id}) }}"><span class="row__title">{{ item.label }}</span></a>
-                        {% else %}
-                            <span class="row"><span class="row__title mono">{{ item.label }}</span></span>
-                        {% endif %}
-                    </li>
-                {% endfor %}
-            </ul>
-            {% if finding.count > finding.items|length %}<p class="row__sub">Et {{ finding.count - finding.items|length }} autres.</p>{% endif %}
-        </section>
+    {% for key, group in groups %}
+        {% set group_findings = findings|filter(finding => finding.group == key) %}
+        <div class="garden-group" id="group-{{ key }}">
+            <h2 class="garden-group__title">{{ group.label }}</h2>
+            {% if group_findings is empty %}
+                <p class="block__empty">{{ group.clean }}</p>
+            {% endif %}
+            {% for finding in group_findings %}
+                <section class="finding" aria-labelledby="finding-{{ finding.key }}">
+                    <details {% if finding.count <= 8 %}open{% endif %}>
+                        <summary class="finding__head">
+                            <h3 id="finding-{{ finding.key }}">{{ finding.title }}</h3>
+                            <span class="block__count">{{ finding.count }}</span>
+                            <span class="row__sub finding__hint">{{ finding.hint }}</span>
+                        </summary>
+                        <ul class="list">
+                            {% for item in finding.items %}
+                                <li>
+                                    {% if item.type == 'memory' %}
+                                        <a class="row row--memory" href="{{ path('memory_show', {id: item.id}) }}"><span class="row__title"><span class="memory-text">{{ item.label }}</span></span></a>
+                                    {% elseif item.type == 'business_rule' %}
+                                        <a class="row" href="{{ path('rule_show', {slug: project.slug, code: item.code}) }}"><span class="row__title"><span class="code-chip">{{ item.code }}</span> {{ item.label }}</span></a>
+                                    {% elseif item.type == 'document' %}
+                                        <a class="row" href="{{ path('document_show', {id: item.id}) }}"><span class="row__title">{{ item.label }}</span></a>
+                                    {% else %}
+                                        <span class="row"><span class="row__title mono">{{ item.label }}</span></span>
+                                    {% endif %}
+                                </li>
+                            {% endfor %}
+                        </ul>
+                        {% if finding.count > finding.items|length %}<p class="row__sub">Et {{ finding.count - finding.items|length }} autres.</p>{% endif %}
+                    </details>
+                </section>
+            {% endfor %}
+        </div>
     {% endfor %}
 {% endblock %}

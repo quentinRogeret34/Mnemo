@@ -5,6 +5,7 @@ namespace App\Export;
 use App\Entity\Project;
 use App\Enum\NodeType;
 use App\Graph\CapabilityDetector;
+use App\Security\MemoryAccess;
 use Doctrine\DBAL\Connection;
 
 /**
@@ -23,6 +24,7 @@ final class MemoryBlockExporter
 
     public function __construct(
         private readonly Connection $connection,
+        private readonly MemoryAccess $memoryAccess,
         private readonly CapabilityDetector $capabilityDetector,
     ) {
     }
@@ -47,10 +49,10 @@ final class MemoryBlockExporter
         }
 
         $sections = [
-            'Conventions' => array_map(static fn (array $row): string => $row['label'], $this->memories($project, 'convention')),
+            'Conventions' => array_map(static fn (array $row): string => $row['label'], $this->memories($project, 'convention', $markers)),
             'Décisions' => array_map(
                 static fn (array $row): string => null === $row['decision'] ? $row['label'] : \sprintf('%s : %s', $row['label'], $row['decision']),
-                $this->memories($project, 'decision'),
+                $this->memories($project, 'decision', $markers),
             ),
             'Règles métier validées' => array_map(
                 static fn (array $row): string => \sprintf('`%s` %s%s', $row['code'], $row['label'], null === $row['statement'] ? '' : ' : '.$row['statement']),
@@ -98,17 +100,20 @@ final class MemoryBlockExporter
     }
 
     /**
-     * Active memories of the project, not refuted by a verification.
+     * Active memories of the project, not refuted by a verification. A block written to a file is read by the
+     * whole team: it only holds the memories shared with the project, never private or group ones.
      *
      * @return list<array{label: string, decision: ?string}>
      */
-    private function memories(Project $project, string $type): array
+    private function memories(Project $project, string $type, bool $sharedOnly): array
     {
+        $visible = $sharedOnly ? $this->memoryAccess->sharedSql('m') : $this->memoryAccess->sql('m');
+
         return $this->connection->fetchAllAssociative(
-            <<<'SQL'
+            <<<SQL
                 SELECT m.label, m.metadata->'adr'->>'decision' AS decision FROM node m
                 WHERE m.type = :memory AND m.metadata->>'type' = :kind
-                  AND COALESCE(m.metadata->>'status', 'active') = 'active'
+                  AND COALESCE(m.metadata->>'status', 'active') = 'active' AND {$visible}
                   AND COALESCE(m.metadata->'verification'->>'verdict', '') NOT IN ('refuted', 'conflict')
                   AND EXISTS (SELECT 1 FROM node_project np WHERE np.node_id = m.id AND np.project_id = :project)
                 ORDER BY m.created_at, m.id

@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="fr">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Compte en attente · Graphe projet</title>
+        <script>
+            try { document.documentElement.dataset.theme = localStorage.getItem('theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'); } catch (error) { document.documentElement.dataset.theme = 'light'; }
+        </script>
+        {{ importmap('app') }}
+    </head>
+    <body>
+        <main class="login">
+            <div class="login__card">
+                <span class="workspace"><span class="workspace__mark" aria-hidden="true">G</span>Graphe projet</span>
+                <h1>Compte en attente</h1>
+                {% if app.user %}
+                    <p>Le compte <strong>{{ app.user.userIdentifier }}</strong> existe mais n'est pas actif. Un super admin doit l'activer avant qu'il ne donne accès au graphe.</p>
+                    <a class="button" href="{{ path('logout') }}">Se déconnecter</a>
+                {% else %}
+                    <a class="button button--primary" href="{{ path('login') }}">Se connecter</a>
+                {% endif %}
+            </div>
+        </main>
+    </body>
+</html>

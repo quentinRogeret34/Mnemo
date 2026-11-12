@@ -1,15 +1,6 @@
 import { Controller } from '@hotwired/stimulus';
 import cytoscape from 'cytoscape';
-
-// Cytoscape parses colours itself and does not understand oklch(), so tokens are resolved to rgb through a canvas.
-function resolveColor(element, token) {
-    const context = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
-    context.fillStyle = getComputedStyle(element).getPropertyValue(token).trim();
-    context.fillRect(0, 0, 1, 1);
-    const [r, g, b] = context.getImageData(0, 0, 1, 1).data;
-
-    return `rgb(${r}, ${g}, ${b})`;
-}
+import { resolveColor } from '../color.js';
 
 export default class extends Controller {
     static targets = ['canvas', 'empty'];

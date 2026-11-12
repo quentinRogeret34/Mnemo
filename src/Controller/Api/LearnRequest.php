@@ -7,7 +7,6 @@ use Symfony\Component\Validator\Constraints as Assert;
 final readonly class LearnRequest
 {
     public function __construct(
-        #[Assert\NotBlank]
         public string $cwd = '',
         #[Assert\NotBlank]
         #[Assert\Length(max: 1_000_000)]
@@ -17,6 +16,14 @@ final readonly class LearnRequest
         public string $label = '',
         #[Assert\Choice(choices: ['conversation', 'file', 'diff', 'review'])]
         public string $kind = 'conversation',
+        #[Assert\Length(max: 100)]
+        public string $project = '',
     ) {
+    }
+
+    #[Assert\IsTrue(message: 'Send the project slug or the working directory.')]
+    public function hasProjectOrDirectory(): bool
+    {
+        return '' !== $this->project || '' !== $this->cwd;
     }
 }

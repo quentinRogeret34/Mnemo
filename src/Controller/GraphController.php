@@ -6,6 +6,8 @@ use App\Entity\Project;
 use App\Graph\CapabilityDetector;
 use App\Graph\GraphReader;
 use App\Graph\KnowledgeReader;
+use App\Security\ProjectScope;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bridge\Doctrine\Attribute\MapEntity;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -19,6 +21,8 @@ final class GraphController extends AbstractController
         private readonly GraphReader $graphReader,
         private readonly KnowledgeReader $knowledgeReader,
         private readonly CapabilityDetector $capabilityDetector,
+        private readonly EntityManagerInterface $entityManager,
+        private readonly ProjectScope $projectScope,
     ) {
     }
 
@@ -26,7 +30,10 @@ final class GraphController extends AbstractController
     public function listProjects(): Response
     {
         return $this->render('project/index.html.twig', [
-            'projects' => $this->graphReader->projectSummaries(),
+            'projects' => array_map(
+                fn (array $summary): array => $summary + ['knowledge' => $this->knowledgeReader->counts($this->entityManager->getReference(Project::class, $summary['id'])), 'pending' => $this->knowledgeReader->pendingProposals($this->entityManager->getReference(Project::class, $summary['id']))],
+                array_values(array_filter($this->graphReader->projectSummaries(), fn (array $summary): bool => $this->projectScope->allows($this->entityManager->getReference(Project::class, $summary['id'])))),
+            ),
         ]);
     }
 
@@ -49,6 +56,7 @@ final class GraphController extends AbstractController
             'rules' => $this->knowledgeReader->rulesForFile($project, $path),
             'documents' => $this->knowledgeReader->documentsForFile($project, $path),
             'memories' => $this->knowledgeReader->memoriesAbout($file['id']),
+            'history' => $this->graphReader->fileHistory($project, $path),
         ]);
     }
 

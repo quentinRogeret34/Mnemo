@@ -114,6 +114,24 @@
         </aside>
 
         <div class="sheet__main">
+            {% if history is not empty %}
+                <section aria-labelledby="history-title">
+                    <div class="block__head"><h2 id="history-title">Historique</h2><span class="block__count">{{ history|length }} derniers commits</span></div>
+                    <ul class="list">
+                        {% for commit in history %}
+                            <li class="row row--commit">
+                                <a class="code-chip" href="{{ commit.url }}" rel="noopener noreferrer" target="_blank">{{ commit.sha|slice(0, 7) }}</a>
+                                <span class="row__title">
+                                    <span>{{ commit.label }}</span>
+                                    {% for ticket in commit.tickets %}<a class="tag" href="{{ ticket.url }}" rel="noopener noreferrer" target="_blank" title="{{ ticket.title }}">{{ ticket.ref }}</a>{% endfor %}
+                                </span>
+                                <span class="row__meta"><span>{{ commit.author }}</span><span class="num">{{ commit.date ? commit.date|date('d/m/Y') }}</span></span>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </section>
+            {% endif %}
+
             <section aria-labelledby="outgoing-title">
                 <div class="block__head"><h2 id="outgoing-title">Dépend de</h2><span class="block__count">{{ edges.outgoing|length }}</span></div>
                 {{ include('file/_edges.html.twig', {rows: edges.outgoing, direction: 'outgoing', other_heading: 'Fichier cible', empty: 'Aucune dépendance vers un autre fichier.'}) }}

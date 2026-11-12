@@ -7,6 +7,7 @@ use App\Entity\Proposal;
 use App\Enum\ProposalKind;
 use App\Enum\ProposalStatus;
 use App\Proposal\ProposalApplier;
+use App\Security\ProjectScope;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -19,6 +20,7 @@ final class ProposalController extends AbstractController
 {
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
+        private readonly ProjectScope $projectScope,
         private readonly ProposalApplier $applier,
     ) {
     }
@@ -26,7 +28,7 @@ final class ProposalController extends AbstractController
     #[Route('/proposals', name: 'proposal_index', methods: ['GET'])]
     public function index(#[MapQueryParameter] ?string $project = null, #[MapQueryParameter] ?string $kind = null): Response
     {
-        $projectEntity = null === $project ? null : ($this->entityManager->getRepository(Project::class)->findOneBy(['slug' => $project]) ?? throw $this->createNotFoundException(\sprintf('Project "%s" not found.', $project)));
+        $projectEntity = $this->projectScope->bySlug($project);
         $kindEnum = null === $kind ? null : ProposalKind::tryFrom($kind);
 
         $criteria = ['status' => ProposalStatus::Pending] + (null === $projectEntity ? [] : ['project' => $projectEntity]) + (null === $kindEnum ? [] : ['kind' => $kindEnum]);
@@ -78,6 +80,9 @@ final class ProposalController extends AbstractController
 
     private function checkToken(Proposal $proposal, Request $request): void
     {
+        if (null !== $proposal->getProject() && !$this->projectScope->allows($proposal->getProject())) {
+            throw $this->createNotFoundException('Proposal not found.');
+        }
         if (!$this->isCsrfTokenValid('proposal-'.$proposal->getId(), $request->getPayload()->getString('_token'))) {
             throw new AccessDeniedHttpException('Invalid CSRF token.');
         }

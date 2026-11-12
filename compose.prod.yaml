@@ -1,0 +1,79 @@
+# Production: docker compose -f compose.prod.yaml --env-file .env.prod.local up -d --build
+# FrankenPHP (Caddy) obtains the HTTPS certificate for SERVER_NAME by itself; ports 80 and 443 must reach the server.
+x-app: &app
+  build:
+    context: .
+    target: prod
+  restart: unless-stopped
+  environment: &app-env
+    APP_ENV: prod
+    APP_SECRET: ${APP_SECRET:?}
+    APP_ACCESS_ROLE: ROLE_USER
+    APP_ADMIN_PASSWORD_HASH: ${APP_ADMIN_PASSWORD_HASH:?}
+    DEFAULT_URI: https://${SERVER_NAME:?}
+    DATABASE_URL: postgresql://app:${POSTGRES_PASSWORD:?}@database:5432/app?serverVersion=18&charset=utf8
+    AI_STORE_DSN: pgsql:host=database;port=5432;dbname=app
+    AI_STORE_USER: app
+    AI_STORE_PASSWORD: ${POSTGRES_PASSWORD:?}
+    MISTRAL_API_KEY: ${MISTRAL_API_KEY:-}
+    OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+    MCP_CONNECTORS_ENV: ${MCP_CONNECTORS_ENV:-}
+    GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+    GITLAB_TOKEN: ${GITLAB_TOKEN:-}
+    OAUTH_GITHUB_CLIENT_ID: ${OAUTH_GITHUB_CLIENT_ID:-}
+    OAUTH_GITHUB_CLIENT_SECRET: ${OAUTH_GITHUB_CLIENT_SECRET:-}
+    OAUTH_GITLAB_CLIENT_ID: ${OAUTH_GITLAB_CLIENT_ID:-}
+    OAUTH_GITLAB_CLIENT_SECRET: ${OAUTH_GITLAB_CLIENT_SECRET:-}
+    OAUTH_GITLAB_URL: ${OAUTH_GITLAB_URL:-https://gitlab.com}
+    OAUTH_GOOGLE_CLIENT_ID: ${OAUTH_GOOGLE_CLIENT_ID:-}
+    OAUTH_GOOGLE_CLIENT_SECRET: ${OAUTH_GOOGLE_CLIENT_SECRET:-}
+  volumes:
+    - storage:/app/var/storage
+    - locks:/app/var/lock
+  depends_on:
+    database:
+      condition: service_healthy
+
+services:
+  php:
+    <<: *app
+    environment:
+      <<: *app-env
+      SERVER_NAME: ${SERVER_NAME:?}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - storage:/app/var/storage
+      - locks:/app/var/lock
+      - caddy_data:/data
+      - caddy_config:/config
+
+  worker:
+    <<: *app
+    command: ["php", "bin/console", "messenger:consume", "scheduler_default", "async", "--time-limit=3600", "--memory-limit=256M"]
+    healthcheck:
+      disable: true
+
+  database:
+    image: pgvector/pgvector:pg18
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: app
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+    healthcheck:
+      test: ["CMD", "pg_isready", "-d", "app", "-U", "app"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - database_data:/var/lib/postgresql
+
+volumes:
+  storage:
+  locks:
+  caddy_data:
+  caddy_config:
+  database_data:

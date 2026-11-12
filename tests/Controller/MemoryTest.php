@@ -58,6 +58,30 @@ final class MemoryTest extends WebTestCase
         self::assertCount(0, $crawler->filter('.content .row--memory'));
     }
 
+    public function testMemoriesAreFilteredAndDrawnAroundWhatTheyAreAbout(): void
+    {
+        $store = self::getContainer()->get(MemoryStore::class);
+        $linked = $store->add('Les remises passent par catalog.ts.', MemoryType::Convention, 'mcp');
+        $loose = $store->add('Le projet vise les petites équipes.', MemoryType::Fact, 'manual');
+        $linked->addProject($this->project);
+        $loose->addProject($this->project);
+        $this->entityManager->flush();
+        $store->linkReferences($linked, [$this->project], ['src/domain/catalog.ts'], []);
+        $this->entityManager->flush();
+
+        $crawler = $this->client->request('GET', '/memories?source=mcp&verdict=none&project=demo');
+        self::assertSame(['Les remises passent par catalog.ts.'], $crawler->filter('.content .row--memory .memory-text')->each(static fn ($text): string => $text->text()));
+        self::assertCount(0, $this->client->request('GET', '/memories?verdict=verified')->filter('.content .row--memory'));
+
+        $this->client->request('GET', '/memories/graph?project=demo');
+        self::assertResponseIsSuccessful();
+        $this->client->request('GET', '/memories/graph/data?project=demo');
+        $graph = json_decode($this->client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        $hubs = array_column(array_filter($graph['nodes'], static fn (array $node): bool => 'memory' !== $node['kind']), 'label', 'kind');
+        self::assertSame(['code_file' => 'src/domain/catalog.ts', 'project' => 'Demo project'], $hubs);
+        self::assertCount(2, $graph['edges']);
+    }
+
     public function testEmptyMemoryIsRejected(): void
     {
         $crawler = $this->client->request('GET', '/memories');

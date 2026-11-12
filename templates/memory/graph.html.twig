@@ -1,0 +1,40 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Graphe des mémoires{{ project ? ' · ' ~ project.name }}{% endblock %}
+
+{% block crumbs %}
+    {% if project %}
+        <a href="{{ path('project_show', {slug: project.slug}) }}">{{ project.name }}</a>
+        <span class="crumbs__sep" aria-hidden="true">/</span>
+    {% endif %}
+    <a href="{{ path('memory_index', project ? {project: project.slug} : {}) }}">Mémoires</a>
+    <span class="crumbs__sep" aria-hidden="true">/</span>
+    <span class="crumbs__current">Graphe</span>
+{% endblock %}
+
+{% block body %}
+    <div class="view-head">
+        <h1>Graphe des mémoires</h1>
+        <span class="view-head__meta">{{ project ? project.name : 'Tous les projets' }}</span>
+    </div>
+    <p class="page__lede">Chaque mémoire est un satellite du sujet dont elle parle : un fichier de code, une règle métier ou un document. Plus un sujet est gros, plus de mémoires gravitent autour. Une mémoire liée à rien tourne autour de son projet.</p>
+
+    <section class="panel galaxy" data-controller="galaxy" data-galaxy-url-value="{{ path('memory_graph_data', project ? {project: project.slug} : {}) }}" data-action="theme:change@window->galaxy#render" aria-label="Graphe des mémoires et de leurs sujets">
+        <div class="panel__head">
+            <ul class="legend">
+                <li><span class="legend__mark legend__mark--memory"></span>Mémoire</li>
+                <li><span class="legend__mark legend__mark--file"></span>Fichier de code</li>
+                <li><span class="legend__mark legend__mark--rule"></span>Règle métier</li>
+                <li><span class="legend__mark legend__mark--document"></span>Document</li>
+                <li><span class="legend__mark legend__mark--project"></span>Projet</li>
+            </ul>
+            <span class="row__sub num" data-galaxy-target="count"></span>
+        </div>
+        <div class="galaxy__canvas">
+            <div data-galaxy-target="canvas"></div>
+            <p class="galaxy__empty" data-galaxy-target="empty" hidden>Aucune mémoire active à afficher.</p>
+        </div>
+        <p class="galaxy__detail" data-galaxy-target="detail" aria-live="polite">Survoler un point pour lire la mémoire ou le sujet ; cliquer pour ouvrir sa fiche.</p>
+    </section>
+    <p class="row__sub">Les 300 mémoires actives les plus récentes sont affichées. La liste complète, avec filtres, est dans <a class="link" href="{{ path('memory_index', project ? {project: project.slug} : {}) }}">le tableau des mémoires</a>.</p>
+{% endblock %}

@@ -1,0 +1,6 @@
+{
+  "name": "graphe",
+  "version": "0.1.0",
+  "description": "Branche Claude Code sur le graphe de connaissance projet : outils MCP, mémoire du projet, contexte des fichiers, capture des apprentissages",
+  "author": { "name": "Quentin Rogeret" }
+}

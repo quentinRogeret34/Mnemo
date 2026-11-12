@@ -10,6 +10,7 @@ use App\Learn\Learner;
 use App\Learn\SourceKind;
 use App\Llm\LlmUnavailable;
 use App\Memory\MemoryStore;
+use App\Security\ProjectScope;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -18,8 +19,9 @@ use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
 
 /**
- * Endpoints for the hooks of agent clients (Claude Code...): they only know the working directory, so the project is
- * the one whose repository path contains it. A directory outside every project gets an empty answer, not an error.
+ * Endpoints for the hooks of agent clients (Claude Code...). The client names its project by slug, or only sends its
+ * working directory: the project is then the one whose repository path contains it, which only works when the server
+ * runs on the same machine. An unknown project or directory gets an empty answer, not an error.
  */
 #[Route('/api', format: 'json')]
 final class ClientHookController extends AbstractController
@@ -33,13 +35,14 @@ final class ClientHookController extends AbstractController
         private readonly KnowledgeReader $knowledgeReader,
         private readonly Learner $learner,
         private readonly MemoryStore $memoryStore,
+        private readonly ProjectScope $projectScope,
     ) {
     }
 
     #[Route('/context', name: 'api_context', methods: ['GET'])]
-    public function context(#[MapQueryParameter] string $cwd = ''): JsonResponse
+    public function context(#[MapQueryParameter] string $cwd = '', #[MapQueryParameter] string $project = ''): JsonResponse
     {
-        $project = $this->projectFor($cwd);
+        $project = $this->projectFor($cwd, $project);
 
         return $this->json([
             'project' => $project?->getSlug(),
@@ -49,10 +52,10 @@ final class ClientHookController extends AbstractController
     }
 
     #[Route('/file-context', name: 'api_file_context', methods: ['GET'])]
-    public function fileContext(#[MapQueryParameter] string $cwd = '', #[MapQueryParameter] string $path = ''): JsonResponse
+    public function fileContext(#[MapQueryParameter] string $cwd = '', #[MapQueryParameter] string $path = '', #[MapQueryParameter(name: 'project')] string $slug = ''): JsonResponse
     {
-        $project = $this->projectFor($cwd);
-        $relative = null === $project ? null : $this->relativePath($project, $path, $cwd);
+        $project = $this->projectFor($cwd, $slug);
+        $relative = null === $project ? null : $this->relativePath('' === $slug ? $project->getRepositoryPath() : $cwd, $path, $cwd);
         $file = null === $relative ? null : $this->graphReader->findFile($project, $relative);
         if (null === $file) {
             return $this->json(['project' => $project?->getSlug(), 'path' => $relative, 'context' => '']);
@@ -85,9 +88,9 @@ final class ClientHookController extends AbstractController
     #[Route('/learn', name: 'api_learn', methods: ['POST'])]
     public function learn(#[MapRequestPayload] LearnRequest $request): JsonResponse
     {
-        $project = $this->projectFor($request->cwd);
+        $project = $this->projectFor($request->cwd, $request->project);
         if (null === $project) {
-            return $this->json(['project' => null, 'error' => 'Aucun projet du graphe ne contient ce dossier.'], JsonResponse::HTTP_UNPROCESSABLE_ENTITY);
+            return $this->json(['project' => null, 'error' => 'Aucun projet du graphe ne porte ce nom ni ne contient ce dossier.'], JsonResponse::HTTP_UNPROCESSABLE_ENTITY);
         }
 
         try {
@@ -100,10 +103,15 @@ final class ClientHookController extends AbstractController
     }
 
     /**
-     * The project with the longest repository path containing the directory.
+     * The project named by its slug, else the one with the longest repository path containing the directory.
      */
-    private function projectFor(string $cwd): ?Project
+    private function projectFor(string $cwd, string $slug = ''): ?Project
     {
+        if ('' !== $slug) {
+            $project = $this->entityManager->getRepository(Project::class)->findOneBy(['slug' => $slug]);
+
+            return null !== $project && $this->projectScope->allows($project) ? $project : null;
+        }
         $cwd = rtrim($cwd, '/');
         if ('' === $cwd) {
             return null;
@@ -112,7 +120,7 @@ final class ClientHookController extends AbstractController
         $found = null;
         foreach ($this->entityManager->getRepository(Project::class)->findAll() as $project) {
             $root = rtrim($project->getRepositoryPath(), '/');
-            if (('' !== $root && ($cwd === $root || str_starts_with($cwd, $root.'/'))) && \strlen($root) > \strlen((string) $found?->getRepositoryPath())) {
+            if ($this->projectScope->allows($project) && ('' !== $root && ($cwd === $root || str_starts_with($cwd, $root.'/'))) && \strlen($root) > \strlen((string) $found?->getRepositoryPath())) {
                 $found = $project;
             }
         }
@@ -120,13 +128,16 @@ final class ClientHookController extends AbstractController
         return $found;
     }
 
-    private function relativePath(Project $project, string $path, string $cwd): ?string
+    /**
+     * @param string $root repository root as the client sees it
+     */
+    private function relativePath(string $root, string $path, string $cwd): ?string
     {
         if ('' === $path) {
             return null;
         }
         $absolute = str_starts_with($path, '/') ? $path : rtrim($cwd, '/').'/'.$path;
-        $root = rtrim($project->getRepositoryPath(), '/').'/';
+        $root = rtrim($root, '/').'/';
 
         return str_starts_with($absolute, $root) ? substr($absolute, \strlen($root)) : null;
     }

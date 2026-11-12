@@ -1,0 +1,150 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Tableau de bord{{ project ? ' · ' ~ project.name }}{% endblock %}
+
+{% block crumbs %}
+    {% if project %}
+        <a href="{{ path('project_show', {slug: project.slug}) }}">{{ project.name }}</a>
+        <span class="crumbs__sep" aria-hidden="true">/</span>
+    {% endif %}
+    <span class="crumbs__current">Tableau de bord</span>
+{% endblock %}
+
+{% block body %}
+    {% set scope = project ? {project: project.slug} : {} %}
+    {% set period_labels = {'24h': '24 h', '7d': '7 j', '30d': '30 j', '90d': '90 j', 'all': 'Tout'} %}
+    {% set period_text = {'24h': 'sur 24 heures', '7d': 'sur 7 jours', '30d': 'sur 30 jours', '90d': 'sur 90 jours', 'all': 'depuis le début'}[period] %}
+    {% set type_labels = {decision: 'Décision', convention: 'Convention', task_learning: 'Apprentissage', preference: 'Préférence', fact: 'Fait'} %}
+    {% set search_labels = {memory: 'Mémoires', document: 'Documents', business_rule: 'Règles métier', code_file: 'Code'} %}
+
+    <div class="view-head">
+        <h1>Tableau de bord</h1>
+        <span class="view-head__meta">{{ project ? project.name : 'Tous les projets' }}</span>
+    </div>
+
+    <div class="filter-bar">
+        <nav class="tabs" aria-label="Période">
+            {% for item in periods %}
+                <a href="{{ path('dashboard', scope|merge({period: item})) }}" {% if item == period %}aria-current="page"{% endif %}>{{ period_labels[item] }}</a>
+            {% endfor %}
+        </nav>
+        <a class="button" href="{{ path('dashboard', scope|merge({period: period})) }}">Actualiser</a>
+    </div>
+
+    <section class="tiles" aria-label="Chiffres clés">
+        <div class="tile">
+            <span class="tile__label">Mémoires stockées</span>
+            <span class="tile__value">{{ summary.memories|number_format(0, ',', ' ') }}</span>
+            <span class="tile__sub">+{{ summary.memories_added }} {{ period_text }}</span>
+        </div>
+        <div class="tile">
+            <span class="tile__label" title="Mémoires renvoyées aux agents par search, file_context et get_document">Mémoires rappelées</span>
+            <span class="tile__value">{{ summary.recalled|number_format(0, ',', ' ') }}</span>
+            <span class="tile__sub">{{ summary.lookups }} {{ summary.lookups > 1 ? 'lectures' : 'lecture' }}{% if summary.lookups > 0 %}, {{ (summary.recalled / summary.lookups)|number_format(1, ',', ' ') }} en moyenne{% endif %}</span>
+        </div>
+        <div class="tile">
+            <span class="tile__label">Requêtes MCP</span>
+            <span class="tile__value">{{ summary.requests|number_format(0, ',', ' ') }}</span>
+            <span class="tile__sub">{{ summary.failed }} en échec {{ period_text }}</span>
+        </div>
+        <a class="tile tile--link" href="{{ path('proposal_index', scope) }}">
+            <span class="tile__label">À valider</span>
+            <span class="tile__value">{{ summary.pending|number_format(0, ',', ' ') }}</span>
+            <span class="tile__sub">{{ summary.pending > 1 ? 'propositions en attente' : 'proposition en attente' }}</span>
+        </a>
+    </section>
+
+    <div class="panels">
+        {% for chart in [
+            {id: 'requests', title: 'Requêtes MCP', total: summary.requests, points: requests, unit: 'requêtes', link: null},
+            {id: 'memories', title: 'Mémoires créées', total: summary.memories_added, points: memories, unit: 'mémoires', link: path('memory_index', scope)},
+        ] %}
+            <section class="panel" aria-labelledby="chart-{{ chart.id }}">
+                <div class="panel__head">
+                    <div>
+                        <h2 id="chart-{{ chart.id }}">{{ chart.title }}</h2>
+                        <p class="panel__figure">{{ chart.total|number_format(0, ',', ' ') }}</p>
+                    </div>
+                    {% if chart.link %}<a class="button" href="{{ chart.link }}">Voir les mémoires</a>{% endif %}
+                </div>
+                <div class="chart" data-controller="chart" data-chart-points-value="{{ chart.points|json_encode }}" data-chart-hourly-value="{{ hourly ? 'true' : 'false' }}" data-chart-unit-value="{{ chart.unit }}"
+                     data-action="pointermove->chart#move pointerleave->chart#leave" aria-label="{{ chart.title }} par {{ hourly ? 'heure' : 'jour' }}, {{ period_text }}">
+                    <div class="chart__plot" data-chart-target="plot"></div>
+                    <div class="chart__tooltip" data-chart-target="tooltip" hidden></div>
+                </div>
+                <details class="chart-data">
+                    <summary>Voir les valeurs</summary>
+                    <div class="table-wrap">
+                        <table class="data-table">
+                            <thead><tr><th>{{ hourly ? 'Heure' : 'Jour' }}</th><th class="num">{{ chart.title }}</th></tr></thead>
+                            <tbody>
+                                {% for point in chart.points|reverse %}
+                                    <tr><td class="num">{{ point.at|date(hourly ? 'd/m H:i' : 'd/m/Y') }}</td><td class="num">{{ point.value }}</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </details>
+            </section>
+        {% endfor %}
+
+        {% for breakdown in [
+            {id: 'types', title: 'Types de mémoires', note: summary.memories ~ ' actives', rows: memory_types, labels: type_labels, empty: 'Aucune mémoire active.'},
+            {id: 'tools', title: 'Outils MCP appelés', note: period_text, rows: tools, labels: {}, empty: 'Aucun appel MCP sur la période.'},
+            {id: 'search', title: 'Types de recherche', note: 'ce que les agents demandent à search', rows: search_types, labels: search_labels, empty: 'Aucune recherche sur la période.'},
+            {id: 'modes', title: 'Mode de recherche', note: 'mots-clés seuls, ou mots-clés et sens', rows: search_modes, labels: {keyword: 'Mots-clés', hybrid: 'Hybride (sémantique)'}, empty: 'Aucune recherche sur la période.'},
+        ] %}
+            {% set total = breakdown.rows|reduce((sum, row) => sum + row.value, 0) %}
+            {% set top = breakdown.rows|reduce((max, row) => max(max, row.value), 0) %}
+            <section class="panel" aria-labelledby="breakdown-{{ breakdown.id }}">
+                <div class="panel__head">
+                    <h2 id="breakdown-{{ breakdown.id }}">{{ breakdown.title }}</h2>
+                    <span class="row__sub">{{ breakdown.note }}</span>
+                </div>
+                {% if breakdown.rows is empty %}
+                    <p class="block__empty">{{ breakdown.empty }}</p>
+                {% else %}
+                    <ul class="bars">
+                        {% for row in breakdown.rows %}
+                            <li class="bars__row" title="{{ row.value }} sur {{ total }}">
+                                <span class="bars__label{{ breakdown.labels is empty ? ' mono' }}">{{ breakdown.labels[row.label] ?? row.label }}</span>
+                                <span class="bars__track"><span class="bars__fill" style="width: {{ (row.value / top * 100)|round(1) }}%"></span></span>
+                                <span class="bars__value num">{{ row.value }} <span class="row__sub">{{ (row.value / total * 100)|number_format(1, ',', ' ') }} %</span></span>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+            </section>
+        {% endfor %}
+
+        <section class="panel panel--wide" aria-labelledby="recent-title">
+            <div class="panel__head">
+                <h2 id="recent-title">Dernières requêtes MCP</h2>
+                <span class="row__sub">{{ recent|length }} plus récentes</span>
+            </div>
+            {% if recent is empty %}
+                <p class="block__empty">Aucune requête enregistrée. Brancher un agent sur <span class="mono">/mcp</span> : chaque appel d'outil apparaît ici.</p>
+            {% else %}
+                <div class="table-wrap">
+                    <table class="data-table">
+                        <thead><tr><th>Quand</th><th>Outil</th><th>Projet</th><th>Recherche ou fichier</th><th class="num">Résultats</th><th class="num">Mémoires</th><th class="num">Durée</th><th>Client</th></tr></thead>
+                        <tbody>
+                            {% for call in recent %}
+                                <tr>
+                                    <td class="num">{{ call.created_at|date('d/m H:i') }}</td>
+                                    <td><span class="code-chip">{{ call.tool }}</span>{% if call.failed %} <span class="verdict verdict--refuted">échec</span>{% endif %}</td>
+                                    <td>{{ call.project ?? '-' }}</td>
+                                    <td class="data-table__clip">{{ call.query ?? '-' }}</td>
+                                    <td class="num">{{ call.results }}</td>
+                                    <td class="num">{{ call.memories }}</td>
+                                    <td class="num">{{ call.duration_ms }} ms</td>
+                                    <td>{{ call.client ?? '-' }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% endif %}
+        </section>
+    </div>
+{% endblock %}

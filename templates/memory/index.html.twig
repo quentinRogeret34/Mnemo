@@ -10,68 +10,88 @@
     <span class="crumbs__current">Mémoires</span>
 {% endblock %}
 
+{% block header_actions %}
+    <a class="button" href="{{ path('memory_graph', project ? {project: project.slug} : {}) }}">Graphe</a>
+{% endblock %}
+
 {% block body %}
-    {% set filters = {project: project ? project.slug : null, q: q ?: null, archived: archived ? 1 : null} %}
+    {% set verdicts = {verified: 'Vérifiée', refuted: 'Réfutée', conflict: 'Sources en conflit', unverified: 'Non vérifiable', none: 'Jamais vérifiée'} %}
+    {% set filtered = q or type or archived or verdict or source %}
     <div class="view-head">
         <h1>Mémoires</h1>
         <span class="view-head__meta">{{ memories|length }}{{ project ? ' rattachées à ' ~ project.name }}</span>
     </div>
 
-    <section class="memory-new" aria-label="Ajouter une mémoire">
+    <details class="memory-new" {% if form.vars.submitted %}open{% endif %}>
+        <summary class="button">Nouvelle mémoire</summary>
         {{ form_start(form, {attr: {novalidate: 'novalidate'}}) }}
             {{ form_label(form.text, null, {label_attr: {class: 'visually-hidden'}}) }}
             {{ form_widget(form.text, {attr: {class: 'input memory-new__text'}}) }}
             <div class="memory-new__actions">
                 {{ form_label(form.type, null, {label_attr: {class: 'visually-hidden'}}) }}
                 {{ form_widget(form.type, {attr: {class: 'select'}}) }}
+                {{ form_label(form.visibility, null, {label_attr: {class: 'visually-hidden'}}) }}
+                {{ form_widget(form.visibility, {attr: {class: 'select'}}) }}
                 <button class="button button--primary" type="submit">Ajouter la mémoire</button>
                 <span class="row__sub">{{ project ? 'Rattachée à ' ~ project.name : 'Sans projet, à rattacher ensuite' }}</span>
             </div>
             {% for error in form.text.vars.errors %}<p class="form-errors">{{ error.message }}</p>{% endfor %}
         {{ form_end(form) }}
-    </section>
+    </details>
 
-    <div class="filter-bar">
-        <nav class="tabs" aria-label="Filtrer par type">
-            <a href="{{ path('memory_index', filters|filter(v => v is not null)) }}" {% if type is null %}aria-current="page"{% endif %}>Toutes</a>
-            {% for item in types %}
-                <a href="{{ path('memory_index', (filters|merge({type: item.value}))|filter(v => v is not null)) }}" {% if type == item %}aria-current="page"{% endif %}>{{ item.label }}</a>
-            {% endfor %}
-        </nav>
-        <nav class="tabs" aria-label="Filtrer par statut">
-            <a href="{{ path('memory_index', (filters|merge({archived: null, type: type ? type.value : null}))|filter(v => v is not null)) }}" {% if not archived %}aria-current="page"{% endif %}>Actives</a>
-            <a href="{{ path('memory_index', (filters|merge({archived: 1, type: type ? type.value : null}))|filter(v => v is not null)) }}" {% if archived %}aria-current="page"{% endif %}>Archivées</a>
-        </nav>
-        <form class="filter-bar__search" method="get" action="{{ path('memory_index') }}" role="search">
-            {% if project %}<input type="hidden" name="project" value="{{ project.slug }}">{% endif %}
-            {% if type %}<input type="hidden" name="type" value="{{ type.value }}">{% endif %}
-            {% if archived %}<input type="hidden" name="archived" value="1">{% endif %}
-            <input class="input" type="search" name="q" value="{{ q }}" placeholder="Rechercher" aria-label="Chercher dans les mémoires">
-        </form>
-    </div>
+    <form class="filters" method="get" action="{{ path('memory_index') }}" role="search" data-controller="autosubmit">
+        <input class="input filters__search" type="search" name="q" value="{{ q }}" placeholder="Rechercher dans le texte" aria-label="Chercher dans les mémoires">
+        <select class="select" name="project" aria-label="Projet" data-action="autosubmit#submit">
+            <option value="">Tous les projets</option>
+            {% for item in projects %}<option value="{{ item.slug }}" {{ project and project.id == item.id ? 'selected' }}>{{ item.name }}</option>{% endfor %}
+        </select>
+        <select class="select" name="type" aria-label="Type" data-action="autosubmit#submit">
+            <option value="">Tous les types</option>
+            {% for item in types %}<option value="{{ item.value }}" {{ type == item ? 'selected' }}>{{ item.label }}</option>{% endfor %}
+        </select>
+        <select class="select" name="verdict" aria-label="Vérification" data-action="autosubmit#submit">
+            <option value="">Toute vérification</option>
+            {% for value, label in verdicts %}<option value="{{ value }}" {{ verdict == value ? 'selected' }}>{{ label }}</option>{% endfor %}
+        </select>
+        <select class="select" name="source" aria-label="Source" data-action="autosubmit#submit">
+            <option value="">Toutes les sources</option>
+            {% for item in sources %}<option value="{{ item }}" {{ source == item ? 'selected' }}>{{ item }}</option>{% endfor %}
+        </select>
+        <select class="select" name="archived" aria-label="Statut" data-action="autosubmit#submit">
+            <option value="0">Actives</option>
+            <option value="1" {{ archived ? 'selected' }}>Archivées</option>
+        </select>
+        <button class="button" type="submit">Filtrer</button>
+        {% if filtered %}<a class="button button--ghost" href="{{ path('memory_index', project ? {project: project.slug} : {}) }}">Réinitialiser</a>{% endif %}
+    </form>
 
     {% if memories is empty %}
-        <p class="block__empty">{{ q or type or archived ? 'Aucune mémoire ne correspond.' : 'Aucune mémoire. En ajouter une ci-dessus ; plus tard, les agents (Claude Code, MCP) les enverront automatiquement.' }}</p>
+        <p class="block__empty">{{ filtered ? 'Aucune mémoire ne correspond.' : 'Aucune mémoire. En ajouter une ci-dessus ; les agents (Claude Code, MCP) les envoient aussi automatiquement.' }}</p>
     {% else %}
-        <ul class="list">
-            {% for memory in memories %}
-                <li>
-                    <a class="row row--memory{{ memory.status != 'active' ? ' row--archived' }}" href="{{ path('memory_show', {id: memory.id}) }}">
-                        {{ include('memory/_type.html.twig', {type: memory.type}) }}
-                        <span class="row__title">
-                            <span class="memory-text">{{ memory.text }}</span>
-                            {% if memory.demo %}<span class="tag tag--demo">Démo</span>{% endif %}
-                        </span>
-                        <span class="row__meta">
-                            {{ include('memory/_verdict.html.twig', {verdict: memory.verdict}) }}
-                            {% if memory.status != 'active' %}<span class="tag">{{ memory.status == 'superseded' ? 'remplacée' : 'retirée' }}</span>{% endif %}
-                            {% if memory.projects and not project %}<span class="row__projects">{{ memory.projects }}</span>{% endif %}
-                            <span>{{ memory.links }} {{ memory.links > 1 ? 'liens' : 'lien' }}</span>
-                            <span class="num">{{ memory.updated_at|date('d/m/Y') }}</span>
-                        </span>
-                    </a>
-                </li>
-            {% endfor %}
-        </ul>
+        <div class="table-wrap">
+            <table class="data-table data-table--memories">
+                <thead>
+                    <tr><th>Type</th><th>Mémoire</th><th>Projets</th><th>Vérification</th><th class="num">Liens</th><th>Source</th><th class="num">Mise à jour</th></tr>
+                </thead>
+                <tbody>
+                    {% for memory in memories %}
+                        <tr class="row--memory{{ memory.status != 'active' ? ' row--archived' }}">
+                            <td>{{ include('memory/_type.html.twig', {type: memory.type}) }}</td>
+                            <td class="data-table__main">
+                                <a class="memory-text" href="{{ path('memory_show', {id: memory.id}) }}">{{ memory.text }}</a>
+                                {% if memory.demo %}<span class="tag tag--demo">Démo</span>{% endif %}
+                                {% if memory.visibility != 'project' %}<span class="tag">{{ memory.visibility == 'private' ? 'privée' : 'groupe' }}</span>{% endif %}
+                                {% if memory.status != 'active' %}<span class="tag">{{ memory.status == 'superseded' ? 'remplacée' : 'retirée' }}</span>{% endif %}
+                            </td>
+                            <td>{{ memory.projects ?? '-' }}</td>
+                            <td>{% if memory.verdict %}{{ include('memory/_verdict.html.twig', {verdict: memory.verdict}) }}{% else %}<span class="row__sub">-</span>{% endif %}</td>
+                            <td class="num">{{ memory.links }}</td>
+                            <td><span class="row__sub">{{ memory.source ?? '-' }}</span></td>
+                            <td class="num">{{ memory.updated_at|date('d/m/Y') }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     {% endif %}
 {% endblock %}

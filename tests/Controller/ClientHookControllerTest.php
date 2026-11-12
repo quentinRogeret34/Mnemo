@@ -75,6 +75,19 @@ final class ClientHookControllerTest extends WebTestCase
         self::assertSame('', $this->get('/api/file-context?cwd=/repos/demo&path=/etc/passwd')['context']);
     }
 
+    public function testAClientOnAnotherMachineNamesItsProject(): void
+    {
+        self::assertSame('demo', $this->get('/api/context?cwd=/home/dev/shop&project=demo')['project']);
+        self::assertNull($this->get('/api/context?cwd=/repos/demo&project=unknown')['project']);
+
+        $context = $this->get('/api/file-context?cwd=/home/dev/shop&project=demo&path=/home/dev/shop/src/domain/catalog.ts');
+        self::assertSame('src/domain/catalog.ts', $context['path']);
+        self::assertStringContainsString('- Règle RG-042 Remise plafonnée (validée)', $context['context']);
+
+        $this->client->jsonRequest('POST', '/api/learn', ['text' => 'transcript', 'label' => 'x']);
+        self::assertResponseStatusCodeSame(422);
+    }
+
     public function testLearnQueuesProposalsForTheProjectOfTheDirectory(): void
     {
         $this->scriptLlm(static fn (): array => ['candidates' => [[

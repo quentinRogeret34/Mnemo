@@ -2,13 +2,17 @@
 
 namespace App\Tests\Mcp;
 
+use App\Entity\ApiKey;
 use App\Entity\Edge;
 use App\Entity\Folder;
 use App\Entity\Node;
 use App\Entity\Project;
+use App\Entity\User;
+use App\Entity\UserGroup;
 use App\Enum\Confidence;
 use App\Enum\EdgeOrigin;
 use App\Enum\NodeType;
+use App\Enum\UserStatus;
 use App\Entity\Proposal;
 use App\Ingest\GraphifyImporter;
 use App\Tests\LlmTestTrait;
@@ -25,12 +29,13 @@ final class McpServerTest extends WebTestCase
     private EntityManagerInterface $entityManager;
     private string $sessionId;
     private int $requestId = 0;
+    private ?string $token = null;
 
     protected function setUp(): void
     {
         $this->client = self::createClient();
         $this->entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        $this->entityManager->getConnection()->executeStatement('TRUNCATE project, node, edge, folder RESTART IDENTITY CASCADE');
+        $this->entityManager->getConnection()->executeStatement('TRUNCATE project, node, edge, folder, api_key RESTART IDENTITY CASCADE');
         (new Filesystem())->remove(self::getContainer()->getParameter('kernel.project_dir').'/var/storage/test');
 
         $project = new Project('demo', 'Demo project', '/repos/demo');
@@ -80,6 +85,74 @@ final class McpServerTest extends WebTestCase
         $memory = $this->entityManager->find(Node::class, $first['id']);
         self::assertSame(['source' => 'mcp', 'agent' => 'claude-code'], array_intersect_key($memory->getMetadata(), ['source' => 1, 'agent' => 1]));
         self::assertSame(2, $this->entityManager->getRepository(Edge::class)->count(['source' => $memory, 'relation' => 'about']));
+    }
+
+    public function testToolCallsAreRecordedAndShownOnTheDashboard(): void
+    {
+        $this->entityManager->getConnection()->executeStatement('TRUNCATE mcp_call RESTART IDENTITY');
+        $this->tool('add_memory', ['text' => 'Les remises passent par catalog.ts.', 'projects' => ['demo'], 'files' => ['src/domain/catalog.ts']]);
+        $this->tool('search', ['query' => 'remises', 'project' => 'demo', 'types' => ['memory', 'document']]);
+        $this->tool('file_context', ['project' => 'demo', 'path' => 'src/domain/catalog.ts']);
+
+        $calls = $this->entityManager->getConnection()->fetchAllAssociative('SELECT tool, project, query, search_types, results, memories, failed, client FROM mcp_call ORDER BY id');
+        self::assertSame(['add_memory', 'search', 'file_context'], array_column($calls, 'tool'));
+        self::assertSame(['tool' => 'search', 'project' => 'demo', 'query' => 'remises', 'search_types' => '["memory","document"]', 'results' => 1, 'memories' => 1, 'failed' => false, 'client' => 'phpunit'], $calls[1]);
+        self::assertSame(1, $calls[2]['memories']);
+
+        $crawler = $this->client->request('GET', '/dashboard?project=demo&period=24h');
+        self::assertResponseIsSuccessful();
+        self::assertSame(['1', '2', '3', '0'], $crawler->filter('.tile__value')->each(static fn ($value): string => $value->text()));
+        self::assertSame(['Documents 1 50,0 %', 'Mémoires 1 50,0 %'], $crawler->filter('section[aria-labelledby="breakdown-search"] .bars__row')->each(static fn ($row): string => $row->text()));
+        self::assertCount(3, $crawler->filter('section[aria-labelledby="recent-title"] tbody tr'));
+        self::assertSame(3, array_sum(array_column(json_decode($crawler->filter('[data-chart-points-value]')->first()->attr('data-chart-points-value'), true), 'value')));
+    }
+
+    public function testAKeyLimitedToAProjectCannotReachTheOthers(): void
+    {
+        $other = new Project('other', 'Other project', '/repos/other');
+        [$key, $this->token] = ApiKey::generate('laptop');
+        $key->addProject($other);
+        $this->entityManager->persist($other);
+        $this->entityManager->persist($key);
+        $this->entityManager->flush();
+
+        self::assertSame(['other'], array_column($this->tool('list_projects', []), 'slug'));
+        foreach ([['search', ['query' => 'catalog', 'project' => 'demo']], ['search', ['query' => 'catalog']], ['add_memory', ['text' => 'Sans projet.']], ['file_context', ['project' => 'demo', 'path' => 'src/domain/catalog.ts']]] as [$tool, $arguments]) {
+            self::assertTrue($this->rpc('tools/call', ['name' => $tool, 'arguments' => $arguments])['isError'], $tool);
+        }
+        self::assertSame('ADD', $this->tool('add_memory', ['text' => 'Dans le périmètre.', 'projects' => ['other']])['event']);
+        self::assertSame($key->getId(), $this->entityManager->getConnection()->fetchOne('SELECT api_key_id FROM mcp_call ORDER BY id DESC LIMIT 1'));
+    }
+
+    public function testAPrivateMemoryIsOnlyRecalledForItsOwner(): void
+    {
+        $this->entityManager->getConnection()->executeStatement('TRUNCATE app_user, user_group RESTART IDENTITY CASCADE');
+        $tokens = [];
+        foreach (['alice', 'bob'] as $name) {
+            $user = new User($name.'@example.com', ucfirst($name), 'github', $name);
+            $user->setStatus(UserStatus::Active);
+            $user->setSuperAdmin(true);
+            [$key, $tokens[$name]] = ApiKey::generate($name);
+            $key->setOwner($user);
+            $this->entityManager->persist($user);
+            $this->entityManager->persist($key);
+        }
+        $this->entityManager->flush();
+        $this->entityManager->getRepository(User::class)->findOneBy(['email' => 'bob@example.com'])->setSuperAdmin(false);
+        $group = new UserGroup('Tous');
+        $group->setUsers($this->entityManager->getRepository(User::class)->findAll());
+        $group->setProjects($this->entityManager->getRepository(Project::class)->findAll());
+        $this->entityManager->persist($group);
+        $this->entityManager->flush();
+
+        $this->token = $tokens['alice'];
+        $this->tool('add_memory', ['text' => 'Alice veut des réponses courtes.', 'type' => 'preference', 'projects' => ['demo'], 'visibility' => 'private']);
+        self::assertCount(1, $this->tool('search', ['query' => 'réponses courtes', 'project' => 'demo', 'types' => ['memory']])['results']);
+
+        $this->token = $tokens['bob'];
+        self::assertCount(0, $this->tool('search', ['query' => 'réponses courtes', 'project' => 'demo', 'types' => ['memory']])['results']);
+        self::assertSame('ADD', $this->tool('add_memory', ['text' => 'Alice veut des réponses courtes.', 'projects' => ['demo']])['event']);
+        self::assertTrue($this->rpc('tools/call', ['name' => 'add_memory', 'arguments' => ['text' => 'Pour un groupe inconnu.', 'projects' => ['demo'], 'visibility' => 'group', 'group' => 'Inconnu']])['isError']);
     }
 
     public function testImportDocumentCreatesFoldersAndIsSearchable(): void
@@ -158,6 +231,6 @@ final class McpServerTest extends WebTestCase
      */
     private function headers(): array
     {
-        return ['CONTENT_TYPE' => 'application/json', 'HTTP_ACCEPT' => 'application/json, text/event-stream'];
+        return ['CONTENT_TYPE' => 'application/json', 'HTTP_ACCEPT' => 'application/json, text/event-stream'] + (null === $this->token ? [] : ['HTTP_AUTHORIZATION' => 'Bearer '.$this->token]);
     }
 }

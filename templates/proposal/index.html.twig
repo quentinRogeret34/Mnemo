@@ -56,11 +56,13 @@
                                 <p class="proposal__text">Retirer : <a href="{{ path('memory_show', {id: p.target_id}) }}">{{ p.target_text }}</a></p>
                             {% else %}
                                 <label class="visually-hidden" for="lesson-{{ proposal.id }}">Texte de la mémoire</label>
-                                <textarea id="lesson-{{ proposal.id }}" name="lesson" class="memory-editor__text" rows="2" maxlength="1000">{{ p.lesson }}</textarea>
+                                <textarea id="lesson-{{ proposal.id }}" name="lesson" class="proposal__lesson" rows="2" maxlength="1000">{{ p.lesson }}</textarea>
                                 {% if p.target_id %}
                                     <p class="row__sub">{{ p.reconciliation == 'updates' ? 'Remplace le texte de' : 'Archive' }} : <a href="{{ path('memory_show', {id: p.target_id}) }}">{{ p.target_text }}</a></p>
                                 {% endif %}
                             {% endif %}
+                            <details class="proposal__more">
+                                <summary>Preuve et source</summary>
                             <dl class="props props--flat">
                                 <dt>Preuve</dt><dd><q>{{ p.evidence }}</q></dd>
                                 <dt>Source</dt><dd>{{ sources[p.source.kind] ?? p.source.kind }} · {{ p.source.label }}</dd>
@@ -73,6 +75,7 @@
                                     <dt>Décision</dt><dd>{{ p.adr.decision ?? '' }}</dd>
                                 {% endif %}
                             </dl>
+                            </details>
                         {% elseif proposal.kind.value in ['duplicate', 'contradiction'] %}
                             <fieldset class="proposal__pair">
                                 <legend class="row__sub">{{ proposal.kind.value == 'duplicate' ? 'Garder (l\'autre est fusionnée dedans puis archivée) :' : 'Garder (l\'autre est archivée) :' }}</legend>

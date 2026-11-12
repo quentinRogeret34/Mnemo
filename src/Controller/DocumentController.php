@@ -10,6 +10,7 @@ use App\Enum\NodeType;
 use App\Form\DocumentUploadType;
 use App\Form\FolderType;
 use App\Graph\KnowledgeReader;
+use App\Security\ProjectScope;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bridge\Doctrine\Attribute\MapEntity;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -28,6 +29,7 @@ final class DocumentController extends AbstractController
         private readonly KnowledgeReader $knowledgeReader,
         private readonly DocumentStorage $documentStorage,
         private readonly EntityManagerInterface $entityManager,
+        private readonly ProjectScope $projectScope,
     ) {
     }
 
@@ -139,7 +141,8 @@ final class DocumentController extends AbstractController
 
     private function findDocument(int $id): Node
     {
-        return $this->entityManager->getRepository(Node::class)->findOneBy(['id' => $id, 'type' => NodeType::Document])
-            ?? throw $this->createNotFoundException(\sprintf('Document %d not found.', $id));
+        $document = $this->entityManager->getRepository(Node::class)->findOneBy(['id' => $id, 'type' => NodeType::Document]);
+
+        return null !== $document && $this->projectScope->allowsNode($document) ? $document : throw $this->createNotFoundException(\sprintf('Document %d not found.', $id));
     }
 }

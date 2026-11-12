@@ -2,6 +2,7 @@
 
 namespace App\Tests\Connector;
 
+use App\Connector\CredentialResolver;
 use App\Connector\McpClientFactory;
 use App\Entity\Connector;
 use App\Entity\Node;
@@ -98,7 +99,7 @@ final class ConnectorControllerTest extends WebTestCase
     public function testPresetPrefillsTheForm(): void
     {
         $crawler = $this->client->request('GET', '/connectors');
-        self::assertSame(['DeepWiki', 'Context7', 'mem0', 'GitHub', 'Linear'], $crawler->filter('.preset__name')->each(static fn ($name): string => $name->text()));
+        self::assertSame(['DeepWiki', 'Context7', 'mem0', 'GitHub (historique)', 'GitLab (historique)', 'GitHub', 'Linear'], $crawler->filter('.preset__name')->each(static fn ($name): string => $name->text()));
 
         $crawler = $this->client->request('GET', '/connectors/new?preset=mem0');
         self::assertSelectorTextContains('.callout--info', 'Définir MEM0_API_KEY dans .env.local.');
@@ -122,6 +123,6 @@ final class ConnectorControllerTest extends WebTestCase
         $connector->setEndpoint('php tests/Fixtures/mcp/server.php');
 
         $this->expectExceptionMessage('Les connecteurs STDIO sont désactivés');
-        (new McpClientFactory(false, [], '/app'))->connect($connector);
+        (new McpClientFactory(false, new CredentialResolver([]), '/app'))->connect($connector);
     }
 }

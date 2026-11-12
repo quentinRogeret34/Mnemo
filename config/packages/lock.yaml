@@ -1,0 +1,3 @@
+framework:
+    # A directory shared by the web and worker containers, so that both see the same locks.
+    lock: 'flock://%kernel.project_dir%/var/lock'

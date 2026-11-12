@@ -1,0 +1,8 @@
+{
+  "name": "graphe",
+  "owner": { "name": "Quentin Rogeret" },
+  "description": "Plugin Claude Code du graphe de connaissance projet",
+  "plugins": [
+    { "name": "graphe", "source": "./claude-plugin", "description": "Serveur MCP du graphe, contexte du projet en début de session, contexte des fichiers lus, capture des apprentissages" }
+  ]
+}

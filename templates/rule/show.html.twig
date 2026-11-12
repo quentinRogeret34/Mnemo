@@ -73,6 +73,21 @@
             {% endif %}
         </section>
 
+        {% if mentions is not empty %}
+            <section class="block" aria-labelledby="mentions-title">
+                <div class="block__head"><h2 id="mentions-title">Citée dans l'historique</h2><span class="block__count">{{ mentions|length }}</span></div>
+                <ul class="list">
+                    {% for mention in mentions %}
+                        <li class="row row--commit">
+                            <a class="code-chip" href="{{ mention.url }}" rel="noopener noreferrer" target="_blank">{{ mention.type == 'commit' ? mention.ref|slice(0, 7) : mention.ref }}</a>
+                            <span class="row__title"><span>{{ mention.label }}</span>{% if mention.state %}<span class="tag">{{ mention.state }}</span>{% endif %}</span>
+                            <span class="row__meta"><span>{{ mention.author }}</span><span class="num">{{ mention.date ? mention.date|date('d/m/Y') }}</span></span>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </section>
+        {% endif %}
+
         {% set areas = meta.shadow_areas ?? [] %}
         <section class="block" aria-labelledby="shadow-title">
             <div class="block__head"><h2 id="shadow-title">Zones d'ombre</h2><span class="block__count">{{ areas|length }}</span></div>

@@ -4,7 +4,7 @@ namespace App\Twig\Components;
 
 use App\Entity\Project;
 use App\Graph\KnowledgeReader;
-use Doctrine\ORM\EntityManagerInterface;
+use App\Security\ProjectScope;
 use Symfony\UX\TwigComponent\Attribute\AsTwigComponent;
 
 #[AsTwigComponent]
@@ -13,8 +13,8 @@ final class Sidebar
     public ?Project $project = null;
 
     public function __construct(
-        private readonly EntityManagerInterface $entityManager,
         private readonly KnowledgeReader $knowledgeReader,
+        private readonly ProjectScope $projectScope,
     ) {
     }
 
@@ -23,7 +23,15 @@ final class Sidebar
      */
     public function getProjects(): array
     {
-        return $this->entityManager->getRepository(Project::class)->findBy([], ['name' => 'ASC']);
+        return $this->projectScope->projects();
+    }
+
+    /**
+     * A caller limited to some projects has no view across all of them: the workspace entries are hidden.
+     */
+    public function isScoped(): bool
+    {
+        return null !== $this->projectScope->slugs();
     }
 
     public function getMemoryCount(): int

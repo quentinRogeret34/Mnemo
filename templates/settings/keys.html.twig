@@ -1,0 +1,67 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Clés d'API{% endblock %}
+
+{% block crumbs %}<span class="crumbs__current">Clés d'API</span>{% endblock %}
+
+{% block body %}
+    <div class="view-head">
+        <h1>Clés d'API</h1>
+        <span class="view-head__meta">{{ keys|length }}</span>
+    </div>
+    <p class="page__lede">Une clé identifie un agent ou un poste qui appelle <span class="mono">/mcp</span> et <span class="mono">/api</span>, avec l'en-tête <span class="mono">Authorization: Bearer &lt;clé&gt;</span>. Limitée à des projets, elle ne lit et n'écrit que dans ceux-là.</p>
+
+    {% if token %}
+        <div class="archived-banner" role="status">
+            <span>Clé créée. Elle ne sera plus affichée : la copier maintenant.</span>
+            <code class="mono" id="new-token">{{ token }}</code>
+        </div>
+    {% endif %}
+
+    <form class="panel key-form" method="post" action="{{ path('api_key_index') }}">
+        <input type="hidden" name="_token" value="{{ csrf_token('api-key-create') }}">
+        <label for="key-name">Nom</label>
+        <input class="input" id="key-name" type="text" name="name" maxlength="100" placeholder="claude-code-portable" required>
+        {% if error %}<p class="form-errors">{{ error }}</p>{% endif %}
+        {% if projects is not empty %}
+            <fieldset class="key-form__projects">
+                <legend>Projets autorisés <span class="row__sub">aucun coché : tous les projets</span></legend>
+                {% for project in projects %}
+                    <label class="key-form__check"><input type="checkbox" name="projects[]" value="{{ project.slug }}"> {{ project.name }}</label>
+                {% endfor %}
+            </fieldset>
+        {% endif %}
+        <button class="button button--primary" type="submit">Créer la clé</button>
+    </form>
+
+    {% if keys is empty %}
+        <p class="block__empty">Aucune clé. Tant que l'accès n'est pas restreint (<span class="mono">APP_ACCESS_ROLE=ROLE_USER</span>), les agents appellent le serveur sans clé.</p>
+    {% else %}
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead><tr><th>Nom</th><th>Clé</th><th>Projets</th><th class="num">Créée</th><th class="num">Dernier usage</th><th></th></tr></thead>
+                <tbody>
+                    {% for key in keys %}
+                        <tr class="{{ key.revoked ? 'row--archived' }}">
+                            <td>{{ key.name }}</td>
+                            <td class="mono">{{ key.prefix }}…</td>
+                            <td>{{ key.projects is empty ? 'Tous' : key.projects|map(project => project.name)|join(', ') }}</td>
+                            <td class="num">{{ key.createdAt|date('d/m/Y') }}</td>
+                            <td class="num">{{ key.lastUsedAt ? key.lastUsedAt|date('d/m/Y H:i') : '-' }}</td>
+                            <td class="num">
+                                {% if key.revoked %}
+                                    <span class="tag">révoquée</span>
+                                {% else %}
+                                    <form method="post" action="{{ path('api_key_revoke', {id: key.id}) }}">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('api-key-revoke-' ~ key.id) }}">
+                                        <button class="button button--danger" type="submit">Révoquer</button>
+                                    </form>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endif %}
+{% endblock %}

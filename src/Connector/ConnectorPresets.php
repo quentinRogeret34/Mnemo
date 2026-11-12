@@ -70,6 +70,41 @@ final class ConnectorPresets
                 'Toutes les mémoires reçoivent le même type ; le type mem0 d\'origine n\'est pas repris.',
             ],
         ],
+        'github-api' => [
+            'label' => 'GitHub (historique)',
+            'description' => 'Commits, pull requests, issues et auteurs d\'un dépôt, reliés aux fichiers et aux règles du projet.',
+            'docs' => 'https://docs.github.com/en/rest',
+            'auth' => 'Personal access token (lecture seule)',
+            'checked' => false,
+            'endpoint' => 'https://api.github.com',
+            'credentials' => ['Authorization' => 'Bearer env:GITHUB_TOKEN'],
+            'mode' => ConnectorMode::GitHub,
+            'tool' => null,
+            'arguments' => ['repository' => 'owner/repo', 'learn_reviews' => false],
+            'notes' => [
+                'Remplacer « owner/repo » et choisir le projet : c\'est son graphe de code qui reçoit l\'historique.',
+                'Définir GITHUB_TOKEN dans .env.local et l\'ajouter à MCP_CONNECTORS_ENV. Un dépôt public se lit sans jeton : vider le champ des en-têtes.',
+                'Premier passage : 200 commits, 100 pull requests et 100 issues les plus récents. Les suivants ne lisent que le delta.',
+                '« learn_reviews: true » envoie les revues des pull requests fusionnées au LLM ; les apprentissages arrivent dans À valider.',
+            ],
+        ],
+        'gitlab-api' => [
+            'label' => 'GitLab (historique)',
+            'description' => 'Commits, merge requests, issues et auteurs d\'un projet GitLab, reliés aux fichiers et aux règles.',
+            'docs' => 'https://docs.gitlab.com/api/rest/',
+            'auth' => 'Access token (read_api)',
+            'checked' => false,
+            'endpoint' => 'https://gitlab.com/api/v4',
+            'credentials' => ['PRIVATE-TOKEN' => 'env:GITLAB_TOKEN'],
+            'mode' => ConnectorMode::GitLab,
+            'tool' => null,
+            'arguments' => ['repository' => 'groupe/projet', 'learn_reviews' => false],
+            'notes' => [
+                'Remplacer « groupe/projet » par le chemin du projet. Instance auto-hébergée : changer l\'URL en https://gitlab.exemple.com/api/v4.',
+                'Définir GITLAB_TOKEN dans .env.local et l\'ajouter à MCP_CONNECTORS_ENV.',
+                'Premier passage : 200 commits, 100 merge requests et 100 issues les plus récents. Les suivants ne lisent que le delta.',
+            ],
+        ],
         'github' => [
             'label' => 'GitHub',
             'description' => 'Issues d\'un dépôt, importées en document.',
@@ -112,7 +147,6 @@ final class ConnectorPresets
     private const UNAVAILABLE = [
         'notion' => ['label' => 'Notion', 'reason' => 'Serveur hébergé en OAuth uniquement ; le serveur local demande Node.js dans l\'image et STDIO.'],
         'atlassian' => ['label' => 'Jira / Confluence', 'reason' => 'Serveur hébergé Atlassian en OAuth.'],
-        'gitlab' => ['label' => 'GitLab', 'reason' => 'Serveur MCP en OAuth, réservé à certaines offres.'],
     ];
 
     /**

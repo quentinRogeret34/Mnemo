@@ -7,11 +7,15 @@ use App\Entity\Project;
 use App\Enum\MemoryType;
 use App\Graph\KnowledgeReader;
 use App\Memory\MemoryStore;
+use App\Security\MemoryAccess;
+use App\Security\ProjectScope;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\UX\LiveComponent\Attribute\AsLiveComponent;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\UX\LiveComponent\Attribute\LiveAction;
 use Symfony\UX\LiveComponent\Attribute\LiveArg;
 use Symfony\UX\LiveComponent\Attribute\LiveProp;
+use Symfony\UX\LiveComponent\Attribute\PostHydrate;
 use Symfony\UX\LiveComponent\DefaultActionTrait;
 
 #[AsLiveComponent]
@@ -45,15 +49,29 @@ final class MemoryEditor
         private readonly EntityManagerInterface $entityManager,
         private readonly KnowledgeReader $knowledgeReader,
         private readonly MemoryStore $memoryStore,
+        private readonly MemoryAccess $memoryAccess,
+        private readonly ProjectScope $projectScope,
     ) {
     }
 
     public function mount(Node $memory): void
     {
         $this->memory = $memory;
+        $this->guard();
         $this->text = $memory->getLabel();
         $this->type = $memory->getMetadata()['type'];
         $this->adr = $this->storedAdr();
+    }
+
+    /**
+     * A live action rebuilds the component from the memory id sent by the browser: checked again each time.
+     */
+    #[PostHydrate]
+    public function guard(): void
+    {
+        if (!$this->memoryAccess->canSee($this->memory)) {
+            throw new NotFoundHttpException('Memory not found.');
+        }
     }
 
     public function isDirty(): bool
@@ -84,7 +102,7 @@ final class MemoryEditor
      */
     public function getProjects(): array
     {
-        return $this->entityManager->getRepository(Project::class)->findBy([], ['name' => 'ASC']);
+        return $this->projectScope->projects();
     }
 
     /**
@@ -148,6 +166,9 @@ final class MemoryEditor
     public function toggleProject(#[LiveArg] int $projectId): void
     {
         $project = $this->entityManager->find(Project::class, $projectId) ?? throw new \InvalidArgumentException('Unknown project.');
+        if (!$this->projectScope->allows($project)) {
+            throw new \InvalidArgumentException('Unknown project.');
+        }
         $this->memory->getProjects()->contains($project) ? $this->memoryStore->detachProject($this->memory, $project) : $this->memory->addProject($project);
         $this->entityManager->flush();
     }

@@ -44,6 +44,7 @@ final class DuplicateFinder
             \sprintf(<<<'SQL'
                 SELECT m.id, m.label FROM node m
                 WHERE m.type = :memory AND COALESCE(m.metadata->>'status', 'active') = 'active'
+                  AND COALESCE(m.metadata->>'visibility', 'project') = 'project'
                   AND EXISTS (SELECT 1 FROM node_project np WHERE np.node_id = m.id AND np.project_id = :project)
                 ORDER BY m.id LIMIT %d
                 SQL, self::MAX_MEMORIES),

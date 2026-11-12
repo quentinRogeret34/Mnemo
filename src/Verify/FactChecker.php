@@ -7,7 +7,7 @@ use App\Entity\Node;
 use App\Entity\Project;
 use App\Enum\NodeType;
 use App\Graph\GraphReader;
-use App\Graph\KnowledgeReader;
+use App\Search\HybridSearch;
 use App\Llm\Chat;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -39,7 +39,7 @@ final class FactChecker
 
     public function __construct(
         private readonly Chat $chat,
-        private readonly KnowledgeReader $knowledgeReader,
+        private readonly HybridSearch $hybridSearch,
         private readonly GraphReader $graphReader,
         private readonly DocumentStorage $documentStorage,
         private readonly EntityManagerInterface $entityManager,
@@ -140,7 +140,7 @@ final class FactChecker
     private function sources(string $claim, Project $project, array $linked): array
     {
         $nodes = [] === $linked ? [] : $this->entityManager->getRepository(Node::class)->findBy(['id' => $linked]);
-        $related = $this->knowledgeReader->related($claim, $project, [NodeType::BusinessRule->value, NodeType::Document->value], self::RELATED, $linked);
+        $related = $this->hybridSearch->related($claim, $project, [NodeType::BusinessRule->value, NodeType::Document->value], self::RELATED, $linked);
         if ([] !== $related) {
             $nodes = [...$nodes, ...$this->entityManager->getRepository(Node::class)->findBy(['id' => array_column($related, 'id')])];
         }

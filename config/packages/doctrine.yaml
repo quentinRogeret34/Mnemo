@@ -4,7 +4,8 @@ doctrine:
         # The "default" table belongs to the ai.store.postgres.default store (ai:store:setup).
         # DBAL introspects its vector column before applying schema_filter, hence the mapping type.
         # "default" is a reserved word, so DBAL passes the name to the filter quoted.
-        schema_filter: '~^(?!"?default"?$)~'
+        # node_embedding holds a pgvector column Doctrine cannot map: its migration is written by hand.
+        schema_filter: '~^(?!"?default"?$)(?!node_embedding$)~'
         mapping_types:
             vector: string
 

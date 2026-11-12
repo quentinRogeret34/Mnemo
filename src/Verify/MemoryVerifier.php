@@ -11,6 +11,7 @@ use App\Enum\ProposalKind;
 use App\Enum\ProposalStatus;
 use App\Memory\MemoryStore;
 use Doctrine\DBAL\ParameterType;
+use App\Security\MemoryAccess;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
@@ -22,6 +23,7 @@ final class MemoryVerifier
     public function __construct(
         private readonly FactChecker $factChecker,
         private readonly EntityManagerInterface $entityManager,
+        private readonly MemoryAccess $memoryAccess,
     ) {
     }
 
@@ -59,9 +61,9 @@ final class MemoryVerifier
     public function verifyProject(Project $project, int $limit): array
     {
         $ids = $this->entityManager->getConnection()->fetchFirstColumn(
-            <<<'SQL'
+            <<<SQL
                 SELECT m.id FROM node m
-                WHERE m.type = :memory AND COALESCE(m.metadata->>'status', 'active') = 'active'
+                WHERE m.type = :memory AND COALESCE(m.metadata->>'status', 'active') = 'active' AND {$this->memoryAccess->sql('m')}
                   AND EXISTS (SELECT 1 FROM node_project np WHERE np.node_id = m.id AND np.project_id = :project)
                   AND (m.metadata->'verification' IS NULL OR m.metadata->'verification'->>'text' IS DISTINCT FROM m.label)
                 ORDER BY m.id

@@ -3,7 +3,7 @@
 namespace App\Learn;
 
 use App\Entity\Project;
-use App\Graph\KnowledgeReader;
+use App\Search\HybridSearch;
 use App\Llm\Chat;
 
 /**
@@ -30,7 +30,7 @@ final class LearningReconciler
 
     public function __construct(
         private readonly Chat $chat,
-        private readonly KnowledgeReader $knowledgeReader,
+        private readonly HybridSearch $hybridSearch,
     ) {
     }
 
@@ -39,7 +39,7 @@ final class LearningReconciler
      */
     public function reconcile(Candidate $candidate, Project $project): array
     {
-        $neighbours = $this->knowledgeReader->related($candidate->lesson, $project, ['memory'], self::NEIGHBOURS);
+        $neighbours = $this->hybridSearch->related($candidate->lesson, $project, ['memory'], self::NEIGHBOURS);
         if ([] === $neighbours) {
             return ['verdict' => 'new', 'target_id' => null, 'target_text' => null, 'reason' => 'Aucune mémoire proche.'];
         }
