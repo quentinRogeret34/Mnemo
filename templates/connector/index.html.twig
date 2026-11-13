@@ -5,6 +5,7 @@
 {% block crumbs %}<span class="crumbs__current">Connexions</span>{% endblock %}
 
 {% block header_actions %}
+    {% if github_oauth %}<a class="button" href="{{ path('github_repositories') }}">Dépôts GitHub</a>{% endif %}
     <a class="button button--primary" href="{{ path('connector_new') }}">Nouveau connecteur</a>
 {% endblock %}
 

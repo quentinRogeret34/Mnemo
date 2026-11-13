@@ -10,6 +10,7 @@ use App\Entity\Project;
 use App\Enum\ConnectorMode;
 use App\Enum\ConnectorTransport;
 use App\Enum\NodeType;
+use App\Forge\GitHubAccount;
 use App\Message\SyncConnector;
 use App\Security\OAuth\OAuthClient;
 use App\Security\SecretBox;
@@ -147,6 +148,75 @@ final class ConnectorControllerTest extends WebTestCase
         self::assertSelectorTextContains('.props', 'compte GitHub connecté');
         $this->client->submit($crawler->selectButton('Déconnecter GitHub')->form());
         self::assertNull($stored()->getOauthToken());
+    }
+
+    public function testTheRepositoriesOfAGitHubAccountAreListedAndConnected(): void
+    {
+        $this->client->disableReboot();
+        self::getContainer()->set(OAuthClient::class, new OAuthClient(new MockHttpClient(static fn (): JsonMockResponse => new JsonMockResponse(['access_token' => 'gho_secret'])), 'client-id', 'client-secret', '', '', 'https://gitlab.com', '', ''));
+        $listed = [];
+        self::getContainer()->set(GitHubAccount::class, new GitHubAccount(new MockHttpClient(static function (string $method, string $url, array $options) use (&$listed): JsonMockResponse {
+            $listed[] = [$url, $options['normalized_headers']['authorization'][0]];
+
+            return new JsonMockResponse([
+                ['full_name' => 'acme/shop', 'private' => true, 'description' => 'Boutique'],
+                ['full_name' => 'acme/blog', 'private' => false, 'description' => null],
+                ['full_name' => 'acme/old', 'private' => false, 'description' => null],
+            ]);
+        })));
+        $existing = new Connector();
+        $existing->setName('acme/old');
+        $existing->setMode(ConnectorMode::GitHub);
+        $existing->setEndpoint('https://api.github.com');
+        $existing->setArguments(['repository' => 'Acme/Old']);
+        $existing->setProject($this->entityManager->getRepository(Project::class)->findOneBy(['slug' => 'demo']));
+        $this->entityManager->persist($existing);
+        $this->entityManager->flush();
+
+        $this->client->request('GET', '/connectors');
+        $crawler = $this->client->click($this->client->getCrawler()->selectLink('Dépôts GitHub')->link());
+        $this->client->submit($crawler->selectButton('Connecter avec GitHub')->form());
+        parse_str((string) parse_url($this->client->getResponse()->headers->get('Location'), \PHP_URL_QUERY), $query);
+        self::assertSame(['repo', 'http://localhost/oauth/github/check/repositories'], [$query['scope'], $query['redirect_uri']]);
+
+        $this->client->request('GET', '/oauth/github/check/repositories?code=abc&state=forged');
+        $crawler = $this->client->followRedirect();
+        self::assertSelectorTextContains('.flash', 'La connexion à GitHub a expiré');
+        self::assertSame([], $listed);
+
+        $this->client->submit($crawler->selectButton('Connecter avec GitHub')->form());
+        parse_str((string) parse_url($this->client->getResponse()->headers->get('Location'), \PHP_URL_QUERY), $query);
+        $this->client->request('GET', '/oauth/github/check/repositories?code=abc&state='.$query['state']);
+        $crawler = $this->client->followRedirect();
+        self::assertSame([['https://api.github.com/user/repos?per_page=100&page=1&sort=pushed&affiliation=owner%2Ccollaborator%2Corganization_member', 'Authorization: Bearer gho_secret']], $listed);
+        self::assertSame(['acme/shop', 'acme/blog', 'acme/old'], $crawler->filter('input[name="repositories[]"]')->each(static fn ($input): string => $input->attr('value')));
+        self::assertNotNull($crawler->filter('input[value="acme/old"]')->attr('disabled'));
+
+        $form = $crawler->selectButton('Brancher les dépôts cochés')->form();
+        $form['project']->select((string) $this->entityManager->getRepository(Project::class)->findOneBy(['slug' => 'demo'])->getId());
+        $form['repositories'][0]->tick();
+        $form['repositories'][1]->tick();
+        $this->client->submit($form);
+        self::assertResponseRedirects('/connectors');
+        $sent = array_map(static fn ($envelope): object => $envelope->getMessage(), self::getContainer()->get('messenger.transport.async')->getSent());
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('.flash', '2 dépôt(s) branché(s) sur Demo project');
+
+        $this->entityManager->clear();
+        $connectors = $this->entityManager->getRepository(Connector::class)->findBy(['name' => ['acme/shop', 'acme/blog']], ['id' => 'ASC']);
+        self::assertSame(['acme/shop', 'acme/blog'], array_map(static fn (Connector $connector): string => $connector->getArguments()['repository'], $connectors));
+        foreach ($connectors as $connector) {
+            self::assertSame(['repository' => $connector->getName(), 'code_graph' => true, 'learn_reviews' => false], $connector->getArguments());
+            self::assertSame(['Authorization' => 'Bearer gho_secret'], self::getContainer()->get(CredentialResolver::class)->forgeHeaders($connector));
+            self::assertSame('demo', $connector->getProject()->getSlug());
+        }
+        self::assertEquals(
+            array_map(static fn (Connector $connector): SyncConnector => new SyncConnector($connector->getId(), 'manual'), $connectors),
+            $sent,
+        );
+
+        $this->client->request('GET', '/connectors/github');
+        self::assertSelectorExists('button:contains("Connecter avec GitHub")');
     }
 
     public function testInvalidArgumentsAreRejected(): void

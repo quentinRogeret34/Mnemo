@@ -42,8 +42,8 @@ security:
 
     # APP_ACCESS_ROLE is PUBLIC_ACCESS on a local machine and ROLE_USER once the server is shared.
     access_control:
-        # Callback of the GitHub connection of a connector: not a sign-in, it needs the same access as the connectors.
-        - { path: ^/oauth/github/check/connector$, roles: '%env(APP_ACCESS_ROLE)%' }
+        # Callbacks of the GitHub connection of the connectors: not a sign-in, they need the same access as the connectors.
+        - { path: ^/oauth/github/check/(connector|repositories)$, roles: '%env(APP_ACCESS_ROLE)%' }
         - { path: ^/(login|pending|logout|oauth/), roles: PUBLIC_ACCESS }
         # Whatever the access mode, only a super admin manages accounts and groups.
         - { path: ^/admin, roles: ROLE_SUPER_ADMIN }

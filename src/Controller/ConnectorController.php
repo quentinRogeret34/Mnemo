@@ -51,6 +51,7 @@ final class ConnectorController extends AbstractController
             'llm' => $this->llmSettings,
             'presets' => $this->presets->available(),
             'unavailable_presets' => $this->presets->unavailable(),
+            'github_oauth' => isset($this->oauthClient->enabled()['github']),
         ]);
     }
 
