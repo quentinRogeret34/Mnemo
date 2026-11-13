@@ -174,6 +174,32 @@ final class AccountsTest extends WebTestCase
         self::assertStringContainsString('Convention partagée.', $context($orphanToken));
     }
 
+    public function testAKeyCreatesAnUnknownProjectInTheGroupsOfItsOwner(): void
+    {
+        $bob = $this->user('bob@example.com', 'Bob');
+        $carol = $this->user('carol@example.com', 'Carol');
+        $back = new UserGroup('Back');
+        $back->setUsers([$bob]);
+        $this->entityManager->persist($back);
+        $tokens = [];
+        foreach (['bob' => $bob, 'carol' => $carol] as $name => $owner) {
+            [$key, $tokens[$name]] = ApiKey::generate($name);
+            $key->setOwner($owner);
+            $this->entityManager->persist($key);
+        }
+        $this->entityManager->flush();
+        $this->entityManager->clear();
+        $this->client->restart();
+        $context = fn (string $name): array => json_decode($this->client->request('GET', '/api/context?cwd=/home/dev/shop&repository=github.com/acme/shop', server: ['HTTP_AUTHORIZATION' => 'Bearer '.$tokens[$name]]) ? $this->client->getResponse()->getContent() : '', true);
+
+        self::assertNull($context('carol')['project']);
+        self::assertSame(['project' => 'shop', 'created' => true], array_intersect_key($context('bob'), ['project' => 1, 'created' => 1]));
+        self::assertSame(['project' => 'shop', 'created' => false], array_intersect_key($context('bob'), ['project' => 1, 'created' => 1]));
+        self::assertNull($context('carol')['project']);
+        $this->entityManager->clear();
+        self::assertSame(['shop'], $this->entityManager->getRepository(UserGroup::class)->findOneBy(['name' => 'Back'])->getProjects()->map(static fn ($project): string => $project->getSlug())->getValues());
+    }
+
     private function signIn(): void
     {
         $this->client->request('GET', '/oauth/github');

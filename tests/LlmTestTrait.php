@@ -30,12 +30,11 @@ trait LlmTestTrait
         });
 
         self::getContainer()->set(LlmSettings::class, new LlmSettings(
-            new ServiceLocator(['mistral' => static fn () => $platform, 'openrouter' => static fn () => $platform]),
-            'mistral',
+            new ServiceLocator(['openrouter' => static fn () => $platform]),
+            'openrouter',
             'test-model',
-            'mistral',
+            'openrouter',
             'test-embedding',
-            'test-key',
             'test-key',
         ));
     }

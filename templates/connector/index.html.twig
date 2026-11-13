@@ -53,11 +53,9 @@
         <dl class="props props--flat">
             <dt>Chat</dt><dd><span class="mono">{{ llm.chatPlatform }} / {{ llm.chatModel }}</span></dd>
             <dt>Embeddings</dt><dd><span class="mono">{{ llm.embeddingPlatform }} / {{ llm.embeddingModel }}</span></dd>
-            {% for platform in constant('App\\Llm\\LlmSettings::PLATFORMS') %}
-                <dt>Clé {{ platform == 'openrouter' ? 'OpenRouter' : 'Mistral' }}</dt>
-                <dd>{% if llm.isConfigured(platform) %}<span class="status status--validated">configurée</span>{% else %}<span class="status">absente</span>{% endif %}</dd>
-            {% endfor %}
+            <dt>Clé OpenRouter</dt>
+            <dd>{% if llm.isConfigured('openrouter') %}<span class="status status--validated">configurée</span>{% else %}<span class="status">absente</span>{% endif %}</dd>
         </dl>
-        <p class="row__sub">Clés dans <code>.env.local</code> (<code>MISTRAL_API_KEY</code>, <code>OPENROUTER_API_KEY</code>), modèles via <code>LLM_PLATFORM</code>, <code>LLM_MODEL</code>, <code>EMBEDDING_PLATFORM</code>, <code>EMBEDDING_MODEL</code>. Vérifier avec <code>bin/console app:llm:check</code>.</p>
+        <p class="row__sub">Clé dans <code>.env.local</code> (<code>OPENROUTER_API_KEY</code>), modèles via <code>LLM_PLATFORM</code>, <code>LLM_MODEL</code>, <code>EMBEDDING_PLATFORM</code>, <code>EMBEDDING_MODEL</code>. Vérifier avec <code>bin/console app:llm:check</code>.</p>
     </section>
 {% endblock %}

@@ -3,8 +3,6 @@ ai:
     platform:
         openrouter:
             api_key: '%env(OPENROUTER_API_KEY)%'
-        mistral:
-            api_key: '%env(MISTRAL_API_KEY)%'
 
     # see https://symfony.com/doc/current/ai/bundles/ai-bundle.html
     agent:

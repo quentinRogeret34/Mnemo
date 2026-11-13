@@ -6,13 +6,14 @@
   capture        SessionEnd, PreCompact : envoie la partie nouvelle du transcript à `learn`, en arrière-plan
   capture-run    le travail de capture lui-même, lancé détaché par `capture`
 
-Le projet est celui que nomme GRAPHE_PROJECT (son slug dans le graphe). Sans cette variable, c'est celui dont le chemin
-de dépôt contient le dossier courant, ce qui ne marche que si le serveur tourne sur la même machine.
-Serveur absent, projet inconnu ou erreur : le hook ne dit rien et sort en 0, il ne gêne jamais la session.
+Le projet est celui que nomme GRAPHE_PROJECT (son slug dans le graphe). Sans cette variable, c'est celui du dépôt
+distant `origin`, sinon celui dont le chemin contient le dossier courant (même machine que le serveur seulement).
+Un projet inconnu est créé par le serveur au début de la session, nommé d'après le slug, le dépôt ou le dossier.
+Serveur absent ou erreur : le hook ne dit rien et sort en 0, il ne gêne jamais la session.
 
 Variables, à poser dans le bloc "env" de .claude/settings.json du projet (la clé dans settings.local.json) :
   GRAPHE_URL       adresse du serveur, défaut http://localhost:8080
-  GRAPHE_PROJECT   slug du projet dans le graphe
+  GRAPHE_PROJECT   slug du projet dans le graphe, pour ne pas le déduire du dépôt
   GRAPHE_API_KEY   clé d'API, quand le serveur en demande une
   GRAPHE_DISABLED  1 coupe tout
   GRAPHE_CAPTURE   0 coupe l'envoi des transcripts
@@ -46,6 +47,7 @@ SECRETS = [
     (re.compile(r"\b(?![0-9a-f]{40}\b)(?=[A-Za-z0-9+_-]*\d)(?=[A-Za-z0-9+_-]*[A-Za-z])[A-Za-z0-9+_-]{40,}={0,2}"), "[MASQUÉ]"),
 ]
 NOISE = re.compile(r"<system-reminder>.*?</system-reminder>", re.S)
+REMOTE = re.compile(r"^(?:[a-z][a-z0-9+.-]*://)?(?:[^@/]+@)?(?P<host>[a-z0-9][a-z0-9.-]+)(?::\d+(?=/))?[:/](?P<path>[^/?#][^?#]*?)(?:\.git)?/?$", re.I)
 
 
 def base_url() -> str:
@@ -53,9 +55,10 @@ def base_url() -> str:
 
 
 def scope(data: dict) -> dict:
-    """Ce qui désigne le projet au serveur : le dossier de travail, et le slug s'il est configuré."""
-    project = os.environ.get("GRAPHE_PROJECT")
-    return {"cwd": cwd_of(data)} | ({"project": project} if project else {})
+    """Ce qui désigne le projet au serveur : le dossier de travail, le dépôt distant, et le slug s'il est configuré."""
+    cwd = cwd_of(data)
+    project, repository = os.environ.get("GRAPHE_PROJECT"), repository_of(cwd)
+    return {"cwd": cwd} | ({"repository": repository} if repository else {}) | ({"project": project} if project else {})
 
 
 def request(path: str, params: dict | None = None, payload: dict | None = None, timeout: float = READ_TIMEOUT) -> tuple[int, dict]:
@@ -88,12 +91,22 @@ def cwd_of(data: dict) -> str:
     return os.environ.get("CLAUDE_PROJECT_DIR") or (cwd if isinstance(cwd, str) else "") or os.getcwd()
 
 
-def branch_of(cwd: str) -> str:
+def git(cwd: str, *args: str) -> str:
     try:
-        result = subprocess.run(["git", "-C", cwd, "branch", "--show-current"], capture_output=True, text=True, timeout=READ_TIMEOUT)
+        result = subprocess.run(["git", "-C", cwd, *args], capture_output=True, text=True, timeout=READ_TIMEOUT)
     except (OSError, subprocess.SubprocessError):
-        return "-"
-    return result.stdout.strip() or "-"
+        return ""
+    return result.stdout.strip() if result.returncode == 0 else ""
+
+
+def branch_of(cwd: str) -> str:
+    return git(cwd, "branch", "--show-current") or "-"
+
+
+def repository_of(cwd: str) -> str:
+    """Le dépôt distant `origin` en « hôte/propriétaire/dépôt », sans identifiants ; vide s'il n'y en a pas."""
+    match = REMOTE.match(git(cwd, "remote", "get-url", "origin"))
+    return f"{match['host']}/{match['path']}".lower() if match else ""
 
 
 def session_start(data: dict) -> None:
@@ -103,6 +116,8 @@ def session_start(data: dict) -> None:
     if status != 200 or not isinstance(project, str) or not project:
         return
     line = f"Graphe Active | project={project} | branch={branch_of(cwd)} | memories={body.get('memories', 0)}"
+    if body.get("created"):
+        line += " | projet créé"
     emit("SessionStart", f"""## Graphe Active
 
 `{line}`
@@ -201,7 +216,7 @@ def capture_run(data: dict) -> None:
     status, body = request("/api/learn", payload=scope(data) | {"text": text[-MAX_CHARS:], "label": label}, timeout=LEARN_TIMEOUT)
 
     (state_dir() / "last.json").write_text(json.dumps({"session": session, "status": status, "response": body}, ensure_ascii=False), encoding="utf-8")
-    # 422 : projet inconnu du graphe, inutile de renvoyer ces lignes. Autre échec : réessayé à la prochaine capture.
+    # 422 : projet que cette clé ne peut ni atteindre ni créer, inutile de renvoyer ces lignes. Autre échec : réessayé à la prochaine capture.
     if status in (200, 422):
         state.write_text(json.dumps({"lines": len(lines)}), encoding="utf-8")
 

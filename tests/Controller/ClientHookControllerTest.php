@@ -60,7 +60,26 @@ final class ClientHookControllerTest extends WebTestCase
         self::assertStringNotContainsString('knowledge_graph:start', $context['context']);
 
         self::assertSame('demo-sub', $this->get('/api/context?cwd=/repos/demo/packages/sub/lib')['project']);
-        self::assertSame(['project' => null, 'memories' => 0, 'context' => ''],$this->get('/api/context?cwd=/repos/demo-other'));
+        self::assertFalse($context['created']);
+        self::assertSame(['project' => null, 'created' => false, 'memories' => 0, 'context' => ''], $this->get('/api/context'));
+    }
+
+    public function testAnUnknownProjectIsCreatedFromItsRepositoryElseItsDirectory(): void
+    {
+        $created = $this->get('/api/context?cwd=/home/dev/shop&repository=GitHub.com/Acme/Shop.git');
+        self::assertSame(['project' => 'shop', 'created' => true, 'memories' => 0], array_intersect_key($created, ['project' => 1, 'created' => 1, 'memories' => 1]));
+        $shop = $this->entityManager->getRepository(Project::class)->findOneBy(['slug' => 'shop']);
+        self::assertSame(['github.com/acme/shop', '/home/dev/shop'], [$shop->getRepository(), $shop->getRepositoryPath()]);
+
+        $again = $this->get('/api/context?cwd=/workspace&repository=github.com/acme/shop');
+        self::assertSame(['shop', false], [$again['project'], $again['created']]);
+        self::assertSame('acme-fork-shop', $this->get('/api/context?cwd=/workspace&repository=github.com/acme-fork/shop')['project']);
+
+        self::assertSame('demo-other', $this->get('/api/context?cwd=/repos/Demo%20Other')['project']);
+        self::assertNull($this->entityManager->getRepository(Project::class)->findOneBy(['slug' => 'demo-other'])->getRepository());
+
+        self::assertSame('', $this->get('/api/file-context?cwd=/repos/unseen&repository=github.com/acme/unseen&path=/repos/unseen/a.ts')['context']);
+        self::assertSame(5, $this->entityManager->getRepository(Project::class)->count([]));
     }
 
     public function testFileContextListsRulesAndMemoriesOrNothing(): void
@@ -78,7 +97,13 @@ final class ClientHookControllerTest extends WebTestCase
     public function testAClientOnAnotherMachineNamesItsProject(): void
     {
         self::assertSame('demo', $this->get('/api/context?cwd=/home/dev/shop&project=demo')['project']);
-        self::assertNull($this->get('/api/context?cwd=/repos/demo&project=unknown')['project']);
+        self::assertNull($this->get('/api/context?cwd=/repos/demo&project=Not%20A%20Slug')['project']);
+
+        $named = $this->get('/api/context?cwd=/home/dev/billing&project=billing&repository=github.com/acme/monolith');
+        self::assertSame(['billing', true], [$named['project'], $named['created']]);
+        self::assertSame('demo', $this->get('/api/context?cwd=/home/dev/shop&project=demo&repository=github.com/acme/demo')['project']);
+        $this->entityManager->clear();
+        self::assertSame('github.com/acme/demo', $this->entityManager->getRepository(Project::class)->findOneBy(['slug' => 'demo'])->getRepository());
 
         $context = $this->get('/api/file-context?cwd=/home/dev/shop&project=demo&path=/home/dev/shop/src/domain/catalog.ts');
         self::assertSame('src/domain/catalog.ts', $context['path']);
@@ -103,14 +128,16 @@ final class ClientHookControllerTest extends WebTestCase
         self::assertSame('demo', $this->entityManager->getRepository(Proposal::class)->findOneBy([])->getProject()->getSlug());
     }
 
-    public function testLearnRejectsAnInvalidPayloadOrAnUnknownDirectory(): void
+    public function testLearnRejectsAnInvalidPayloadAndCreatesAnUnknownProject(): void
     {
+        $this->scriptLlm(static fn (): array => ['candidates' => []]);
         $this->client->jsonRequest('POST', '/api/learn', ['cwd' => '/repos/demo', 'text' => '', 'label' => 'x', 'kind' => 'chat']);
         self::assertResponseStatusCodeSame(422);
-
-        $this->client->jsonRequest('POST', '/api/learn', ['cwd' => '/elsewhere', 'text' => 'transcript', 'label' => 'x']);
-        self::assertResponseStatusCodeSame(422);
         self::assertSame(0, $this->entityManager->getRepository(Proposal::class)->count([]));
+
+        $this->client->jsonRequest('POST', '/api/learn', ['cwd' => '/elsewhere', 'repository' => 'gitlab.com/acme/tools/cli', 'text' => 'transcript', 'label' => 'x']);
+        self::assertResponseIsSuccessful();
+        self::assertSame('cli', json_decode((string) $this->client->getResponse()->getContent(), true)['project']);
     }
 
     /**

@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "5e2e2bd0f6f9d8f19c7e1c66dd1d43cb",
+    "content-hash": "0a16cdd457f49a07b02fac8a03ee71f0",
     "packages": [
         {
             "name": "composer/semver",
@@ -3161,93 +3161,6 @@
             ],
             "time": "2026-10-22T23:44:24+00:00",
             "published-time": "2026-10-23T07:53:28+00:00"
-        },
-        {
-            "name": "symfony/ai-mistral-platform",
-            "version": "v0.15.0",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/symfony/ai-mistral-platform.git",
-                "reference": "0b875470208ca5a1bf332685c5800ab387383171"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/symfony/ai-mistral-platform/zipball/0b875470208ca5a1bf332685c5800ab387383171",
-                "reference": "0b875470208ca5a1bf332685c5800ab387383171",
-                "shasum": ""
-            },
-            "require": {
-                "php": ">=8.2",
-                "symfony/ai-generic-platform": "^0.15",
-                "symfony/ai-platform": "^0.15",
-                "symfony/http-client": "^7.3|^8.0"
-            },
-            "require-dev": {
-                "phpstan/phpstan": "^2.1",
-                "phpstan/phpstan-phpunit": "^2.0",
-                "phpstan/phpstan-strict-rules": "^2.0",
-                "phpunit/phpunit": "^11.5.53"
-            },
-            "type": "symfony-ai-platform",
-            "extra": {
-                "thanks": {
-                    "url": "https://github.com/symfony/ai",
-                    "name": "symfony/ai"
-                }
-            },
-            "autoload": {
-                "psr-4": {
-                    "Symfony\\AI\\Platform\\Bridge\\Mistral\\": ""
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "Christopher Hertel",
-                    "email": "mail@christopher-hertel.de"
-                },
-                {
-                    "name": "Oskar Stark",
-                    "email": "oskarstark@googlemail.com"
-                },
-                {
-                    "name": "Symfony Community",
-                    "homepage": "https://symfony.com/contributors"
-                }
-            ],
-            "description": "Mistral platform bridge for Symfony AI",
-            "keywords": [
-                "Bridge",
-                "ai",
-                "mistral",
-                "platform"
-            ],
-            "support": {
-                "source": "https://github.com/symfony/ai-mistral-platform/tree/v0.15.0"
-            },
-            "funding": [
-                {
-                    "url": "https://symfony.com/sponsor",
-                    "type": "custom"
-                },
-                {
-                    "url": "https://github.com/fabpot",
-                    "type": "github"
-                },
-                {
-                    "url": "https://github.com/nicolas-grekas",
-                    "type": "github"
-                },
-                {
-                    "url": "https://tidelift.com/funding/github/packagist/symfony/symfony",
-                    "type": "tidelift"
-                }
-            ],
-            "time": "2026-10-22T23:44:24+00:00",
-            "published-time": "2026-10-23T07:55:09+00:00"
         },
         {
             "name": "symfony/ai-open-router-platform",

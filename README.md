@@ -40,7 +40,7 @@ L'idée complète, l'état des lieux et les décisions sont dans
 
 - PHP >= 8.4 (image `dunglas/frankenphp`, PHP 8.5), Symfony 8.1
 - Doctrine ORM 3 + migrations, Postgres 18 + pgvector
-- Symfony AI 0.15 : plateformes Mistral et OpenRouter, store Postgres, `symfony/mcp-bundle`
+- Symfony AI 0.15 : plateforme OpenRouter, store Postgres, `symfony/mcp-bundle`
 - Twig, AssetMapper, Stimulus, UX Live Component / Twig Component / Dropzone
 - Docker : `compose.yaml` (services `php` sur le port 8080, `database` sur 5432)
 
@@ -52,17 +52,15 @@ docker compose exec -T php composer install
 docker compose exec -T php bin/console doctrine:migrations:migrate --no-interaction
 ```
 
-Clés LLM dans `.env.local` (git-ignoré), jamais dans `.env` :
+Clé LLM dans `.env.local` (git-ignoré), jamais dans `.env` :
 
 ```dotenv
-MISTRAL_API_KEY=...
 OPENROUTER_API_KEY=...
 
-# mistral | openrouter
-LLM_PLATFORM=mistral
-LLM_MODEL=mistral-small-latest
-EMBEDDING_PLATFORM=mistral
-EMBEDDING_MODEL=mistral-embed
+LLM_PLATFORM=openrouter
+LLM_MODEL=mistralai/mistral-small-2603
+EMBEDDING_PLATFORM=openrouter
+EMBEDDING_MODEL=mistralai/mistral-embed-2312
 ```
 
 Vérifier la configuration (chat, sortie JSON structurée, embeddings) :
@@ -77,7 +75,7 @@ Les commandes ci-dessous s'écrivent `bin/console ...` ; dans Docker, préfixer 
 ## Workflow
 
 ```
-  1. projet        app:project:create
+  1. projet        app:project:create, ou créé par le plugin à la première session
         |
   2. ingestion     app:ingest:code      (graphe AST graphify)
         |          app:ingest:context   (banque AIDD, CLAUDE.md, AGENTS.md...)
@@ -101,6 +99,12 @@ de travail d'un agent.
 ```bash
 bin/console app:project:create <slug> "<Nom>" <chemin-du-depot>
 ```
+
+Avec le plugin Claude Code, la commande est facultative : un projet inconnu est
+créé à la première session. Il est reconnu par le dépôt distant `origin`
+(`hôte/propriétaire/dépôt`), sinon par le nom du dossier ; `GRAPHE_PROJECT`
+impose un slug. Le projet rejoint les groupes du propriétaire de la clé ; une
+clé limitée à certains projets ne crée rien.
 
 ### 2. Ingérer
 

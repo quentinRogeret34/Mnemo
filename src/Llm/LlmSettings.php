@@ -12,13 +12,13 @@ use Symfony\Component\DependencyInjection\ServiceLocator;
  */
 final class LlmSettings
 {
-    public const PLATFORMS = ['mistral', 'openrouter'];
+    public const PLATFORMS = ['openrouter'];
 
     /**
      * @param ServiceLocator<PlatformInterface> $platforms
      */
     public function __construct(
-        #[AutowireLocator(['mistral' => new Autowire(service: 'ai.platform.mistral'), 'openrouter' => new Autowire(service: 'ai.platform.openrouter')])]
+        #[AutowireLocator(['openrouter' => new Autowire(service: 'ai.platform.openrouter')])]
         private readonly ServiceLocator $platforms,
         #[Autowire(env: 'LLM_PLATFORM')]
         public readonly string $chatPlatform,
@@ -28,8 +28,6 @@ final class LlmSettings
         public readonly string $embeddingPlatform,
         #[Autowire(env: 'EMBEDDING_MODEL')]
         public readonly string $embeddingModel,
-        #[Autowire(env: 'MISTRAL_API_KEY')]
-        private readonly string $mistralKey,
         #[Autowire(env: 'OPENROUTER_API_KEY')]
         private readonly string $openRouterKey,
     ) {
@@ -46,10 +44,6 @@ final class LlmSettings
 
     public function isConfigured(string $platform): bool
     {
-        return '' !== trim(match ($platform) {
-            'mistral' => $this->mistralKey,
-            'openrouter' => $this->openRouterKey,
-            default => '',
-        });
+        return 'openrouter' === $platform && '' !== trim($this->openRouterKey);
     }
 }

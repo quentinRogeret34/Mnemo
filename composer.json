@@ -13,7 +13,6 @@
         "league/commonmark": "*",
         "nyholm/psr7": "^1.8",
         "symfony/ai-bundle": "^0.15.0",
-        "symfony/ai-mistral-platform": "^0.15",
         "symfony/ai-open-router-platform": "^0.15",
         "symfony/ai-postgres-store": "^0.15",
         "symfony/asset-mapper": "8.1.*",

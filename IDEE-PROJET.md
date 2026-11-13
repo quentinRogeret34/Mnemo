@@ -291,8 +291,8 @@ mémoires et les liens validés, pas seulement sur le code.
 - Écartés pour l'instant : Neo4j (service en plus), Apache AGE (compatibilité
   PG18 non vérifiée).
 - Retenus le 2026-11-08 : `symfony/mcp-bundle` 0.15 et le SDK officiel
-  `mcp/sdk` 0.9 (serveur et client), `symfony/ai-mistral-platform` et
-  `symfony/ai-open-router-platform` 0.15, Symfony UX (Twig Components, Live
+  `mcp/sdk` 0.9 (serveur et client), `symfony/ai-open-router-platform` 0.15
+  (`symfony/ai-mistral-platform` retiré le 2026-11-13), Symfony UX (Twig Components, Live
   Components, Dropzone), Cytoscape.js pour la vue graphe.
 
 Ce que Symfony AI 0.15 fournit déjà (vérifié dans `vendor/`) :
@@ -379,7 +379,7 @@ Prochaines étapes proposées, dans l'ordre :
 
 1. Authentification minimale (jeton d'API pour MCP, login pour le front) et port
    publié en `127.0.0.1`.
-2. Clés Mistral / OpenRouter, choix du modèle d'embedding et de la dimension,
+2. Clé OpenRouter, choix du modèle d'embedding et de la dimension,
    indexation vectorielle des documents et mémoires (`search` sémantique).
 3. Extraction des règles depuis les documents et des mémoires depuis les
    transcripts, avec écran de validation.
@@ -398,7 +398,7 @@ Prochaines étapes proposées, dans l'ordre :
   que php-parser (PHP seul).
 - Client MCP : SDK officiel `mcp/sdk` piloté par le code, car la config
   `clients` de `symfony/mcp-bundle` est statique.
-- LLM : Mistral et / ou OpenRouter, choisis par variables d'environnement
+- LLM : OpenRouter, modèles choisis par variables d'environnement
   (`LLM_PLATFORM`, `LLM_MODEL`, `EMBEDDING_PLATFORM`, `EMBEDDING_MODEL`).
 - Secrets des connecteurs : références `env:NOM` lues dans `.env.local`, limitées aux variables listées dans `MCP_CONNECTORS_ENV`.
 
@@ -436,7 +436,7 @@ Socle :
   Commandes dans le conteneur : `docker compose exec -T php bin/console ...`.
 - Postgres 18 + pgvector. Doctrine ORM 3, 3 migrations.
 - `symfony/ai-bundle` 0.15, store `postgres.default` (pas encore alimenté),
-  plateformes Mistral et OpenRouter configurées, clés absentes.
+  plateforme OpenRouter configurée, clé absente.
 - Symfony UX (Twig / Live Components, Stimulus, AssetMapper, Dropzone), Form,
   Validator, SecurityBundle (sans règle d'accès), `symfony/mcp-bundle`.
 - 64 tests (PHPUnit, `bin/phpunit`) ; base de test `app_test`. Le LLM est simulé en test (`tests/LlmTestTrait.php`).

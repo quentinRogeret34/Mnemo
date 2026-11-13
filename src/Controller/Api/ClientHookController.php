@@ -2,7 +2,6 @@
 
 namespace App\Controller\Api;
 
-use App\Entity\Project;
 use App\Export\MemoryBlockExporter;
 use App\Graph\GraphReader;
 use App\Graph\KnowledgeReader;
@@ -10,8 +9,7 @@ use App\Learn\Learner;
 use App\Learn\SourceKind;
 use App\Llm\LlmUnavailable;
 use App\Memory\MemoryStore;
-use App\Security\ProjectScope;
-use Doctrine\ORM\EntityManagerInterface;
+use App\Project\ProjectResolver;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
@@ -19,9 +17,9 @@ use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
 
 /**
- * Endpoints for the hooks of agent clients (Claude Code...). The client names its project by slug, or only sends its
- * working directory: the project is then the one whose repository path contains it, which only works when the server
- * runs on the same machine. An unknown project or directory gets an empty answer, not an error.
+ * Endpoints for the hooks of agent clients (Claude Code...). The client sends its project slug, the remote of its
+ * repository and its working directory; ProjectResolver says which project that is. An unknown project is created by
+ * the session context and by learn, and gets an empty answer from the file context.
  */
 #[Route('/api', format: 'json')]
 final class ClientHookController extends AbstractController
@@ -29,33 +27,33 @@ final class ClientHookController extends AbstractController
     private const MAX_MEMORIES = 10;
 
     public function __construct(
-        private readonly EntityManagerInterface $entityManager,
         private readonly MemoryBlockExporter $memoryBlockExporter,
         private readonly GraphReader $graphReader,
         private readonly KnowledgeReader $knowledgeReader,
         private readonly Learner $learner,
         private readonly MemoryStore $memoryStore,
-        private readonly ProjectScope $projectScope,
+        private readonly ProjectResolver $projectResolver,
     ) {
     }
 
     #[Route('/context', name: 'api_context', methods: ['GET'])]
-    public function context(#[MapQueryParameter] string $cwd = '', #[MapQueryParameter] string $project = ''): JsonResponse
+    public function context(#[MapQueryParameter] string $cwd = '', #[MapQueryParameter] string $project = '', #[MapQueryParameter] string $repository = ''): JsonResponse
     {
-        $project = $this->projectFor($cwd, $project);
+        [$project, $created] = $this->projectResolver->findOrCreate($cwd, $project, $repository);
 
         return $this->json([
             'project' => $project?->getSlug(),
+            'created' => $created,
             'memories' => null === $project ? 0 : $this->memoryStore->countActive($project),
             'context' => null === $project ? '' : $this->memoryBlockExporter->render($project, markers: false),
         ]);
     }
 
     #[Route('/file-context', name: 'api_file_context', methods: ['GET'])]
-    public function fileContext(#[MapQueryParameter] string $cwd = '', #[MapQueryParameter] string $path = '', #[MapQueryParameter(name: 'project')] string $slug = ''): JsonResponse
+    public function fileContext(#[MapQueryParameter] string $cwd = '', #[MapQueryParameter] string $path = '', #[MapQueryParameter(name: 'project')] string $slug = '', #[MapQueryParameter] string $repository = ''): JsonResponse
     {
-        $project = $this->projectFor($cwd, $slug);
-        $relative = null === $project ? null : $this->relativePath('' === $slug ? $project->getRepositoryPath() : $cwd, $path, $cwd);
+        $project = $this->projectResolver->find($cwd, $slug, $repository);
+        $relative = null === $project ? null : $this->relativePath('' === $slug && '' === $repository ? $project->getRepositoryPath() : $cwd, $path, $cwd);
         $file = null === $relative ? null : $this->graphReader->findFile($project, $relative);
         if (null === $file) {
             return $this->json(['project' => $project?->getSlug(), 'path' => $relative, 'context' => '']);
@@ -88,9 +86,9 @@ final class ClientHookController extends AbstractController
     #[Route('/learn', name: 'api_learn', methods: ['POST'])]
     public function learn(#[MapRequestPayload] LearnRequest $request): JsonResponse
     {
-        $project = $this->projectFor($request->cwd, $request->project);
+        [$project] = $this->projectResolver->findOrCreate($request->cwd, $request->project, $request->repository);
         if (null === $project) {
-            return $this->json(['project' => null, 'error' => 'Aucun projet du graphe ne porte ce nom ni ne contient ce dossier.'], JsonResponse::HTTP_UNPROCESSABLE_ENTITY);
+            return $this->json(['project' => null, 'error' => 'Aucun projet du graphe ne correspond, et il ne peut pas être créé avec cette clé.'], JsonResponse::HTTP_UNPROCESSABLE_ENTITY);
         }
 
         try {
@@ -100,32 +98,6 @@ final class ClientHookController extends AbstractController
         }
 
         return $this->json(['project' => $project->getSlug()] + $report);
-    }
-
-    /**
-     * The project named by its slug, else the one with the longest repository path containing the directory.
-     */
-    private function projectFor(string $cwd, string $slug = ''): ?Project
-    {
-        if ('' !== $slug) {
-            $project = $this->entityManager->getRepository(Project::class)->findOneBy(['slug' => $slug]);
-
-            return null !== $project && $this->projectScope->allows($project) ? $project : null;
-        }
-        $cwd = rtrim($cwd, '/');
-        if ('' === $cwd) {
-            return null;
-        }
-
-        $found = null;
-        foreach ($this->entityManager->getRepository(Project::class)->findAll() as $project) {
-            $root = rtrim($project->getRepositoryPath(), '/');
-            if ($this->projectScope->allows($project) && ('' !== $root && ($cwd === $root || str_starts_with($cwd, $root.'/'))) && \strlen($root) > \strlen((string) $found?->getRepositoryPath())) {
-                $found = $project;
-            }
-        }
-
-        return $found;
     }
 
     /**

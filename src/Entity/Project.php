@@ -15,6 +15,12 @@ class Project
     #[ORM\Column]
     private \DateTimeImmutable $createdAt;
 
+    /**
+     * Remote of the repository as "host/owner/name", lower case: what identifies the project from any machine.
+     */
+    #[ORM\Column(length: 255, unique: true, nullable: true)]
+    private ?string $repository = null;
+
     public function __construct(
         #[ORM\Column(length: 100, unique: true)]
         private string $slug,
@@ -44,6 +50,16 @@ class Project
     public function getRepositoryPath(): string
     {
         return $this->repositoryPath;
+    }
+
+    public function getRepository(): ?string
+    {
+        return $this->repository;
+    }
+
+    public function setRepository(?string $repository): void
+    {
+        $this->repository = $repository;
     }
 
     public function getCreatedAt(): \DateTimeImmutable

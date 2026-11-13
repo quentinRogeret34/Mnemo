@@ -18,12 +18,14 @@ final readonly class LearnRequest
         public string $kind = 'conversation',
         #[Assert\Length(max: 100)]
         public string $project = '',
+        #[Assert\Length(max: 255)]
+        public string $repository = '',
     ) {
     }
 
-    #[Assert\IsTrue(message: 'Send the project slug or the working directory.')]
+    #[Assert\IsTrue(message: 'Send the project slug, the repository or the working directory.')]
     public function hasProjectOrDirectory(): bool
     {
-        return '' !== $this->project || '' !== $this->cwd;
+        return '' !== $this->project || '' !== $this->repository || '' !== $this->cwd;
     }
 }

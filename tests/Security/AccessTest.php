@@ -63,6 +63,9 @@ final class AccessTest extends WebTestCase
 
         $this->client->request('GET', '/api/context?cwd=/repos/other', server: ['HTTP_AUTHORIZATION' => 'Bearer '.$token]);
         self::assertNull(json_decode($this->client->getResponse()->getContent(), true)['project']);
+        $this->client->request('GET', '/api/context?cwd=/repos/new&repository=github.com/acme/new', server: ['HTTP_AUTHORIZATION' => 'Bearer '.$token]);
+        self::assertNull(json_decode($this->client->getResponse()->getContent(), true)['project']);
+        self::assertSame(2, $this->entityManager->getRepository(Project::class)->count([]));
 
         $this->client->request('GET', '/api/context?cwd=/repos/demo', server: ['HTTP_AUTHORIZATION' => 'Bearer gk_wrong']);
         self::assertResponseStatusCodeSame(401);
