@@ -26,6 +26,7 @@ final class AccountsTest extends WebTestCase
     protected function setUp(): void
     {
         $_SERVER['APP_ACCESS_ROLE'] = $_ENV['APP_ACCESS_ROLE'] = 'ROLE_USER';
+        $_SERVER['APP_ADMIN_EMAILS'] = $_ENV['APP_ADMIN_EMAILS'] = 'someone@example.com, Alice@Example.com';
         $this->client = self::createClient();
         $this->client->disableReboot();
         $this->entityManager = self::getContainer()->get(EntityManagerInterface::class);
@@ -40,12 +41,13 @@ final class AccountsTest extends WebTestCase
     protected function tearDown(): void
     {
         $_SERVER['APP_ACCESS_ROLE'] = $_ENV['APP_ACCESS_ROLE'] = 'PUBLIC_ACCESS';
+        $_SERVER['APP_ADMIN_EMAILS'] = $_ENV['APP_ADMIN_EMAILS'] = '';
         parent::tearDown();
     }
 
-    public function testFirstSignInIsSuperAdminAndTheNextOnesWaitForApproval(): void
+    public function testAListedEmailSignsInAsSuperAdminAndTheOthersWaitForApproval(): void
     {
-        $account = ['id' => 11, 'login' => 'alice', 'name' => 'Alice', 'email' => 'alice@example.com'];
+        $account = ['id' => 10, 'login' => 'mallory', 'name' => 'Mallory', 'email' => 'mallory@example.com'];
         $http = new MockHttpClient(static function (string $method, string $url) use (&$account): JsonMockResponse {
             return new JsonMockResponse(match (true) {
                 str_contains($url, 'access_token') => ['access_token' => 'token'],
@@ -58,6 +60,13 @@ final class AccountsTest extends WebTestCase
         $crawler = $this->client->request('GET', '/login');
         self::assertSame(['Continuer avec GitHub'], $crawler->filter('.login__provider')->each(static fn ($link): string => $link->text()));
 
+        $this->signIn();
+        $this->client->followRedirect();
+        self::assertResponseRedirects('/pending');
+        self::assertFalse($this->entityManager->getRepository(User::class)->findOneBy(['email' => 'mallory@example.com'])->isSuperAdmin());
+        $this->client->request('GET', '/logout');
+
+        $account = ['id' => 11, 'login' => 'alice', 'name' => 'Alice', 'email' => 'alice@example.com'];
         $this->signIn();
         self::assertResponseRedirects('/dashboard');
         $alice = $this->entityManager->getRepository(User::class)->findOneBy(['email' => 'alice@example.com']);
@@ -79,7 +88,7 @@ final class AccountsTest extends WebTestCase
         $this->client->request('GET', '/oauth/github/check?code=abc&state=forged');
         self::assertResponseRedirects('/login');
         self::assertSelectorTextContains('.flash--error', 'La connexion a expiré', $this->client->followRedirect()->html());
-        self::assertSame(2, $this->entityManager->getRepository(User::class)->count());
+        self::assertSame(3, $this->entityManager->getRepository(User::class)->count());
     }
 
     public function testSuperAdminActivatesAccountsAndGroupsOpenProjects(): void

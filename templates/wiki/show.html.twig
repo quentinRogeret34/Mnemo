@@ -61,14 +61,15 @@
             "Les étiquettes en haut de la page Code sont les capacités détectées dans les chemins (api, ui, base de données...).",
         ]},
         {id: 'connexions', title: 'Connexions', url: path('connector_index'), what: "Les connecteurs qui alimentent le graphe depuis l'extérieur : l'historique d'un dépôt GitHub ou GitLab, ou le contenu d'autres serveurs MCP (DeepWiki, Context7, mem0...).", how: [
-            "GitHub et GitLab (historique) : commits, pull ou merge requests, issues et auteurs deviennent des noeuds du projet. Un commit est relié aux fichiers qu'il touche, une PR à ses commits et aux issues qu'elle ferme, et tout texte qui cite une règle (RG-042) y est relié.",
+            "GitHub et GitLab (code et historique) : avec « code_graph », le dépôt est cloné sur le serveur, son graphe de code calculé par graphify, ses README, docs/ et conventions d'agents importés ; la synchronisation tourne alors en arrière-plan. Commits, pull ou merge requests, issues et auteurs deviennent des noeuds du projet. Un commit est relié aux fichiers qu'il touche, une PR à ses commits et aux issues qu'elle ferme, et tout texte qui cite une règle (RG-042) y est relié.",
             "L'historique apparaît sur la fiche de chaque fichier, sur la fiche des règles citées, et dans l'outil MCP file_context. Le jardinage signale les mémoires dont le code a changé depuis leur vérification.",
             "Partir d'un préréglage ou configurer l'URL du serveur et l'outil à appeler. « Inspecter » liste les outils du serveur distant.",
             "« Synchroniser » importe le contenu ; bin/console app:connector:sync [id] fait la même chose en ligne de commande.",
         ]},
         {id: 'utilisateurs', title: 'Utilisateurs et groupes', url: null, what: "Les comptes, leurs droits et les groupes. Réservé aux super admins (menu Utilisateurs).", how: [
             "Connexion par GitHub, GitLab ou Google : un fournisseur apparaît sur la page de connexion dès que son identifiant client est configuré (variables OAUTH_*). L'adresse de retour à déclarer chez le fournisseur est https://<domaine>/oauth/<github|gitlab|google>/check.",
-            "Le tout premier compte qui se connecte devient super admin. Les suivants sont créés « en attente » et ne voient rien tant qu'un super admin ne les a pas activés. En secours : bin/console app:user:promote <email>, ou le compte admin à mot de passe.",
+            "Un compte dont l'email vérifié figure dans APP_ADMIN_EMAILS est créé super admin à sa première connexion. Tous les autres sont créés « en attente » et ne voient rien tant qu'un super admin ne les a pas activés. En secours : bin/console app:user:promote <email>, ou le compte admin à mot de passe.",
+            "L'application OAuth GitHub sert aussi aux connecteurs : sur un connecteur « GitHub (code et historique) », le bouton « Connecter avec GitHub » demande l'accès aux dépôts (scope repo) et enregistre le jeton chiffré en base, à la place d'un jeton saisi dans les variables d'environnement.",
             "Un groupe réunit des utilisateurs et des projets : un utilisateur ne voit que les projets de ses groupes. Les vues « tous les projets », l'espace commun des documents et les connecteurs restent au super admin.",
             "Visibilité d'une mémoire : « Projet » (tous ceux qui ont accès au projet, par défaut), « Groupe » (les membres d'un groupe) ou « Privée » (son auteur et ses agents). Elle se choisit à la création, sur la fiche de la mémoire, ou avec le paramètre visibility de l'outil MCP add_memory.",
             "Un super admin voit toutes les mémoires. Les passes LLM d'équipe (doublons, bloc mémoire écrit dans un fichier) ne lisent que les mémoires partagées au projet.",
@@ -168,7 +169,7 @@ docker compose -f docker/compose.prod.yaml --env-file .env.prod.local exec php b
                 <ul>
                     <li>Rien à déclarer : chaque projet est créé à la première session d'un poste, d'après son dépôt distant. Pour choisir le slug et le nom, le déclarer avant : <code>bin/console app:project:create &lt;slug&gt; "&lt;Nom&gt;" &lt;chemin&gt;</code>, et poser <code>GRAPHE_PROJECT</code> sur les postes.</li>
                     <li>Créer une clé par poste dans Clés d'API, puis installer le <a href="#plugin">plugin</a> dans chaque dépôt.</li>
-                    <li>Le graphe du code se calcule sur un poste (<code>graphify extract --code-only</code>) ; copier <code>graph.json</code> sur le serveur, puis <code>docker compose ... cp graph.json php:/tmp/graph.json</code> et <code>bin/console app:ingest:code &lt;slug&gt; /tmp/graph.json</code>.</li>
+                    <li>Le graphe du code se calcule sur le serveur : créer un connecteur « GitHub (code et historique) » ou GitLab sur le projet, il clone le dépôt et lance graphify à chaque synchronisation. À défaut, le calculer sur un poste (<code>graphify extract --code-only</code>), copier <code>graph.json</code> sur le serveur et lancer <code>bin/console app:ingest:code &lt;slug&gt; /tmp/graph.json</code>.</li>
                     <li>Ajouter un connecteur GitHub ou GitLab planifié pour l'historique : le worker le synchronise seul.</li>
                 </ul>
 

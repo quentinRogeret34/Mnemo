@@ -10,6 +10,7 @@ x-app: &app
     APP_SECRET: ${APP_SECRET:?}
     APP_ACCESS_ROLE: ROLE_USER
     APP_ADMIN_PASSWORD_HASH: ${APP_ADMIN_PASSWORD_HASH:?}
+    APP_ADMIN_EMAILS: ${APP_ADMIN_EMAILS:-}
     DEFAULT_URI: https://${SERVER_NAME:?}
     DATABASE_URL: postgresql://app:${POSTGRES_PASSWORD:?}@database:5432/app?serverVersion=18&charset=utf8
     AI_STORE_DSN: pgsql:host=database;port=5432;dbname=app
@@ -28,6 +29,7 @@ x-app: &app
     OAUTH_GOOGLE_CLIENT_SECRET: ${OAUTH_GOOGLE_CLIENT_SECRET:-}
   volumes:
     - storage:/app/var/storage
+    - repos:/app/var/repos
     - locks:/app/var/lock
   depends_on:
     database:
@@ -44,6 +46,7 @@ services:
       - "80"
     volumes:
       - storage:/app/var/storage
+      - repos:/app/var/repos
       - locks:/app/var/lock
       - caddy_data:/data
       - caddy_config:/config
@@ -71,6 +74,7 @@ services:
 
 volumes:
   storage:
+  repos:
   locks:
   caddy_data:
   caddy_config:

@@ -72,6 +72,32 @@ docker compose exec -T php bin/console app:llm:check
 Les commandes ci-dessous s'écrivent `bin/console ...` ; dans Docker, préfixer par
 `docker compose exec -T php`.
 
+## Connexion OAuth
+
+Désactivée par défaut (`APP_ACCESS_ROLE=PUBLIC_ACCESS`, aucun fournisseur). Pour l'activer :
+
+1. Créer une application OAuth chez le fournisseur (GitHub : Settings → Developer settings → OAuth Apps) avec
+   l'adresse de retour `https://<domaine>/oauth/github/check` (`gitlab` ou `google` pour les autres ; en local
+   `http://localhost:8080/oauth/github/check`).
+2. Poser dans `.env.local` (ou `.env.prod.local` / Dokploy sur le serveur) :
+
+```dotenv
+APP_ACCESS_ROLE=ROLE_USER
+OAUTH_GITHUB_CLIENT_ID=...
+OAUTH_GITHUB_CLIENT_SECRET=...
+# Emails vérifiés créés super admin à leur première connexion ; les autres attendent une activation dans /admin/users
+APP_ADMIN_EMAILS=moi@exemple.com
+```
+
+3. Recharger : `/login` propose « Continuer avec GitHub ». Le compte `admin` à mot de passe
+   (`APP_ADMIN_PASSWORD_HASH`) reste disponible en secours.
+
+La même application GitHub sert aux connecteurs de dépôt : sur la page d'un connecteur
+« GitHub (code et historique) », « Connecter avec GitHub » demande l'accès aux dépôts (scope `repo`, le seul
+qu'une OAuth App offre pour les dépôts privés) et enregistre le jeton chiffré en base avec une clé dérivée de
+`APP_SECRET`. Il remplace alors les en-têtes saisis, pour l'API comme pour le clone, et n'est jamais envoyé
+ailleurs qu'à github.com. Changer `APP_SECRET` oblige à reconnecter le compte.
+
 ## Workflow
 
 ```
@@ -81,6 +107,7 @@ Les commandes ci-dessous s'écrivent `bin/console ...` ; dans Docker, préfixer 
         |          app:ingest:context   (banque AIDD, CLAUDE.md, AGENTS.md...)
         |          front /documents     (md, pdf, docx)
         |          app:connector:sync   (connecteurs MCP : DeepWiki, Context7, mem0...)
+        |          connecteur GitHub / GitLab (clone + graphify + docs + historique, dans le worker)
         |
   3. apprentissage app:learn / outil MCP learn / POST /api/learn
         |
@@ -119,6 +146,14 @@ bin/console app:ingest:context <slug> <chemin-du-depot>
 # Connecteurs MCP configurés dans /connectors
 bin/console app:connector:sync [id]
 ```
+
+Sur un serveur, le connecteur « GitHub / GitLab (code et historique) » fait les deux
+premières étapes tout seul : avec `"code_graph": true` dans ses arguments, le
+worker clone le dépôt (clone superficiel dans `var/repos/`, branche par défaut ou
+`"branch"`), lance `graphify extract --code-only`, importe le graphe, les
+conventions d'agents, les `README*.md` et `docs/**/*.md`, puis l'historique. Tant
+que le commit de tête n'a pas changé, l'étape code est sautée. Le jeton du
+connecteur sert aussi au clone ; il n'est écrit ni dans l'URL ni dans le clone.
 
 Les documents métier se déposent dans le front (`/documents`), avec dossiers et
 rattachement à plusieurs projets. Pour explorer sans données réelles :
@@ -172,7 +207,7 @@ bin/console app:export:memory-block <slug> --write=../repo/CLAUDE.md --write=../
 | `app:project:create <slug> <nom> <chemin>` | Déclarer un projet | non |
 | `app:ingest:code <slug> <graph.json>` | Importer le graphe graphify | non |
 | `app:ingest:context <slug> <chemin>` | Importer banque AIDD et conventions d'agents | non |
-| `app:connector:sync [id]` | Synchroniser un ou tous les connecteurs MCP | non |
+| `app:connector:sync [id]` | Synchroniser un ou tous les connecteurs (MCP, GitHub, GitLab) | non |
 | `app:demo <slug> [--clear]` | Charger / retirer des données de démo | non |
 | `app:learn <slug> <kind> <label> [--file=]` | Extraire des mémoires en propositions | oui |
 | `app:garden <slug> [--llm]` | Rapport de dérive, doublons et contradictions | option |

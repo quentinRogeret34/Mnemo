@@ -97,6 +97,12 @@ class Connector
     #[ORM\Column(type: Types::JSON, nullable: true)]
     private ?array $cursor = null;
 
+    /**
+     * Token of the GitHub account connected by OAuth, encrypted by SecretBox. It replaces the credentials.
+     */
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    private ?string $oauthToken = null;
+
     #[ORM\Column]
     private \DateTimeImmutable $createdAt;
 
@@ -290,6 +296,16 @@ class Connector
     public function setSchedule(ConnectorSchedule $schedule): void
     {
         $this->schedule = $schedule;
+    }
+
+    public function getOauthToken(): ?string
+    {
+        return $this->oauthToken;
+    }
+
+    public function setOauthToken(?string $oauthToken): void
+    {
+        $this->oauthToken = $oauthToken;
     }
 
     /** @return array<string, string> */

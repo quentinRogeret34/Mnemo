@@ -13,7 +13,7 @@
     <p class="page__lede">Un compte se crée à la première connexion par GitHub, GitLab ou Google, puis attend ici d'être activé. Un utilisateur ne voit que les projets de ses groupes ; un super admin voit tout et gère cette page.</p>
 
     {% if users is empty %}
-        <p class="block__empty">Aucun compte. Le premier à se connecter par un fournisseur devient super admin.</p>
+        <p class="block__empty">Aucun compte. Un email listé dans APP_ADMIN_EMAILS devient super admin à sa première connexion par un fournisseur.</p>
     {% else %}
         <ul class="admin-list">
             {% for user in users %}

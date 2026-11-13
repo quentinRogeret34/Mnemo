@@ -7,11 +7,17 @@ use App\Connector\McpClientFactory;
 use App\Entity\Connector;
 use App\Entity\Node;
 use App\Entity\Project;
+use App\Enum\ConnectorMode;
 use App\Enum\ConnectorTransport;
 use App\Enum\NodeType;
+use App\Message\SyncConnector;
+use App\Security\OAuth\OAuthClient;
+use App\Security\SecretBox;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use Symfony\Component\HttpClient\MockHttpClient;
+use Symfony\Component\HttpClient\Response\JsonMockResponse;
 
 final class ConnectorControllerTest extends WebTestCase
 {
@@ -67,6 +73,82 @@ final class ConnectorControllerTest extends WebTestCase
         self::assertSelectorTextContains('.content .row', '2 créés');
     }
 
+    public function testACodeGraphSyncIsLeftToTheWorker(): void
+    {
+        $connector = new Connector();
+        $connector->setName('Forge');
+        $connector->setMode(ConnectorMode::GitHub);
+        $connector->setEndpoint('https://api.github.com');
+        $connector->setArguments(['repository' => 'acme/shop', 'code_graph' => true]);
+        $connector->setProject($this->entityManager->getRepository(Project::class)->findOneBy(['slug' => 'demo']));
+        $this->entityManager->persist($connector);
+        $this->entityManager->flush();
+
+        $crawler = $this->client->request('GET', '/connectors/'.$connector->getId());
+        $this->client->submit($crawler->selectButton('Synchroniser')->form());
+        self::assertResponseRedirects('/connectors/'.$connector->getId());
+        self::assertEquals(
+            [new SyncConnector($connector->getId(), 'manual')],
+            array_map(static fn ($envelope): object => $envelope->getMessage(), self::getContainer()->get('messenger.transport.async')->getSent()),
+        );
+        self::assertNull($connector->getLastRunAt());
+    }
+
+    public function testAGitHubAccountIsConnectedByOAuthAndItsTokenStoredEncrypted(): void
+    {
+        $this->client->disableReboot();
+        self::getContainer()->set(OAuthClient::class, new OAuthClient(new MockHttpClient(static fn (): JsonMockResponse => new JsonMockResponse(['access_token' => 'gho_secret'])), 'client-id', 'client-secret', '', '', 'https://gitlab.com', '', ''));
+        $connector = new Connector();
+        $connector->setName('Forge');
+        $connector->setMode(ConnectorMode::GitHub);
+        $connector->setEndpoint('https://api.github.com');
+        $connector->setCredentials(['Authorization' => 'Bearer env:NOT_ALLOWED']);
+        $connector->setArguments(['repository' => 'acme/shop']);
+        $connector->setProject($this->entityManager->getRepository(Project::class)->findOneBy(['slug' => 'demo']));
+        $this->entityManager->persist($connector);
+        $this->entityManager->flush();
+        $show = '/connectors/'.$connector->getId();
+        // Each request works on its own copy of the connector.
+        $stored = function () use ($connector): Connector {
+            $this->entityManager->clear();
+
+            return $this->entityManager->find(Connector::class, $connector->getId());
+        };
+        $authorize = function () use ($show): array {
+            $this->client->submit($this->client->request('GET', $show)->selectButton('Connecter avec GitHub')->form());
+            parse_str((string) parse_url($this->client->getResponse()->headers->get('Location'), \PHP_URL_QUERY), $query);
+
+            return $query;
+        };
+
+        $query = $authorize();
+        self::assertSame(['repo', 'http://localhost/oauth/github/check/connector'], [$query['scope'], $query['redirect_uri']]);
+        $this->client->request('GET', '/oauth/github/check/connector?code=abc&state=forged');
+        self::assertResponseRedirects('/connectors');
+        self::assertNull($stored()->getOauthToken());
+
+        $query = $authorize();
+        $this->client->request('GET', '/oauth/github/check/connector?code=abc&state='.$query['state']);
+        self::assertResponseRedirects($show);
+        $connector = $stored();
+        self::assertStringNotContainsString('gho_secret', (string) $connector->getOauthToken());
+        self::assertSame('gho_secret', self::getContainer()->get(SecretBox::class)->decrypt((string) $connector->getOauthToken()));
+        self::assertSame(['Authorization' => 'Bearer gho_secret'], self::getContainer()->get(CredentialResolver::class)->forgeHeaders($connector));
+
+        $connector->setEndpoint('https://attacker.example.com');
+        try {
+            self::getContainer()->get(CredentialResolver::class)->forgeHeaders($connector);
+            self::fail('The OAuth token must never leave for another host.');
+        } catch (\RuntimeException $exception) {
+            self::assertStringContainsString('NOT_ALLOWED', $exception->getMessage());
+        }
+
+        $crawler = $this->client->request('GET', $show);
+        self::assertSelectorTextContains('.props', 'compte GitHub connecté');
+        $this->client->submit($crawler->selectButton('Déconnecter GitHub')->form());
+        self::assertNull($stored()->getOauthToken());
+    }
+
     public function testInvalidArgumentsAreRejected(): void
     {
         $crawler = $this->client->request('GET', '/connectors/new');
@@ -99,7 +181,7 @@ final class ConnectorControllerTest extends WebTestCase
     public function testPresetPrefillsTheForm(): void
     {
         $crawler = $this->client->request('GET', '/connectors');
-        self::assertSame(['DeepWiki', 'Context7', 'mem0', 'GitHub (historique)', 'GitLab (historique)', 'GitHub', 'Linear'], $crawler->filter('.preset__name')->each(static fn ($name): string => $name->text()));
+        self::assertSame(['DeepWiki', 'Context7', 'mem0', 'GitHub (code et historique)', 'GitLab (code et historique)', 'GitHub', 'Linear'], $crawler->filter('.preset__name')->each(static fn ($name): string => $name->text()));
 
         $crawler = $this->client->request('GET', '/connectors/new?preset=mem0');
         self::assertSelectorTextContains('.callout--info', 'Définir MEM0_API_KEY dans .env.local.');
@@ -123,6 +205,6 @@ final class ConnectorControllerTest extends WebTestCase
         $connector->setEndpoint('php tests/Fixtures/mcp/server.php');
 
         $this->expectExceptionMessage('Les connecteurs STDIO sont désactivés');
-        (new McpClientFactory(false, new CredentialResolver([]), '/app'))->connect($connector);
+        (new McpClientFactory(false, new CredentialResolver([], new SecretBox('test')), '/app'))->connect($connector);
     }
 }

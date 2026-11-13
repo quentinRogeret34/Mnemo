@@ -85,7 +85,7 @@ final class ProjectResolver
                 if (null !== $projects->findOneBy(['slug' => $candidate])) {
                     continue;
                 }
-                $project = new Project($candidate, $candidate, $cwd);
+                $project = new Project($candidate, $candidate, mb_substr($cwd, 0, 1024));
                 $project->setRepository('' === $repository ? null : $repository);
                 $this->entityManager->persist($project);
                 foreach ($this->projectScope->viewer()?->getGroups() ?? [] as $group) {

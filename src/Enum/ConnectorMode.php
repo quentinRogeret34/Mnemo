@@ -16,8 +16,8 @@ enum ConnectorMode: string
             self::Resources => 'Ressources → documents',
             self::ToolDocument => 'Outil → un document',
             self::ToolMemories => 'Outil → mémoires',
-            self::GitHub => 'API GitHub → commits, PR, issues',
-            self::GitLab => 'API GitLab → commits, MR, issues',
+            self::GitHub => 'GitHub → code, commits, PR, issues',
+            self::GitLab => 'GitLab → code, commits, MR, issues',
         };
     }
 

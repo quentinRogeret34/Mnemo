@@ -19,7 +19,7 @@ use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 final class ProjectAccessListener
 {
     private const ACROSS_PROJECTS = ['dashboard', 'activity', 'memory_index', 'memory_graph', 'memory_graph_data', 'proposal_index'];
-    private const WORKSPACE = ['document_index', 'connector_index', 'connector_new', 'connector_edit', 'connector_show', 'connector_inspect', 'connector_sync', 'connector_delete'];
+    private const WORKSPACE = ['document_index', 'connector_index', 'connector_new', 'connector_edit', 'connector_show', 'connector_inspect', 'connector_sync', 'connector_delete', 'connector_oauth', 'connector_oauth_check', 'connector_oauth_disconnect'];
 
     public function __construct(
         private readonly ProjectScope $projectScope,

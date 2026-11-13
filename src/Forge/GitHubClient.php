@@ -3,6 +3,7 @@
 namespace App\Forge;
 
 use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Symfony\Contracts\HttpClient\ResponseInterface;
 
 final class GitHubClient implements ForgeClient
 {
@@ -27,15 +28,15 @@ final class GitHubClient implements ForgeClient
     public function commits(?\DateTimeImmutable $since, int $limit): array
     {
         $rows = $this->pages('/commits', null === $since ? [] : ['since' => $since->format(\DATE_ATOM)], $limit);
-        $details = array_map(fn (array $row) => $this->http->request('GET', $this->path('/commits/'.$row['sha'])), $rows);
+        $details = $this->all(array_map(fn (array $row) => $this->http->request('GET', $this->path('/commits/'.$row['sha'])), $rows));
 
-        return array_map(static fn (array $row, $detail): ForgeCommit => new ForgeCommit(
+        return array_map(static fn (array $row, array $detail): ForgeCommit => new ForgeCommit(
             $row['sha'],
             $row['commit']['message'],
             $row['author']['login'] ?? $row['commit']['author']['name'],
             new \DateTimeImmutable($row['commit']['author']['date']),
             $row['html_url'],
-            array_column($detail->toArray()['files'] ?? [], 'filename'),
+            array_column($detail['files'] ?? [], 'filename'),
         ), $rows, $details);
     }
 
@@ -45,9 +46,9 @@ final class GitHubClient implements ForgeClient
             $this->pages('/pulls', ['state' => 'all', 'sort' => 'updated', 'direction' => 'desc'], $limit),
             static fn (array $row): bool => null === $since || new \DateTimeImmutable($row['updated_at']) >= $since,
         );
-        $commits = array_map(fn (array $row) => $this->http->request('GET', $this->path('/pulls/'.$row['number'].'/commits'), ['query' => ['per_page' => self::PAGE]]), $rows);
+        $commits = $this->all(array_map(fn (array $row) => $this->http->request('GET', $this->path('/pulls/'.$row['number'].'/commits'), ['query' => ['per_page' => self::PAGE]]), $rows));
 
-        return array_values(array_map(fn (array $row, $list): ForgeTicket => $this->ticket($row, true, array_column($list->toArray(), 'sha')), $rows, $commits));
+        return array_values(array_map(fn (array $row, array $list): ForgeTicket => $this->ticket($row, true, array_column($list, 'sha')), $rows, $commits));
     }
 
     public function issues(?\DateTimeImmutable $since, int $limit): array
@@ -101,6 +102,27 @@ final class GitHubClient implements ForgeClient
         }
 
         return \array_slice($rows, 0, $limit);
+    }
+
+    /**
+     * Decodes responses requested in parallel. Once one fails the others are cancelled: left alone, each would throw
+     * when it is destroyed, long after the caller caught the first error.
+     *
+     * @param array<ResponseInterface> $responses
+     *
+     * @return array<array<mixed>>
+     */
+    private function all(array $responses): array
+    {
+        try {
+            return array_map(static fn (ResponseInterface $response): array => $response->toArray(), $responses);
+        } catch (\Throwable $exception) {
+            foreach ($responses as $response) {
+                $response->cancel();
+            }
+
+            throw $exception;
+        }
     }
 
     /**

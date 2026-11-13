@@ -43,20 +43,29 @@ final class OAuthClient
         return array_intersect_key(self::LABELS, $this->providers);
     }
 
-    public function authorizeUrl(string $provider, string $redirectUri, string $state): string
+    /**
+     * @param string|null $scope what to ask instead of the sign-in scope, e.g. "repo" to read the repositories
+     */
+    public function authorizeUrl(string $provider, string $redirectUri, string $state, ?string $scope = null): string
     {
         $config = $this->provider($provider);
 
-        return $config['authorize'].'?'.http_build_query(['client_id' => $config['id'], 'redirect_uri' => $redirectUri, 'response_type' => 'code', 'scope' => $config['scope'], 'state' => $state]);
+        return $config['authorize'].'?'.http_build_query(['client_id' => $config['id'], 'redirect_uri' => $redirectUri, 'response_type' => 'code', 'scope' => $scope ?? $config['scope'], 'state' => $state]);
+    }
+
+    public function accessToken(string $provider, string $code, string $redirectUri): string
+    {
+        $config = $this->provider($provider);
+
+        return $this->httpClient->request('POST', $config['token'], [
+            'headers' => ['Accept' => 'application/json'],
+            'body' => ['client_id' => $config['id'], 'client_secret' => $config['secret'], 'code' => $code, 'redirect_uri' => $redirectUri, 'grant_type' => 'authorization_code'],
+        ])->toArray()['access_token'] ?? throw new \RuntimeException('Le fournisseur n\'a pas délivré de jeton.');
     }
 
     public function profile(string $provider, string $code, string $redirectUri): OAuthProfile
     {
-        $config = $this->provider($provider);
-        $token = $this->httpClient->request('POST', $config['token'], [
-            'headers' => ['Accept' => 'application/json'],
-            'body' => ['client_id' => $config['id'], 'client_secret' => $config['secret'], 'code' => $code, 'redirect_uri' => $redirectUri, 'grant_type' => 'authorization_code'],
-        ])->toArray()['access_token'] ?? throw new \RuntimeException('Le fournisseur n\'a pas délivré de jeton.');
+        $token = $this->accessToken($provider, $code, $redirectUri);
 
         return match ($provider) {
             'github' => $this->github($token),

@@ -19,7 +19,7 @@ final class ForgeClientFactory
     {
         $http = $this->httpClient->withOptions([
             'base_uri' => rtrim($connector->getEndpoint(), '/').'/',
-            'headers' => $this->credentials->resolve($connector->getCredentials()) + ['Accept' => 'application/json', 'User-Agent' => 'graphe-projet'],
+            'headers' => $this->credentials->forgeHeaders($connector) + ['Accept' => 'application/json', 'User-Agent' => 'graphe-projet'],
             'timeout' => 30,
         ]);
         $repository = trim((string) ($connector->getArguments()['repository'] ?? ''), '/ ');

@@ -11,12 +11,16 @@ use App\Enum\ConnectorMode;
 use App\Enum\NodeType;
 use App\Forge\ForgeClientFactory;
 use App\Forge\ForgeImporter;
+use App\Forge\RepositoryCheckout;
 use App\Ingest\GraphifyImporter;
+use App\Ingest\GraphifyRunner;
+use App\Ingest\RepoContextImporter;
 use App\Learn\Learner;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\JsonMockResponse;
 
@@ -70,7 +74,7 @@ final class ForgeImporterTest extends WebTestCase
 
             return new JsonMockResponse(['message' => 'Not Found: '.$path], ['http_code' => 404]);
         });
-        $importer = new ForgeImporter(new ForgeClientFactory($http, self::getContainer()->get(CredentialResolver::class)), $this->entityManager, self::getContainer()->get(Learner::class));
+        $importer = $this->importer($http, self::getContainer()->get(RepositoryCheckout::class), self::getContainer()->get(GraphifyRunner::class));
         $report = ['created' => 0, 'updated' => 0, 'unchanged' => 0, 'skipped' => [], 'error' => null];
         $importer->import($connector, $report);
         self::assertSame(4, $report['created']);
@@ -102,6 +106,86 @@ final class ForgeImporterTest extends WebTestCase
         self::assertSame('Plafonne la remise (RG-042) '.$changeRequest, $crawler->filter('section[aria-labelledby="history-title"] .row__title')->text());
         $crawler = $this->client->request('GET', '/projects/demo/rules/RG-042');
         self::assertSame('aaaaaaa', $crawler->filter('section[aria-labelledby="mentions-title"] .code-chip')->text());
+    }
+
+    public function testCodeGraphImportsTheCloneOncePerHeadCommit(): void
+    {
+        $root = sys_get_temp_dir().'/graphe-clone-'.bin2hex(random_bytes(4));
+        $filesystem = new Filesystem();
+        $filesystem->dumpFile($root.'/README.md', "# Shop\n\nLa boutique.");
+        $filesystem->dumpFile($root.'/docs/guide.md', "# Guide\n\nInstaller puis lancer.");
+        $filesystem->dumpFile($root.'/CLAUDE.md', "# Instructions\n\nRester simple.");
+        $filesystem->symlink('/etc/hostname', $root.'/docs/secret.md');
+
+        $connector = new Connector();
+        $connector->setName('Forge');
+        $connector->setMode(ConnectorMode::GitHub);
+        $connector->setEndpoint('https://api.github.com');
+        $connector->setArguments(['repository' => 'Acme/Shop', 'code_graph' => true]);
+        $connector->setProject($this->project);
+        $this->entityManager->persist($connector);
+        $this->entityManager->flush();
+
+        $checkout = new class(self::getContainer()->get(CredentialResolver::class), $root) extends RepositoryCheckout {
+            public string $commit = 'c1';
+
+            public function __construct(CredentialResolver $credentials, private readonly string $root)
+            {
+                parent::__construct($credentials, $root);
+            }
+
+            public function checkout(Connector $connector): array
+            {
+                return ['path' => $this->root, 'commit' => $this->commit];
+            }
+        };
+        $graphify = new class extends GraphifyRunner {
+            public int $calls = 0;
+
+            public function extract(string $repository, string $output): string
+            {
+                ++$this->calls;
+
+                return __DIR__.'/../Fixtures/graphify/graph-v2.json';
+            }
+        };
+        $importer = $this->importer(new MockHttpClient(static fn (): JsonMockResponse => new JsonMockResponse([])), $checkout, $graphify);
+        $run = static function () use ($importer, $connector): array {
+            $report = ['created' => 0, 'updated' => 0, 'unchanged' => 0, 'skipped' => [], 'error' => null];
+            $importer->import($connector, $report);
+
+            return $report;
+        };
+
+        $report = $run();
+        self::assertSame(['docs/secret.md : lien hors du dépôt'], $report['skipped']);
+        self::assertGreaterThanOrEqual(3, $report['created']);
+        $documents = $this->entityManager->getConnection()->fetchFirstColumn("SELECT label FROM node WHERE type = 'document'");
+        sort($documents);
+        self::assertSame(['CLAUDE.md', 'README.md', 'docs/guide.md'], $documents);
+        self::assertSame('github.com/acme/shop', $this->project->getRepository());
+        self::assertSame(['code_commit' => 'c1'], $connector->getCursor());
+
+        $run();
+        self::assertSame(1, $graphify->calls);
+        $checkout->commit = 'c2';
+        $run();
+        self::assertSame(2, $graphify->calls);
+        self::assertSame(['code_commit' => 'c2'], $connector->getCursor());
+        $filesystem->remove($root);
+    }
+
+    private function importer(MockHttpClient $http, RepositoryCheckout $checkout, GraphifyRunner $graphify): ForgeImporter
+    {
+        return new ForgeImporter(
+            new ForgeClientFactory($http, self::getContainer()->get(CredentialResolver::class)),
+            $this->entityManager,
+            self::getContainer()->get(Learner::class),
+            $checkout,
+            $graphify,
+            self::getContainer()->get(GraphifyImporter::class),
+            self::getContainer()->get(RepoContextImporter::class),
+        );
     }
 
     /**

@@ -9,6 +9,9 @@ use App\Entity\Project;
 use App\Enum\Confidence;
 use App\Enum\EdgeOrigin;
 use App\Enum\NodeType;
+use App\Ingest\GraphifyImporter;
+use App\Ingest\GraphifyRunner;
+use App\Ingest\RepoContextImporter;
 use App\Learn\Learner;
 use App\Learn\SourceKind;
 use App\Llm\LlmUnavailable;
@@ -19,6 +22,8 @@ use Doctrine\ORM\EntityManagerInterface;
  * Brings the history of a repository into the graph, without any LLM: commits, change requests, issues and authors
  * become nodes, linked to the code files they touch and to the business rules they name (RG-042).
  * A run only fetches what changed since the connector's cursor and never duplicates a node or an edge.
+ * With "code_graph", the repository is cloned first: its code graph (graphify), what it says to its agents and its
+ * Markdown documentation are imported whenever its head commit changed.
  */
 final class ForgeImporter
 {
@@ -35,6 +40,10 @@ final class ForgeImporter
         private readonly ForgeClientFactory $clientFactory,
         private readonly EntityManagerInterface $entityManager,
         private readonly Learner $learner,
+        private readonly RepositoryCheckout $checkout,
+        private readonly GraphifyRunner $graphify,
+        private readonly GraphifyImporter $graphifyImporter,
+        private readonly RepoContextImporter $contextImporter,
     ) {
     }
 
@@ -49,6 +58,9 @@ final class ForgeImporter
     public function import(Connector $connector, array &$report): void
     {
         $project = $connector->getProject() ?? throw new \RuntimeException('Un connecteur de forge doit être rattaché à un projet.');
+        if (true === ($connector->getArguments()['code_graph'] ?? false)) {
+            $this->importCode($connector, $project, $report);
+        }
         $client = $this->clientFactory->create($connector);
         $cursor = $connector->getCursor();
         $since = static fn (string $key): ?\DateTimeImmutable => isset($cursor[$key]) ? new \DateTimeImmutable($cursor[$key]) : null;
@@ -105,6 +117,7 @@ final class ForgeImporter
         $this->link($links);
 
         $connector->setCursor(array_filter([
+            'code_commit' => $cursor['code_commit'] ?? null,
             'commits' => ($commits[0] ?? null)?->date->format(\DATE_ATOM) ?? ($cursor['commits'] ?? null),
             'issues' => ($issues[0] ?? null)?->updatedAt->format(\DATE_ATOM) ?? ($cursor['issues'] ?? null),
             'change_requests' => ($changeRequests[0] ?? null)?->updatedAt->format(\DATE_ATOM) ?? ($cursor['change_requests'] ?? null),
@@ -114,6 +127,32 @@ final class ForgeImporter
         if (true === ($connector->getArguments()['learn_reviews'] ?? false)) {
             $this->learnReviews($client, $project, $prefix, $merged, $report);
         }
+    }
+
+    /**
+     * The code files must be in the graph before the history, which links commits to them.
+     *
+     * @param array{created: int, updated: int, unchanged: int, skipped: list<string>, error: ?string} $report
+     */
+    private function importCode(Connector $connector, Project $project, array &$report): void
+    {
+        $checkout = $this->checkout->checkout($connector);
+        $repository = strtolower((string) preg_replace('#^\w+://|\.git$#', '', $this->checkout->cloneUrl($connector)));
+        if (null === $project->getRepository() && null === $this->entityManager->getRepository(Project::class)->findOneBy(['repository' => $repository])) {
+            $project->setRepository($repository);
+        }
+        if ($checkout['commit'] === ($connector->getCursor()['code_commit'] ?? null)) {
+            return;
+        }
+
+        $graph = $this->graphifyImporter->import($project, $this->graphify->extract($checkout['path'], $checkout['path'].'-graph'));
+        $context = $this->contextImporter->import($project, $checkout['path']);
+        $report['created'] += $graph->nodesCreated + $context->memoriesCreated + $context->decisionsCreated + $context->documentsCreated;
+        $report['updated'] += $graph->nodesUpdated + $context->decisionsUpdated + $context->documentsUpdated;
+        $report['skipped'] = [...$report['skipped'], ...$context->skipped];
+
+        $connector->setCursor(['code_commit' => $checkout['commit']] + $connector->getCursor());
+        $this->entityManager->flush();
     }
 
     /**

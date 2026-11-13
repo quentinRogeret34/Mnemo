@@ -38,6 +38,8 @@ final class AccessTest extends WebTestCase
         self::assertResponseRedirects('/login');
         $this->client->followRedirect();
         self::assertSelectorExists('input[name="_password"]');
+        $this->client->request('GET', '/oauth/github/check/connector?code=abc&state=abc');
+        self::assertResponseRedirects('/login');
 
         $this->client->loginUser(new InMemoryUser('admin', '', ['ROLE_USER', 'ROLE_SUPER_ADMIN']));
         $this->client->request('GET', '/dashboard');

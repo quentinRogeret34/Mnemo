@@ -3,6 +3,7 @@
 namespace App\Forge;
 
 use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Symfony\Contracts\HttpClient\ResponseInterface;
 
 final class GitLabClient implements ForgeClient
 {
@@ -27,24 +28,24 @@ final class GitLabClient implements ForgeClient
     public function commits(?\DateTimeImmutable $since, int $limit): array
     {
         $rows = $this->pages('/repository/commits', null === $since ? [] : ['since' => $since->format(\DATE_ATOM)], $limit);
-        $diffs = array_map(fn (array $row) => $this->http->request('GET', $this->path('/repository/commits/'.$row['id'].'/diff'), ['query' => ['per_page' => self::PAGE]]), $rows);
+        $diffs = $this->all(array_map(fn (array $row) => $this->http->request('GET', $this->path('/repository/commits/'.$row['id'].'/diff'), ['query' => ['per_page' => self::PAGE]]), $rows));
 
-        return array_map(static fn (array $row, $diff): ForgeCommit => new ForgeCommit(
+        return array_map(static fn (array $row, array $diff): ForgeCommit => new ForgeCommit(
             $row['id'],
             $row['message'],
             $row['author_name'],
             new \DateTimeImmutable($row['committed_date']),
             $row['web_url'],
-            array_values(array_unique(array_column($diff->toArray(), 'new_path'))),
+            array_values(array_unique(array_column($diff, 'new_path'))),
         ), $rows, $diffs);
     }
 
     public function changeRequests(?\DateTimeImmutable $since, int $limit): array
     {
         $rows = $this->pages('/merge_requests', $this->updated($since), $limit);
-        $commits = array_map(fn (array $row) => $this->http->request('GET', $this->path('/merge_requests/'.$row['iid'].'/commits'), ['query' => ['per_page' => self::PAGE]]), $rows);
+        $commits = $this->all(array_map(fn (array $row) => $this->http->request('GET', $this->path('/merge_requests/'.$row['iid'].'/commits'), ['query' => ['per_page' => self::PAGE]]), $rows));
 
-        return array_map(fn (array $row, $list): ForgeTicket => $this->ticket($row, true, array_column($list->toArray(), 'id')), $rows, $commits);
+        return array_map(fn (array $row, array $list): ForgeTicket => $this->ticket($row, true, array_column($list, 'id')), $rows, $commits);
     }
 
     public function issues(?\DateTimeImmutable $since, int $limit): array
@@ -103,6 +104,27 @@ final class GitLabClient implements ForgeClient
         }
 
         return \array_slice($rows, 0, $limit);
+    }
+
+    /**
+     * Decodes responses requested in parallel. Once one fails the others are cancelled: left alone, each would throw
+     * when it is destroyed, long after the caller caught the first error.
+     *
+     * @param array<ResponseInterface> $responses
+     *
+     * @return array<array<mixed>>
+     */
+    private function all(array $responses): array
+    {
+        try {
+            return array_map(static fn (ResponseInterface $response): array => $response->toArray(), $responses);
+        } catch (\Throwable $exception) {
+            foreach ($responses as $response) {
+                $response->cancel();
+            }
+
+            throw $exception;
+        }
     }
 
     /**

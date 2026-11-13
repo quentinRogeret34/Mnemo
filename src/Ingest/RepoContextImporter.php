@@ -16,7 +16,8 @@ use Symfony\Component\Finder\Finder;
  * Imports what a repository already says to its agents, without LLM:
  * - an AIDD memory bank (github.com/ai-driven-dev/framework, MIT): one memory per top-level bullet of
  *   aidd_docs/memory/*.md, one decision per ADR of aidd_docs/memory/internal/decisions, notes and plans as documents;
- * - agent conventions (CLAUDE.md, AGENTS.md, Copilot instructions, Claude / Cursor / Copilot / AIDD rules) as documents.
+ * - agent conventions (CLAUDE.md, AGENTS.md, Copilot instructions, Claude / Cursor / Copilot / AIDD rules) as documents;
+ * - the README files of the root and the Markdown files of docs/ as documents.
  * Files gone from the repository are reported, never deleted.
  */
 final class RepoContextImporter
@@ -25,6 +26,8 @@ final class RepoContextImporter
     private const DECISIONS = 'aidd_docs/memory/internal/decisions';
     private const CONVENTION_FILES = ['CLAUDE.md', 'AGENTS.md', '.github/copilot-instructions.md'];
     private const CONVENTION_DIRS = ['.claude/rules', '.cursor/rules', '.github/instructions', 'aidd_docs/rules'];
+    private const DOCS_DIRS = ['docs', 'doc'];
+    private const MAX_DOCS = 200;
     private const MAX_FILE_BYTES = 1_000_000;
     private const ADR_SECTIONS = ['context' => 'context', 'decision' => 'decision', 'alternatives' => 'alternatives', 'consequences' => 'consequences'];
 
@@ -49,8 +52,13 @@ final class RepoContextImporter
             ...array_values(array_filter(self::CONVENTION_FILES, static fn (string $path): bool => is_file($root.'/'.$path))),
             ...$this->files($root, self::CONVENTION_DIRS, ['*.md', '*.mdc']),
         ];
+        $docs = array_values(array_diff([...array_map('basename', glob($root.'/[Rr][Ee][Aa][Dd][Mm][Ee]*.md') ?: []), ...$this->files($root, self::DOCS_DIRS, '*.md')], $conventions));
+        if (\count($docs) > self::MAX_DOCS) {
+            $result->skipped[] = \sprintf('%d fichiers Markdown au-delà des %d premiers', \count($docs) - self::MAX_DOCS, self::MAX_DOCS);
+            $docs = \array_slice($docs, 0, self::MAX_DOCS);
+        }
         $seen = [];
-        foreach (['AIDD/'.$project->getSlug() => $notes, 'AIDD/'.$project->getSlug().'/Plans' => $plans, 'Conventions agents/'.$project->getSlug() => $conventions] as $folder => $paths) {
+        foreach (['AIDD/'.$project->getSlug() => $notes, 'AIDD/'.$project->getSlug().'/Plans' => $plans, 'Conventions agents/'.$project->getSlug() => $conventions, 'Dépôt/'.$project->getSlug() => $docs] as $folder => $paths) {
             foreach ($paths as $path) {
                 $seen[] = $this->importDocument($project, $root, $path, $folder, $result);
             }
@@ -284,6 +292,13 @@ final class RepoContextImporter
 
     private function read(string $root, string $path, RepoContextImportResult $result): ?string
     {
+        // A cloned repository is not trusted: a link could point at any file of the server.
+        $real = realpath($root.'/'.$path);
+        if (false === $real || !str_starts_with($real, realpath($root).'/')) {
+            $result->skipped[] = \sprintf('%s : lien hors du dépôt', $path);
+
+            return null;
+        }
         if (filesize($root.'/'.$path) > self::MAX_FILE_BYTES) {
             $result->skipped[] = \sprintf('%s : plus de 1 Mo', $path);
 

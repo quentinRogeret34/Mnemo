@@ -5,6 +5,7 @@ namespace App\Security\OAuth;
 use App\Entity\User;
 use App\Enum\UserStatus;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -21,7 +22,7 @@ use Symfony\Contracts\HttpClient\Exception\ExceptionInterface as HttpExceptionIn
 
 /**
  * Finishes a sign-in started by OAuthController: checks the state, reads the profile, finds or creates the account.
- * The very first account becomes the super admin; the next ones wait for approval.
+ * An account whose verified email is listed in APP_ADMIN_EMAILS is created as a super admin; the others wait for approval.
  */
 final class OAuthAuthenticator extends AbstractAuthenticator
 {
@@ -31,6 +32,8 @@ final class OAuthAuthenticator extends AbstractAuthenticator
         private readonly OAuthClient $client,
         private readonly EntityManagerInterface $entityManager,
         private readonly UrlGeneratorInterface $urlGenerator,
+        #[Autowire(env: 'APP_ADMIN_EMAILS')]
+        private readonly string $adminEmails,
     ) {
     }
 
@@ -79,7 +82,7 @@ final class OAuthAuthenticator extends AbstractAuthenticator
         $user = $users->findOneBy(['provider' => $profile->provider, 'providerId' => $profile->id]) ?? $users->findOneBy(['email' => $profile->email]);
         if (null === $user) {
             $user = new User($profile->email, $profile->name, $profile->provider, $profile->id);
-            if (0 === $users->count()) {
+            if (\in_array(strtolower($profile->email), array_map('trim', explode(',', strtolower($this->adminEmails))), true)) {
                 $user->setStatus(UserStatus::Active);
                 $user->setSuperAdmin(true);
             }
