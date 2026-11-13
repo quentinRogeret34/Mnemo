@@ -36,8 +36,20 @@ x-app: &app
       condition: service_healthy
 
 services:
+  migrate:
+    <<: *app
+    restart: "no"
+    command: ["php", "bin/console", "doctrine:migrations:migrate", "--no-interaction", "--all-or-nothing"]
+    healthcheck:
+      disable: true
+
   php:
     <<: *app
+    depends_on:
+      database:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     environment:
       <<: *app-env
       SERVER_NAME: ":80"
@@ -53,6 +65,11 @@ services:
 
   worker:
     <<: *app
+    depends_on:
+      database:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     command: ["php", "bin/console", "messenger:consume", "scheduler_default", "async", "--time-limit=3600", "--memory-limit=256M"]
     healthcheck:
       disable: true
