@@ -9,6 +9,7 @@ use App\Entity\Project;
 use App\Enum\ConnectorMode;
 use App\Forge\GitHubAccount;
 use App\Message\SyncConnector;
+use App\Project\ProjectResolver;
 use App\Security\OAuth\OAuthClient;
 use App\Security\ProjectScope;
 use App\Security\SecretBox;
@@ -33,6 +34,7 @@ final class GitHubRepositoryController extends AbstractController
     private const TOKEN = 'github_repositories_token';
     // The project the user came from, kept while GitHub has the hand: its callback URL takes no parameter of ours.
     private const PROJECT = 'github_repositories_project';
+    private const NEW_PROJECTS = 'new';
 
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
@@ -42,6 +44,7 @@ final class GitHubRepositoryController extends AbstractController
         private readonly ConnectorPresets $presets,
         private readonly MessageBusInterface $bus,
         private readonly ProjectScope $projectScope,
+        private readonly ProjectResolver $projectResolver,
     ) {
     }
 
@@ -71,6 +74,7 @@ final class GitHubRepositoryController extends AbstractController
             'projects' => $this->projectScope->projects(),
             'selected' => $selected,
             'scoped' => null !== $this->projectScope->slugs(),
+            'may_create' => $this->projectResolver->mayCreate(),
         ]);
     }
 
@@ -122,26 +126,33 @@ final class GitHubRepositoryController extends AbstractController
 
             return $this->redirectToRoute('github_repositories', $back);
         }
-        $project = $this->entityManager->find(Project::class, $request->getPayload()->getInt('project'));
+        $perRepository = self::NEW_PROJECTS === $request->getPayload()->getString('project') && $this->projectResolver->mayCreate();
+        $project = $perRepository ? null : $this->entityManager->find(Project::class, $request->getPayload()->getInt('project'));
         $repositories = array_values(array_unique(array_filter(
             array_map('strval', $request->getPayload()->all('repositories')),
             static fn (string $repository): bool => 1 === preg_match('#^[\w.-]+/[\w.-]+$#', $repository),
         )));
-        if (null === $project || $project->isArchived() || !$this->projectScope->allows($project) || [] === $repositories) {
+        if ((!$perRepository && (null === $project || $project->isArchived() || !$this->projectScope->allows($project))) || [] === $repositories) {
             $this->addFlash('error', 'Choisir un projet et au moins un dépôt.');
 
             return $this->redirectToRoute('github_repositories', $back);
         }
 
         $connectors = [];
+        $skipped = [];
         foreach ($repositories as $repository) {
+            $target = $perRepository ? $this->projectFor($repository) : $project;
+            if (null === $target) {
+                $skipped[] = $repository;
+                continue;
+            }
             $connector = new Connector();
             $this->presets->apply('github-api', $connector);
             $connector->setName($repository);
             $connector->setCredentials([]);
             $connector->setArguments(['repository' => $repository] + $connector->getArguments());
             $connector->setOauthToken($token);
-            $connector->setProject($project);
+            $connector->setProject($target);
             $this->entityManager->persist($connector);
             $connectors[] = $connector;
         }
@@ -150,10 +161,48 @@ final class GitHubRepositoryController extends AbstractController
             $this->bus->dispatch(new SyncConnector($connector->getId(), ConnectorRun::MANUAL));
         }
         $request->getSession()->remove(self::TOKEN);
-        $this->addFlash('success', \sprintf('%d dépôt(s) branché(s) sur %s : clonés et analysés en arrière-plan.', \count($connectors), $project->getName()));
+        if ([] !== $connectors) {
+            $this->addFlash('success', $perRepository
+                ? \sprintf('%d dépôt(s) branché(s), chacun sur son projet : clonés et analysés en arrière-plan.', \count($connectors))
+                : \sprintf('%d dépôt(s) branché(s) sur %s : clonés et analysés en arrière-plan.', \count($connectors), $project->getName()));
+        }
+        if ([] !== $skipped) {
+            $this->addFlash('error', \sprintf('Pas de projet possible pour %s : un projet archivé ou hors de portée a déjà ce dépôt, ou son nom est pris.', implode(', ', $skipped)));
+        }
+
+        $single = $project ?? (1 === \count($connectors) ? $connectors[0]->getProject() : null);
 
         // The list of all connectors is closed to a caller limited to some projects.
-        return [] !== $back || null !== $this->projectScope->slugs() ? $this->redirectToRoute('project_settings', ['slug' => $project->getSlug()]) : $this->redirectToRoute('connector_index');
+        return null !== $single && ([] !== $back || null !== $this->projectScope->slugs() || $perRepository)
+            ? $this->redirectToRoute('project_settings', ['slug' => $single->getSlug()])
+            : $this->redirectToRoute(null !== $this->projectScope->slugs() ? 'project_index' : 'connector_index');
+    }
+
+    /**
+     * The project of a repository connected "one project per repository": the one already tied to its remote,
+     * or a new one named after the repository.
+     */
+    private function projectFor(string $repository): ?Project
+    {
+        $remote = $this->projectResolver->normalize('github.com/'.$repository);
+        $projects = $this->entityManager->getRepository(Project::class);
+        if (null !== $existing = $projects->findOneBy(['repository' => $remote])) {
+            return $existing->isArchived() || !$this->projectScope->allows($existing) ? null : $existing;
+        }
+
+        [$owner, $name] = explode('/', $repository);
+        foreach (array_unique([$this->projectResolver->slug($name), $this->projectResolver->slug($owner.'-'.$name)]) as $slug) {
+            if ('' === $slug || 'new' === $slug || null !== $projects->findOneBy(['slug' => $slug])) {
+                continue;
+            }
+            $project = new Project($slug, $name, '');
+            $project->setRepository($remote);
+            $this->projectResolver->register($project);
+
+            return $project;
+        }
+
+        return null;
     }
 
     private function callbackUrl(): string

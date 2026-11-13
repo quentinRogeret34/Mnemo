@@ -37,8 +37,14 @@
             <label for="github-project">Projet</label>
             <select class="select" id="github-project" name="project" required>
                 <option value="">Choisir un projet</option>
-                {% for project in projects %}<option value="{{ project.id }}" {{ selected and selected.id == project.id ? 'selected' }}>{{ project.name }}</option>{% endfor %}
+                {% if may_create %}<option value="new" {{ not selected and projects is empty ? 'selected' }}>Un nouveau projet par dépôt</option>{% endif %}
+                {% if projects is not empty %}
+                    <optgroup label="Projets existants">
+                        {% for project in projects %}<option value="{{ project.id }}" {{ selected and selected.id == project.id ? 'selected' }}>{{ project.name }}</option>{% endfor %}
+                    </optgroup>
+                {% endif %}
             </select>
+            {% if may_create %}<p class="row__sub">« Un nouveau projet par dépôt » crée un projet nommé d'après chaque dépôt coché, ou reprend celui qui a déjà ce dépôt.</p>{% endif %}
             <ul class="list">
                 {% for repository in repositories %}
                     {% set already = repository.full_name|lower in connected %}

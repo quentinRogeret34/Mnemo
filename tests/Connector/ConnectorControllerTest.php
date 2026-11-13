@@ -252,7 +252,7 @@ final class ConnectorControllerTest extends WebTestCase
         $this->client->request('GET', '/oauth/github/check/repositories?code=abc&state='.$query['state']);
         self::assertResponseRedirects('/connectors/github?project=demo');
         $crawler = $this->client->followRedirect();
-        self::assertSame(['', (string) $demo->getId()], $crawler->filter('#github-project option')->each(static fn ($option): string => $option->attr('value')));
+        self::assertSame(['', 'new', (string) $demo->getId()], $crawler->filter('#github-project option')->each(static fn ($option): string => $option->attr('value')));
         self::assertSame('Demo project', $crawler->filter('#github-project option[selected]')->text());
 
         $form = $crawler->selectButton('Brancher les dépôts cochés')->form();
@@ -271,6 +271,42 @@ final class ConnectorControllerTest extends WebTestCase
         self::assertSame('acme/shop', $crawler->filter('section[aria-labelledby="connectors-title"] .row__title > span')->first()->text());
         self::assertCount(0, $crawler->filter('section[aria-labelledby="connectors-title"] a.row'));
         self::assertSame('demo', $this->entityManager->getRepository(Connector::class)->findOneBy(['name' => 'acme/shop'])->getProject()->getSlug());
+    }
+
+    public function testEachRepositoryCanGetItsOwnProject(): void
+    {
+        $this->client->disableReboot();
+        self::getContainer()->set(OAuthClient::class, new OAuthClient(new MockHttpClient(static fn (): JsonMockResponse => new JsonMockResponse(['access_token' => 'gho_secret'])), 'client-id', 'client-secret', '', '', 'https://gitlab.com', '', ''));
+        self::getContainer()->set(GitHubAccount::class, new GitHubAccount(new MockHttpClient(static fn (): JsonMockResponse => new JsonMockResponse([
+            ['full_name' => 'Acme/Shop', 'private' => true, 'description' => null],
+            ['full_name' => 'acme/demo', 'private' => false, 'description' => null],
+        ]))));
+        $this->entityManager->getRepository(Project::class)->findOneBy(['slug' => 'demo'])->setRepository('github.com/acme/demo');
+        $this->entityManager->flush();
+
+        $crawler = $this->client->request('GET', '/connectors/github');
+        $this->client->submit($crawler->selectButton('Connecter avec GitHub')->form());
+        parse_str((string) parse_url($this->client->getResponse()->headers->get('Location'), \PHP_URL_QUERY), $query);
+        $this->client->request('GET', '/oauth/github/check/repositories?code=abc&state='.$query['state']);
+        $crawler = $this->client->followRedirect();
+        self::assertSame('Un nouveau projet par dépôt', $crawler->filter('select[name="project"] option[value="new"]')->text());
+
+        $form = $crawler->selectButton('Brancher les dépôts cochés')->form();
+        $form['project']->select('new');
+        $form['repositories'][0]->tick();
+        $form['repositories'][1]->tick();
+        $this->client->submit($form);
+        self::assertResponseRedirects('/connectors');
+
+        $this->entityManager->clear();
+        $shop = $this->entityManager->getRepository(Project::class)->findOneBy(['slug' => 'shop']);
+        self::assertSame(['Shop', 'github.com/acme/shop'], [$shop->getName(), $shop->getRepository()]);
+        self::assertSame(2, $this->entityManager->getRepository(Project::class)->count([]));
+        $projects = [];
+        foreach ($this->entityManager->getRepository(Connector::class)->findAll() as $connector) {
+            $projects[$connector->getArguments()['repository']] = $connector->getProject()->getSlug();
+        }
+        self::assertSame(['Acme/Shop' => 'shop', 'acme/demo' => 'demo'], $projects);
     }
 
     public function testInvalidArgumentsAreRejected(): void
