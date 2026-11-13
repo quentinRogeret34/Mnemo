@@ -12,9 +12,10 @@
     <p class="page__lede">Une clé identifie un agent ou un poste qui appelle <span class="mono">/mcp</span> et <span class="mono">/api</span>, avec l'en-tête <span class="mono">Authorization: Bearer &lt;clé&gt;</span>. Limitée à des projets, elle ne lit et n'écrit que dans ceux-là.</p>
 
     {% if token %}
-        <div class="archived-banner" role="status">
+        <div class="archived-banner" role="status" {{ stimulus_controller('clipboard') }}>
             <span>Clé créée. Elle ne sera plus affichée : la copier maintenant.</span>
-            <code class="mono" id="new-token">{{ token }}</code>
+            <code class="mono" id="new-token" {{ stimulus_target('clipboard', 'source') }}>{{ token }}</code>
+            <button class="button button--primary" type="button" {{ stimulus_target('clipboard', 'button') }} {{ stimulus_action('clipboard', 'copy') }}>Copier</button>
         </div>
     {% endif %}
 
