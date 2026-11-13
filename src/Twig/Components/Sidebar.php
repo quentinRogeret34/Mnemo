@@ -4,6 +4,7 @@ namespace App\Twig\Components;
 
 use App\Entity\Project;
 use App\Graph\KnowledgeReader;
+use App\Project\ProjectResolver;
 use App\Security\ProjectScope;
 use Symfony\UX\TwigComponent\Attribute\AsTwigComponent;
 
@@ -15,7 +16,13 @@ final class Sidebar
     public function __construct(
         private readonly KnowledgeReader $knowledgeReader,
         private readonly ProjectScope $projectScope,
+        private readonly ProjectResolver $projectResolver,
     ) {
+    }
+
+    public function mayCreate(): bool
+    {
+        return $this->projectResolver->mayCreate();
     }
 
     /**

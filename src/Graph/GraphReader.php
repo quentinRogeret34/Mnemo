@@ -19,13 +19,13 @@ final class GraphReader
     }
 
     /**
-     * @return list<array{id: int, slug: string, name: string, repository_path: string, files: int, symbols: int, edges: int, ref: ?string, updated_at: ?string}>
+     * @return list<array{id: int, slug: string, name: string, repository_path: string, archived_at: ?string, files: int, symbols: int, edges: int, ref: ?string, updated_at: ?string}>
      */
     public function projectSummaries(): array
     {
         return $this->connection->fetchAllAssociative(
             <<<'SQL'
-                SELECT p.id, p.slug, p.name, p.repository_path,
+                SELECT p.id, p.slug, p.name, p.repository_path, p.archived_at,
                        COUNT(n.id) FILTER (WHERE n.type = :file) AS files,
                        COUNT(n.id) FILTER (WHERE n.type = :symbol) AS symbols,
                        (SELECT COUNT(*) FROM edge e JOIN node s ON s.id = e.source_id WHERE s.project_id = p.id) AS edges,

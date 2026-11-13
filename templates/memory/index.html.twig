@@ -18,12 +18,12 @@
     {% set verdicts = {verified: 'Vérifiée', refuted: 'Réfutée', conflict: 'Sources en conflit', unverified: 'Non vérifiable', none: 'Jamais vérifiée'} %}
     {% set filtered = q or type or archived or verdict or source %}
     <div class="view-head">
-        <h1>Mémoires</h1>
+        <h1><twig:ux:icon name="lucide:lightbulb" />Mémoires</h1>
         <span class="view-head__meta">{{ memories|length }}{{ project ? ' rattachées à ' ~ project.name }}</span>
     </div>
 
     <details class="memory-new" {% if form.vars.submitted %}open{% endif %}>
-        <summary class="button">Nouvelle mémoire</summary>
+        <summary class="button"><twig:ux:icon name="lucide:plus" />Nouvelle mémoire</summary>
         {{ form_start(form, {attr: {novalidate: 'novalidate'}}) }}
             {{ form_label(form.text, null, {label_attr: {class: 'visually-hidden'}}) }}
             {{ form_widget(form.text, {attr: {class: 'input memory-new__text'}}) }}
@@ -32,7 +32,7 @@
                 {{ form_widget(form.type, {attr: {class: 'select'}}) }}
                 {{ form_label(form.visibility, null, {label_attr: {class: 'visually-hidden'}}) }}
                 {{ form_widget(form.visibility, {attr: {class: 'select'}}) }}
-                <button class="button button--primary" type="submit">Ajouter la mémoire</button>
+                <button class="button button--primary" type="submit"><twig:ux:icon name="lucide:plus" />Ajouter la mémoire</button>
                 <span class="row__sub">{{ project ? 'Rattachée à ' ~ project.name : 'Sans projet, à rattacher ensuite' }}</span>
             </div>
             {% for error in form.text.vars.errors %}<p class="form-errors">{{ error.message }}</p>{% endfor %}
@@ -66,7 +66,13 @@
     </form>
 
     {% if memories is empty %}
-        <p class="block__empty">{{ filtered ? 'Aucune mémoire ne correspond.' : 'Aucune mémoire. En ajouter une ci-dessus ; les agents (Claude Code, MCP) les envoient aussi automatiquement.' }}</p>
+        {% if filtered %}
+            <p class="block__empty">Aucune mémoire ne correspond.</p>
+        {% else %}
+            <twig:EmptyState title="Aucune mémoire" text="En ajouter une ci-dessus ; les agents (Claude Code, MCP) les envoient aussi automatiquement.">
+                <twig:block name="icon"><twig:ux:icon name="lucide:lightbulb" /></twig:block>
+            </twig:EmptyState>
+        {% endif %}
     {% else %}
         <div class="table-wrap">
             <table class="data-table data-table--memories">

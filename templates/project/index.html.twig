@@ -2,20 +2,43 @@
 
 {% block crumbs %}<span class="crumbs__current">Projets</span>{% endblock %}
 
+{% block header_actions %}
+    {% if may_create %}<button class="button button--primary" type="button" commandfor="project-new" command="show-modal"><twig:ux:icon name="lucide:plus" />Nouveau projet</button>{% endif %}
+{% endblock %}
+
 {% block body %}
     <div class="view-head">
-        <h1>Projets</h1>
+        <h1><twig:ux:icon name="lucide:layout-grid" />Projets</h1>
         <span class="view-head__meta">{{ projects|length }}</span>
     </div>
 
-    {% if projects is empty %}
-        <section class="empty" aria-labelledby="empty-title">
-            <h2 id="empty-title">Aucun projet indexé</h2>
-            <p>Extraire le graphe d'un dépôt avec graphify, puis l'importer :</p>
-            <pre><code>graphify extract &lt;dépôt&gt; --code-only --out var/graphify/&lt;slug&gt;
+    {% if archived or archived_count > 0 %}
+        <nav class="tabs" aria-label="Filtrer par état">
+            <a href="{{ path('project_index') }}" {% if not archived %}aria-current="page"{% endif %}>Actifs</a>
+            <a href="{{ path('project_index', {archived: 1}) }}" {% if archived %}aria-current="page"{% endif %}>Archivés</a>
+        </nav>
+    {% endif %}
+
+    {% if projects is empty and archived %}
+        <twig:EmptyState title="Aucun projet archivé" text="Un projet archivé reste lisible, mais les agents ne le lisent plus et ses connecteurs ne se synchronisent plus.">
+            <twig:block name="icon"><twig:ux:icon name="lucide:archive" /></twig:block>
+            <twig:block name="actions"><a class="button" href="{{ path('project_index') }}">Voir les projets actifs</a></twig:block>
+        </twig:EmptyState>
+    {% elseif projects is empty %}
+        <twig:EmptyState title="Aucun projet" text="Un projet réunit le code d'un dépôt, ses documents, ses règles métier et ses mémoires.">
+            <twig:block name="icon"><twig:ux:icon name="lucide:folder-plus" /></twig:block>
+            <twig:block name="actions">
+                {% if may_create %}<button class="button button--primary" type="button" commandfor="project-new" command="show-modal"><twig:ux:icon name="lucide:plus" />Nouveau projet</button>{% endif %}
+                {% if github_oauth %}<a class="button" href="{{ path('github_repositories') }}"><twig:ux:icon name="simple-icons:github" />Brancher des dépôts GitHub</a>{% endif %}
+            </twig:block>
+            <details class="empty-state__more">
+                <summary>En ligne de commande</summary>
+                <p>Extraire le graphe d'un dépôt avec graphify, puis l'importer :</p>
+                <pre><code>graphify extract &lt;dépôt&gt; --code-only --out var/graphify/&lt;slug&gt;
 bin/console app:project:create &lt;slug&gt; "&lt;Nom&gt;" &lt;dépôt&gt;
 bin/console app:ingest:code &lt;slug&gt; var/graphify/&lt;slug&gt;/graphify-out/graph.json --no-debug</code></pre>
-        </section>
+            </details>
+        </twig:EmptyState>
     {% else %}
         <ul class="project-list">
             {% for project in projects %}
@@ -23,7 +46,7 @@ bin/console app:ingest:code &lt;slug&gt; var/graphify/&lt;slug&gt;/graphify-out/
                 <li class="project-card">
                     <details class="project-card__details">
                         <summary class="row project-card__summary">
-                            <svg class="project-card__chevron" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M6.5 4.5L10 8l-3.5 3.5"/></svg>
+                            <twig:ux:icon name="lucide:chevron-right" class="icon project-card__chevron" />
                             <span class="row__title"><span>{{ project.name }}</span><span class="row__sub">{{ project.slug }}</span></span>
                             <span class="row__meta">
                                 <span class="num">{{ project.files|number_format(0, ',', ' ') }} fichiers</span>
@@ -44,11 +67,11 @@ bin/console app:ingest:code &lt;slug&gt; var/graphify/&lt;slug&gt;/graphify-out/
                         </div>
                     </details>
                     <a class="button project-card__open" href="{{ path('project_show', {slug: project.slug}) }}">Ouvrir</a>
-                    <details class="menu menu--end" data-controller="menu" data-action="click@window->menu#closeOutside keydown.esc@window->menu#close">
-                        <summary class="button menu__kebab" aria-label="Actions pour {{ project.name }}">
-                            <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true"><circle cx="3.5" cy="8" r="1.25"/><circle cx="8" cy="8" r="1.25"/><circle cx="12.5" cy="8" r="1.25"/></svg>
-                        </summary>
-                        <div class="menu__panel">
+                    <div class="menu menu--end" data-controller="menu">
+                        <button class="button menu__kebab" type="button" aria-label="Actions pour {{ project.name }}" aria-expanded="false" commandfor="project-actions-{{ project.id }}" command="toggle-popover" data-menu-target="trigger">
+                            <twig:ux:icon name="lucide:ellipsis" />
+                        </button>
+                        <div class="menu__panel" id="project-actions-{{ project.id }}" popover data-menu-target="panel" data-action="beforetoggle->menu#place toggle->menu#sync">
                             <a class="menu__item" href="{{ path('dashboard', {project: project.slug}) }}">Tableau de bord</a>
                             <a class="menu__item" href="{{ path('project_show', {slug: project.slug}) }}">Documents</a>
                             <a class="menu__item" href="{{ path('rule_index', {slug: project.slug}) }}">Règles métier</a>
@@ -57,8 +80,19 @@ bin/console app:ingest:code &lt;slug&gt; var/graphify/&lt;slug&gt;/graphify-out/
                             <a class="menu__item" href="{{ path('project_code', {slug: project.slug}) }}">Code</a>
                             <a class="menu__item" href="{{ path('garden_show', {slug: project.slug}) }}">Jardinage</a>
                             <a class="menu__item" href="{{ path('proposal_index', {project: project.slug}) }}">À valider{% if project.pending > 0 %} ({{ project.pending }}){% endif %}</a>
+                            <hr class="menu__rule">
+                            <a class="menu__item" href="{{ path('project_settings', {slug: project.slug}) }}"><twig:ux:icon name="lucide:settings" />Réglages</a>
+                            <form method="post" action="{{ path(archived ? 'project_restore' : 'project_archive', {slug: project.slug}) }}">
+                                <input type="hidden" name="_token" value="{{ csrf_token('project-' ~ project.id) }}">
+                                {% if archived %}
+                                    <button class="menu__item" type="submit"><twig:ux:icon name="lucide:archive-restore" />Restaurer</button>
+                                {% else %}
+                                    <button class="menu__item" type="submit" data-confirm="Archiver {{ project.name }} ? Les agents ne le liront plus et ses connecteurs ne se synchroniseront plus." data-confirm-label="Archiver"><twig:ux:icon name="lucide:archive" />Archiver</button>
+                                {% endif %}
+                            </form>
+                            <a class="menu__item menu__item--danger" href="{{ path('project_settings', {slug: project.slug}) }}#danger"><twig:ux:icon name="lucide:trash-2" />Supprimer</a>
                         </div>
-                    </details>
+                    </div>
                 </li>
             {% endfor %}
         </ul>

@@ -12,7 +12,7 @@
 {% endblock %}
 
 {% block header_actions %}
-    <a class="button" href="{{ path('project_code', {slug: project.slug}) }}">Fichiers <kbd class="kbd">⌘K</kbd></a>
+    <a class="button" href="{{ path('project_code', {slug: project.slug}) }}">Fichiers <kbd class="kbd" aria-hidden="true">/</kbd></a>
 {% endblock %}
 
 {% block body %}
@@ -79,6 +79,7 @@
 
     <section class="graph-panel block" aria-labelledby="graph-title"
              data-controller="graph"
+             data-action="theme:change@window->graph#load"
              data-graph-url-value="{{ path('file_graph', {slug: project.slug, path: file.path}) }}"
              data-graph-file-url-value="{{ path('file_show', {slug: project.slug, path: '__PATH__'}) }}">
         <div class="graph-panel__bar">

@@ -46,7 +46,7 @@ final class ReadTools
             fn (Project $project): array => ['slug' => $project->getSlug(), 'name' => $project->getName()]
                 + $this->knowledgeReader->counts($project)
                 + ['capabilities' => array_map(static fn (array $item): string => $item['capability']->value, $this->capabilityDetector->detect($project))],
-            array_values(array_filter($this->entityManager->getRepository(Project::class)->findBy([], ['name' => 'ASC']), $this->projectScope->allows(...))),
+            $this->projectScope->projects(),
         );
     }
 

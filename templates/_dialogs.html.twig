@@ -1,0 +1,7 @@
+<dialog class="dialog" id="confirm" closedby="any" aria-labelledby="confirm-title" data-controller="confirm" data-action="submit@document->confirm#ask">
+    <h2 class="dialog__title" id="confirm-title" data-confirm-target="title">Confirmer cette action ?</h2>
+    <div class="dialog__actions">
+        <button class="button" type="button" commandfor="confirm" command="close" autofocus>Annuler</button>
+        <button class="button button--danger" type="button" data-confirm-target="accept" data-action="confirm#accept">Confirmer</button>
+    </div>
+</dialog>

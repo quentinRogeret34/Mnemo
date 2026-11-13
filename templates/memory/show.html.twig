@@ -77,7 +77,7 @@
 
         <form class="danger-zone" method="post" action="{{ path('memory_delete', {id: memory.id}) }}">
             <input type="hidden" name="_token" value="{{ csrf_token('delete-memory-' ~ memory.id) }}">
-            <button class="button button--danger" type="submit">Supprimer la mémoire</button>
+            <button class="button button--danger" type="submit" data-confirm="Supprimer cette mémoire et ses liens ?" data-confirm-label="Supprimer"><twig:ux:icon name="lucide:trash-2" />Supprimer la mémoire</button>
             <span class="row__sub">Supprime aussi ses liens. Irréversible.</span>
         </form>
     </article>

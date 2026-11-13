@@ -1,0 +1,10 @@
+<meta name="color-scheme" content="light dark">
+<script>
+    try {
+        document.querySelector('meta[name="color-scheme"]').content = localStorage.getItem('theme') ?? 'light dark';
+        for (const key of ['accent', 'contrast', 'text-size']) {
+            const value = localStorage.getItem(key);
+            if (value) document.documentElement.setAttribute('data-' + key, value);
+        }
+    } catch (error) {}
+</script>

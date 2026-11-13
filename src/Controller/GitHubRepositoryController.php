@@ -10,11 +10,13 @@ use App\Enum\ConnectorMode;
 use App\Forge\GitHubAccount;
 use App\Message\SyncConnector;
 use App\Security\OAuth\OAuthClient;
+use App\Security\ProjectScope;
 use App\Security\SecretBox;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Routing\Attribute\Route;
@@ -29,6 +31,8 @@ final class GitHubRepositoryController extends AbstractController
     private const STATE = 'github_repositories_state';
     // Encrypted, and only until the repositories are connected: each connector then keeps its own copy.
     private const TOKEN = 'github_repositories_token';
+    // The project the user came from, kept while GitHub has the hand: its callback URL takes no parameter of ours.
+    private const PROJECT = 'github_repositories_project';
 
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
@@ -37,13 +41,15 @@ final class GitHubRepositoryController extends AbstractController
         private readonly GitHubAccount $account,
         private readonly ConnectorPresets $presets,
         private readonly MessageBusInterface $bus,
+        private readonly ProjectScope $projectScope,
     ) {
     }
 
     #[Route('/connectors/github', name: 'github_repositories', methods: ['GET'])]
-    public function index(Request $request): Response
+    public function index(Request $request, #[MapQueryParameter(name: 'project')] ?string $slug = null): Response
     {
         $this->checkAvailable();
+        $selected = $this->projectScope->bySlug($slug);
         $token = $request->getSession()->get(self::TOKEN);
         $repositories = null;
         if (\is_string($token)) {
@@ -62,7 +68,9 @@ final class GitHubRepositoryController extends AbstractController
         return $this->render('connector/github.html.twig', [
             'repositories' => $repositories,
             'connected' => $connected,
-            'projects' => $this->entityManager->getRepository(Project::class)->findBy([], ['name' => 'ASC']),
+            'projects' => $this->projectScope->projects(),
+            'selected' => $selected,
+            'scoped' => null !== $this->projectScope->slugs(),
         ]);
     }
 
@@ -73,6 +81,7 @@ final class GitHubRepositoryController extends AbstractController
         $this->checkToken($request);
         $state = bin2hex(random_bytes(16));
         $request->getSession()->set(self::STATE, $state);
+        $request->getSession()->set(self::PROJECT, $request->getPayload()->getString('project'));
 
         return $this->redirect($this->oauthClient->authorizeUrl('github', $this->callbackUrl(), $state, 'repo'));
     }
@@ -85,10 +94,11 @@ final class GitHubRepositoryController extends AbstractController
     {
         $this->checkAvailable();
         $state = $request->getSession()->remove(self::STATE);
+        $back = array_filter(['project' => (string) $request->getSession()->remove(self::PROJECT)]);
         if (!\is_string($state) || !hash_equals($state, $request->query->getString('state'))) {
             $this->addFlash('error', 'La connexion à GitHub a expiré, recommencer.');
 
-            return $this->redirectToRoute('github_repositories');
+            return $this->redirectToRoute('github_repositories', $back);
         }
 
         try {
@@ -97,7 +107,7 @@ final class GitHubRepositoryController extends AbstractController
             $this->addFlash('error', 'GitHub a refusé la connexion.');
         }
 
-        return $this->redirectToRoute('github_repositories');
+        return $this->redirectToRoute('github_repositories', $back);
     }
 
     #[Route('/connectors/github', name: 'github_repositories_connect', methods: ['POST'])]
@@ -105,21 +115,22 @@ final class GitHubRepositoryController extends AbstractController
     {
         $this->checkAvailable();
         $this->checkToken($request);
+        $back = array_filter(['project' => $request->query->getString('project')]);
         $token = $request->getSession()->get(self::TOKEN);
         if (!\is_string($token)) {
             $this->addFlash('error', 'La connexion à GitHub a expiré, recommencer.');
 
-            return $this->redirectToRoute('github_repositories');
+            return $this->redirectToRoute('github_repositories', $back);
         }
         $project = $this->entityManager->find(Project::class, $request->getPayload()->getInt('project'));
         $repositories = array_values(array_unique(array_filter(
             array_map('strval', $request->getPayload()->all('repositories')),
             static fn (string $repository): bool => 1 === preg_match('#^[\w.-]+/[\w.-]+$#', $repository),
         )));
-        if (null === $project || [] === $repositories) {
+        if (null === $project || $project->isArchived() || !$this->projectScope->allows($project) || [] === $repositories) {
             $this->addFlash('error', 'Choisir un projet et au moins un dépôt.');
 
-            return $this->redirectToRoute('github_repositories');
+            return $this->redirectToRoute('github_repositories', $back);
         }
 
         $connectors = [];
@@ -141,7 +152,8 @@ final class GitHubRepositoryController extends AbstractController
         $request->getSession()->remove(self::TOKEN);
         $this->addFlash('success', \sprintf('%d dépôt(s) branché(s) sur %s : clonés et analysés en arrière-plan.', \count($connectors), $project->getName()));
 
-        return $this->redirectToRoute('connector_index');
+        // The list of all connectors is closed to a caller limited to some projects.
+        return [] !== $back || null !== $this->projectScope->slugs() ? $this->redirectToRoute('project_settings', ['slug' => $project->getSlug()]) : $this->redirectToRoute('connector_index');
     }
 
     private function callbackUrl(): string

@@ -1,0 +1,48 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Apparence{% endblock %}
+
+{% block crumbs %}<span class="crumbs__current">Apparence</span>{% endblock %}
+
+{% block body %}
+    <div class="view-head">
+        <h1><twig:ux:icon name="lucide:palette" />Apparence</h1>
+    </div>
+    <p class="page__lede">Ces réglages sont enregistrés dans ce navigateur et s'appliquent tout de suite. Sans JavaScript, l'interface suit les préférences du système.</p>
+
+    <form class="panel form-stack appearance" data-controller="appearance" data-action="change->appearance#update theme:change@window->appearance#refresh">
+        <fieldset>
+            <legend>Thème</legend>
+            <div class="choices">
+                <label class="key-form__check"><input type="radio" name="theme" value="system" checked> Système <span data-appearance-target="system"></span></label>
+                <label class="key-form__check"><input type="radio" name="theme" value="light"> Clair</label>
+                <label class="key-form__check"><input type="radio" name="theme" value="dark"> Sombre</label>
+            </div>
+        </fieldset>
+        <fieldset>
+            <legend>Couleur d'accent</legend>
+            <div class="choices">
+                <label class="key-form__check"><input type="radio" name="accent" value="violet" checked><span class="swatch" data-accent="violet"></span> Violet</label>
+                <label class="key-form__check"><input type="radio" name="accent" value="cobalt"><span class="swatch" data-accent="cobalt"></span> Cobalt</label>
+                <label class="key-form__check"><input type="radio" name="accent" value="vert"><span class="swatch" data-accent="vert"></span> Vert</label>
+                <label class="key-form__check"><input type="radio" name="accent" value="ambre"><span class="swatch" data-accent="ambre"></span> Ambre</label>
+                <label class="key-form__check"><input type="radio" name="accent" value="rose"><span class="swatch" data-accent="rose"></span> Rose</label>
+            </div>
+            <p class="help-text">Les couleurs des graphiques et du graphe des mémoires ne changent pas.</p>
+        </fieldset>
+        <fieldset>
+            <legend>Contraste</legend>
+            <div class="choices">
+                <label class="key-form__check"><input type="checkbox" name="contrast" value="more"> Contraste élevé</label>
+            </div>
+            <p class="help-text">Textes secondaires et bordures renforcés, liens soulignés. Toujours actif quand le système demande plus de contraste.</p>
+        </fieldset>
+        <fieldset>
+            <legend>Taille du texte</legend>
+            <div class="choices">
+                <label class="key-form__check"><input type="radio" name="text-size" value="normal" checked> Normale</label>
+                <label class="key-form__check"><input type="radio" name="text-size" value="large"> Grande</label>
+            </div>
+        </fieldset>
+    </form>
+{% endblock %}

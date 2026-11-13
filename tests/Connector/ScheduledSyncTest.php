@@ -62,6 +62,21 @@ final class ScheduledSyncTest extends WebTestCase
         self::assertSame('planifié', $crawler->filter('section[aria-labelledby="runs-title"] tbody tr td')->eq(2)->text());
     }
 
+    public function testTheConnectorsOfAnArchivedProjectAreLeftAlone(): void
+    {
+        $this->connector('Quotidien', ConnectorSchedule::Daily);
+        $this->project->archive();
+        $this->entityManager->flush();
+
+        self::getContainer()->get(SyncDueConnectorsHandler::class)(new SyncDueConnectors());
+        self::assertSame([], self::getContainer()->get('messenger.transport.async')->getSent());
+
+        $this->project->restore();
+        $this->entityManager->flush();
+        self::getContainer()->get(SyncDueConnectorsHandler::class)(new SyncDueConnectors());
+        self::assertCount(1, self::getContainer()->get('messenger.transport.async')->getSent());
+    }
+
     public function testAConnectorIsNeverSynchronisedTwiceAtOnce(): void
     {
         $connector = $this->connector('Quotidien', ConnectorSchedule::Daily);

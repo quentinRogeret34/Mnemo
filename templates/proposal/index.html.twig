@@ -15,7 +15,7 @@
     {% set reconciliations = {new: 'Nouvelle mémoire', updates: 'Met à jour', supersedes: 'Remplace', retracts: 'Retire'} %}
     {% set sources = {conversation: 'conversation', file: 'fichier', diff: 'diff', review: 'revue'} %}
     <div class="view-head">
-        <h1>À valider</h1>
+        <h1><twig:ux:icon name="lucide:check" />À valider</h1>
         <span class="view-head__meta">{{ proposals|length }} en attente{{ project ? ' pour ' ~ project.name }}</span>
     </div>
     <p class="page__lede">Ce que le LLM propose n'entre dans le graphe qu'une fois appliqué ici. Une mémoire remplacée ou retirée est archivée, pas supprimée.</p>

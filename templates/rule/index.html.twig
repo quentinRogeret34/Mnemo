@@ -10,7 +10,7 @@
 
 {% block body %}
     <div class="view-head">
-        <h1>Règles métier</h1>
+        <h1><twig:ux:icon name="lucide:clipboard-check" />Règles métier</h1>
         <span class="view-head__meta">{{ rules|length }}</span>
     </div>
 
@@ -21,7 +21,14 @@
     </nav>
 
     {% if rules is empty %}
-        <p class="block__empty">Aucune règle{{ status ? ' dans ce statut' }}. Les règles viendront de l'extraction des documents métier.</p>
+        {% if status %}
+            <p class="block__empty">Aucune règle dans ce statut.</p>
+        {% else %}
+            <twig:EmptyState title="Aucune règle métier" text="Les règles viennent de l'extraction des documents métier du projet.">
+                <twig:block name="icon"><twig:ux:icon name="lucide:clipboard-check" /></twig:block>
+                <twig:block name="actions"><a class="button" href="{{ path('project_show', {slug: project.slug}) }}"><twig:ux:icon name="lucide:upload" />Déposer des documents</a></twig:block>
+            </twig:EmptyState>
+        {% endif %}
     {% else %}
         <ul class="list">
             {% for rule in rules %}

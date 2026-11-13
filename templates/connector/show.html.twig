@@ -12,7 +12,7 @@
 {% endblock %}
 
 {% block header_actions %}
-    <a class="button" href="{{ path('connector_edit', {id: connector.id}) }}">Modifier</a>
+    <a class="button" href="{{ path('connector_edit', {id: connector.id}) }}"><twig:ux:icon name="lucide:pencil" />Modifier</a>
 {% endblock %}
 
 {% block body %}
@@ -41,12 +41,12 @@
         </dl>
 
         <div class="upload__actions">
-            <form method="post" action="{{ path('connector_sync', {id: connector.id}) }}"><input type="hidden" name="_token" value="{{ token }}"><button class="button button--primary" type="submit">Synchroniser</button></form>
-            <form method="post" action="{{ path('connector_inspect', {id: connector.id}) }}"><input type="hidden" name="_token" value="{{ token }}"><button class="button" type="submit">Tester la connexion</button></form>
+            <form method="post" action="{{ path('connector_sync', {id: connector.id}) }}"><input type="hidden" name="_token" value="{{ token }}"><button class="button button--primary" type="submit"><twig:ux:icon name="lucide:refresh-cw" />Synchroniser</button></form>
+            <form method="post" action="{{ path('connector_inspect', {id: connector.id}) }}"><input type="hidden" name="_token" value="{{ token }}"><button class="button" type="submit"><twig:ux:icon name="lucide:plug" />Tester la connexion</button></form>
             {% if connector.oauthToken %}
-                <form method="post" action="{{ path('connector_oauth_disconnect', {id: connector.id}) }}"><input type="hidden" name="_token" value="{{ token }}"><button class="button" type="submit">Déconnecter GitHub</button></form>
+                <form method="post" action="{{ path('connector_oauth_disconnect', {id: connector.id}) }}"><input type="hidden" name="_token" value="{{ token }}"><button class="button" type="submit" data-confirm="Déconnecter le compte GitHub de ce connecteur ?" data-confirm-label="Déconnecter"><twig:ux:icon name="lucide:unplug" />Déconnecter GitHub</button></form>
             {% elseif oauth %}
-                <form method="post" action="{{ path('connector_oauth', {id: connector.id}) }}"><input type="hidden" name="_token" value="{{ token }}"><button class="button" type="submit">Connecter avec GitHub</button></form>
+                <form method="post" action="{{ path('connector_oauth', {id: connector.id}) }}"><input type="hidden" name="_token" value="{{ token }}"><button class="button" type="submit"><twig:ux:icon name="simple-icons:github" />Connecter avec GitHub</button></form>
             {% endif %}
         </div>
 
@@ -78,7 +78,7 @@
 
         <form class="danger-zone" method="post" action="{{ path('connector_delete', {id: connector.id}) }}">
             <input type="hidden" name="_token" value="{{ token }}">
-            <button class="button button--danger" type="submit">Supprimer le connecteur</button>
+            <button class="button button--danger" type="submit" data-confirm="Supprimer le connecteur {{ connector.name }} ?" data-confirm-label="Supprimer"><twig:ux:icon name="lucide:trash-2" />Supprimer le connecteur</button>
             <span class="row__sub">Les documents et mémoires déjà importés sont conservés.</span>
         </form>
     </article>

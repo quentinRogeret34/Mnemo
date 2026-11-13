@@ -1,0 +1,24 @@
+# Full configuration reference: https://symfony.com/bundles/ux-icons/current/index.html#configuration
+ux_icons:
+    default_icon_attributes:
+        class: icon
+
+    ignore_not_found: false
+
+when@dev:
+    ux_icons:
+        iconify:
+            # Persist each on-demand icon to disk on first render, so you don't forget to commit it before deploying (like `ux:icons:lock`)
+            auto_lock: true
+
+when@test:
+    ux_icons:
+        iconify:
+            on_demand: false
+
+when@prod:
+    ux_icons:
+        # Suppress exceptions for missing icons in production
+        ignore_not_found: true
+        iconify:
+            on_demand: false

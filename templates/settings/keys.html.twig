@@ -6,7 +6,7 @@
 
 {% block body %}
     <div class="view-head">
-        <h1>Clés d'API</h1>
+        <h1><twig:ux:icon name="lucide:key-round" />Clés d'API</h1>
         <span class="view-head__meta">{{ keys|length }}</span>
     </div>
     <p class="page__lede">Une clé identifie un agent ou un poste qui appelle <span class="mono">/mcp</span> et <span class="mono">/api</span>, avec l'en-tête <span class="mono">Authorization: Bearer &lt;clé&gt;</span>. Limitée à des projets, elle ne lit et n'écrit que dans ceux-là.</p>
@@ -15,7 +15,7 @@
         <div class="archived-banner" role="status" {{ stimulus_controller('clipboard') }}>
             <span>Clé créée. Elle ne sera plus affichée : la copier maintenant.</span>
             <code class="mono" id="new-token" {{ stimulus_target('clipboard', 'source') }}>{{ token }}</code>
-            <button class="button button--primary" type="button" {{ stimulus_target('clipboard', 'button') }} {{ stimulus_action('clipboard', 'copy') }}>Copier</button>
+            <button class="button button--primary" type="button" {{ stimulus_action('clipboard', 'copy') }}><twig:ux:icon name="lucide:copy" /><span {{ stimulus_target('clipboard', 'label') }}>Copier</span></button>
         </div>
     {% endif %}
 
@@ -32,11 +32,13 @@
                 {% endfor %}
             </fieldset>
         {% endif %}
-        <button class="button button--primary" type="submit">Créer la clé</button>
+        <button class="button button--primary" type="submit"><twig:ux:icon name="lucide:plus" />Créer la clé</button>
     </form>
 
     {% if keys is empty %}
-        <p class="block__empty">Aucune clé. Tant que l'accès n'est pas restreint (<span class="mono">APP_ACCESS_ROLE=ROLE_USER</span>), les agents appellent le serveur sans clé.</p>
+        <twig:EmptyState title="Aucune clé" text="Tant que l'accès n'est pas restreint (APP_ACCESS_ROLE=ROLE_USER), les agents appellent le serveur sans clé.">
+            <twig:block name="icon"><twig:ux:icon name="lucide:key-round" /></twig:block>
+        </twig:EmptyState>
     {% else %}
         <div class="table-wrap">
             <table class="data-table">
@@ -55,7 +57,7 @@
                                 {% else %}
                                     <form method="post" action="{{ path('api_key_revoke', {id: key.id}) }}">
                                         <input type="hidden" name="_token" value="{{ csrf_token('api-key-revoke-' ~ key.id) }}">
-                                        <button class="button button--danger" type="submit">Révoquer</button>
+                                        <button class="button button--danger" type="submit" data-confirm="Révoquer la clé {{ key.name }} ?" data-confirm-label="Révoquer la clé">Révoquer</button>
                                     </form>
                                 {% endif %}
                             </td>

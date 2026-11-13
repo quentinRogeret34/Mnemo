@@ -82,6 +82,27 @@ final class ClientHookControllerTest extends WebTestCase
         self::assertSame(5, $this->entityManager->getRepository(Project::class)->count([]));
     }
 
+    public function testAnArchivedProjectIsNeitherFoundNorCreatedAgain(): void
+    {
+        $projects = $this->entityManager->getRepository(Project::class);
+        $demo = $projects->findOneBy(['slug' => 'demo']);
+        $demo->setRepository('github.com/acme/demo');
+        $demo->archive();
+        $this->entityManager->flush();
+
+        foreach (['cwd=/repos/demo/src/domain', 'cwd=/home/dev/shop&project=demo', 'cwd=/home/dev/shop&repository=github.com/acme/demo'] as $query) {
+            self::assertSame(['project' => null, 'created' => false, 'memories' => 0, 'context' => ''], $this->get('/api/context?'.$query), $query);
+        }
+        self::assertSame(['project' => null, 'path' => null, 'context' => ''], $this->get('/api/file-context?cwd=/repos/demo&path=/repos/demo/src/domain/catalog.ts'));
+        $this->client->jsonRequest('POST', '/api/learn', ['cwd' => '/repos/demo', 'text' => 'transcript', 'label' => 'x']);
+        self::assertResponseStatusCodeSame(422);
+        self::assertSame('demo-sub', $this->get('/api/context?cwd=/repos/demo/packages/sub/lib')['project']);
+        self::assertSame(2, $projects->count([]));
+
+        self::assertNull($this->get('/api/context?cwd=/home/dev/new&project=new')['project']);
+        self::assertSame('acme-2-new', $this->get('/api/context?cwd=/home/dev/new&repository=github.com/acme-2/new')['project']);
+    }
+
     public function testFileContextListsRulesAndMemoriesOrNothing(): void
     {
         $context = $this->get('/api/file-context?cwd=/repos/demo&path=/repos/demo/src/domain/catalog.ts');

@@ -36,6 +36,7 @@
         "symfony/stimulus-bundle": "^3.7",
         "symfony/twig-bundle": "8.1.*",
         "symfony/ux-dropzone": "*",
+        "symfony/ux-icons": "^3.7",
         "symfony/ux-live-component": "^3.7",
         "symfony/ux-twig-component": "^3.7",
         "symfony/validator": "8.1.*",

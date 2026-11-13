@@ -6,6 +6,8 @@ use App\Entity\Project;
 use App\Graph\CapabilityDetector;
 use App\Graph\GraphReader;
 use App\Graph\KnowledgeReader;
+use App\Project\ProjectResolver;
+use App\Security\OAuth\OAuthClient;
 use App\Security\ProjectScope;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bridge\Doctrine\Attribute\MapEntity;
@@ -23,16 +25,25 @@ final class GraphController extends AbstractController
         private readonly CapabilityDetector $capabilityDetector,
         private readonly EntityManagerInterface $entityManager,
         private readonly ProjectScope $projectScope,
+        private readonly ProjectResolver $projectResolver,
+        private readonly OAuthClient $oauthClient,
     ) {
     }
 
     #[Route('/', name: 'project_index', methods: ['GET'])]
-    public function listProjects(): Response
+    public function listProjects(#[MapQueryParameter] bool $archived = false): Response
     {
+        $summaries = array_filter($this->graphReader->projectSummaries(), fn (array $summary): bool => $this->projectScope->allows($this->entityManager->getReference(Project::class, $summary['id'])));
+        $shown = array_values(array_filter($summaries, static fn (array $summary): bool => $archived === (null !== $summary['archived_at'])));
+
         return $this->render('project/index.html.twig', [
+            'may_create' => $this->projectResolver->mayCreate(),
+            'github_oauth' => isset($this->oauthClient->enabled()['github']),
+            'archived' => $archived,
+            'archived_count' => $archived ? \count($shown) : \count($summaries) - \count($shown),
             'projects' => array_map(
                 fn (array $summary): array => $summary + ['knowledge' => $this->knowledgeReader->counts($this->entityManager->getReference(Project::class, $summary['id'])), 'pending' => $this->knowledgeReader->pendingProposals($this->entityManager->getReference(Project::class, $summary['id']))],
-                array_values(array_filter($this->graphReader->projectSummaries(), fn (array $summary): bool => $this->projectScope->allows($this->entityManager->getReference(Project::class, $summary['id'])))),
+                $shown,
             ),
         ]);
     }
@@ -40,7 +51,7 @@ final class GraphController extends AbstractController
     #[Route('/projects/{slug}/code', name: 'project_code', methods: ['GET'])]
     public function showCode(#[MapEntity(mapping: ['slug' => 'slug'])] Project $project): Response
     {
-        return $this->render('project/code.html.twig', ['project' => $project, 'capabilities' => $this->capabilityDetector->detect($project)]);
+        return $this->render('project/code.html.twig', ['project' => $project, 'files' => $this->knowledgeReader->counts($project)['files'], 'capabilities' => $this->capabilityDetector->detect($project)]);
     }
 
     #[Route('/projects/{slug}/files/{path}', name: 'file_show', requirements: ['path' => '.+'], methods: ['GET'])]

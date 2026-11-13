@@ -14,12 +14,12 @@
     <div class="explorer">
         <nav class="tree" aria-label="Dossiers">
             <a class="tree__item" href="{{ path('document_index') }}" {% if current is null %}aria-current="page"{% endif %}>
-                <svg class="nav-item__icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M2 4.5h4.5l1.5 1.5H14v6.5H2z"/></svg>
+                <twig:ux:icon name="lucide:folder" class="icon nav-item__icon" />
                 <span class="nav-item__label">Tous les dossiers</span>
             </a>
             {% for folder in folders %}
                 <a class="tree__item" style="--depth: {{ folder.depth + 1 }}" href="{{ path('document_index', {folder: folder.id}) }}" {% if current and current.id == folder.id %}aria-current="page"{% endif %}>
-                    <svg class="nav-item__icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M2 4.5h4.5l1.5 1.5H14v6.5H2z"/></svg>
+                    <twig:ux:icon name="lucide:folder" class="icon nav-item__icon" />
                     <span class="nav-item__label">{{ folder.name }}</span>
                     {% if folder.documents > 0 %}<span class="nav-item__count">{{ folder.documents }}</span>{% endif %}
                 </a>
@@ -28,7 +28,7 @@
 
         <div class="explorer__content">
             <div class="view-head">
-                <h1>{{ current ? current.name : 'Documents' }}</h1>
+                <h1><twig:ux:icon name="lucide:folder-open" />{{ current ? current.name : 'Documents' }}</h1>
                 <span class="view-head__meta">{{ documents|length }}{{ current is null ? ' à la racine' }}</span>
             </div>
 
@@ -38,7 +38,7 @@
                     {% for folder in children %}
                         <li>
                             <a class="row" href="{{ path('document_index', {folder: folder.id}) }}">
-                                <svg class="nav-item__icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M2 4.5h4.5l1.5 1.5H14v6.5H2z"/></svg>
+                                <twig:ux:icon name="lucide:folder" class="icon nav-item__icon" />
                                 <span class="row__title"><span>{{ folder.name }}</span></span>
                                 <span class="row__meta">{{ folder.documents }} doc.</span>
                             </a>
@@ -59,7 +59,7 @@
                 {{ form_start(folder_form, {attr: {class: 'inline-form', novalidate: 'novalidate'}}) }}
                     {{ form_label(folder_form.name, null, {label_attr: {class: 'visually-hidden'}}) }}
                     {{ form_widget(folder_form.name, {attr: {class: 'input'}}) }}
-                    <button class="button" type="submit">Créer le dossier</button>
+                    <button class="button" type="submit"><twig:ux:icon name="lucide:plus" />Créer le dossier</button>
                     {% for error in folder_form.name.vars.errors %}<p class="form-errors">{{ error.message }}</p>{% endfor %}
                 {{ form_end(folder_form) }}
             </div>

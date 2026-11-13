@@ -2,56 +2,58 @@
  * axes: light and dark / neutral-sans / cool
  * Chart and graph series are the hex steps validated with the dataviz palette script, one set per theme.
  */
+/* Text tokens hold 4.5:1 and --color-control 3:1 on paper, card, sidebar, hover and selected, in both schemes and for every accent. */
 :root {
-    color-scheme: light;
-    --color-paper: oklch(98.6% 0.003 285);
-    --color-card: oklch(100% 0 0);
-    --color-sidebar: oklch(97.2% 0.004 285);
-    --color-hover: oklch(95.2% 0.006 285);
-    --color-selected: oklch(93% 0.02 288);
-    --color-ink: oklch(21% 0.014 285);
-    --color-ink-2: oklch(37% 0.012 285);
-    --color-muted: oklch(53% 0.012 285);
-    --color-faint: oklch(68% 0.01 285);
-    --color-rule: oklch(91.6% 0.006 285);
-    --color-rule-2: oklch(86% 0.008 285);
-    --color-accent: oklch(50% 0.19 285);
-    --color-accent-hover: oklch(44% 0.19 285);
-    --color-accent-ink: oklch(99% 0.004 285);
-    --color-accent-soft: oklch(95% 0.03 288);
-    --color-success: oklch(55% 0.14 155);
-    --color-success-soft: oklch(96% 0.03 155);
-    --color-warning: oklch(60% 0.14 65);
-    --color-warning-soft: oklch(96.5% 0.04 80);
-    --color-danger: oklch(55% 0.18 25);
-    --color-danger-soft: oklch(96% 0.025 25);
-    --color-format-md: oklch(45% 0.012 285);
-    --color-format-pdf: oklch(56% 0.17 25);
-    --color-format-docx: oklch(53% 0.15 255);
+    color-scheme: light dark;
+    accent-color: var(--color-accent);
+
+    &:has(> head > meta[name="color-scheme"][content="dark"]) { color-scheme: dark; }
+    &:has(> head > meta[name="color-scheme"][content="light"]) { color-scheme: light; }
+
+    --color-paper: light-dark(oklch(98.6% 0.003 285), oklch(13.5% 0.004 285));
+    --color-card: light-dark(oklch(100% 0 0), oklch(17% 0.006 285));
+    --color-sidebar: light-dark(oklch(97.2% 0.004 285), oklch(15.5% 0.005 285));
+    --color-hover: light-dark(oklch(95.2% 0.006 285), oklch(21% 0.008 285));
+    --color-ink: light-dark(oklch(21% 0.014 285), oklch(96% 0.004 285));
+    --color-ink-2: light-dark(oklch(37% 0.012 285), oklch(84% 0.008 285));
+    --color-muted: light-dark(oklch(46% 0.012 285), oklch(72% 0.012 285));
+    --color-faint: light-dark(oklch(51% 0.01 285), oklch(64% 0.012 285));
+    --color-control: light-dark(oklch(60% 0.012 285), oklch(55% 0.012 285));
+    --color-rule: light-dark(oklch(91.6% 0.006 285), oklch(24% 0.008 285));
+    --color-rule-2: light-dark(oklch(82% 0.008 285), oklch(36% 0.01 285));
+    --color-success: light-dark(oklch(48% 0.115 155), oklch(72% 0.15 155));
+    --color-success-soft: light-dark(oklch(96% 0.03 155), oklch(24% 0.05 155));
+    --color-warning: light-dark(oklch(50% 0.11 65), oklch(78% 0.14 75));
+    --color-warning-soft: light-dark(oklch(96.5% 0.03 80), oklch(26% 0.05 75));
+    --color-danger: light-dark(oklch(50% 0.18 25), oklch(72% 0.16 25));
+    --color-danger-soft: light-dark(oklch(96% 0.018 25), oklch(25% 0.06 25));
+    --color-format-md: light-dark(oklch(45% 0.012 285), oklch(42% 0.012 285));
+    --color-format-pdf: oklch(52% 0.17 25);
+    --color-format-docx: oklch(50% 0.15 255);
     --color-format-ink: oklch(99% 0.004 285);
-    --color-graphite: oklch(19% 0.008 285);
-    --color-graphite-2: oklch(27% 0.012 285);
-    --color-graphite-rule: oklch(33% 0.012 285);
+    --color-graphite: light-dark(oklch(19% 0.008 285), oklch(10.5% 0.004 285));
+    --color-graphite-2: light-dark(oklch(27% 0.012 285), oklch(21% 0.01 285));
+    --color-graphite-rule: light-dark(oklch(33% 0.012 285), oklch(27% 0.01 285));
     --color-graphite-ink: oklch(93% 0.006 285);
     --color-graphite-muted: oklch(66% 0.012 285);
     --color-focus: var(--color-accent);
-    --color-series: #6250d6;
+    --color-series: light-dark(#6250d6, #9085e9);
     --color-series-wash: color-mix(in oklch, var(--color-series) 10%, transparent);
-    --color-hub-file: #2a78d6;
-    --color-hub-rule: #eb6834;
-    --color-hub-document: #1baf7a;
+    --color-hub-file: light-dark(#2a78d6, #3987e5);
+    --color-hub-rule: light-dark(#eb6834, #d95926);
+    --color-hub-document: light-dark(#1baf7a, #199e70);
     --color-hub-project: var(--color-ink-2);
-    --shadow-pop: 0 8px 24px oklch(21% 0.014 285 / 0.12);
+    --shadow-pop: 0 8px 24px light-dark(oklch(21% 0.014 285 / 0.12), oklch(0% 0 0 / 0.5));
 
     --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
     --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 
-    --text-2xs: 0.6875rem;
-    --text-xs: 0.75rem;
-    --text-sm: 0.8125rem;
-    --text-base: 0.875rem;
-    --text-md: 0.9375rem;
-    --text-lg: 1.0625rem;
+    --text-2xs: 0.75rem;
+    --text-xs: 0.8125rem;
+    --text-sm: 0.875rem;
+    --text-base: 0.9375rem;
+    --text-md: 1rem;
+    --text-lg: 1.125rem;
     --text-xl: 1.375rem;
     --text-2xl: clamp(1.5rem, 1.3rem + 0.8vw, 1.875rem);
 
@@ -81,36 +83,68 @@
     --gutter: clamp(1rem, 0.6rem + 1.4vw, 2rem);
 }
 
-:root[data-theme="dark"] {
-    color-scheme: dark;
-    --color-paper: oklch(13.5% 0.004 285);
-    --color-card: oklch(17% 0.006 285);
-    --color-sidebar: oklch(15.5% 0.005 285);
-    --color-hover: oklch(21% 0.008 285);
-    --color-selected: oklch(25% 0.03 288);
-    --color-ink: oklch(96% 0.004 285);
-    --color-ink-2: oklch(84% 0.008 285);
-    --color-muted: oklch(66% 0.012 285);
-    --color-faint: oklch(48% 0.012 285);
-    --color-rule: oklch(24% 0.008 285);
-    --color-rule-2: oklch(31% 0.01 285);
-    --color-accent: oklch(70% 0.14 288);
-    --color-accent-hover: oklch(77% 0.12 288);
-    --color-accent-ink: oklch(16% 0.03 288);
-    --color-accent-soft: oklch(27% 0.07 288);
-    --color-success: oklch(72% 0.15 155);
-    --color-success-soft: oklch(24% 0.05 155);
-    --color-warning: oklch(78% 0.14 75);
-    --color-warning-soft: oklch(26% 0.05 75);
-    --color-danger: oklch(70% 0.17 25);
-    --color-danger-soft: oklch(25% 0.06 25);
-    --color-format-md: oklch(42% 0.012 285);
-    --color-graphite: oklch(10.5% 0.004 285);
-    --color-graphite-2: oklch(21% 0.01 285);
-    --color-graphite-rule: oklch(27% 0.01 285);
-    --color-series: #9085e9;
-    --color-hub-file: #3987e5;
-    --color-hub-rule: #d95926;
-    --color-hub-document: #199e70;
-    --shadow-pop: 0 12px 32px oklch(0% 0 0 / 0.5);
+/* Accents never touch --color-series or --color-hub-*: data colours stay fixed. The attribute also scopes a swatch. */
+:root, [data-accent="violet"] {
+    --color-accent: light-dark(oklch(50% 0.19 285), oklch(70% 0.14 288));
+    --color-accent-hover: light-dark(oklch(44% 0.19 285), oklch(77% 0.12 288));
+    --color-accent-ink: light-dark(oklch(99% 0.004 285), oklch(16% 0.03 288));
+    --color-accent-soft: light-dark(oklch(95% 0.024 288), oklch(27% 0.07 288));
+    --color-selected: light-dark(oklch(93% 0.02 288), oklch(25% 0.03 288));
+}
+
+[data-accent="cobalt"] {
+    --color-accent: light-dark(oklch(48% 0.155 255), oklch(72% 0.13 255));
+    --color-accent-hover: light-dark(oklch(42% 0.135 255), oklch(79% 0.1 255));
+    --color-accent-ink: light-dark(oklch(99% 0.004 255), oklch(16% 0.03 255));
+    --color-accent-soft: light-dark(oklch(95% 0.022 255), oklch(27% 0.06 255));
+    --color-selected: light-dark(oklch(93% 0.02 255), oklch(25% 0.03 255));
+}
+
+[data-accent="vert"] {
+    --color-accent: light-dark(oklch(45% 0.11 155), oklch(74% 0.15 155));
+    --color-accent-hover: light-dark(oklch(39% 0.095 155), oklch(81% 0.13 155));
+    --color-accent-ink: light-dark(oklch(99% 0.004 155), oklch(16% 0.03 155));
+    --color-accent-soft: light-dark(oklch(95% 0.03 155), oklch(27% 0.05 155));
+    --color-selected: light-dark(oklch(93% 0.02 155), oklch(25% 0.03 155));
+}
+
+[data-accent="ambre"] {
+    --color-accent: light-dark(oklch(48% 0.1 70), oklch(78% 0.14 75));
+    --color-accent-hover: light-dark(oklch(42% 0.088 70), oklch(84% 0.12 75));
+    --color-accent-ink: light-dark(oklch(99% 0.004 75), oklch(16% 0.03 75));
+    --color-accent-soft: light-dark(oklch(95% 0.03 75), oklch(27% 0.05 75));
+    --color-selected: light-dark(oklch(93% 0.02 75), oklch(25% 0.03 75));
+}
+
+[data-accent="rose"] {
+    --color-accent: light-dark(oklch(50% 0.19 0), oklch(72% 0.15 0));
+    --color-accent-hover: light-dark(oklch(44% 0.175 0), oklch(79% 0.11 0));
+    --color-accent-ink: light-dark(oklch(99% 0.004 0), oklch(16% 0.03 0));
+    --color-accent-soft: light-dark(oklch(95% 0.024 0), oklch(27% 0.06 0));
+    --color-selected: light-dark(oklch(93% 0.02 0), oklch(25% 0.03 0));
+}
+
+:root[data-text-size="large"] { font-size: 112.5%; }
+
+/* Written twice so the system preference works without the stored setting, and the reverse. */
+:root[data-contrast="more"] {
+    --color-muted: var(--color-ink-2);
+    --color-faint: light-dark(oklch(46% 0.012 285), oklch(72% 0.012 285));
+    --color-control: var(--color-ink-2);
+    --color-rule-2: var(--color-faint);
+    --rule-width: 1.5px;
+
+    & .content a:not([class]), & .crumbs a { text-decoration: underline; text-underline-offset: 2px; }
+}
+
+@media (prefers-contrast: more) {
+    :root {
+        --color-muted: var(--color-ink-2);
+        --color-faint: light-dark(oklch(46% 0.012 285), oklch(72% 0.012 285));
+        --color-control: var(--color-ink-2);
+        --color-rule-2: var(--color-faint);
+        --rule-width: 1.5px;
+
+        & .content a:not([class]), & .crumbs a { text-decoration: underline; text-underline-offset: 2px; }
+    }
 }

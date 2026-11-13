@@ -5,18 +5,24 @@
 {% block crumbs %}<span class="crumbs__current">Connexions</span>{% endblock %}
 
 {% block header_actions %}
-    {% if github_oauth %}<a class="button" href="{{ path('github_repositories') }}">Dépôts GitHub</a>{% endif %}
-    <a class="button button--primary" href="{{ path('connector_new') }}">Nouveau connecteur</a>
+    {% if github_oauth %}<a class="button" href="{{ path('github_repositories') }}"><twig:ux:icon name="simple-icons:github" />Dépôts GitHub</a>{% endif %}
+    <a class="button button--primary" href="{{ path('connector_new') }}"><twig:ux:icon name="lucide:plus" />Nouveau connecteur</a>
 {% endblock %}
 
 {% block body %}
     <div class="view-head">
-        <h1>Connecteurs</h1>
+        <h1><twig:ux:icon name="lucide:plug" />Connecteurs</h1>
         <span class="view-head__meta">{{ connectors|length }}</span>
     </div>
 
     {% if connectors is empty %}
-        <p class="block__empty">Aucun connecteur. Un connecteur lit l'historique d'un dépôt GitHub ou GitLab (commits, pull et merge requests, issues), ou se branche sur un serveur MCP externe (mem0, DeepWiki...) et importe ses ressources en documents ou en mémoires.</p>
+        <twig:EmptyState title="Aucun connecteur" text="Un connecteur lit l'historique d'un dépôt GitHub ou GitLab (commits, pull et merge requests, issues), ou se branche sur un serveur MCP externe (mem0, DeepWiki...) et importe ses ressources en documents ou en mémoires.">
+            <twig:block name="icon"><twig:ux:icon name="lucide:plug" /></twig:block>
+            <twig:block name="actions">
+                <a class="button button--primary" href="{{ path('connector_new') }}"><twig:ux:icon name="lucide:plus" />Nouveau connecteur</a>
+                {% if github_oauth %}<a class="button" href="{{ path('github_repositories') }}"><twig:ux:icon name="simple-icons:github" />Brancher des dépôts GitHub</a>{% endif %}
+            </twig:block>
+        </twig:EmptyState>
     {% else %}
         <ul class="list">
             {% for connector in connectors %}
@@ -34,15 +40,20 @@
     <section class="block" aria-labelledby="presets-title">
         <div class="block__head"><h2 id="presets-title">Démarrer avec un fournisseur</h2></div>
         <ul class="presets">
+            {% set preset_icons = {
+                deepwiki: 'lucide:book-open', context7: 'lucide:library', mem0: 'lucide:brain', linear: 'lucide:kanban',
+                'github-api': 'simple-icons:github', 'gitlab-api': 'simple-icons:gitlab', github: 'simple-icons:github',
+            } %}
             {% for key, preset in presets %}
                 <li class="preset">
                     <div class="preset__head">
+                        {{ ux_icon(preset_icons[key] ?? 'lucide:plug') }}
                         <span class="preset__name">{{ preset.label }}</span>
                         {% if not preset.checked %}<span class="tag tag--demo" title="Nom de l'outil non vérifié sans accès">à vérifier</span>{% endif %}
                     </div>
                     <p class="preset__text">{{ preset.description }}</p>
                     <p class="row__sub">Authentification : {{ preset.auth }}</p>
-                    <a class="button" href="{{ path('connector_new', {preset: key}) }}">Configurer</a>
+                    <a class="button" href="{{ path('connector_new', {preset: key}) }}"><twig:ux:icon name="lucide:settings" />Configurer</a>
                 </li>
             {% endfor %}
         </ul>

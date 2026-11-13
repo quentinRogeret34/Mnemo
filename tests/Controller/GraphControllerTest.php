@@ -39,6 +39,18 @@ final class GraphControllerTest extends WebTestCase
         );
     }
 
+    public function testEmptyWorkspaceOffersToCreateAProject(): void
+    {
+        self::getContainer()->get(EntityManagerInterface::class)->getConnection()->executeStatement('TRUNCATE project RESTART IDENTITY CASCADE');
+
+        $crawler = $this->client->request('GET', '/');
+
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('.content .empty-state', 'Aucun projet');
+        self::assertCount(1, $crawler->filter('.content .empty-state button[commandfor="project-new"]'));
+        self::assertCount(0, $crawler->filter('.content pre')->reduce(static fn ($pre): bool => 0 === $pre->ancestors()->filter('details')->count()));
+    }
+
     public function testProjectPageSearchesFilesBySymbolName(): void
     {
         $crawler = $this->client->request('GET', '/projects/demo/code?query=planmerges');

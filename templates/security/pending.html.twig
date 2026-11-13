@@ -3,10 +3,8 @@
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
+        {{ include('_appearance_head.html.twig') }}
         <title>Compte en attente · Graphe projet</title>
-        <script>
-            try { document.documentElement.dataset.theme = localStorage.getItem('theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'); } catch (error) { document.documentElement.dataset.theme = 'light'; }
-        </script>
         {{ importmap('app') }}
     </head>
     <body>

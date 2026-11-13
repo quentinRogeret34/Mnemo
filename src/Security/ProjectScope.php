@@ -77,11 +77,14 @@ final class ProjectScope
     }
 
     /**
-     * @return list<Project> the projects the caller may see, by name
+     * @return list<Project> the projects the caller may see, by name: those in use, or the archived ones
      */
-    public function projects(): array
+    public function projects(bool $archived = false): array
     {
-        return array_values(array_filter($this->entityManager->getRepository(Project::class)->findBy([], ['name' => 'ASC']), $this->allows(...)));
+        return array_values(array_filter(
+            $this->entityManager->getRepository(Project::class)->findBy([], ['name' => 'ASC']),
+            fn (Project $project): bool => $archived === $project->isArchived() && $this->allows($project),
+        ));
     }
 
     /**

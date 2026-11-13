@@ -1,0 +1,8 @@
+{% props title, text = null %}
+<div{{ attributes.defaults({class: 'empty-state'}) }}>
+    <span class="empty-state__icon">{% block icon %}<twig:ux:icon name="lucide:inbox" />{% endblock %}</span>
+    <p class="empty-state__title">{{ title }}</p>
+    {% if text %}<p class="empty-state__text">{{ text }}</p>{% endif %}
+    {% block content %}{% endblock %}
+    <div class="empty-state__actions">{% block actions %}{% endblock %}</div>
+</div>

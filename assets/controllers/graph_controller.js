@@ -61,7 +61,7 @@ export default class extends Controller {
                 },
                 {
                     selector: 'node.center',
-                    style: { 'background-color': color('--color-accent'), width: 16, height: 16, label: 'data(label)', 'font-size': 10, 'font-weight': 600, 'z-index': 10 },
+                    style: { 'background-color': color('--color-accent'), 'border-width': 2, 'border-color': color('--color-graphite-ink'), width: 16, height: 16, label: 'data(label)', 'font-size': 10, 'font-weight': 600, 'z-index': 10 },
                 },
                 {
                     selector: 'node:active, node.hover',

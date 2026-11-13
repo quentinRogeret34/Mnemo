@@ -16,7 +16,7 @@
     {% set type_labels = {commit: 'Commits', ticket: 'PR, MR et issues', document: 'Documents', memory: 'Mémoires', business_rule: 'Règles métier'} %}
     {% set kinds = {commit: 'commit', document: 'document', memory: 'mémoire', business_rule: 'règle'} %}
     <div class="view-head">
-        <h1>Activité</h1>
+        <h1><twig:ux:icon name="lucide:activity" />Activité</h1>
         <span class="view-head__meta">{{ project ? project.name : 'Tous les projets' }}</span>
     </div>
     <p class="page__lede">Ce qui est entré dans le graphe : le travail récupéré par les connecteurs, les documents déposés et les mémoires ajoutées.</p>
@@ -55,7 +55,9 @@
                     {% endfor %}
                 </ul>
             {% else %}
-                <p class="block__empty">Rien n'est entré dans le graphe sur la période.</p>
+                <twig:EmptyState title="Rien n'est entré dans le graphe sur la période" text="Les commits et tickets arrivent avec les connecteurs, les documents et les mémoires dès qu'ils sont ajoutés.">
+                    <twig:block name="icon"><twig:ux:icon name="lucide:activity" /></twig:block>
+                </twig:EmptyState>
             {% endfor %}
         </section>
 

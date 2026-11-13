@@ -1,0 +1,20 @@
+{% if this.allowed %}
+    {% set view = this.view %}
+    <dialog{{ attributes.defaults({class: 'dialog dialog--form', id: 'project-new', closedby: 'any', 'aria-labelledby': 'project-new-title', 'data-controller': 'dialog'}) }} {{ form ? 'open' }}>
+        <h2 class="dialog__title" id="project-new-title">Nouveau projet</h2>
+        {{ form_start(view, {attr: {class: 'form-stack', novalidate: 'novalidate'}}) }}
+            <fieldset>
+                {{ form_errors(view) }}
+                {{ form_row(view.name) }}
+                {{ form_row(view.slug) }}
+                {{ form_row(view.repository) }}
+                {{ form_row(view.repositoryPath) }}
+                {% if view.groups is defined %}{{ include('project/_groups.html.twig', {field: view.groups}) }}{% endif %}
+            </fieldset>
+            <div class="dialog__actions">
+                <button class="button" type="button" commandfor="project-new" command="close">Annuler</button>
+                <button class="button button--primary" type="submit"><twig:ux:icon name="lucide:plus" />Créer le projet</button>
+            </div>
+        {{ form_end(view) }}
+    </dialog>
+{% endif %}

@@ -23,7 +23,51 @@ final class ProjectResolver
     ) {
     }
 
+    /**
+     * An archived project is not found: agent clients stop reading and feeding it.
+     */
     public function find(string $cwd, string $slug = '', string $repository = ''): ?Project
+    {
+        $project = $this->locate($cwd, $slug, $repository);
+
+        return true === $project?->isArchived() ? null : $project;
+    }
+
+    /**
+     * Saves a new project in the groups of the caller, who reaches it at once.
+     */
+    public function register(Project $project): void
+    {
+        $this->entityManager->persist($project);
+        foreach ($this->projectScope->viewer()?->getGroups() ?? [] as $group) {
+            $group->getProjects()->add($project);
+        }
+        $this->entityManager->flush();
+    }
+
+    public function mayCreate(): bool
+    {
+        if (false === $this->projectScope->key()?->getProjects()->isEmpty()) {
+            return false;
+        }
+        $viewer = $this->projectScope->viewer();
+
+        return null === $viewer || $viewer->isSuperAdmin() || !$viewer->getGroups()->isEmpty();
+    }
+
+    public function slug(string $name): string
+    {
+        return $this->slugger->slug($name)->lower()->truncate(100)->toString();
+    }
+
+    public function normalize(string $repository): string
+    {
+        $repository = strtolower(trim($repository, " \t\n\r/"));
+
+        return \strlen($repository) > 255 ? '' : (str_ends_with($repository, '.git') ? substr($repository, 0, -4) : $repository);
+    }
+
+    private function locate(string $cwd, string $slug, string $repository): ?Project
     {
         $projects = $this->entityManager->getRepository(Project::class);
         if ('' !== $slug) {
@@ -52,8 +96,8 @@ final class ProjectResolver
     }
 
     /**
-     * An unknown project is created, named after the slug sent, else the repository, else the directory. It joins the
-     * groups of the caller, who reaches it at once. A key limited to some projects creates nothing.
+     * An unknown project is created, named after the slug sent, else the repository, else the directory.
+     * A key limited to some projects creates nothing, and an archived project is neither returned nor created again.
      *
      * @return array{0: ?Project, 1: bool} the project, and whether this call created it
      */
@@ -62,7 +106,10 @@ final class ProjectResolver
         $repository = $this->normalize($repository);
         $projects = $this->entityManager->getRepository(Project::class);
         $known = '' !== $repository && null !== $projects->findOneBy(['repository' => $repository]);
-        if (null !== $project = $this->find($cwd, $slug, $repository)) {
+        if (null !== $project = $this->locate($cwd, $slug, $repository)) {
+            if ($project->isArchived()) {
+                return [null, false];
+            }
             // Only a project named by its slug takes the repository: one found by its path may be a part of a monorepo.
             if ('' !== $slug && '' !== $repository && !$known && null === $project->getRepository()) {
                 $project->setRepository($repository);
@@ -78,8 +125,8 @@ final class ProjectResolver
         $lock = $this->lockFactory->createLock('project-create');
         $lock->acquire(true);
         try {
-            if (null !== $project = $this->find($cwd, $slug, $repository)) {
-                return [$project, false];
+            if (null !== $project = $this->locate($cwd, $slug, $repository)) {
+                return [$project->isArchived() ? null : $project, false];
             }
             foreach ($this->candidates($cwd, $slug, $repository) as $candidate) {
                 if (null !== $projects->findOneBy(['slug' => $candidate])) {
@@ -87,11 +134,7 @@ final class ProjectResolver
                 }
                 $project = new Project($candidate, $candidate, mb_substr($cwd, 0, 1024));
                 $project->setRepository('' === $repository ? null : $repository);
-                $this->entityManager->persist($project);
-                foreach ($this->projectScope->viewer()?->getGroups() ?? [] as $group) {
-                    $group->getProjects()->add($project);
-                }
-                $this->entityManager->flush();
+                $this->register($project);
 
                 return [$project, true];
             }
@@ -107,23 +150,13 @@ final class ProjectResolver
         return null !== $project && $this->projectScope->allows($project) ? $project : null;
     }
 
-    private function mayCreate(): bool
-    {
-        if (false === $this->projectScope->key()?->getProjects()->isEmpty()) {
-            return false;
-        }
-        $viewer = $this->projectScope->viewer();
-
-        return null === $viewer || $viewer->isSuperAdmin() || !$viewer->getGroups()->isEmpty();
-    }
-
     /**
      * @return list<string> slugs to try, in order
      */
     private function candidates(string $cwd, string $slug, string $repository): array
     {
         if ('' !== $slug) {
-            return $slug === $this->slug($slug) ? [$slug] : [];
+            return $slug === $this->slug($slug) && 'new' !== $slug ? [$slug] : [];
         }
         if ('' !== $repository) {
             $segments = explode('/', $repository);
@@ -132,18 +165,6 @@ final class ProjectResolver
             $names = [$this->slug(basename($cwd))];
         }
 
-        return array_values(array_unique(array_filter($names, static fn (string $name): bool => '' !== $name)));
-    }
-
-    private function slug(string $name): string
-    {
-        return $this->slugger->slug($name)->lower()->truncate(100)->toString();
-    }
-
-    private function normalize(string $repository): string
-    {
-        $repository = strtolower(trim($repository, " \t\n\r/"));
-
-        return \strlen($repository) > 255 ? '' : (str_ends_with($repository, '.git') ? substr($repository, 0, -4) : $repository);
+        return array_values(array_unique(array_filter($names, static fn (string $name): bool => '' !== $name && 'new' !== $name)));
     }
 }

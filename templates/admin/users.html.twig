@@ -7,7 +7,7 @@
 {% block body %}
     {% set pending = users|filter(user => user.status.value == 'pending')|length %}
     <div class="view-head">
-        <h1>Utilisateurs</h1>
+        <h1><twig:ux:icon name="lucide:users" />Utilisateurs</h1>
         <span class="view-head__meta">{{ users|length }}{% if pending > 0 %} · {{ pending }} en attente{% endif %}</span>
     </div>
     <p class="page__lede">Un compte se crée à la première connexion par GitHub, GitLab ou Google, puis attend ici d'être activé. Un utilisateur ne voit que les projets de ses groupes ; un super admin voit tout et gère cette page.</p>
@@ -51,7 +51,7 @@
             <input type="hidden" name="_token" value="{{ csrf_token('admin-group-create') }}">
             <label class="visually-hidden" for="group-name">Nom du groupe</label>
             <input class="input" id="group-name" type="text" name="name" maxlength="100" placeholder="Équipe back" required>
-            <button class="button" type="submit">Créer le groupe</button>
+            <button class="button" type="submit"><twig:ux:icon name="lucide:plus" />Créer le groupe</button>
         </form>
         <ul class="admin-list">
             {% for group in groups %}
@@ -71,7 +71,7 @@
                             {% endfor %}
                         </fieldset>
                         <button class="button" type="submit">Enregistrer</button>
-                        <button class="button button--danger" type="submit" name="delete" value="1">Supprimer</button>
+                        <button class="button button--danger" type="submit" name="delete" value="1" data-confirm="Supprimer le groupe {{ group.name }} ?" data-confirm-label="Supprimer"><twig:ux:icon name="lucide:trash-2" />Supprimer</button>
                     </form>
                 </li>
             {% endfor %}

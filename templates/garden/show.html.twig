@@ -17,7 +17,7 @@
     } %}
     {% set total = findings|reduce((sum, finding) => sum + finding.count, 0) %}
     <div class="view-head">
-        <h1>Jardinage</h1>
+        <h1><twig:ux:icon name="lucide:sprout" />Jardinage</h1>
         <span class="view-head__meta">{{ total }} {{ total > 1 ? 'éléments à entretenir' : 'élément à entretenir' }}</span>
     </div>
     <p class="page__lede">Le jardinage est l'entretien de la connaissance du projet : repérer ce qui n'est plus relié, plus vérifié ou jamais relu, avant que les agents ne s'appuient dessus. Cette page ne modifie rien.</p>

@@ -22,7 +22,7 @@ final class SyncDueConnectorsHandler
     {
         $now = new \DateTimeImmutable();
         foreach ($this->entityManager->getRepository(Connector::class)->findAll() as $connector) {
-            if ($connector->getSchedule()->isDue($connector->getLastRunAt(), $now)) {
+            if (true !== $connector->getProject()?->isArchived() && $connector->getSchedule()->isDue($connector->getLastRunAt(), $now)) {
                 $this->bus->dispatch(new SyncConnector($connector->getId()));
             }
         }

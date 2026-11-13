@@ -18,7 +18,7 @@
     {% set search_labels = {memory: 'Mémoires', document: 'Documents', business_rule: 'Règles métier', code_file: 'Code'} %}
 
     <div class="view-head">
-        <h1>Tableau de bord</h1>
+        <h1><twig:ux:icon name="lucide:layout-dashboard" />Tableau de bord</h1>
         <span class="view-head__meta">{{ project ? project.name : 'Tous les projets' }}</span>
     </div>
 
@@ -28,7 +28,7 @@
                 <a href="{{ path('dashboard', scope|merge({period: item})) }}" {% if item == period %}aria-current="page"{% endif %}>{{ period_labels[item] }}</a>
             {% endfor %}
         </nav>
-        <a class="button" href="{{ path('dashboard', scope|merge({period: period})) }}">Actualiser</a>
+        <a class="button" href="{{ path('dashboard', scope|merge({period: period})) }}"><twig:ux:icon name="lucide:refresh-cw" />Actualiser</a>
     </div>
 
     <section class="tiles" aria-label="Chiffres clés">

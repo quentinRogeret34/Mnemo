@@ -3,14 +3,12 @@
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
+        {{ include('_appearance_head.html.twig') }}
         <title>{% block title %}Projets{% endblock %} · Graphe projet</title>
         <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22><rect x=%223%22 y=%223%22 width=%2210%22 height=%2210%22 rx=%222.5%22 fill=%22%236250d6%22/></svg>">
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap">
-        <script>
-            try { document.documentElement.dataset.theme = localStorage.getItem('theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'); } catch (error) { document.documentElement.dataset.theme = 'light'; }
-        </script>
         {% block stylesheets %}{% endblock %}
 
         {% block javascripts %}
@@ -24,7 +22,7 @@
         <script src="https://cdn.jsdelivr.net/npm/frankenphp-hot-reload/+esm" type="module"></script>
         {% endif %}
     </head>
-    <body data-controller="search-hotkey" data-search-hotkey-url-value="{{ (project ?? null) ? path('project_code', {slug: project.slug}) : '' }}" data-action="keydown@window->search-hotkey#handle">
+    <body data-controller="search-hotkey busy" data-search-hotkey-url-value="{{ (project ?? null) ? path('project_code', {slug: project.slug}) : '' }}" data-action="keydown@window->search-hotkey#handle submit@window->busy#mark pageshow@window->busy#reset">
         <div class="app">
             <twig:Sidebar :project="project ?? null" />
             <div class="main">
@@ -38,23 +36,22 @@
                             proposal_index: 'a-valider', garden_show: 'jardinage', project_code: 'code', file_show: 'code',
                             connector_index: 'connexions', connector_show: 'connexions', connector_new: 'connexions', connector_edit: 'connexions', api_key_index: 'cles-api', admin_users: 'utilisateurs', activity: 'activite',
                         }[app.request.attributes.get('_route')] ?? null %}
+                        <button class="button button--ghost palette-trigger" type="button" data-action="search-hotkey#palette" aria-keyshortcuts="Meta+K Control+K"><twig:ux:icon name="lucide:search" />Rechercher <kbd class="kbd" aria-hidden="true">⌘K</kbd></button>
                         {% if help %}<a class="button button--ghost" href="{{ path('wiki') }}#{{ help }}" title="Comprendre cette page">Aide</a>{% endif %}
-                        <button class="button button--ghost theme-toggle" type="button" data-controller="theme" data-action="theme#toggle" aria-label="Changer de thème, clair ou sombre">
-                            <svg class="theme-toggle__moon" viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M13.5 9.5A5.75 5.75 0 016.5 2.5a5.75 5.75 0 107 7z"/></svg>
-                            <svg class="theme-toggle__sun" viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><circle cx="8" cy="8" r="2.75"/><path d="M8 1.5v1.75M8 12.75v1.75M1.5 8h1.75M12.75 8h1.75M3.4 3.4l1.25 1.25M11.35 11.35l1.25 1.25M3.4 12.6l1.25-1.25M11.35 4.65l1.25-1.25"/></svg>
+                        <button class="button button--ghost theme-toggle" type="button" data-controller="theme" data-action="theme#toggle">
+                            <span class="theme-toggle__option theme-toggle__option--dark"><twig:ux:icon name="lucide:moon" /><span class="visually-hidden">Passer au thème sombre</span></span>
+                            <span class="theme-toggle__option theme-toggle__option--light"><twig:ux:icon name="lucide:sun" /><span class="visually-hidden">Passer au thème clair</span></span>
                         </button>
                     </div>
                 </header>
                 <main class="content">
-                    {% for message in app.flashes('success') %}
-                        <p class="flash" role="status">{{ message }}</p>
-                    {% endfor %}
-                    {% for message in app.flashes('error') %}
-                        <p class="flash flash--error" role="alert">{{ message }}</p>
-                    {% endfor %}
                     {% block body %}{% endblock %}
                 </main>
             </div>
         </div>
+        {{ include('_toasts.html.twig') }}
+        {{ include('_dialogs.html.twig') }}
+        <twig:ProjectDialog :form="project_form ?? null" />
+        <twig:Palette :project="project ?? null" />
     </body>
 </html>

@@ -28,4 +28,6 @@ return [
     '@symfony/stimulus-bundle' => ['path' => './vendor/symfony/stimulus-bundle/assets/dist/loader.js'],
     '@symfony/ux-live-component' => ['path' => './vendor/symfony/ux-live-component/assets/dist/live_controller.js'],
     'cytoscape' => ['version' => '3.34.4'],
+    'invokers-polyfill' => ['version' => '1.0.4'],
+    '@oddbird/popover-polyfill' => ['version' => '0.7.3'],
 ];

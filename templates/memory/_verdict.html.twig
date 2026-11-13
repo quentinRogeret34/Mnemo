@@ -1,2 +1,3 @@
 {% set labels = {verified: 'Vérifiée', refuted: 'Réfutée', conflict: 'Sources en conflit', unverified: 'Non vérifiable'} %}
-{% if verdict %}<span class="verdict verdict--{{ verdict }}" title="Vérification contre le graphe">{{ labels[verdict] ?? verdict }}</span>{% endif %}
+{% set icons = {verified: 'lucide:circle-check', refuted: 'lucide:circle-x', conflict: 'lucide:triangle-alert'} %}
+{% if verdict %}<span class="verdict verdict--{{ verdict }}" title="Vérification contre le graphe">{{ ux_icon(icons[verdict] ?? 'lucide:circle-dashed') }}{{ labels[verdict] ?? verdict }}</span>{% endif %}

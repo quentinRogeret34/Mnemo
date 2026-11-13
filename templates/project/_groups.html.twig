@@ -1,0 +1,13 @@
+{% if field|length > 0 %}
+    <div role="group" aria-labelledby="{{ field.vars.id }}-label">
+        <span class="form-stack__label" id="{{ field.vars.id }}-label">{{ field.vars.label }}</span>
+        <div class="choices">
+            {% for choice in field %}
+                <label class="key-form__check">{{ form_widget(choice) }}{{ choice.vars.label }}</label>
+            {% endfor %}
+        </div>
+        <p class="help-text">Leurs membres voient le projet. Un super admin voit tous les projets.</p>
+    </div>
+{% else %}
+    {% do field.setRendered() %}
+{% endif %}

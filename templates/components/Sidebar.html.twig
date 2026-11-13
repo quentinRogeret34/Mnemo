@@ -3,61 +3,73 @@
 <aside{{ attributes.defaults({class: 'sidebar'}) }}>
     <a class="workspace" href="{{ path('dashboard') }}"><span class="workspace__mark" aria-hidden="true">G</span>Graphe projet</a>
 
-    <details class="menu menu--switcher" data-controller="menu" data-action="click@window->menu#closeOutside keydown.esc@window->menu#close">
-        <summary class="menu__trigger" aria-label="Changer de projet">
-            <svg class="nav-item__icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M2 4.5h4.5l1.5 1.5H14v6.5H2z"/></svg>
+    {% set projects = this.projects %}
+    <div class="menu menu--switcher" data-controller="menu">
+        <button class="menu__trigger" type="button" aria-label="Changer de projet" aria-expanded="false" commandfor="project-menu" command="toggle-popover" data-menu-target="trigger">
+            <twig:ux:icon name="lucide:folder" class="icon nav-item__icon" />
             <span class="nav-item__label">{{ project ? project.name : 'Tous les projets' }}</span>
-            <svg class="menu__chevron" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M4.5 6.5L8 10l3.5-3.5"/></svg>
-        </summary>
-        <div class="menu__panel">
+            <twig:ux:icon name="lucide:chevron-down" class="icon menu__chevron" />
+        </button>
+        <div class="menu__panel" id="project-menu" popover data-menu-target="panel" data-action="beforetoggle->menu#place toggle->menu#sync">
+            {% if projects|length > 6 %}
+                <input class="input menu__filter" type="search" placeholder="Filtrer les projets" aria-label="Filtrer les projets" autocomplete="off" autofocus data-menu-target="filter" data-action="input->menu#filter">
+            {% endif %}
             <a class="menu__item" href="{{ path('project_index') }}" {% if not project %}aria-current="true"{% endif %}>Tous les projets</a>
-            {% for item in this.projects %}
-                <a class="menu__item" href="{{ path('project_show', {slug: item.slug}) }}" {% if project and project.id == item.id %}aria-current="true"{% endif %}>
+            {% for item in projects %}
+                <a class="menu__item" href="{{ path('project_show', {slug: item.slug}) }}" {% if project and project.id == item.id %}aria-current="true"{% endif %} data-menu-target="item">
                     <span class="project-dot" aria-hidden="true"></span>{{ item.name }}
                 </a>
             {% else %}
                 <span class="menu__note">Aucun projet</span>
             {% endfor %}
+            <span class="menu__note" data-menu-target="empty" hidden>Aucun projet ne correspond</span>
+            {% if this.mayCreate or project %}<hr class="menu__rule">{% endif %}
+            {% if this.mayCreate %}
+                <button class="menu__item" type="button" commandfor="project-new" command="show-modal"><twig:ux:icon name="lucide:plus" />Nouveau projet</button>
+            {% endif %}
+            {% if project %}
+                <a class="menu__item" href="{{ path('project_settings', {slug: project.slug}) }}"><twig:ux:icon name="lucide:settings" />Réglages du projet</a>
+            {% endif %}
         </div>
-    </details>
+    </div>
 
     <nav class="nav-group" aria-label="Espace">
         <a class="nav-item" href="{{ path('dashboard', scope) }}" {% if route == 'dashboard' %}aria-current="page"{% endif %}>
-            <svg class="nav-item__icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M2.5 13.5v-4M6.25 13.5v-8M10 13.5v-5.5M13.5 13.5v-11"/></svg>
+            <twig:ux:icon name="lucide:layout-dashboard" class="icon nav-item__icon" />
             <span class="nav-item__label">Tableau de bord</span>
         </a>
         <a class="nav-item" href="{{ path('activity', scope) }}" {% if route == 'activity' %}aria-current="page"{% endif %}>
-            <svg class="nav-item__icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M1.5 8.5h3l2-5 3 9 2-4h3"/></svg>
+            <twig:ux:icon name="lucide:activity" class="icon nav-item__icon" />
             <span class="nav-item__label">Activité</span>
         </a>
         <a class="nav-item" href="{{ path('project_index') }}" {% if route == 'project_index' %}aria-current="page"{% endif %}>
-            <svg class="nav-item__icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M2.5 2.5h4.5v4.5H2.5zM9 2.5h4.5v4.5H9zM2.5 9h4.5v4.5H2.5zM9 9h4.5v4.5H9z"/></svg>
+            <twig:ux:icon name="lucide:layout-grid" class="icon nav-item__icon" />
             <span class="nav-item__label">Projets</span>
         </a>
         {% if not this.scoped %}
         <a class="nav-item" href="{{ path('document_index') }}" {% if route in ['document_index', 'document_show'] %}aria-current="page"{% endif %}>
-            <svg class="nav-item__icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M4 1.75h5.25L12.5 5v9.25H4z"/><path d="M9 1.75V5.25h3.5"/></svg>
+            <twig:ux:icon name="lucide:file" class="icon nav-item__icon" />
             <span class="nav-item__label">Tous les documents</span>
         </a>
         {% endif %}
         <a class="nav-item" href="{{ path('memory_index') }}" {% if route in ['memory_index', 'memory_show'] and not app.request.query.get('project') %}aria-current="page"{% endif %}>
-            <svg class="nav-item__icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M8 2.25c-2.6 0-4.5 1.8-4.5 4.1 0 1.4.7 2.5 1.8 3.2v2.2h5.4V9.55c1.1-.7 1.8-1.8 1.8-3.2 0-2.3-1.9-4.1-4.5-4.1zM6.25 14h3.5"/></svg>
+            <twig:ux:icon name="lucide:lightbulb" class="icon nav-item__icon" />
             <span class="nav-item__label">{{ this.scoped ? 'Mémoires' : 'Toutes les mémoires' }}</span>
             {% if not this.scoped %}<span class="nav-item__count">{{ this.memoryCount }}</span>{% endif %}
         </a>
         <a class="nav-item" href="{{ path('memory_graph', scope) }}" {% if route == 'memory_graph' %}aria-current="page"{% endif %}>
-            <svg class="nav-item__icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><circle cx="8" cy="8" r="2"/><circle cx="3" cy="4" r="1.25"/><circle cx="13" cy="4.5" r="1.25"/><circle cx="12" cy="12.5" r="1.25"/><path d="M6.4 6.8L4 4.8M9.8 7.1l2.1-1.9M9.3 9.5l1.9 2.1"/></svg>
+            <twig:ux:icon name="lucide:network" class="icon nav-item__icon" />
             <span class="nav-item__label">Graphe des mémoires</span>
         </a>
         {% set pending = this.scoped ? 0 : this.pendingProposals %}
         <a class="nav-item" href="{{ path('proposal_index') }}" {% if route == 'proposal_index' %}aria-current="page"{% endif %}>
-            <svg class="nav-item__icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M2.5 8.5l3.25 3.25L13.5 4"/></svg>
+            <twig:ux:icon name="lucide:check" class="icon nav-item__icon" />
             <span class="nav-item__label">À valider</span>
             {% if pending > 0 %}<span class="nav-item__count nav-item__count--alert">{{ pending }}</span>{% endif %}
         </a>
         {% if not this.scoped %}
         <a class="nav-item" href="{{ path('connector_index') }}" {% if route starts with 'connector_' %}aria-current="page"{% endif %}>
-            <svg class="nav-item__icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M6 10l4-4M5 7.5L3.5 9a2.5 2.5 0 003.5 3.5L8.5 11M11 8.5L12.5 7A2.5 2.5 0 009 3.5L7.5 5"/></svg>
+            <twig:ux:icon name="lucide:plug" class="icon nav-item__icon" />
             <span class="nav-item__label">Connexions</span>
         </a>
         {% endif %}
@@ -66,14 +78,14 @@
     {% if project %}
         {% set counts = this.counts %}
         <nav class="nav-group" aria-label="{{ project.name }}">
-            <span class="nav-group__label">{{ project.name }}</span>
+            <span class="nav-group__label">{{ project.name }}{% if project.archived %} <span class="tag tag--demo">Archivé</span>{% endif %}</span>
             <a class="nav-item" href="{{ path('project_show', {slug: project.slug}) }}" {% if route == 'project_show' %}aria-current="page"{% endif %}>
-                <svg class="nav-item__icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M4 1.75h5.25L12.5 5v9.25H4z"/><path d="M9 1.75V5.25h3.5M6 8.5h4.5M6 11h4.5"/></svg>
+                <twig:ux:icon name="lucide:file-text" class="icon nav-item__icon" />
                 <span class="nav-item__label">Documents</span>
                 <span class="nav-item__count">{{ counts.documents }}</span>
             </a>
             <a class="nav-item" href="{{ path('rule_index', {slug: project.slug}) }}" {% if route in ['rule_index', 'rule_show'] %}aria-current="page"{% endif %}>
-                <svg class="nav-item__icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M3 2.5h10v11H3z"/><path d="M5.5 6l1.25 1.25L9.5 4.5M5.5 10.5h5"/></svg>
+                <twig:ux:icon name="lucide:clipboard-check" class="icon nav-item__icon" />
                 <span class="nav-item__label">Règles métier</span>
                 {% if counts.rules_to_review > 0 %}
                     <span class="nav-item__count nav-item__count--alert" title="{{ counts.rules_to_review }} à valider">{{ counts.rules_to_review }} à valider</span>
@@ -82,43 +94,51 @@
                 {% endif %}
             </a>
             <a class="nav-item" href="{{ path('memory_index', {project: project.slug}) }}" {% if route == 'memory_index' and app.request.query.get('project') == project.slug %}aria-current="page"{% endif %}>
-                <svg class="nav-item__icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M8 2.25c-2.6 0-4.5 1.8-4.5 4.1 0 1.4.7 2.5 1.8 3.2v2.2h5.4V9.55c1.1-.7 1.8-1.8 1.8-3.2 0-2.3-1.9-4.1-4.5-4.1zM6.25 14h3.5"/></svg>
+                <twig:ux:icon name="lucide:lightbulb" class="icon nav-item__icon" />
                 <span class="nav-item__label">Mémoires</span>
                 <span class="nav-item__count">{{ counts.memories }}</span>
             </a>
             <a class="nav-item" href="{{ path('project_code', {slug: project.slug}) }}" {% if route in ['project_code', 'file_show'] %}aria-current="page"{% endif %}>
-                <svg class="nav-item__icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M5.5 4.5L2 8l3.5 3.5M10.5 4.5L14 8l-3.5 3.5"/></svg>
+                <twig:ux:icon name="lucide:code" class="icon nav-item__icon" />
                 <span class="nav-item__label">Code</span>
                 <span class="nav-item__count">{{ counts.files }}</span>
             </a>
             <a class="nav-item" href="{{ path('garden_show', {slug: project.slug}) }}" {% if route == 'garden_show' %}aria-current="page"{% endif %}>
-                <svg class="nav-item__icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M8 14V7.5M8 7.5C8 4.75 10 3 13 3c0 3-2 4.5-5 4.5zM8 9.5C8 7.25 6.25 5.75 3.5 5.75c0 2.5 1.75 3.75 4.5 3.75z"/></svg>
+                <twig:ux:icon name="lucide:sprout" class="icon nav-item__icon" />
                 <span class="nav-item__label">Jardinage</span>
+            </a>
+            <a class="nav-item" href="{{ path('project_settings', {slug: project.slug}) }}" {% if route == 'project_settings' %}aria-current="page"{% endif %}>
+                <twig:ux:icon name="lucide:settings" class="icon nav-item__icon" />
+                <span class="nav-item__label">Réglages</span>
             </a>
         </nav>
     {% endif %}
 
     <nav class="nav-group nav-group--foot" aria-label="Aide">
         <a class="nav-item" href="{{ path('wiki') }}" {% if route == 'wiki' %}aria-current="page"{% endif %}>
-            <svg class="nav-item__icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M2.5 3h4a1.5 1.5 0 011.5 1.5V13a1.25 1.25 0 00-1.25-1.25H2.5zM13.5 3h-4A1.5 1.5 0 008 4.5V13a1.25 1.25 0 011.25-1.25h4.25z"/></svg>
+            <twig:ux:icon name="lucide:book-open" class="icon nav-item__icon" />
             <span class="nav-item__label">Wiki</span>
         </a>
         <a class="nav-item" href="{{ path('api_key_index') }}" {% if route == 'api_key_index' %}aria-current="page"{% endif %}>
-            <svg class="nav-item__icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><circle cx="5.25" cy="10.75" r="2.75"/><path d="M7.25 8.75L13 3M10.5 5.5l2 2"/></svg>
+            <twig:ux:icon name="lucide:key-round" class="icon nav-item__icon" />
             <span class="nav-item__label">Clés d'API</span>
+        </a>
+        <a class="nav-item" href="{{ path('appearance') }}" {% if route == 'appearance' %}aria-current="page"{% endif %}>
+            <twig:ux:icon name="lucide:palette" class="icon nav-item__icon" />
+            <span class="nav-item__label">Apparence</span>
         </a>
         {% if is_granted('ROLE_SUPER_ADMIN') %}
             <a class="nav-item" href="{{ path('admin_users') }}" {% if route == 'admin_users' %}aria-current="page"{% endif %}>
-                <svg class="nav-item__icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><circle cx="6" cy="5.5" r="2.25"/><path d="M2 13c0-2.2 1.8-3.75 4-3.75S10 10.8 10 13M10.5 3.6a2.25 2.25 0 010 3.8M12 9.6c1.3.5 2 1.7 2 3.4"/></svg>
+                <twig:ux:icon name="lucide:users" class="icon nav-item__icon" />
                 <span class="nav-item__label">Utilisateurs</span>
             </a>
         {% endif %}
         {% if is_granted('IS_AUTHENTICATED') %}
             <a class="nav-item" href="{{ path('logout') }}">
-                <svg class="nav-item__icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M6.5 2.5h-4v11h4M10.5 5l3 3-3 3M5.5 8h8"/></svg>
+                <twig:ux:icon name="lucide:log-out" class="icon nav-item__icon" />
                 <span class="nav-item__label">Se déconnecter</span>
             </a>
         {% endif %}
-        {% if project %}<p class="sidebar__hint"><kbd class="kbd">⌘K</kbd> chercher dans le code</p>{% endif %}
+        <p class="sidebar__hint"><kbd class="kbd">⌘K</kbd> commandes{% if project %} · <kbd class="kbd">/</kbd> code{% endif %}</p>
     </nav>
 </aside>

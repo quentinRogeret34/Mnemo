@@ -38,7 +38,7 @@
                         {% set parts = impl.path|split('/') %}
                         <li>
                             <a class="row" href="{{ path('file_show', {slug: project.slug, path: impl.path}) }}">
-                                <svg class="nav-item__icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M5.5 4.5L2 8l3.5 3.5M10.5 4.5L14 8l-3.5 3.5"/></svg>
+                                <twig:ux:icon name="lucide:code" class="icon nav-item__icon" />
                                 <span class="row__title mono"><span>{{ parts|last }}</span><span class="row__sub">{{ parts|slice(0, -1)|join('/') }}</span></span>
                                 <span class="row__meta">
                                     <span>{{ origins[impl.origin] ?? impl.origin }}</span>

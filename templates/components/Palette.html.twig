@@ -1,0 +1,56 @@
+{% set scope = project ? {project: project.slug} : {} %}
+<dialog{{ attributes.defaults({class: 'dialog palette', id: 'palette', closedby: 'any', 'aria-label': 'Palette de commandes'}) }} data-controller="palette" data-palette-url-value="{{ path('palette') }}" data-palette-project-value="{{ project ? project.slug : '' }}" data-action="close->palette#reset">
+    <div class="palette__field">
+        <twig:ux:icon name="lucide:search" />
+        <input class="palette__input" type="text" role="combobox" aria-expanded="true" aria-controls="palette-list" aria-autocomplete="list" aria-label="Chercher une page, un projet, une action{{ project ? ', une mémoire ou un fichier' : ' ou une mémoire' }}" placeholder="Chercher…" autocomplete="off" spellcheck="false" autofocus data-palette-target="input" data-action="input->palette#filter keydown->palette#navigate">
+    </div>
+    <div class="palette__list" id="palette-list" role="listbox" aria-label="Résultats" data-action="click->palette#choose mousemove->palette#hover">
+        <div role="group" aria-label="Actions" class="palette__group" data-palette-target="group">
+            <span class="palette__heading" aria-hidden="true">Actions</span>
+            {% if this.mayCreate %}<a class="palette__option" role="option" href="{{ path('project_new') }}" data-command="project-new" data-palette-target="option"><twig:ux:icon name="lucide:folder-plus" />Nouveau projet</a>{% endif %}
+            <a class="palette__option" role="option" href="{{ path('memory_index', scope) }}" data-palette-target="option"><twig:ux:icon name="lucide:plus" />Nouvelle mémoire</a>
+            {% if this.hasGithub %}<a class="palette__option" role="option" href="{{ path('github_repositories', scope) }}" data-palette-target="option"><twig:ux:icon name="simple-icons:github" />Brancher des dépôts GitHub</a>{% endif %}
+            {% if project %}<a class="palette__option" role="option" href="{{ path('project_settings', {slug: project.slug}) }}" data-palette-target="option"><twig:ux:icon name="lucide:settings" />Réglages du projet {{ project.name }}</a>{% endif %}
+            <a class="palette__option" role="option" href="{{ path('appearance') }}" data-palette-target="option"><twig:ux:icon name="lucide:palette" />Apparence et thème</a>
+        </div>
+        {% if this.projects is not empty %}
+            <div role="group" aria-label="Projets" class="palette__group" data-palette-target="group">
+                <span class="palette__heading" aria-hidden="true">Projets</span>
+                {% for item in this.projects %}
+                    <a class="palette__option" role="option" href="{{ path('project_show', {slug: item.slug}) }}" data-palette-target="option"><twig:ux:icon name="lucide:folder" />{{ item.name }}<span class="palette__hint">{{ item.slug }}</span></a>
+                {% endfor %}
+            </div>
+        {% endif %}
+        <div role="group" aria-label="Pages" class="palette__group" data-palette-target="group">
+            <span class="palette__heading" aria-hidden="true">Pages</span>
+            {% if project %}
+                <a class="palette__option" role="option" href="{{ path('project_show', {slug: project.slug}) }}" data-palette-target="option"><twig:ux:icon name="lucide:file-text" />Documents<span class="palette__hint">{{ project.name }}</span></a>
+                <a class="palette__option" role="option" href="{{ path('rule_index', {slug: project.slug}) }}" data-palette-target="option"><twig:ux:icon name="lucide:clipboard-check" />Règles métier<span class="palette__hint">{{ project.name }}</span></a>
+                <a class="palette__option" role="option" href="{{ path('project_code', {slug: project.slug}) }}" data-palette-target="option"><twig:ux:icon name="lucide:code" />Code<span class="palette__hint">{{ project.name }}</span></a>
+                <a class="palette__option" role="option" href="{{ path('garden_show', {slug: project.slug}) }}" data-palette-target="option"><twig:ux:icon name="lucide:sprout" />Jardinage<span class="palette__hint">{{ project.name }}</span></a>
+            {% endif %}
+            <a class="palette__option" role="option" href="{{ path('dashboard', scope) }}" data-palette-target="option"><twig:ux:icon name="lucide:layout-dashboard" />Tableau de bord</a>
+            <a class="palette__option" role="option" href="{{ path('activity', scope) }}" data-palette-target="option"><twig:ux:icon name="lucide:activity" />Activité</a>
+            <a class="palette__option" role="option" href="{{ path('project_index') }}" data-palette-target="option"><twig:ux:icon name="lucide:layout-grid" />Projets</a>
+            <a class="palette__option" role="option" href="{{ path('memory_index', scope) }}" data-palette-target="option"><twig:ux:icon name="lucide:lightbulb" />Mémoires</a>
+            <a class="palette__option" role="option" href="{{ path('memory_graph', scope) }}" data-palette-target="option"><twig:ux:icon name="lucide:network" />Graphe des mémoires</a>
+            <a class="palette__option" role="option" href="{{ path('proposal_index', scope) }}" data-palette-target="option"><twig:ux:icon name="lucide:check" />À valider</a>
+            {% if not this.scoped %}
+                <a class="palette__option" role="option" href="{{ path('document_index') }}" data-palette-target="option"><twig:ux:icon name="lucide:file" />Tous les documents</a>
+                <a class="palette__option" role="option" href="{{ path('connector_index') }}" data-palette-target="option"><twig:ux:icon name="lucide:plug" />Connexions</a>
+            {% endif %}
+            <a class="palette__option" role="option" href="{{ path('wiki') }}" data-palette-target="option"><twig:ux:icon name="lucide:book-open" />Wiki</a>
+            <a class="palette__option" role="option" href="{{ path('api_key_index') }}" data-palette-target="option"><twig:ux:icon name="lucide:key-round" />Clés d'API</a>
+            {% if is_granted('ROLE_SUPER_ADMIN') %}<a class="palette__option" role="option" href="{{ path('admin_users') }}" data-palette-target="option"><twig:ux:icon name="lucide:users" />Utilisateurs</a>{% endif %}
+        </div>
+        <div role="group" aria-label="Mémoires" class="palette__group" data-palette-target="remote" data-kind="memories" hidden>
+            <span class="palette__heading" aria-hidden="true">Mémoires</span>
+        </div>
+        <div role="group" aria-label="Fichiers" class="palette__group" data-palette-target="remote" data-kind="files" hidden>
+            <span class="palette__heading" aria-hidden="true">Fichiers</span>
+        </div>
+    </div>
+    <p class="palette__empty" data-palette-target="empty" hidden>Aucun résultat.</p>
+    <p class="visually-hidden" aria-live="polite" data-palette-target="status"></p>
+    <p class="palette__foot" aria-hidden="true"><kbd class="kbd">↑</kbd><kbd class="kbd">↓</kbd> naviguer · <kbd class="kbd">Entrée</kbd> ouvrir · <kbd class="kbd">Échap</kbd> fermer</p>
+</dialog>

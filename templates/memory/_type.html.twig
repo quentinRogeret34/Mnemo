@@ -1,2 +1,3 @@
 {% set labels = {decision: 'Décision', convention: 'Convention', task_learning: 'Apprentissage', preference: 'Préférence', fact: 'Fait'} %}
-<span class="memory-type memory-type--{{ type }}">{{ labels[type] ?? type }}</span>
+{% set icons = {decision: 'lucide:gavel', convention: 'lucide:ruler', task_learning: 'lucide:graduation-cap', preference: 'lucide:sliders-horizontal'} %}
+<span class="memory-type memory-type--{{ type }}">{{ ux_icon(icons[type] ?? 'lucide:info') }}{{ labels[type] ?? type }}</span>

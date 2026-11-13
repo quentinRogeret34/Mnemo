@@ -1,0 +1,17 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Nouveau projet{% endblock %}
+
+{% block crumbs %}
+    <a href="{{ path('project_index') }}">Projets</a>
+    <span class="crumbs__sep" aria-hidden="true">/</span>
+    <span class="crumbs__current">Nouveau projet</span>
+{% endblock %}
+
+{% block body %}
+    <div class="view-head">
+        <h1><twig:ux:icon name="lucide:plus" />Nouveau projet</h1>
+    </div>
+    <p class="page__lede">Un projet regroupe les documents, les règles, les mémoires et le code d'un dépôt.</p>
+    <button class="button button--primary" type="button" commandfor="project-new" command="show-modal"><twig:ux:icon name="lucide:plus" />Ouvrir le formulaire</button>
+{% endblock %}

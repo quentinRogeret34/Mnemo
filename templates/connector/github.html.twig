@@ -4,15 +4,22 @@
 
 {% block title %}Dépôts GitHub · Connexions{% endblock %}
 
+{% set back = selected ? {project: selected.slug} : {} %}
+
 {% block crumbs %}
-    <a href="{{ path('connector_index') }}">Connexions</a>
-    <span class="crumbs__sep" aria-hidden="true">/</span>
+    {% if selected %}
+        <a href="{{ path('project_settings', {slug: selected.slug}) }}">{{ selected.name }}</a>
+        <span class="crumbs__sep" aria-hidden="true">/</span>
+    {% elseif not scoped %}
+        <a href="{{ path('connector_index') }}">Connexions</a>
+        <span class="crumbs__sep" aria-hidden="true">/</span>
+    {% endif %}
     <span class="crumbs__current">Dépôts GitHub</span>
 {% endblock %}
 
 {% block body %}
     <div class="view-head">
-        <h1>Dépôts GitHub</h1>
+        <h1><twig:ux:icon name="simple-icons:github" />Dépôts GitHub</h1>
         {% if repositories is not null %}<span class="view-head__meta">{{ repositories|length }}</span>{% endif %}
     </div>
     <p class="page__lede">Chaque dépôt coché devient un connecteur « GitHub (code et historique) » : le serveur le clone, calcule son graphe de code et importe son historique dans le projet choisi.</p>
@@ -20,16 +27,17 @@
     {% if repositories is null %}
         <form method="post" action="{{ path('github_repositories_oauth') }}">
             <input type="hidden" name="_token" value="{{ token }}">
-            <button class="button button--primary" type="submit">Connecter avec GitHub</button>
+            <input type="hidden" name="project" value="{{ selected ? selected.slug }}">
+            <button class="button button--primary" type="submit"><twig:ux:icon name="simple-icons:github" />Connecter avec GitHub</button>
             <span class="row__sub">Accès en lecture aux dépôts, privés compris (scope « repo »).</span>
         </form>
     {% else %}
-        <form class="key-form" method="post" action="{{ path('github_repositories_connect') }}">
+        <form class="key-form" method="post" action="{{ path('github_repositories_connect', back) }}">
             <input type="hidden" name="_token" value="{{ token }}">
             <label for="github-project">Projet</label>
             <select class="select" id="github-project" name="project" required>
                 <option value="">Choisir un projet</option>
-                {% for project in projects %}<option value="{{ project.id }}">{{ project.name }}</option>{% endfor %}
+                {% for project in projects %}<option value="{{ project.id }}" {{ selected and selected.id == project.id ? 'selected' }}>{{ project.name }}</option>{% endfor %}
             </select>
             <ul class="list">
                 {% for repository in repositories %}
@@ -45,7 +53,7 @@
                     <li class="block__empty">Aucun dépôt visible avec ce compte.</li>
                 {% endfor %}
             </ul>
-            <button class="button button--primary" type="submit">Brancher les dépôts cochés</button>
+            <button class="button button--primary" type="submit"><twig:ux:icon name="lucide:plug" />Brancher les dépôts cochés</button>
         </form>
     {% endif %}
 {% endblock %}
