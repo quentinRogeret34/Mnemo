@@ -40,6 +40,9 @@ final class AccessTest extends WebTestCase
         self::assertSelectorExists('input[name="_password"]');
         $this->client->request('GET', '/oauth/github/check/connector?code=abc&state=abc');
         self::assertResponseRedirects('/login');
+        // GitHub signs its events instead of signing in.
+        $this->client->request('POST', '/webhooks/github', content: '{}');
+        self::assertResponseStatusCodeSame(401);
 
         $this->client->loginUser(new InMemoryUser('admin', '', ['ROLE_USER', 'ROLE_SUPER_ADMIN']));
         $this->client->request('GET', '/dashboard');

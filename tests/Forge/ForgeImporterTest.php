@@ -16,6 +16,7 @@ use App\Ingest\GraphifyImporter;
 use App\Ingest\GraphifyRunner;
 use App\Ingest\RepoContextImporter;
 use App\Learn\Learner;
+use App\Tests\LlmTestTrait;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
@@ -26,6 +27,8 @@ use Symfony\Component\HttpClient\Response\JsonMockResponse;
 
 final class ForgeImporterTest extends WebTestCase
 {
+    use LlmTestTrait;
+
     private const SHA_A = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
     private const SHA_B = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
 
@@ -173,6 +176,45 @@ final class ForgeImporterTest extends WebTestCase
         self::assertSame(2, $graphify->calls);
         self::assertSame(['code_commit' => 'c2'], $connector->getCursor());
         $filesystem->remove($root);
+    }
+
+    public function testReviewsAreLearntFromOnceWhenAPullRequestSeenOpenGetsMerged(): void
+    {
+        $this->scriptLlm(static fn (): array => ['candidates' => []]);
+        $connector = new Connector();
+        $connector->setName('Forge');
+        $connector->setMode(ConnectorMode::GitHub);
+        $connector->setEndpoint('https://api.github.com');
+        $connector->setArguments(['repository' => 'acme/shop', 'learn_reviews' => true]);
+        $connector->setProject($this->project);
+        $this->entityManager->persist($connector);
+        $this->entityManager->flush();
+
+        $mergedAt = null;
+        $importer = $this->importer(new MockHttpClient(static function (string $method, string $url) use (&$mergedAt): JsonMockResponse {
+            $path = parse_url($url, \PHP_URL_PATH);
+
+            return new JsonMockResponse(match (true) {
+                str_ends_with($path, '/pulls') => [['number' => 3, 'title' => 'Remise plafonnée', 'body' => '', 'state' => null === $mergedAt ? 'open' : 'closed', 'merged_at' => $mergedAt, 'user' => ['login' => 'alice'], 'updated_at' => $mergedAt ?? '2026-11-02T12:00:00Z', 'html_url' => 'https://github.com/acme/shop/pull/3']],
+                str_ends_with($path, '/pulls/3/reviews') => [['body' => 'Le plafond doit rester configurable.']],
+                default => [],
+            });
+        }), self::getContainer()->get(RepositoryCheckout::class), self::getContainer()->get(GraphifyRunner::class));
+        $run = static function () use ($importer, $connector): void {
+            $report = ['created' => 0, 'updated' => 0, 'unchanged' => 0, 'skipped' => [], 'error' => null];
+            $importer->import($connector, $report);
+        };
+
+        $run();
+        self::assertCount(0, $this->llmCalls);
+
+        $mergedAt = '2026-11-03T12:00:00Z';
+        $run();
+        self::assertCount(1, $this->llmCalls);
+        self::assertStringContainsString('Le plafond doit rester configurable.', $this->llmCalls[0]['user']);
+
+        $run();
+        self::assertCount(1, $this->llmCalls);
     }
 
     private function importer(MockHttpClient $http, RepositoryCheckout $checkout, GraphifyRunner $graphify): ForgeImporter

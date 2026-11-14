@@ -35,6 +35,17 @@
             {% endif %}
             {% if connector.arguments is not empty %}<dt>Arguments</dt><dd class="mono">{{ connector.arguments|json_encode }}</dd>{% endif %}
             {% if connector.oauthToken %}<dt>Accès</dt><dd><span class="status status--validated">compte GitHub connecté</span> (les en-têtes saisis sont ignorés)</dd>{% endif %}
+            {% if connector.mode.value == 'github' %}
+                <dt>Revue des PR</dt>
+                <dd>
+                    {% if connector.arguments.review ?? false %}<span class="status status--validated">bot actif</span>{% else %}<span class="row__sub">inactive</span>{% endif %}
+                    {% if not github_app.configured %}
+                        <span class="row__sub">· application GitHub non configurée (variables <span class="mono">GITHUB_APP_*</span>)</span>
+                    {% elseif github_app.installUrl %}
+                        · <a href="{{ github_app.installUrl }}" rel="noopener">installer l'application sur le dépôt</a>
+                    {% endif %}
+                </dd>
+            {% endif %}
             <dt>Projet</dt><dd>{{ connector.project ? connector.project.name : 'aucun' }}</dd>
             <dt>Dossier</dt><dd>{{ connector.folder ? connector.folder.name : 'racine' }}</dd>
             <dt>Dernier import</dt><dd>{{ include('connector/_status.html.twig') }}</dd>
@@ -43,6 +54,9 @@
         <div class="upload__actions">
             <form method="post" action="{{ path('connector_sync', {id: connector.id}) }}"><input type="hidden" name="_token" value="{{ token }}"><button class="button button--primary" type="submit"><twig:ux:icon name="lucide:refresh-cw" />Synchroniser</button></form>
             <form method="post" action="{{ path('connector_inspect', {id: connector.id}) }}"><input type="hidden" name="_token" value="{{ token }}"><button class="button" type="submit"><twig:ux:icon name="lucide:plug" />Tester la connexion</button></form>
+            {% if connector.mode.value == 'github' %}
+                <form method="post" action="{{ path('connector_review', {id: connector.id}) }}"><input type="hidden" name="_token" value="{{ token }}"><button class="button" type="submit"><twig:ux:icon name="lucide:clipboard-check" />{{ connector.arguments.review ?? false ? 'Désactiver la revue des PR' : 'Activer la revue des PR' }}</button></form>
+            {% endif %}
             {% if connector.oauthToken %}
                 <form method="post" action="{{ path('connector_oauth_disconnect', {id: connector.id}) }}"><input type="hidden" name="_token" value="{{ token }}"><button class="button" type="submit" data-confirm="Déconnecter le compte GitHub de ce connecteur ?" data-confirm-label="Déconnecter"><twig:ux:icon name="lucide:unplug" />Déconnecter GitHub</button></form>
             {% elseif oauth %}

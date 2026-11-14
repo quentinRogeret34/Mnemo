@@ -80,13 +80,14 @@ final class ConnectorPresets
             'credentials' => ['Authorization' => 'Bearer env:GITHUB_TOKEN'],
             'mode' => ConnectorMode::GitHub,
             'tool' => null,
-            'arguments' => ['repository' => 'owner/repo', 'code_graph' => true, 'learn_reviews' => false],
+            'arguments' => ['repository' => 'owner/repo', 'code_graph' => true, 'learn_reviews' => false, 'review' => false],
             'notes' => [
                 'Remplacer « owner/repo » et choisir le projet : c\'est son graphe de code qui reçoit l\'historique.',
                 'Définir GITHUB_TOKEN dans .env.local et l\'ajouter à MCP_CONNECTORS_ENV. Un dépôt public se lit sans jeton : vider le champ des en-têtes.',
                 '« code_graph: true » clone le dépôt sur le serveur (branche par défaut, ou « branch »), calcule son graphe avec graphify sans LLM et importe README, docs/ et conventions d\'agents. Le jeton doit pouvoir lire le contenu.',
                 'Premier passage : 200 commits, 100 pull requests et 100 issues les plus récents. Les suivants ne lisent que le delta.',
                 '« learn_reviews: true » envoie les revues des pull requests fusionnées au LLM ; les apprentissages arrivent dans À valider.',
+                '« review: true » fait commenter chaque pull request par le bot (application GitHub installée sur le dépôt) : règles métier touchées, décisions liées, ce que le diff contredit. « review_llm: false » retire la lecture du diff par le LLM, « review_check: "fail" » fait échouer le check graphe/rules au lieu d\'avertir.',
             ],
         ],
         'gitlab-api' => [

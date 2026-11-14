@@ -98,6 +98,31 @@ final class ConnectorControllerTest extends WebTestCase
         self::assertNull($connector->getLastRunAt());
     }
 
+    public function testTheReviewOfPullRequestsIsTurnedOnAndOffFromTheConnector(): void
+    {
+        $connector = new Connector();
+        $connector->setName('Forge');
+        $connector->setMode(ConnectorMode::GitHub);
+        $connector->setEndpoint('https://api.github.com');
+        $connector->setArguments(['repository' => 'acme/shop']);
+        $connector->setProject($this->entityManager->getRepository(Project::class)->findOneBy(['slug' => 'demo']));
+        $this->entityManager->persist($connector);
+        $this->entityManager->flush();
+        $show = '/connectors/'.$connector->getId();
+
+        $crawler = $this->client->request('GET', $show);
+        self::assertStringContainsString('inactive', $crawler->filter('.props')->text());
+        $this->client->submit($crawler->selectButton('Activer la revue des PR')->form());
+        self::assertResponseRedirects($show);
+        self::assertSame(['review' => true, 'repository' => 'acme/shop'], $this->entityManager->find(Connector::class, $connector->getId())->getArguments());
+
+        $crawler = $this->client->request('GET', $show);
+        self::assertStringContainsString('bot actif', $crawler->filter('.props')->text());
+        $this->client->submit($crawler->selectButton('Désactiver la revue des PR')->form());
+        $this->entityManager->clear();
+        self::assertFalse($this->entityManager->find(Connector::class, $connector->getId())->getArguments()['review']);
+    }
+
     public function testAGitHubAccountIsConnectedByOAuthAndItsTokenStoredEncrypted(): void
     {
         $this->client->disableReboot();
@@ -209,7 +234,7 @@ final class ConnectorControllerTest extends WebTestCase
         $connectors = $this->entityManager->getRepository(Connector::class)->findBy(['name' => ['acme/shop', 'acme/blog']], ['id' => 'ASC']);
         self::assertSame(['acme/shop', 'acme/blog'], array_map(static fn (Connector $connector): string => $connector->getArguments()['repository'], $connectors));
         foreach ($connectors as $connector) {
-            self::assertSame(['repository' => $connector->getName(), 'code_graph' => true, 'learn_reviews' => false], $connector->getArguments());
+            self::assertSame(['repository' => $connector->getName(), 'code_graph' => true, 'learn_reviews' => false, 'review' => false], $connector->getArguments());
             self::assertSame(['Authorization' => 'Bearer gho_secret'], self::getContainer()->get(CredentialResolver::class)->forgeHeaders($connector));
             self::assertSame('demo', $connector->getProject()->getSlug());
         }

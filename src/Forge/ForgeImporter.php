@@ -85,10 +85,15 @@ final class ForgeImporter
             }
         }
 
+        // A change request is learnt from once: when it first shows up merged, whether or not the graph saw it open.
+        $alreadyMerged = array_flip($this->entityManager->getConnection()->fetchFirstColumn(
+            "SELECT external_id FROM node WHERE project_id = :project AND type = :ticket AND metadata->>'state' = 'merged'",
+            ['project' => $project->getId(), 'ticket' => NodeType::Ticket->value],
+        ));
         $merged = [];
         foreach ([...$issues, ...$changeRequests] as $ticket) {
-            $created = $report['created'];
-            $node = $this->upsert($project, NodeType::Ticket, ($ticket->changeRequest ? $prefix : 'issue').'-'.$ticket->number, $ticket->title, [
+            $externalId = ($ticket->changeRequest ? $prefix : 'issue').'-'.$ticket->number;
+            $node = $this->upsert($project, NodeType::Ticket, $externalId, $ticket->title, [
                 'kind' => $ticket->changeRequest ? 'change_request' : 'issue', 'number' => $ticket->number, 'state' => $ticket->state, 'author' => $ticket->author,
                 'date' => $ticket->updatedAt->format(\DATE_ATOM), 'url' => $ticket->url, 'body' => mb_substr($ticket->body, 0, self::MAX_TEXT),
             ], $report);
@@ -108,7 +113,7 @@ final class ForgeImporter
             foreach ($this->find($project, NodeType::Ticket, array_map(static fn (string $number): string => 'issue-'.$number, $closed[1])) as $issue) {
                 $links[] = [$node, $issue, 'closes', $ticket->url];
             }
-            if ('merged' === $ticket->state && $report['created'] > $created) {
+            if ('merged' === $ticket->state && !isset($alreadyMerged[$externalId])) {
                 $merged[] = $ticket;
             }
         }

@@ -14,6 +14,7 @@ class ConnectorRun
 {
     public const MANUAL = 'manual';
     public const SCHEDULE = 'schedule';
+    public const WEBHOOK = 'webhook';
 
     #[ORM\Id]
     #[ORM\GeneratedValue]

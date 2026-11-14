@@ -45,6 +45,8 @@ security:
         # Callbacks of the GitHub connection of the connectors: not a sign-in, they need the same access as the connectors.
         - { path: ^/oauth/github/check/(connector|repositories)$, roles: '%env(APP_ACCESS_ROLE)%' }
         - { path: ^/(login|pending|logout|oauth/), roles: PUBLIC_ACCESS }
+        # Events of the GitHub App: authenticated by their signature, not by a session.
+        - { path: ^/webhooks/, roles: PUBLIC_ACCESS }
         # Whatever the access mode, only a super admin manages accounts and groups.
         - { path: ^/admin, roles: ROLE_SUPER_ADMIN }
         - { path: ^/, roles: '%env(APP_ACCESS_ROLE)%' }

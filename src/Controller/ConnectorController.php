@@ -9,6 +9,7 @@ use App\Entity\Connector;
 use App\Entity\ConnectorRun;
 use App\Enum\ConnectorMode;
 use App\Enum\ConnectorTransport;
+use App\Forge\GitHubApp;
 use App\Forge\RepositoryCheckout;
 use App\Form\ConnectorType;
 use App\Llm\LlmSettings;
@@ -40,6 +41,7 @@ final class ConnectorController extends AbstractController
         private readonly RepositoryCheckout $checkout,
         private readonly OAuthClient $oauthClient,
         private readonly SecretBox $secretBox,
+        private readonly GitHubApp $gitHubApp,
     ) {
     }
 
@@ -85,7 +87,7 @@ final class ConnectorController extends AbstractController
     #[Route('/connectors/{id}', name: 'connector_show', requirements: ['id' => '\d+'], methods: ['GET'])]
     public function show(Connector $connector): Response
     {
-        return $this->render('connector/show.html.twig', ['connector' => $connector, 'inspection' => null, 'inspection_error' => null, 'oauth' => $this->oauthAvailable($connector)]);
+        return $this->render('connector/show.html.twig', ['connector' => $connector, 'inspection' => null, 'inspection_error' => null, 'oauth' => $this->oauthAvailable($connector), 'github_app' => $this->gitHubApp]);
     }
 
     /**
@@ -153,7 +155,7 @@ final class ConnectorController extends AbstractController
             $error = $exception->getMessage();
         }
 
-        return $this->render('connector/show.html.twig', ['connector' => $connector, 'inspection' => $inspection, 'inspection_error' => $error, 'oauth' => $this->oauthAvailable($connector)]);
+        return $this->render('connector/show.html.twig', ['connector' => $connector, 'inspection' => $inspection, 'inspection_error' => $error, 'oauth' => $this->oauthAvailable($connector), 'github_app' => $this->gitHubApp]);
     }
 
     #[Route('/connectors/{id}/sync', name: 'connector_sync', requirements: ['id' => '\d+'], methods: ['POST'])]
@@ -171,6 +173,24 @@ final class ConnectorController extends AbstractController
         if (null === $report['error']) {
             $this->addFlash('success', \sprintf('Import terminé : %d créés, %d mis à jour, %d inchangés, %d ignorés.', $report['created'], $report['updated'], $report['unchanged'], \count($report['skipped'])));
         }
+
+        return $this->redirectToRoute('connector_show', ['id' => $connector->getId()]);
+    }
+
+    /**
+     * Turns the review of the pull requests by the GitHub App on or off for this repository.
+     */
+    #[Route('/connectors/{id}/review', name: 'connector_review', requirements: ['id' => '\d+'], methods: ['POST'])]
+    public function review(Connector $connector, Request $request): Response
+    {
+        $this->checkToken($connector, $request);
+        if (ConnectorMode::GitHub !== $connector->getMode()) {
+            throw $this->createNotFoundException('Only a GitHub connector reviews pull requests.');
+        }
+        $enabled = true !== ($connector->getArguments()['review'] ?? false);
+        $connector->setArguments(['review' => $enabled] + $connector->getArguments());
+        $this->entityManager->flush();
+        $this->addFlash('success', $enabled ? 'Revue activée : le bot commentera les pull requests de ce dépôt.' : 'Revue désactivée pour ce dépôt.');
 
         return $this->redirectToRoute('connector_show', ['id' => $connector->getId()]);
     }

@@ -74,7 +74,7 @@
                                 <tr>
                                     <td class="num">{{ run.started_at|date('d/m H:i') }}</td>
                                     <td><a href="{{ path('connector_show', {id: run.connector_id}) }}">{{ run.connector }}</a></td>
-                                    <td>{{ run.trigger == 'schedule' ? 'planifié' : 'manuel' }}</td>
+                                    <td>{{ {schedule: 'planifié', webhook: 'webhook'}[run.trigger] ?? 'manuel' }}</td>
                                     <td class="num">{{ run.report.created ?? 0 }}</td>
                                     <td class="num">{{ run.report.updated ?? 0 }}</td>
                                     <td>{% if run.report.error ?? null %}<span class="verdict verdict--refuted" title="{{ run.report.error }}">échec</span>{% else %}<span class="verdict verdict--verified">ok</span>{% endif %}</td>

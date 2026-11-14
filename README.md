@@ -98,6 +98,45 @@ qu'une OAuth App offre pour les dépôts privés) et enregistre le jeton chiffr�
 `APP_SECRET`. Il remplace alors les en-têtes saisis, pour l'API comme pour le clone, et n'est jamais envoyé
 ailleurs qu'à github.com. Changer `APP_SECRET` oblige à reconnecter le compte.
 
+## Bot de revue (GitHub App)
+
+Le bot commente chaque pull request d'un dépôt branché avec ce que le graphe sait des fichiers modifiés, et pose
+un check `graphe/rules`. Il agit sous l'identité d'une GitHub App, distincte de l'application OAuth ci-dessus.
+
+1. Créer l'application (GitHub : Settings → Developer settings → GitHub Apps → New GitHub App) :
+   - Webhook URL `https://<domaine>/webhooks/github`, avec un secret (`openssl rand -hex 32`) ;
+   - permissions du dépôt : Pull requests (lecture et écriture), Checks (lecture et écriture), Contents (lecture),
+     Metadata (lecture) ;
+   - événements : Pull request, Push.
+2. Générer une clé privée et poser dans `.env.local` (ou Dokploy) :
+
+```dotenv
+GITHUB_APP_ID=123456
+# Le PEM, ou son base64 sur une ligne : base64 -i app.private-key.pem
+GITHUB_APP_PRIVATE_KEY=...
+GITHUB_APP_WEBHOOK_SECRET=...
+# Nom de l'application dans son URL (github.com/apps/<slug>), pour le lien « installer »
+GITHUB_APP_SLUG=graphe-projet
+```
+
+3. Installer l'application sur les dépôts voulus, puis sur la page de leur connecteur
+   « GitHub (code et historique) » : « Activer la revue des PR » (argument `review: true`).
+
+Ce que font les événements, traités par le worker :
+
+- push sur la branche par défaut : synchronisation du connecteur (déclencheur « webhook » dans l'activité). La
+  synchronisation planifiée reste utile pour rattraper un événement manqué.
+- pull request ouverte, mise à jour ou modifiée (hors brouillon) : un commentaire unique, réécrit à chaque push,
+  liste les règles métier touchées et leurs zones d'ombre, les mémoires liées aux fichiers, l'historique récent, et
+  ce que le diff contredit d'après le LLM (chaque remarque cite sa mémoire ou sa règle ; `review_llm: false` pour
+  s'en passer). Une pull request dont le graphe ne sait rien ne reçoit pas de commentaire.
+- le check `graphe/rules` avertit quand une règle validée est touchée sans fichier de test dans le diff ni mention
+  de son code (RG-042) dans le titre, la description ou un commit ; `review_check: "fail"` le fait échouer.
+
+Le commentaire est visible de tous ceux qui lisent la pull request : seules les mémoires partagées avec le projet
+y figurent, jamais les mémoires privées ou de groupe. Sur un dépôt public, activer la revue rend ces mémoires
+publiques. `bin/console app:review <slug> <numéro> --dry-run` affiche le commentaire sans rien publier.
+
 ## Workflow
 
 ```
@@ -213,6 +252,7 @@ bin/console app:export:memory-block <slug> --write=../repo/CLAUDE.md --write=../
 | `app:garden <slug> [--llm]` | Rapport de dérive, doublons et contradictions | option |
 | `app:verify <slug> [--limit=20]` | Vérifier les mémoires contre le graphe | oui |
 | `app:rule:shadow <slug> [code]` | Zones d'ombre des règles | oui |
+| `app:review <slug> <numéro> [--dry-run]` | Revue d'une pull request par le bot (commentaire et check) | option |
 | `app:export:memory-block <slug> [--write=]` | Afficher ou écrire le bloc mémoire | non |
 | `app:llm:check` | Tester chat et embeddings | oui |
 | `mcp:server` | Serveur MCP en STDIO | - |

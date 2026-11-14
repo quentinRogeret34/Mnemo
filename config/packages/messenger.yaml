@@ -4,6 +4,7 @@ framework:
             async: '%env(MESSENGER_TRANSPORT_DSN)%'
         routing:
             App\Message\SyncConnector: async
+            App\Message\ReviewPullRequest: async
             App\Message\IndexNode: async
 
 when@test:
