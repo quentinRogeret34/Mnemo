@@ -46,9 +46,9 @@ final class KnowledgeReader
      * Active memories, or the archived ones (superseded or retracted) when asked.
      * The verdict "none" keeps the memories never verified.
      *
-     * @return list<array{id: int, text: string, type: string, source: ?string, status: string, verdict: ?string, demo: bool, created_at: string, updated_at: string, projects: ?string, links: int}>
+     * @return list<array{id: int, text: string, type: string, source: ?string, status: string, verdict: ?string, demo: bool, created_at: string, updated_at: string, projects: ?string, links: int, total: int}>
      */
-    public function memories(?Project $project = null, ?string $type = null, string $query = '', bool $archived = false, ?string $verdict = null, ?string $source = null): array
+    public function memories(?Project $project = null, ?string $type = null, string $query = '', bool $archived = false, ?string $verdict = null, ?string $source = null, ?int $limit = null, int $offset = 0): array
     {
         return array_map(
             static fn (array $row): array => ['id' => (int) $row['id'], 'demo' => (bool) $row['demo'], 'links' => (int) $row['links']] + $row,
@@ -59,7 +59,8 @@ final class KnowledgeReader
                            COALESCE(m.metadata->>'visibility', 'project') AS visibility,
                            COALESCE((m.metadata->>'demo')::boolean, false) AS demo, m.created_at, m.updated_at,
                            (SELECT string_agg(p.name, ', ' ORDER BY p.name) FROM node_project np JOIN project p ON p.id = np.project_id WHERE np.node_id = m.id) AS projects,
-                           (SELECT COUNT(*) FROM edge e WHERE e.source_id = m.id AND e.relation = 'about' AND e.status = :active) AS links
+                           (SELECT COUNT(*) FROM edge e WHERE e.source_id = m.id AND e.relation = 'about' AND e.status = :active) AS links,
+                           COUNT(*) OVER () AS total
                     FROM node m
                     WHERE m.type = :memory AND {$this->memoryAccess->sql('m')}
                       AND (COALESCE(m.metadata->>'status', 'active') = 'active') <> :archived
@@ -69,8 +70,11 @@ final class KnowledgeReader
                       AND (CAST(:verdict AS text) IS NULL OR COALESCE(m.metadata->'verification'->>'verdict', 'none') = :verdict)
                       AND (CAST(:source AS text) IS NULL OR m.metadata->>'source' = :source)
                     ORDER BY m.updated_at DESC, m.id DESC
+                    LIMIT :limit OFFSET :offset
                     SQL,
                 [
+                    'limit' => $limit,
+                    'offset' => $offset,
                     'memory' => NodeType::Memory->value,
                     'active' => EdgeStatus::Active->value,
                     'project' => $project?->getId(),
@@ -214,9 +218,9 @@ final class KnowledgeReader
     /**
      * Documents attached to a project, or the documents of a folder when no project is given.
      *
-     * @return list<array{id: int, title: string, filename: string, format: string, size: int, demo: bool, created_at: string, rules: int, folder: ?string, projects: ?string, code_links: int}>
+     * @return list<array{id: int, title: string, filename: string, format: string, size: int, demo: bool, created_at: string, rules: int, folder: ?string, projects: ?string, code_links: int, total: int}>
      */
-    public function documents(?Project $project = null, ?int $folderId = null): array
+    public function documents(?Project $project = null, ?int $folderId = null, ?int $limit = null, int $offset = 0): array
     {
         $scope = null !== $project
             ? 'EXISTS (SELECT 1 FROM node_project np WHERE np.node_id = d.id AND np.project_id = :project)'
@@ -231,13 +235,15 @@ final class KnowledgeReader
                            (SELECT string_agg(p.name, ', ' ORDER BY p.name) FROM node_project np JOIN project p ON p.id = np.project_id WHERE np.node_id = d.id) AS projects,
                            (SELECT COUNT(*) FROM edge e JOIN node r ON r.id = e.target_id
                             WHERE e.source_id = d.id AND r.type = :rule AND e.status = :active) AS rules,
-                           (SELECT COUNT(*) FROM edge e WHERE e.target_id = d.id AND e.relation = 'documented_by' AND e.status = :active) AS code_links
+                           (SELECT COUNT(*) FROM edge e WHERE e.target_id = d.id AND e.relation = 'documented_by' AND e.status = :active) AS code_links,
+                           COUNT(*) OVER () AS total
                     FROM node d
                     LEFT JOIN folder f ON f.id = d.folder_id
                     WHERE d.type = :document AND $scope
-                    ORDER BY d.label
+                    ORDER BY d.label, d.id
+                    LIMIT :limit OFFSET :offset
                     SQL,
-                ['document' => NodeType::Document->value, 'rule' => NodeType::BusinessRule->value, 'active' => EdgeStatus::Active->value]
+                ['limit' => $limit, 'offset' => $offset, 'document' => NodeType::Document->value, 'rule' => NodeType::BusinessRule->value, 'active' => EdgeStatus::Active->value]
                     + (null !== $project ? ['project' => $project->getId()] : [])
                     + (null === $project && null !== $folderId ? ['folder' => $folderId] : []),
             ),
@@ -353,9 +359,9 @@ final class KnowledgeReader
     }
 
     /**
-     * @return list<array{code: string, title: string, statement: ?string, status: ?string, demo: bool, documents: int, files: int, verified_files: int, shadow_areas: int}>
+     * @return list<array{code: string, title: string, statement: ?string, status: ?string, demo: bool, documents: int, files: int, verified_files: int, shadow_areas: int, total: int}>
      */
-    public function rules(Project $project, ?string $status = null): array
+    public function rules(Project $project, ?string $status = null, ?int $limit = null, int $offset = 0): array
     {
         return array_map(
             static fn (array $row): array => ['demo' => (bool) $row['demo'], 'documents' => (int) $row['documents'], 'files' => (int) $row['files'], 'verified_files' => (int) $row['verified_files'], 'shadow_areas' => (int) $row['shadow_areas']] + $row,
@@ -366,12 +372,14 @@ final class KnowledgeReader
                            COALESCE(json_array_length(r.metadata->'shadow_areas'), 0) AS shadow_areas,
                            (SELECT COUNT(*) FROM edge e WHERE e.target_id = r.id AND e.relation = 'defines' AND e.status = :active) AS documents,
                            (SELECT COUNT(*) FROM edge e WHERE e.source_id = r.id AND e.relation = 'implemented_by' AND e.status = :active) AS files,
-                           (SELECT COUNT(*) FROM edge e WHERE e.source_id = r.id AND e.relation = 'implemented_by' AND e.status = :active AND e.confidence = 'VERIFIED') AS verified_files
+                           (SELECT COUNT(*) FROM edge e WHERE e.source_id = r.id AND e.relation = 'implemented_by' AND e.status = :active AND e.confidence = 'VERIFIED') AS verified_files,
+                           COUNT(*) OVER () AS total
                     FROM node r
                     WHERE r.project_id = :project AND r.type = :rule AND (CAST(:status AS text) IS NULL OR r.metadata->>'status' = :status)
                     ORDER BY r.external_id
+                    LIMIT :limit OFFSET :offset
                     SQL,
-                ['project' => $project->getId(), 'rule' => NodeType::BusinessRule->value, 'active' => EdgeStatus::Active->value, 'status' => $status],
+                ['project' => $project->getId(), 'rule' => NodeType::BusinessRule->value, 'active' => EdgeStatus::Active->value, 'status' => $status, 'limit' => $limit, 'offset' => $offset],
             ),
         );
     }

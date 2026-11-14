@@ -1,0 +1,18 @@
+{# page: App\Pagination\Page ; name: query parameter of the page number #}
+{% set name = name|default('page') %}
+{% if page.pages > 1 or page.number > 1 %}
+    {% set parameters = app.current_route_parameters|merge(app.request.query.all) %}
+    <nav class="pager" aria-label="Pagination">
+        {% if page.number > 1 %}
+            <a class="button" rel="prev" href="{{ path(app.current_route, parameters|merge({(name): min(page.number - 1, page.pages)})) }}">Précédente</a>
+        {% else %}
+            <span class="button" aria-disabled="true">Précédente</span>
+        {% endif %}
+        <span class="pager__status">Page {{ page.number }} sur {{ max(page.pages, page.number) }} · {{ page.total|number_format(0, ',', ' ') }} au total</span>
+        {% if page.number < page.pages %}
+            <a class="button" rel="next" href="{{ path(app.current_route, parameters|merge({(name): page.number + 1})) }}">Suivante</a>
+        {% else %}
+            <span class="button" aria-disabled="true">Suivante</span>
+        {% endif %}
+    </nav>
+{% endif %}

@@ -13,6 +13,7 @@ use App\Graph\KnowledgeReader;
 use App\Graph\MemoryGalaxy;
 use App\Llm\LlmUnavailable;
 use App\Memory\MemoryStore;
+use App\Pagination\Page;
 use App\Security\MemoryAccess;
 use App\Security\ProjectScope;
 use App\Verify\MemoryVerifier;
@@ -27,6 +28,7 @@ use Symfony\Component\Routing\Attribute\Route;
 
 final class MemoryController extends AbstractController
 {
+    private const PAGE_SIZE = 50;
     private const VERDICTS = ['verified', 'refuted', 'conflict', 'unverified', 'none'];
 
     public function __construct(
@@ -49,7 +51,9 @@ final class MemoryController extends AbstractController
         #[MapQueryParameter] bool $archived = false,
         #[MapQueryParameter] ?string $verdict = null,
         #[MapQueryParameter] ?string $source = null,
+        #[MapQueryParameter] int $page = 1,
     ): Response {
+        $page = max(1, $page);
         $projectEntity = $this->findProject($project);
         $verdict = \in_array($verdict, self::VERDICTS, true) ? $verdict : null;
         $source = '' === (string) $source ? null : $source;
@@ -82,7 +86,7 @@ final class MemoryController extends AbstractController
             'source' => $source,
             'sources' => $this->knowledgeReader->memorySources(),
             'projects' => $this->projectScope->projects(),
-            'memories' => $this->knowledgeReader->memories($projectEntity, $memoryType?->value, $q, $archived, $verdict, $source),
+            'memories' => Page::ofRows($this->knowledgeReader->memories($projectEntity, $memoryType?->value, $q, $archived, $verdict, $source, self::PAGE_SIZE, Page::offset($page, self::PAGE_SIZE)), $page, self::PAGE_SIZE),
             'form' => $form,
         ], new Response(status: $form->isSubmitted() ? Response::HTTP_UNPROCESSABLE_ENTITY : Response::HTTP_OK));
     }

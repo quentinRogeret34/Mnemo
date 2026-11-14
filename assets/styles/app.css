@@ -656,6 +656,8 @@ dialog::backdrop { overflow: hidden; overscroll-behavior: contain; }
 .memory-new__text { width: 100%; min-height: 3.5rem; padding: var(--space-xs); resize: vertical; line-height: 1.5; }
 .memory-new__actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-xs) var(--space-sm); }
 
+.pager { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--space-sm); margin-top: var(--space-md); }
+.pager__status { color: var(--color-muted); font-size: var(--text-sm); font-variant-numeric: tabular-nums; }
 .filter-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-sm); margin-bottom: var(--space-md); }
 .filter-bar .tabs { margin-bottom: 0; max-width: 100%; flex-wrap: wrap; }
 .filter-bar__search .input { width: min(100%, 16rem); }

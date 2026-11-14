@@ -19,7 +19,7 @@
     {% set filtered = q or type or archived or verdict or source %}
     <div class="view-head">
         <h1><twig:ux:icon name="lucide:lightbulb" />Mémoires</h1>
-        <span class="view-head__meta">{{ memories|length }}{{ project ? ' rattachées à ' ~ project.name }}</span>
+        <span class="view-head__meta">{{ memories.total }}{{ project ? ' rattachées à ' ~ project.name }}</span>
     </div>
 
     <details class="memory-new" {% if form.vars.submitted %}open{% endif %}>
@@ -65,7 +65,7 @@
         {% if filtered %}<a class="button button--ghost" href="{{ path('memory_index', project ? {project: project.slug} : {}) }}">Réinitialiser</a>{% endif %}
     </form>
 
-    {% if memories is empty %}
+    {% if memories.items is empty %}
         {% if filtered %}
             <p class="block__empty">Aucune mémoire ne correspond.</p>
         {% else %}
@@ -80,7 +80,7 @@
                     <tr><th>Type</th><th>Mémoire</th><th>Projets</th><th>Vérification</th><th class="num">Liens</th><th>Source</th><th class="num">Mise à jour</th></tr>
                 </thead>
                 <tbody>
-                    {% for memory in memories %}
+                    {% for memory in memories.items %}
                         <tr class="row--memory{{ memory.status != 'active' ? ' row--archived' }}">
                             <td>{{ include('memory/_type.html.twig', {type: memory.type}) }}</td>
                             <td class="data-table__main">
@@ -100,4 +100,5 @@
             </table>
         </div>
     {% endif %}
+    {{ include('_pager.html.twig', {page: memories}) }}
 {% endblock %}

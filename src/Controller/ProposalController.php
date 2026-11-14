@@ -6,6 +6,7 @@ use App\Entity\Project;
 use App\Entity\Proposal;
 use App\Enum\ProposalKind;
 use App\Enum\ProposalStatus;
+use App\Pagination\Page;
 use App\Proposal\ProposalApplier;
 use App\Security\ProjectScope;
 use Doctrine\ORM\EntityManagerInterface;
@@ -18,6 +19,8 @@ use Symfony\Component\Routing\Attribute\Route;
 
 final class ProposalController extends AbstractController
 {
+    private const PAGE_SIZE = 20;
+
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly ProjectScope $projectScope,
@@ -26,8 +29,10 @@ final class ProposalController extends AbstractController
     }
 
     #[Route('/proposals', name: 'proposal_index', methods: ['GET'])]
-    public function index(#[MapQueryParameter] ?string $project = null, #[MapQueryParameter] ?string $kind = null): Response
+    public function index(#[MapQueryParameter] ?string $project = null, #[MapQueryParameter] ?string $kind = null, #[MapQueryParameter] int $page = 1): Response
     {
+        $page = max(1, $page);
+        $repository = $this->entityManager->getRepository(Proposal::class);
         $projectEntity = $this->projectScope->bySlug($project);
         $kindEnum = null === $kind ? null : ProposalKind::tryFrom($kind);
 
@@ -37,7 +42,7 @@ final class ProposalController extends AbstractController
             'project' => $projectEntity,
             'kind' => $kindEnum,
             'kinds' => ProposalKind::cases(),
-            'proposals' => $this->entityManager->getRepository(Proposal::class)->findBy($criteria, ['createdAt' => 'ASC', 'id' => 'ASC']),
+            'proposals' => new Page($repository->findBy($criteria, ['createdAt' => 'ASC', 'id' => 'ASC'], self::PAGE_SIZE, Page::offset($page, self::PAGE_SIZE)), $repository->count($criteria), $page, self::PAGE_SIZE),
         ]);
     }
 

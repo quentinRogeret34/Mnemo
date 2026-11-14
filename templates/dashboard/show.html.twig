@@ -120,16 +120,16 @@
         <section class="panel panel--wide" aria-labelledby="recent-title">
             <div class="panel__head">
                 <h2 id="recent-title">Dernières requêtes MCP</h2>
-                <span class="row__sub">{{ recent|length }} plus récentes</span>
+                <span class="row__sub">{{ recent.total|number_format(0, ',', ' ') }} au total</span>
             </div>
-            {% if recent is empty %}
+            {% if recent.items is empty %}
                 <p class="block__empty">Aucune requête enregistrée. Brancher un agent sur <span class="mono">/mcp</span> : chaque appel d'outil apparaît ici.</p>
             {% else %}
                 <div class="table-wrap">
                     <table class="data-table">
                         <thead><tr><th>Quand</th><th>Outil</th><th>Projet</th><th>Recherche ou fichier</th><th class="num">Résultats</th><th class="num">Mémoires</th><th class="num">Durée</th><th>Client</th></tr></thead>
                         <tbody>
-                            {% for call in recent %}
+                            {% for call in recent.items %}
                                 <tr>
                                     <td class="num">{{ call.created_at|date('d/m H:i') }}</td>
                                     <td><span class="code-chip">{{ call.tool }}</span>{% if call.failed %} <span class="verdict verdict--refuted">échec</span>{% endif %}</td>
@@ -145,6 +145,7 @@
                     </table>
                 </div>
             {% endif %}
+            {{ include('_pager.html.twig', {page: recent}) }}
         </section>
     </div>
 {% endblock %}

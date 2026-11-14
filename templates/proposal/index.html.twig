@@ -16,7 +16,7 @@
     {% set sources = {conversation: 'conversation', file: 'fichier', diff: 'diff', review: 'revue'} %}
     <div class="view-head">
         <h1><twig:ux:icon name="lucide:check" />À valider</h1>
-        <span class="view-head__meta">{{ proposals|length }} en attente{{ project ? ' pour ' ~ project.name }}</span>
+        <span class="view-head__meta">{{ proposals.total }} en attente{{ project ? ' pour ' ~ project.name }}</span>
     </div>
     <p class="page__lede">Ce que le LLM propose n'entre dans le graphe qu'une fois appliqué ici. Une mémoire remplacée ou retirée est archivée, pas supprimée.</p>
 
@@ -29,11 +29,11 @@
         </nav>
     </div>
 
-    {% if proposals is empty %}
+    {% if proposals.items is empty %}
         <p class="block__empty">Rien à valider. Les propositions arrivent avec <span class="mono">app:learn</span>, l'outil MCP <span class="mono">learn</span>, le jardinage et la vérification des mémoires.</p>
     {% else %}
         <ul class="proposals">
-            {% for proposal in proposals %}
+            {% for proposal in proposals.items %}
                 {% set p = proposal.payload %}
                 {% set query = {project: project ? project.slug : null, kind: kind ? kind.value : null}|filter(v => v is not null) %}
                 <li class="proposal" id="proposal-{{ proposal.id }}">
@@ -105,4 +105,5 @@
             {% endfor %}
         </ul>
     {% endif %}
+    {{ include('_pager.html.twig', {page: proposals}) }}
 {% endblock %}

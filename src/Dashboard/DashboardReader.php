@@ -120,14 +120,14 @@ final class DashboardReader
     }
 
     /**
-     * @return list<array{created_at: string, tool: string, project: ?string, query: ?string, results: int, memories: int, failed: bool, duration_ms: int, client: ?string}>
+     * @return list<array{created_at: string, tool: string, project: ?string, query: ?string, results: int, memories: int, failed: bool, duration_ms: int, client: ?string, total: int}>
      */
-    public function recentCalls(?Project $project, int $limit = 12): array
+    public function recentCalls(?Project $project, int $limit = 12, int $offset = 0): array
     {
         return array_map(
             static fn (array $row): array => ['results' => (int) $row['results'], 'memories' => (int) $row['memories'], 'failed' => (bool) $row['failed'], 'duration_ms' => (int) $row['duration_ms']] + $row,
             $this->connection->fetchAllAssociative(
-                "SELECT c.created_at, c.tool, c.project, c.query, c.results, c.memories, c.failed, c.duration_ms, COALESCE(k.name, c.client) AS client FROM mcp_call c LEFT JOIN api_key k ON k.id = c.api_key_id WHERE (CAST(:slug AS text) IS NULL OR c.project = :slug) ORDER BY c.created_at DESC, c.id DESC LIMIT $limit",
+                "SELECT c.created_at, c.tool, c.project, c.query, c.results, c.memories, c.failed, c.duration_ms, COALESCE(k.name, c.client) AS client, COUNT(*) OVER () AS total FROM mcp_call c LEFT JOIN api_key k ON k.id = c.api_key_id WHERE (CAST(:slug AS text) IS NULL OR c.project = :slug) ORDER BY c.created_at DESC, c.id DESC LIMIT $limit OFFSET $offset",
                 ['slug' => $project?->getSlug()],
             ),
         );

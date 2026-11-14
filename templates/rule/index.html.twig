@@ -11,7 +11,7 @@
 {% block body %}
     <div class="view-head">
         <h1><twig:ux:icon name="lucide:clipboard-check" />Règles métier</h1>
-        <span class="view-head__meta">{{ rules|length }}</span>
+        <span class="view-head__meta">{{ rules.total }}</span>
     </div>
 
     <nav class="tabs" aria-label="Filtrer par statut">
@@ -20,7 +20,7 @@
         <a href="{{ path('rule_index', {slug: project.slug, status: 'validated'}) }}" {% if status == 'validated' %}aria-current="page"{% endif %}>Validées</a>
     </nav>
 
-    {% if rules is empty %}
+    {% if rules.items is empty %}
         {% if status %}
             <p class="block__empty">Aucune règle dans ce statut.</p>
         {% else %}
@@ -31,7 +31,7 @@
         {% endif %}
     {% else %}
         <ul class="list">
-            {% for rule in rules %}
+            {% for rule in rules.items %}
                 <li>
                     <a class="row" href="{{ path('rule_show', {slug: project.slug, code: rule.code}) }}">
                         <span class="code-chip">{{ rule.code }}</span>
@@ -50,4 +50,5 @@
             {% endfor %}
         </ul>
     {% endif %}
+    {{ include('_pager.html.twig', {page: rules}) }}
 {% endblock %}

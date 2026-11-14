@@ -25,7 +25,7 @@ final class ActivityReader
      *
      * @return array<string, list<array{id: int, type: string, label: string, ref: string, kind: ?string, author: ?string, url: ?string, project_slug: ?string, created_at: string}>>
      */
-    public function feed(?Project $project, \DateTimeImmutable $from, int $limit = 300): array
+    public function feed(?Project $project, \DateTimeImmutable $from, int $limit = 300, int $offset = 0): array
     {
         $types = self::TYPES;
         $rows = $this->connection->fetchAllAssociative(
@@ -39,7 +39,7 @@ final class ActivityReader
                       OR EXISTS (SELECT 1 FROM node_project np WHERE np.node_id = n.id AND np.project_id = :project)
                   )
                 ORDER BY n.created_at DESC, n.id DESC
-                LIMIT $limit
+                LIMIT $limit OFFSET $offset
                 SQL,
             ['project' => $project?->getId(), 'from' => $from],
             ['from' => Types::DATETIME_IMMUTABLE],
@@ -79,19 +79,19 @@ final class ActivityReader
     }
 
     /**
-     * @return list<array{connector_id: int, connector: string, trigger: string, started_at: string, finished_at: string, report: array<string, mixed>}>
+     * @return list<array{connector_id: int, connector: string, trigger: string, started_at: string, finished_at: string, report: array<string, mixed>, total: int}>
      */
-    public function runs(?Project $project, int $limit = 20): array
+    public function runs(?Project $project, int $limit = 20, int $offset = 0): array
     {
         return array_map(
             static fn (array $row): array => ['connector_id' => (int) $row['connector_id'], 'report' => json_decode($row['report'], true)] + $row,
             $this->connection->fetchAllAssociative(
                 <<<SQL
-                    SELECT c.id AS connector_id, c.name AS connector, r.triggered_by AS trigger, r.started_at, r.finished_at, r.report
+                    SELECT c.id AS connector_id, c.name AS connector, r.triggered_by AS trigger, r.started_at, r.finished_at, r.report, COUNT(*) OVER () AS total
                     FROM connector_run r JOIN connector c ON c.id = r.connector_id
                     WHERE CAST(:project AS int) IS NULL OR c.project_id = :project
                     ORDER BY r.started_at DESC, r.id DESC
-                    LIMIT $limit
+                    LIMIT $limit OFFSET $offset
                     SQL,
                 ['project' => $project?->getId()],
             ),

@@ -15,12 +15,12 @@
 {% block body %}
     <div class="view-head">
         <h1><twig:ux:icon name="lucide:file-text" />Documents</h1>
-        <span class="view-head__meta">{{ documents|length }} rattachés à {{ project.name }}</span>
+        <span class="view-head__meta">{{ documents.total }} rattachés à {{ project.name }}</span>
     </div>
 
     {{ include('document/_upload.html.twig', {upload: upload, hint: '.md, .pdf, .docx · 32 Mo max · rattachés à ' ~ project.name}) }}
 
-    {% if documents is empty %}
+    {% if documents.items is empty %}
         <twig:EmptyState title="Aucun document rattaché à ce projet" text="Déposer des fichiers ci-dessus, ou rattacher un document existant depuis sa page.">
             <twig:block name="icon"><twig:ux:icon name="lucide:file-text" /></twig:block>
             <details class="empty-state__more">
@@ -29,6 +29,7 @@
             </details>
         </twig:EmptyState>
     {% else %}
-        {{ include('document/_rows.html.twig', {documents: documents, show_folder: true, show_projects: false}) }}
+        {{ include('document/_rows.html.twig', {documents: documents.items, show_folder: true, show_projects: false}) }}
+        {{ include('_pager.html.twig', {page: documents}) }}
     {% endif %}
 {% endblock %}

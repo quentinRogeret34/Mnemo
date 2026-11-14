@@ -10,6 +10,7 @@ use App\Enum\NodeType;
 use App\Form\DocumentUploadType;
 use App\Form\FolderType;
 use App\Graph\KnowledgeReader;
+use App\Pagination\Page;
 use App\Security\ProjectScope;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bridge\Doctrine\Attribute\MapEntity;
@@ -25,6 +26,8 @@ use Symfony\Component\Routing\Attribute\Route;
 
 final class DocumentController extends AbstractController
 {
+    private const PAGE_SIZE = 50;
+
     public function __construct(
         private readonly KnowledgeReader $knowledgeReader,
         private readonly DocumentStorage $documentStorage,
@@ -34,8 +37,9 @@ final class DocumentController extends AbstractController
     }
 
     #[Route('/documents', name: 'document_index', methods: ['GET', 'POST'])]
-    public function index(Request $request, #[MapQueryParameter] ?int $folder = null): Response
+    public function index(Request $request, #[MapQueryParameter] ?int $folder = null, #[MapQueryParameter] int $page = 1): Response
     {
+        $page = max(1, $page);
         $current = null === $folder ? null : ($this->entityManager->find(Folder::class, $folder) ?? throw $this->createNotFoundException(\sprintf('Folder %d not found.', $folder)));
 
         $upload = $this->createForm(DocumentUploadType::class);
@@ -62,15 +66,16 @@ final class DocumentController extends AbstractController
             'current' => $current,
             'ancestors' => $ancestors,
             'folders' => $this->knowledgeReader->folderTree(),
-            'documents' => $this->knowledgeReader->documents(folderId: $folder),
+            'documents' => Page::ofRows($this->knowledgeReader->documents(folderId: $folder, limit: self::PAGE_SIZE, offset: Page::offset($page, self::PAGE_SIZE)), $page, self::PAGE_SIZE),
             'upload' => $upload,
             'folder_form' => $folderForm,
         ], new Response(status: $upload->isSubmitted() || $folderForm->isSubmitted() ? Response::HTTP_UNPROCESSABLE_ENTITY : Response::HTTP_OK));
     }
 
     #[Route('/projects/{slug}', name: 'project_show', methods: ['GET', 'POST'])]
-    public function project(#[MapEntity(mapping: ['slug' => 'slug'])] Project $project, Request $request): Response
+    public function project(#[MapEntity(mapping: ['slug' => 'slug'])] Project $project, Request $request, #[MapQueryParameter] int $page = 1): Response
     {
+        $page = max(1, $page);
         $upload = $this->createForm(DocumentUploadType::class);
         if ($this->handleUpload($upload, $request, null, $project)) {
             return $this->redirectToRoute('project_show', ['slug' => $project->getSlug()]);
@@ -78,7 +83,7 @@ final class DocumentController extends AbstractController
 
         return $this->render('document/project.html.twig', [
             'project' => $project,
-            'documents' => $this->knowledgeReader->documents($project),
+            'documents' => Page::ofRows($this->knowledgeReader->documents($project, limit: self::PAGE_SIZE, offset: Page::offset($page, self::PAGE_SIZE)), $page, self::PAGE_SIZE),
             'upload' => $upload,
         ], new Response(status: $upload->isSubmitted() ? Response::HTTP_UNPROCESSABLE_ENTITY : Response::HTTP_OK));
     }

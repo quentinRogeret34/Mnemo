@@ -7,6 +7,7 @@ use App\Entity\Project;
 use App\Enum\NodeType;
 use App\Graph\KnowledgeReader;
 use App\Llm\LlmUnavailable;
+use App\Pagination\Page;
 use App\Rule\ShadowAreaDetector;
 use App\Rule\ShadowCategory;
 use Doctrine\ORM\EntityManagerInterface;
@@ -20,6 +21,8 @@ use Symfony\Component\Routing\Attribute\Route;
 
 final class RuleController extends AbstractController
 {
+    private const PAGE_SIZE = 50;
+
     public function __construct(
         private readonly KnowledgeReader $knowledgeReader,
         private readonly EntityManagerInterface $entityManager,
@@ -31,11 +34,14 @@ final class RuleController extends AbstractController
     public function index(
         #[MapEntity(mapping: ['slug' => 'slug'])] Project $project,
         #[MapQueryParameter(filter: \FILTER_VALIDATE_REGEXP, options: ['regexp' => '/^(validated|to_review)$/'])] ?string $status = null,
+        #[MapQueryParameter] int $page = 1,
     ): Response {
+        $page = max(1, $page);
+
         return $this->render('rule/index.html.twig', [
             'project' => $project,
             'status' => $status,
-            'rules' => $this->knowledgeReader->rules($project, $status),
+            'rules' => Page::ofRows($this->knowledgeReader->rules($project, $status, self::PAGE_SIZE, Page::offset($page, self::PAGE_SIZE)), $page, self::PAGE_SIZE),
         ]);
     }
 

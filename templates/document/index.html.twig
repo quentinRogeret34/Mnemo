@@ -29,7 +29,7 @@
         <div class="explorer__content">
             <div class="view-head">
                 <h1><twig:ux:icon name="lucide:folder-open" />{{ current ? current.name : 'Documents' }}</h1>
-                <span class="view-head__meta">{{ documents|length }}{{ current is null ? ' à la racine' }}</span>
+                <span class="view-head__meta">{{ documents.total }}{{ current is null ? ' à la racine' }}</span>
             </div>
 
             {% set children = folders|filter(folder => folder.parent_id == (current ? current.id : null)) %}
@@ -47,8 +47,9 @@
                 </ul>
             {% endif %}
 
-            {% if documents is not empty %}
-                {{ include('document/_rows.html.twig', {documents: documents, show_folder: false, show_projects: true}) }}
+            {% if documents.items is not empty %}
+                {{ include('document/_rows.html.twig', {documents: documents.items, show_folder: false, show_projects: true}) }}
+                {{ include('_pager.html.twig', {page: documents}) }}
             {% elseif children is empty %}
                 <p class="block__empty">Dossier vide. Déposer des fichiers ou créer un sous-dossier.</p>
             {% endif %}
