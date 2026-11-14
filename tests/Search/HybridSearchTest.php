@@ -49,12 +49,12 @@ final class HybridSearchTest extends KernelTestCase
                 return true;
             }
 
-            public function model(): string
+            public function model(?Project $project = null): string
             {
                 return 'test/axes';
             }
 
-            public function embed(string $text): array
+            public function embed(string $text, ?Project $project = null): array
             {
                 ++$this->calls;
                 $count = static fn (string $pattern): float => (float) preg_match_all($pattern, mb_strtolower($text));

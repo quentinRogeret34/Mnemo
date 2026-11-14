@@ -66,6 +66,7 @@ final class PullRequestReviewer
         if (false !== ($arguments['review_llm'] ?? true)) {
             try {
                 $remarks = $this->advisor->remarks(
+                    $project,
                     $pullRequest['title'],
                     (string) ($pullRequest['body'] ?? ''),
                     array_filter(array_column($files, 'patch', 'filename')),

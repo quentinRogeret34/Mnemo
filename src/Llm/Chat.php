@@ -2,6 +2,7 @@
 
 namespace App\Llm;
 
+use App\Entity\Project;
 use Symfony\AI\Platform\Message\Message;
 use Symfony\AI\Platform\Message\MessageBag;
 use Symfony\AI\Platform\Result\ObjectResult;
@@ -21,18 +22,19 @@ final class Chat
      * The schema is sent as the provider's structured output format; the answer is still decoded and must be
      * validated by the caller, since not every model enforces it.
      *
-     * @param array<string, mixed> $schema JSON schema of the expected object
+     * @param array<string, mixed> $schema  JSON schema of the expected object
+     * @param Project|null         $project the project the call is for, which may name its own model
      *
      * @return array<string, mixed>
      */
-    public function ask(string $system, string $user, array $schema): array
+    public function ask(string $system, string $user, array $schema, ?Project $project = null): array
     {
         if (!$this->settings->isConfigured($this->settings->chatPlatform)) {
-            throw new LlmUnavailable(\sprintf('Clé API absente pour la plateforme LLM "%s" : la renseigner dans .env.local.', $this->settings->chatPlatform));
+            throw new LlmUnavailable(\sprintf('Clé API absente pour la plateforme LLM "%s" : la renseigner dans les réglages des modèles ou dans .env.local.', $this->settings->chatPlatform));
         }
 
         $result = $this->settings->platform($this->settings->chatPlatform)->invoke(
-            $this->settings->chatModel,
+            $this->settings->chatModel($project),
             new MessageBag(
                 Message::forSystem($system."\n\nRéponds uniquement par un objet JSON conforme au schéma demandé, sans texte autour."),
                 Message::ofUser($user),

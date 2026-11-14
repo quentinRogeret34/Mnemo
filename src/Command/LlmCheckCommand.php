@@ -30,10 +30,10 @@ final class LlmCheckCommand
 
         $failed = false;
 
-        $io->section(\sprintf('Chat: %s / %s', $this->settings->chatPlatform, $this->settings->chatModel));
+        $io->section(\sprintf('Chat: %s / %s', $this->settings->chatPlatform, $this->settings->chatModel()));
         try {
             $result = $this->settings->platform($this->settings->chatPlatform)
-                ->invoke($this->settings->chatModel, new MessageBag(Message::ofUser('Réponds uniquement par le mot OK.')))
+                ->invoke($this->settings->chatModel(), new MessageBag(Message::ofUser('Réponds uniquement par le mot OK.')))
                 ->getResult();
             $io->success(\sprintf('Answer: %s', $result instanceof TextResult ? trim($result->getContent()) : $result::class));
         } catch (\Throwable $exception) {
@@ -55,10 +55,10 @@ final class LlmCheckCommand
             $failed = true;
         }
 
-        $io->section(\sprintf('Embeddings: %s / %s', $this->settings->embeddingPlatform, $this->settings->embeddingModel));
+        $io->section(\sprintf('Embeddings: %s / %s', $this->settings->embeddingPlatform, $this->settings->embeddingModel()));
         try {
             $result = $this->settings->platform($this->settings->embeddingPlatform)
-                ->invoke($this->settings->embeddingModel, 'Règle métier de test')
+                ->invoke($this->settings->embeddingModel(), 'Règle métier de test')
                 ->getResult();
             if (!$result instanceof VectorResult) {
                 throw new \UnexpectedValueException(\sprintf('Expected vectors, got %s.', $result::class));

@@ -131,6 +131,12 @@
             <twig:ux:icon name="lucide:key-round" class="icon nav-item__icon" />
             <span class="nav-item__label">Clés d'API</span>
         </a>
+        {% if not app.user or is_granted('ROLE_SUPER_ADMIN') %}
+            <a class="nav-item" href="{{ path('llm_settings') }}" {% if route == 'llm_settings' %}aria-current="page"{% endif %}>
+                <twig:ux:icon name="lucide:brain" class="icon nav-item__icon" />
+                <span class="nav-item__label">Modèles de langage</span>
+            </a>
+        {% endif %}
         <a class="nav-item" href="{{ path('appearance') }}" {% if route == 'appearance' %}aria-current="page"{% endif %}>
             <twig:ux:icon name="lucide:palette" class="icon nav-item__icon" />
             <span class="nav-item__label">Apparence</span>

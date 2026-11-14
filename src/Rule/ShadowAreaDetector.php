@@ -85,6 +85,7 @@ final class ShadowAreaDetector
                 'required' => ['areas'],
                 'additionalProperties' => false,
             ],
+            $rule->getProject(),
         );
 
         $areas = [];

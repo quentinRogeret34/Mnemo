@@ -47,13 +47,13 @@ final class ProjectAssistant
     public function reply(Project $project, array $history, string $message): array
     {
         if (!$this->settings->isConfigured($this->settings->chatPlatform)) {
-            throw new LlmUnavailable(\sprintf('Clé API absente pour la plateforme LLM "%s" : la renseigner dans .env.local.', $this->settings->chatPlatform));
+            throw new LlmUnavailable(\sprintf('Clé API absente pour la plateforme LLM "%s" : la renseigner dans les réglages des modèles ou dans .env.local.', $this->settings->chatPlatform));
         }
 
         $tools = $this->tools->for($project);
         $agent = new Agent(
             $this->settings->platform($this->settings->chatPlatform),
-            $this->settings->chatModel,
+            $this->settings->chatModel($project),
             [new SystemPromptInputProcessor(\sprintf(self::SYSTEM, $project->getName()))],
             toolbox: new FaultTolerantToolbox(new Toolbox([$tools])),
             maxToolCalls: self::MAX_TOOL_CALLS,

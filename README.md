@@ -301,6 +301,21 @@ ces trois chemins, jamais un réglage ni un hook. `GRAPHE_SYNC=0` coupe la synch
 
 Qui peut modifier ces fichiers sur le serveur donne des instructions aux agents connectés au projet.
 
+## Clé et modèles de langage
+
+« Modèles de langage » (`/settings/llm`) règle la clé OpenRouter et les modèles de chat et d'embeddings de toute
+l'instance, sans toucher au `.env`. La clé est chiffrée en base avec une clé dérivée de `APP_SECRET` et n'est plus
+jamais affichée ; ce qui est saisi là l'emporte sur `OPENROUTER_API_KEY`, `LLM_MODEL` et `EMBEDDING_MODEL`, qui
+restent les valeurs par défaut. La page est réservée au super admin dès que le serveur demande une connexion.
+
+Un projet peut nommer ses propres modèles dans ses réglages ; la clé reste celle de l'instance. Chaque
+enregistrement essaie la clé et les modèles par un appel court, et refuse ce qu'OpenRouter refuse.
+
+Le modèle d'embeddings se choisit parmi ceux que le pont OpenRouter de Symfony AI connaît (liste proposée dans le
+champ). En changer réindexe le contenu en arrière-plan, par le worker. Un contenu garde un vecteur par modèle
+utile : celui de l'instance, et celui de chacun de ses projets qui en nomme un autre. La recherche dans un projet
+utilise le modèle du projet, la recherche sur tous les projets celui de l'instance.
+
 ## Assistant du projet
 
 « Assistant », dans le menu d'un projet, est un chat qui répond à partir du graphe (règles, mémoires, documents,

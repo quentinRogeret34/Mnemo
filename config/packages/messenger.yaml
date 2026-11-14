@@ -6,6 +6,7 @@ framework:
             App\Message\SyncConnector: async
             App\Message\ReviewPullRequest: async
             App\Message\IndexNode: async
+            App\Message\ReindexNodes: async
 
 when@test:
     framework:

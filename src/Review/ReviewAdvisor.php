@@ -2,6 +2,7 @@
 
 namespace App\Review;
 
+use App\Entity\Project;
 use App\Llm\Chat;
 
 /**
@@ -45,7 +46,7 @@ final class ReviewAdvisor
      *
      * @return list<array{source: string, path: string, remark: string, severity: string}>
      */
-    public function remarks(string $title, string $description, array $patches, array $memories, array $rules): array
+    public function remarks(Project $project, string $title, string $description, array $patches, array $memories, array $rules): array
     {
         $sources = [...array_map(static fn (array $memory): string => 'M'.$memory['id'], $memories), ...array_column($rules, 'code')];
         if ([] === $sources || [] === $patches) {
@@ -78,7 +79,7 @@ final class ReviewAdvisor
             ]]],
             'required' => ['remarks'],
             'additionalProperties' => false,
-        ]);
+        ], $project);
 
         $remarks = [];
         foreach (\is_array($answer['remarks'] ?? null) ? $answer['remarks'] : [] as $remark) {

@@ -29,6 +29,17 @@ class Project
     #[ORM\Column(nullable: true)]
     private ?\DateTimeImmutable $archivedAt = null;
 
+    /**
+     * Models of this project when they differ from those of the instance, e.g. "anthropic/claude-sonnet-4.5".
+     */
+    #[ORM\Column(length: 150, nullable: true)]
+    #[Assert\Length(max: 150)]
+    private ?string $chatModel = null;
+
+    #[ORM\Column(length: 150, nullable: true)]
+    #[Assert\Length(max: 150)]
+    private ?string $embeddingModel = null;
+
     public function __construct(
         #[ORM\Column(length: 100, unique: true)]
         #[Assert\NotBlank(message: 'Indiquer un identifiant : le nom ne permet pas d\'en déduire un.')]
@@ -85,6 +96,26 @@ class Project
     public function setRepository(?string $repository): void
     {
         $this->repository = $repository;
+    }
+
+    public function getChatModel(): ?string
+    {
+        return $this->chatModel;
+    }
+
+    public function setChatModel(?string $chatModel): void
+    {
+        $this->chatModel = '' === trim((string) $chatModel) ? null : trim($chatModel);
+    }
+
+    public function getEmbeddingModel(): ?string
+    {
+        return $this->embeddingModel;
+    }
+
+    public function setEmbeddingModel(?string $embeddingModel): void
+    {
+        $this->embeddingModel = '' === trim((string) $embeddingModel) ? null : trim($embeddingModel);
     }
 
     public function getCreatedAt(): \DateTimeImmutable

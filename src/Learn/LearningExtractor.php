@@ -63,6 +63,7 @@ final class LearningExtractor
             self::SYSTEM,
             \sprintf("Projet : %s\nSource : %s (%s)\n\n<source>\n%s\n</source>", $project->getName(), $kind->describe(), $label, $text),
             self::schema(),
+            $project,
         );
 
         $candidates = [];

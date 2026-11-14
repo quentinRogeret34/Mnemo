@@ -10,8 +10,9 @@ use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
- * Keeps one embedding per memory, business rule and document in the node_embedding table (pgvector).
- * A node is embedded again only when its text or the embedding model changed.
+ * Keeps the embeddings of memories, business rules and documents in the node_embedding table (pgvector): one per
+ * node with the model of the instance, plus one with the model of each of its projects that names its own.
+ * A node is embedded again only when its text or a model changed.
  */
 final class NodeIndexer
 {
@@ -34,22 +35,39 @@ final class NodeIndexer
             return false;
         }
         $text = $this->text($node);
-        $hash = hash('sha256', $this->embedder->model()."\n".$text);
-        $connection = $this->entityManager->getConnection();
-        if ('' === $text || $hash === $connection->fetchOne('SELECT content_hash FROM node_embedding WHERE node_id = :node', ['node' => $node->getId()])) {
+        if ('' === $text) {
             return false;
         }
-
+        $models = [$this->embedder->model() => null];
+        foreach (array_filter([$node->getProject(), ...$node->getProjects()]) as $project) {
+            $models[$this->embedder->model($project)] ??= $project;
+        }
+        $connection = $this->entityManager->getConnection();
+        $hashes = $connection->fetchAllKeyValue('SELECT model, content_hash FROM node_embedding WHERE node_id = :node', ['node' => $node->getId()]);
         $connection->executeStatement(
-            <<<'SQL'
-                INSERT INTO node_embedding (node_id, model, content_hash, embedding, updated_at)
-                VALUES (:node, :model, :hash, CAST(:vector AS vector), now())
-                ON CONFLICT (node_id) DO UPDATE SET model = EXCLUDED.model, content_hash = EXCLUDED.content_hash, embedding = EXCLUDED.embedding, updated_at = now()
-                SQL,
-            ['node' => $node->getId(), 'model' => $this->embedder->model(), 'hash' => $hash, 'vector' => self::literal($this->embedder->embed($text))],
+            'DELETE FROM node_embedding WHERE node_id = :node AND model NOT IN (:models)',
+            ['node' => $node->getId(), 'models' => array_keys($models)],
+            ['models' => ArrayParameterType::STRING],
         );
 
-        return true;
+        $written = false;
+        foreach ($models as $model => $project) {
+            $hash = hash('sha256', $model."\n".$text);
+            if ($hash === ($hashes[$model] ?? null)) {
+                continue;
+            }
+            $connection->executeStatement(
+                <<<'SQL'
+                    INSERT INTO node_embedding (node_id, model, content_hash, embedding, updated_at)
+                    VALUES (:node, :model, :hash, CAST(:vector AS vector), now())
+                    ON CONFLICT (node_id, model) DO UPDATE SET content_hash = EXCLUDED.content_hash, embedding = EXCLUDED.embedding, updated_at = now()
+                    SQL,
+                ['node' => $node->getId(), 'model' => $model, 'hash' => $hash, 'vector' => self::literal($this->embedder->embed($text, $project))],
+            );
+            $written = true;
+        }
+
+        return $written;
     }
 
     /**

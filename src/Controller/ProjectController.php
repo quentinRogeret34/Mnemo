@@ -6,6 +6,9 @@ use App\Entity\Connector;
 use App\Entity\Project;
 use App\Entity\UserGroup;
 use App\Form\ProjectType;
+use App\Llm\LlmSettings;
+use App\Llm\ModelCheck;
+use App\Message\ReindexNodes;
 use App\Project\ProjectRemover;
 use App\Project\ProjectResolver;
 use App\Security\OAuth\OAuthClient;
@@ -13,11 +16,13 @@ use App\Security\ProjectScope;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bridge\Doctrine\Attribute\MapEntity;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\Form\FormError;
 use Symfony\Component\Form\FormFactoryInterface;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
+use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Routing\Attribute\Route;
 
 final class ProjectController extends AbstractController
@@ -29,6 +34,9 @@ final class ProjectController extends AbstractController
         private readonly FormFactoryInterface $formFactory,
         private readonly OAuthClient $oauthClient,
         private readonly ProjectRemover $projectRemover,
+        private readonly LlmSettings $llmSettings,
+        private readonly ModelCheck $modelCheck,
+        private readonly MessageBusInterface $bus,
     ) {
     }
 
@@ -68,11 +76,26 @@ final class ProjectController extends AbstractController
                 static fn (UserGroup $group): bool => $group->getProjects()->contains($project),
             ));
         }
+        $chatModel = $this->llmSettings->chatModel($project);
+        $embeddingModel = $this->llmSettings->embeddingModel($project);
         $form->handleRequest($request);
+        $configured = $this->llmSettings->isConfigured('openrouter');
+        if ($form->isSubmitted() && $form->isValid() && $configured) {
+            if ($chatModel !== $this->llmSettings->chatModel($project) && null !== $error = $this->modelCheck->chat($this->llmSettings->chatModel($project))) {
+                $form->get('chatModel')->addError(new FormError('OpenRouter a refusé ce modèle de chat : '.$error));
+            }
+            if ($embeddingModel !== $this->llmSettings->embeddingModel($project) && null !== $error = $this->modelCheck->embedding($this->llmSettings->embeddingModel($project))) {
+                $form->get('embeddingModel')->addError(new FormError('OpenRouter a refusé ce modèle d\'embeddings : '.$error));
+            }
+        }
         if ($form->isSubmitted() && $form->isValid()) {
             $this->saveGroups($form, $project);
             $this->entityManager->flush();
-            $this->addFlash('success', 'Réglages du projet mis à jour.');
+            $reindex = $configured && $embeddingModel !== $this->llmSettings->embeddingModel($project);
+            if ($reindex) {
+                $this->bus->dispatch(new ReindexNodes($project->getId()));
+            }
+            $this->addFlash('success', $reindex ? 'Réglages mis à jour. Le contenu du projet est réindexé en arrière-plan avec son modèle d\'embeddings.' : 'Réglages du projet mis à jour.');
 
             return $this->redirectToRoute('project_settings', ['slug' => $project->getSlug()]);
         }
@@ -84,6 +107,7 @@ final class ProjectController extends AbstractController
         return $this->render('project/settings.html.twig', [
             'project' => $project,
             'form' => $form,
+            'llm' => $this->llmSettings,
             'connectors' => $this->entityManager->getRepository(Connector::class)->findBy(['project' => $project], ['name' => 'ASC']),
             'github_oauth' => isset($this->oauthClient->enabled()['github']),
             'scoped' => null !== $this->projectScope->slugs(),

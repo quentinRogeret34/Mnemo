@@ -82,12 +82,12 @@ final class HybridSearch
     {
         $types = array_values(array_intersect($types, array_column(NodeIndexer::TYPES, 'value')));
         if ('' === trim($text) || [] === $types || !$this->embedder->isAvailable()
-            || !$this->connection->fetchOne('SELECT EXISTS (SELECT 1 FROM node_embedding WHERE model = :model)', ['model' => $this->embedder->model()])) {
+            || !$this->connection->fetchOne('SELECT EXISTS (SELECT 1 FROM node_embedding WHERE model = :model)', ['model' => $this->embedder->model($project)])) {
             return null;
         }
 
         try {
-            $vector = NodeIndexer::literal($this->embedder->embed($text));
+            $vector = NodeIndexer::literal($this->embedder->embed($text, $project));
         } catch (\Throwable $exception) {
             $this->logger->warning('Vector search skipped, the embedding call failed: {message}', ['message' => $exception->getMessage()]);
 
@@ -110,7 +110,7 @@ final class HybridSearch
                     ORDER BY v.embedding <=> CAST(:vector AS vector)
                     LIMIT $limit
                     SQL,
-                ['model' => $this->embedder->model(), 'types' => $types, 'exclude' => [0, ...$exclude], 'project' => $project?->getId(), 'vector' => $vector, 'rule' => NodeType::BusinessRule->value, 'memory' => NodeType::Memory->value],
+                ['model' => $this->embedder->model($project), 'types' => $types, 'exclude' => [0, ...$exclude], 'project' => $project?->getId(), 'vector' => $vector, 'rule' => NodeType::BusinessRule->value, 'memory' => NodeType::Memory->value],
                 ['types' => ArrayParameterType::STRING, 'exclude' => ArrayParameterType::INTEGER],
             ),
         );

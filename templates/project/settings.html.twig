@@ -24,6 +24,7 @@
         </form>
     {% endif %}
 
+    <datalist id="embedding-models">{% for model in llm.embeddingModels %}<option value="{{ model }}">{% endfor %}</datalist>
     {{ form_start(form, {attr: {class: 'form-stack project-settings', novalidate: 'novalidate'}}) }}
         <fieldset>
             <legend>Projet</legend>
@@ -32,6 +33,11 @@
             {{ form_row(form.repository) }}
             {{ form_row(form.repositoryPath) }}
             {% if form.groups is defined %}{{ include('project/_groups.html.twig', {field: form.groups}) }}{% endif %}
+        </fieldset>
+        <fieldset>
+            <legend>Modèles de langage</legend>
+            {{ form_row(form.chatModel) }}
+            {{ form_row(form.embeddingModel) }}
             <div class="upload__actions">
                 <button class="button button--primary" type="submit">Enregistrer les réglages</button>
             </div>

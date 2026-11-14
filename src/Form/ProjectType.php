@@ -4,6 +4,7 @@ namespace App\Form;
 
 use App\Entity\Project;
 use App\Entity\UserGroup;
+use App\Llm\LlmSettings;
 use App\Project\ProjectResolver;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
@@ -17,6 +18,7 @@ final class ProjectType extends AbstractType
 {
     public function __construct(
         private readonly ProjectResolver $projectResolver,
+        private readonly LlmSettings $llmSettings,
     ) {
     }
 
@@ -46,6 +48,21 @@ final class ProjectType extends AbstractType
                 'help' => 'Dossier du dépôt sur la machine qui héberge le graphe, s\'il y est cloné.',
                 'attr' => ['autocomplete' => 'off', 'spellcheck' => 'false'],
             ]);
+        if (!$options['create']) {
+            $builder
+                ->add('chatModel', TextType::class, [
+                    'label' => 'Modèle de chat',
+                    'required' => false,
+                    'help' => 'Identifiant OpenRouter, ex. anthropic/claude-sonnet-4.5. Vide : celui de l\'instance.',
+                    'attr' => ['autocomplete' => 'off', 'spellcheck' => 'false', 'placeholder' => $this->llmSettings->chatModel()],
+                ])
+                ->add('embeddingModel', TextType::class, [
+                    'label' => 'Modèle d\'embeddings',
+                    'required' => false,
+                    'help' => 'À choisir dans la liste. En changer réindexe le contenu du projet. Vide : celui de l\'instance.',
+                    'attr' => ['autocomplete' => 'off', 'spellcheck' => 'false', 'list' => 'embedding-models', 'placeholder' => $this->llmSettings->embeddingModel()],
+                ]);
+        }
         if ($options['groups']) {
             $builder->add('groups', EntityType::class, [
                 'label' => 'Groupes qui y accèdent',

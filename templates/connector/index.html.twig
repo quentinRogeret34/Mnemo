@@ -68,6 +68,6 @@
             <dt>Clé OpenRouter</dt>
             <dd>{% if llm.isConfigured('openrouter') %}<span class="status status--validated">configurée</span>{% else %}<span class="status">absente</span>{% endif %}</dd>
         </dl>
-        <p class="row__sub">Clé dans <code>.env.local</code> (<code>OPENROUTER_API_KEY</code>), modèles via <code>LLM_PLATFORM</code>, <code>LLM_MODEL</code>, <code>EMBEDDING_PLATFORM</code>, <code>EMBEDDING_MODEL</code>. Vérifier avec <code>bin/console app:llm:check</code>.</p>
+        <p class="row__sub">Clé et modèles se règlent dans <a class="link" href="{{ path('llm_settings') }}">Modèles de langage</a>, ou par l'environnement (<code>OPENROUTER_API_KEY</code>, <code>LLM_MODEL</code>, <code>EMBEDDING_MODEL</code>). Vérifier avec <code>bin/console app:llm:check</code>.</p>
     </section>
 {% endblock %}

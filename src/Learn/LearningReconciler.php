@@ -62,6 +62,7 @@ final class LearningReconciler
                 'required' => ['verdict', 'target_id', 'reason'],
                 'additionalProperties' => false,
             ],
+            $project,
         );
 
         $verdict = \in_array($answer['verdict'] ?? null, self::VERDICTS, true) ? $answer['verdict'] : 'new';

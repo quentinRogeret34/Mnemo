@@ -76,6 +76,7 @@ final class DuplicateFinder
                     'required' => ['pairs'],
                     'additionalProperties' => false,
                 ],
+                $project,
             );
 
             foreach (\is_array($answer['pairs'] ?? null) ? $answer['pairs'] : [] as $pair) {

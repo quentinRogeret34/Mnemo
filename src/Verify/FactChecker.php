@@ -80,6 +80,7 @@ final class FactChecker
                 'required' => ['verdict', 'source_ids', 'reason'],
                 'additionalProperties' => false,
             ],
+            $project,
         );
 
         $byId = array_column($sources, null, 'id');
