@@ -81,6 +81,19 @@ final class RuleController extends AbstractController
         return $this->redirectToRoute('rule_show', ['slug' => $project->getSlug(), 'code' => $code, '_fragment' => 'shadow-title']);
     }
 
+    #[Route('/projects/{slug}/rules/{code}/status', name: 'rule_status', methods: ['POST'])]
+    public function status(#[MapEntity(mapping: ['slug' => 'slug'])] Project $project, string $code, Request $request): Response
+    {
+        $rule = $this->findRule($project, $code);
+        $this->checkToken($rule, $request);
+        $validated = 'validated' === $request->getPayload()->getString('status');
+        $rule->update($rule->getLabel(), $rule->getPath(), $rule->getLine(), ['status' => $validated ? 'validated' : 'to_review'] + $rule->getMetadata());
+        $this->entityManager->flush();
+        $this->addFlash('success', $validated ? 'Règle validée : elle rejoint la mémoire du projet donnée aux agents.' : 'Règle remise à valider.');
+
+        return $this->redirectToRoute('rule_show', ['slug' => $project->getSlug(), 'code' => $code]);
+    }
+
     private function findRule(Project $project, string $code): Node
     {
         return $this->entityManager->getRepository(Node::class)->findOneBy(['project' => $project, 'type' => NodeType::BusinessRule, 'externalId' => $code])

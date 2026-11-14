@@ -2,6 +2,7 @@
 
 namespace App\Controller\Api;
 
+use App\Entity\AgentAsset;
 use App\Export\MemoryBlockExporter;
 use App\Graph\GraphReader;
 use App\Graph\KnowledgeReader;
@@ -10,6 +11,7 @@ use App\Learn\SourceKind;
 use App\Llm\LlmUnavailable;
 use App\Memory\MemoryStore;
 use App\Project\ProjectResolver;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
@@ -33,6 +35,7 @@ final class ClientHookController extends AbstractController
         private readonly Learner $learner,
         private readonly MemoryStore $memoryStore,
         private readonly ProjectResolver $projectResolver,
+        private readonly EntityManagerInterface $entityManager,
     ) {
     }
 
@@ -81,6 +84,23 @@ final class ClientHookController extends AbstractController
         }
 
         return $this->json(['project' => $project->getSlug(), 'path' => $relative, 'context' => implode("\n", $lines)]);
+    }
+
+    /**
+     * Skills, commands and subagents the client writes into its ".claude" directory.
+     */
+    #[Route('/agent-assets', name: 'api_agent_assets', methods: ['GET'])]
+    public function agentAssets(#[MapQueryParameter] string $cwd = '', #[MapQueryParameter(name: 'project')] string $slug = '', #[MapQueryParameter] string $repository = ''): JsonResponse
+    {
+        $project = $this->projectResolver->find($cwd, $slug, $repository);
+
+        return $this->json([
+            'project' => $project?->getSlug(),
+            'files' => array_map(
+                static fn (AgentAsset $asset): array => ['path' => $asset->path(), 'content' => $asset->file()],
+                null === $project ? [] : $this->entityManager->getRepository(AgentAsset::class)->findBy(['project' => $project], ['id' => 'ASC']),
+            ),
+        ]);
     }
 
     #[Route('/learn', name: 'api_learn', methods: ['POST'])]

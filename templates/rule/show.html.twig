@@ -17,7 +17,15 @@
         <h1 class="page__title">{{ rule.label }}</h1>
 
         <dl class="props">
-            <dt>Statut</dt><dd><span class="status status--{{ meta.status ?? '' }}">{{ (meta.status ?? '') == 'validated' ? 'Validée' : 'À valider' }}</span></dd>
+            <dt>Statut</dt>
+            <dd>
+                <span class="status status--{{ meta.status ?? '' }}">{{ (meta.status ?? '') == 'validated' ? 'Validée' : 'À valider' }}</span>
+                <form method="post" action="{{ path('rule_status', {slug: project.slug, code: rule.externalId}) }}">
+                    <input type="hidden" name="_token" value="{{ csrf_token('rule-shadow-' ~ rule.id) }}">
+                    <input type="hidden" name="status" value="{{ (meta.status ?? '') == 'validated' ? 'to_review' : 'validated' }}">
+                    <button class="button" type="submit">{{ (meta.status ?? '') == 'validated' ? 'Remettre à valider' : 'Valider la règle' }}</button>
+                </form>
+            </dd>
             <dt>Sources</dt>
             <dd>{% for source in sources %}<a class="tag" href="{{ path('document_show', {id: source.id}) }}"><span class="format format--{{ source.format }}">{{ source.format }}</span>{{ source.title }}</a>{% else %}<span class="row__sub">aucune</span>{% endfor %}</dd>
             <dt>Code lié</dt><dd>{{ implementations|length }} fichiers</dd>

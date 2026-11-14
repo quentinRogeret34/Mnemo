@@ -1,0 +1,33 @@
+{% extends 'base.html.twig' %}
+
+{% set title = asset.id ? asset.name : 'Nouveau skill' %}
+
+{% block title %}{{ title }} · {{ project.name }}{% endblock %}
+
+{% block crumbs %}
+    <a href="{{ path('agent_asset_index', {slug: project.slug}) }}">Skills des agents</a>
+    <span class="crumbs__sep" aria-hidden="true">/</span>
+    <span class="crumbs__current">{{ title }}</span>
+{% endblock %}
+
+{% block body %}
+    <div class="page">
+        <h1 class="page__title">{{ asset.id ? 'Modifier ' ~ asset.name : 'Nouveau skill, commande ou sous-agent' }}</h1>
+        {{ form_start(form, {attr: {class: 'form-stack', novalidate: 'novalidate'}}) }}
+            <fieldset>
+                <legend>Fichier</legend>
+                {{ form_row(form.kind) }}
+                {{ form_row(form.name) }}
+                {{ form_row(form.description) }}
+            </fieldset>
+            <fieldset>
+                <legend>Contenu</legend>
+                {{ form_row(form.content) }}
+            </fieldset>
+            <div class="upload__actions">
+                <button class="button button--primary" type="submit">Enregistrer</button>
+                <a class="button" href="{{ path('agent_asset_index', {slug: project.slug}) }}">Annuler</a>
+            </div>
+        {{ form_end(form) }}
+    </div>
+{% endblock %}

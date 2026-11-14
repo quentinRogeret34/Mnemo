@@ -1,0 +1,17 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Assistant · {{ project.name }}{% endblock %}
+
+{% block crumbs %}
+    <a href="{{ path('project_show', {slug: project.slug}) }}">{{ project.name }}</a>
+    <span class="crumbs__sep" aria-hidden="true">/</span>
+    <span class="crumbs__current">Assistant</span>
+{% endblock %}
+
+{% block body %}
+    <div class="view-head">
+        <h1><twig:ux:icon name="lucide:message-circle" />Assistant</h1>
+    </div>
+    <p class="page__lede">Il répond à partir des règles, mémoires, documents et code du projet, et enregistre une règle ou une mémoire quand on le lui demande. Une règle ajoutée ici reste à valider.</p>
+    <twig:ProjectChat :project="project" />
+{% endblock %}

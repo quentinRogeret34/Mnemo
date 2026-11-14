@@ -1,0 +1,40 @@
+<div{{ attributes.defaults({class: 'chat'}) }} data-loading="addClass(is-loading)">
+    {% set messages = this.messages %}
+    {% if messages is empty %}
+        <div class="chat__empty">
+            <p>Poser une question sur le projet, ou demander d'enregistrer une règle ou une décision.</p>
+            <ul class="chat__examples">
+                <li>Quelles règles métier concernent les remises ?</li>
+                <li>Qu'a-t-on décidé sur l'authentification ?</li>
+                <li>Ajoute une règle : une commande de plus de 500 € demande une validation.</li>
+            </ul>
+        </div>
+    {% else %}
+        <ol class="chat__messages" aria-live="polite">
+            {% for item in messages %}
+                <li class="chat__message chat__message--{{ item.role }}">
+                    <span class="chat__author">{{ item.role == 'user' ? 'Vous' : 'Assistant' }}</span>
+                    {% if item.role == 'user' %}
+                        <p>{{ item.content }}</p>
+                    {% else %}
+                        <div class="prose">{{ item.content|markdown_to_html }}</div>
+                        {% for action in item.actions ?? [] %}
+                            <a class="tag" href="{{ action.url }}"><twig:ux:icon name="lucide:check" />{{ action.label }}</a>
+                        {% endfor %}
+                    {% endif %}
+                </li>
+            {% endfor %}
+        </ol>
+    {% endif %}
+
+    {% if error %}<p class="form-errors" role="alert">{{ error }}</p>{% endif %}
+
+    <form class="chat__form" data-action="live#action:prevent" data-live-action-param="send">
+        <label class="visually-hidden" for="chat-message">Message</label>
+        <input class="input" id="chat-message" type="text" data-model="norender|message" value="{{ message }}" maxlength="4000" placeholder="Demander quelque chose sur {{ project.name }}" autocomplete="off" autofocus required>
+        <button class="button button--primary" type="submit" data-loading="addAttribute(disabled)"><twig:ux:icon name="lucide:message-circle" /><span data-loading="hide">Envoyer</span><span data-loading="show">Réflexion...</span></button>
+        {% if messages is not empty %}
+            <button class="button" type="button" data-action="live#action" data-live-action-param="reset" data-loading="addAttribute(disabled)">Nouvelle conversation</button>
+        {% endif %}
+    </form>
+</div>

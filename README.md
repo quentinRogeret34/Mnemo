@@ -284,9 +284,29 @@ Le projet est trouvé par le dossier de travail (`cwd`) de l'agent.
 | `GET /api/context?cwd=...` | Bloc mémoire du projet, à injecter au démarrage de session |
 | `GET /api/file-context?cwd=...&path=...` | Contexte d'un fichier, à injecter à chaque lecture |
 | `POST /api/learn` (`cwd`, `kind`, `label`, `text`) | Envoyer un transcript ou un diff à l'extraction |
+| `GET /api/agent-assets?cwd=...` | Skills, commandes et sous-agents du projet, en fichiers à écrire dans `.claude/` |
 
 Exemple d'adaptateur : hooks Claude Code `SessionStart` (contexte), `PostToolUse`
 sur `Read` (contexte du fichier), `SessionEnd` / `PreCompact` (transcript vers `learn`).
+
+### Skills, commandes et sous-agents du projet
+
+La page « Skills des agents » d'un projet garde des skills, des commandes (`/nom`) et des sous-agents. Au début
+de chaque session, le plugin les écrit dans le dépôt de l'agent connecté :
+`.claude/skills/<nom>/SKILL.md`, `.claude/commands/<nom>.md`, `.claude/agents/<nom>.md`. Un fichier supprimé sur
+le serveur est retiré du poste ; un fichier local du même nom, que le serveur n'a pas écrit, n'est jamais touché
+(le plugin tient la liste de ce qu'il gère dans `.claude/graphe-assets.json`). Le serveur ne peut faire écrire que
+ces trois chemins, jamais un réglage ni un hook. `GRAPHE_SYNC=0` coupe la synchronisation. Ces fichiers n'ont pas
+à être commités : les ajouter au `.gitignore` du dépôt si besoin.
+
+Qui peut modifier ces fichiers sur le serveur donne des instructions aux agents connectés au projet.
+
+## Assistant du projet
+
+« Assistant », dans le menu d'un projet, est un chat qui répond à partir du graphe (règles, mémoires, documents,
+code) en citant ses sources, et qui écrit quand on le lui demande : une règle métier, créée « à valider » et
+validée ensuite sur sa page, ou une mémoire du projet. Il demande un LLM configuré qui sait appeler des outils.
+La conversation vit dans la session du navigateur : elle n'est ni partagée ni conservée après la déconnexion.
 
 ## Front
 

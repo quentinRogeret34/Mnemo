@@ -103,6 +103,14 @@
                 <span class="nav-item__label">Code</span>
                 <span class="nav-item__count">{{ counts.files }}</span>
             </a>
+            <a class="nav-item" href="{{ path('project_chat', {slug: project.slug}) }}" {% if route == 'project_chat' %}aria-current="page"{% endif %}>
+                <twig:ux:icon name="lucide:message-circle" class="icon nav-item__icon" />
+                <span class="nav-item__label">Assistant</span>
+            </a>
+            <a class="nav-item" href="{{ path('agent_asset_index', {slug: project.slug}) }}" {% if route starts with 'agent_asset_' %}aria-current="page"{% endif %}>
+                <twig:ux:icon name="lucide:wand-sparkles" class="icon nav-item__icon" />
+                <span class="nav-item__label">Skills des agents</span>
+            </a>
             <a class="nav-item" href="{{ path('garden_show', {slug: project.slug}) }}" {% if route == 'garden_show' %}aria-current="page"{% endif %}>
                 <twig:ux:icon name="lucide:sprout" class="icon nav-item__icon" />
                 <span class="nav-item__label">Jardinage</span>

@@ -82,7 +82,7 @@
             </span>
         </dd>
 
-        <dt>Source</dt><dd>{{ {manual: 'saisie manuelle', demo: 'démo', learn: 'extraite par LLM', aidd: 'banque AIDD', mcp: 'agent (MCP)', connector: 'connecteur'}[meta.source] ?? meta.source }}{% if meta.learned_from is defined %} · {{ meta.learned_from.kind }} « {{ meta.learned_from.label }} »{% endif %}</dd>
+        <dt>Source</dt><dd>{{ {manual: 'saisie manuelle', demo: 'démo', learn: 'extraite par LLM', aidd: 'banque AIDD', mcp: 'agent (MCP)', connector: 'connecteur', chat: 'assistant du projet'}[meta.source] ?? meta.source }}{% if meta.learned_from is defined %} · {{ meta.learned_from.kind }} « {{ meta.learned_from.label }} »{% endif %}</dd>
         {% if meta.evidence is defined %}<dt>Preuve</dt><dd><q>{{ meta.evidence }}</q></dd>{% endif %}
         <dt>Créée le</dt><dd>{{ memory.createdAt|date('d/m/Y à H:i') }}</dd>
         <dt>Modifiée le</dt><dd>{{ memory.updatedAt|date('d/m/Y à H:i') }}</dd>
