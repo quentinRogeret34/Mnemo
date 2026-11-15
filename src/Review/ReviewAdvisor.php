@@ -26,6 +26,8 @@ final class ReviewAdvisor
         Chaque remarque :
         - source : l'identifiant exact de la mémoire (M12) ou de la règle (RG-042) contredite, un seul ;
         - path : le fichier du diff concerné ;
+        - line : le numéro, en tête de ligne dans le diff, de la ligne ajoutée (+) qui pose problème ; null si la
+          remarque ne tient pas à une ligne précise ;
         - remark : une ou deux phrases factuelles, ce que le diff fait et en quoi cela contredit la source ;
         - severity : blocker (la source est violée), major (risque sérieux), minor (à vérifier).
 
@@ -45,7 +47,7 @@ final class ReviewAdvisor
      * @param array<string, string>                                                      $patches path => unified diff
      * @param string|null                                                                $model   the model the connector chose for its reviews
      *
-     * @return list<array{source: string, path: string, remark: string, severity: string}>
+     * @return list<array{source: string, path: string, line: ?int, remark: string, severity: string}>
      */
     public function remarks(Project $project, string $title, string $description, array $patches, array $memories, array $rules, ?string $model = null): array
     {
@@ -55,8 +57,9 @@ final class ReviewAdvisor
         }
 
         $diff = '';
+        $added = [];
         foreach ($patches as $path => $patch) {
-            $diff .= \sprintf("### %s\n%s\n\n", $path, mb_substr($patch, 0, self::PATCH_CHARS));
+            $diff .= \sprintf("### %s\n%s\n\n", $path, mb_substr(self::numbered($patch, $added[$path]), 0, self::PATCH_CHARS));
         }
         $answer = $this->chat->ask(self::SYSTEM, \sprintf(
             "Mémoires du projet :\n%s\n\nRègles métier touchées :\n%s\n\nPull request : %s\n%s\n\nDiff :\n%s",
@@ -72,10 +75,11 @@ final class ReviewAdvisor
                 'properties' => [
                     'source' => ['type' => 'string'],
                     'path' => ['type' => 'string'],
+                    'line' => ['type' => ['integer', 'null']],
                     'remark' => ['type' => 'string'],
                     'severity' => ['type' => 'string', 'enum' => self::SEVERITIES],
                 ],
-                'required' => ['source', 'path', 'remark', 'severity'],
+                'required' => ['source', 'path', 'line', 'remark', 'severity'],
                 'additionalProperties' => false,
             ]]],
             'required' => ['remarks'],
@@ -91,6 +95,8 @@ final class ReviewAdvisor
             $remarks[] = [
                 'source' => $remark['source'],
                 'path' => $remark['path'],
+                // GitHub only takes a comment on a line of the diff: any other line leaves the remark in the summary.
+                'line' => \is_int($remark['line'] ?? null) && isset($added[$remark['path']][$remark['line']]) ? $remark['line'] : null,
                 'remark' => mb_substr($text, 0, 500),
                 'severity' => \in_array($remark['severity'] ?? null, self::SEVERITIES, true) ? $remark['severity'] : 'minor',
             ];
@@ -98,5 +104,32 @@ final class ReviewAdvisor
         usort($remarks, static fn (array $a, array $b): int => array_search($a['severity'], self::SEVERITIES, true) <=> array_search($b['severity'], self::SEVERITIES, true));
 
         return \array_slice($remarks, 0, self::MAX_REMARKS);
+    }
+
+    /**
+     * Prefixes the lines of a unified diff with their number in the new file, so that a remark can name one.
+     *
+     * @param array<int, true>|null $added filled with the numbers of the added lines
+     */
+    private static function numbered(string $patch, ?array &$added): string
+    {
+        $added = [];
+        $line = null;
+        $numbered = [];
+        foreach (explode("\n", $patch) as $row) {
+            if (preg_match('/^@@ -\d+(?:,\d+)? \+(\d+)/', $row, $match)) {
+                $line = (int) $match[1];
+                $numbered[] = $row;
+            } elseif (null === $line || str_starts_with($row, '-') || str_starts_with($row, '\\')) {
+                $numbered[] = '      '.$row;
+            } else {
+                if (str_starts_with($row, '+')) {
+                    $added[$line] = true;
+                }
+                $numbered[] = \sprintf('%5d %s', $line++, $row);
+            }
+        }
+
+        return implode("\n", $numbered);
     }
 }

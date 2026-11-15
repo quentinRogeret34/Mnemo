@@ -130,6 +130,9 @@ Ce que font les événements, traités par le worker :
   liste les règles métier touchées et leurs zones d'ombre, les mémoires liées aux fichiers, l'historique récent, et
   ce que le diff contredit d'après le LLM (chaque remarque cite sa mémoire ou sa règle ; `review_llm: false` pour
   s'en passer). Une pull request dont le graphe ne sait rien ne reçoit pas de commentaire.
+- chaque remarque du LLM qui vise une ligne ajoutée est aussi posée sur cette ligne, dans une review « Comment » qui
+  ne bloque jamais la fusion. À chaque push, les remarques en ligne précédentes du bot sont effacées, sauf celles
+  auxquelles quelqu'un a répondu.
 - le check `graphe/rules` avertit quand une règle validée est touchée sans fichier de test dans le diff ni mention
   de son code (RG-042) dans le titre, la description ou un commit ; `review_check: "fail"` le fait échouer.
 

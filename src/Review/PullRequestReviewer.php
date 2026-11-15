@@ -18,6 +18,7 @@ final class PullRequestReviewer
 {
     public const CHECK = 'graphe/rules';
     private const MARKER = '<!-- graphe-review -->';
+    private const LINE_MARKER = '<!-- graphe-review-line -->';
     private const PAGE = 100;
     private const MAX_PAGES = 3;
     private const MAX_MEMORIES = 15;
@@ -83,6 +84,7 @@ final class PullRequestReviewer
         if ($publish) {
             $this->comment($http, $base, $number, $body, [] !== $rules || [] !== $memories || [] !== $remarks);
             $this->check($http, $base, $pullRequest['head']['sha'], $rules, $unguarded, 'fail' === ($arguments['review_check'] ?? 'warn'));
+            $this->lineComments($http, $base, $number, $pullRequest['head']['sha'], $project, array_values(array_filter($remarks, static fn (array $remark): bool => null !== $remark['line'])));
         }
 
         return $body;
@@ -150,7 +152,7 @@ final class PullRequestReviewer
             array_push($lines, '', '### Ce que le diff contredit', '');
             foreach ($remarks as $remark) {
                 $source = str_starts_with($remark['source'], 'M') ? $memoryLink((int) substr($remark['source'], 1)) : $ruleLink($remark['source']);
-                $lines[] = \sprintf('- **%s** · `%s` : %s (source : %s)', self::SEVERITIES[$remark['severity']], $remark['path'], self::inline($remark['remark'], 500), $source);
+                $lines[] = \sprintf('- **%s** · `%s` : %s (source : %s)', self::SEVERITIES[$remark['severity']], $remark['path'].(null === $remark['line'] ? '' : ':'.$remark['line']), self::inline($remark['remark'], 500), $source);
             }
         }
 
@@ -198,6 +200,50 @@ final class PullRequestReviewer
         if ($worthIt) {
             $http->request('POST', $base.'/issues/'.$number.'/comments', ['json' => ['body' => $body]])->toArray();
         }
+    }
+
+    /**
+     * Puts each remark that names a line of the diff next to that line, in one review that never blocks the merge.
+     * The remarks of the previous runs go away first, unless someone answered them: the discussion stays.
+     *
+     * @param list<array{source: string, path: string, line: int, remark: string, severity: string}> $remarks
+     */
+    private function lineComments(HttpClientInterface $http, string $base, int $number, string $sha, Project $project, array $remarks): void
+    {
+        $previous = $this->pages($http, $base.'/pulls/'.$number.'/comments');
+        $answered = array_column($previous, 'in_reply_to_id', 'in_reply_to_id');
+        $kept = [];
+        foreach ($previous as $comment) {
+            if ('Bot' !== ($comment['user']['type'] ?? null) || !str_contains((string) $comment['body'], self::LINE_MARKER)) {
+                continue;
+            }
+            if (isset($answered[$comment['id']])) {
+                $kept[] = $comment['path']."\n".$comment['body'];
+            } else {
+                $http->request('DELETE', $base.'/pulls/comments/'.$comment['id'])->getStatusCode();
+            }
+        }
+
+        $comments = [];
+        foreach ($remarks as $remark) {
+            $source = str_starts_with($remark['source'], 'M')
+                ? \sprintf('[mémoire #%d](%s)', (int) substr($remark['source'], 1), $this->url('memory_show', ['id' => (int) substr($remark['source'], 1)]))
+                : \sprintf('[%s](%s)', $remark['source'], $this->url('rule_show', ['slug' => $project->getSlug(), 'code' => $remark['source']]));
+            $body = \sprintf("%s\n**%s** : %s\n\nSource : %s", self::LINE_MARKER, ucfirst(self::SEVERITIES[$remark['severity']]), self::inline($remark['remark'], 500), $source);
+            if (!\in_array($remark['path']."\n".$body, $kept, true)) {
+                $comments[] = ['path' => $remark['path'], 'line' => $remark['line'], 'side' => 'RIGHT', 'body' => $body];
+            }
+        }
+        if ([] === $comments) {
+            return;
+        }
+
+        $http->request('POST', $base.'/pulls/'.$number.'/reviews', ['json' => [
+            'commit_id' => $sha,
+            'event' => 'COMMENT',
+            'body' => \sprintf('Graphe projet : %d remarque(s) sur les lignes du diff, d\'après la mémoire du projet.', \count($comments)),
+            'comments' => $comments,
+        ]])->toArray();
     }
 
     /**

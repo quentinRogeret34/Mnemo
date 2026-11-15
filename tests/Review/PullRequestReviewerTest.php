@@ -76,7 +76,8 @@ final class PullRequestReviewerTest extends KernelTestCase
     public function testTheCommentTellsWhatTheGraphKnowsAndTheCheckWarnsAboutAnUnguardedRule(): void
     {
         $this->scriptLlm(fn (): array => ['remarks' => [
-            ['source' => 'M'.$this->convention->getId(), 'path' => 'src/domain/catalog.ts', 'remark' => 'Le plafond passe à 20 % sans prévenir.', 'severity' => 'major'],
+            ['source' => 'M'.$this->convention->getId(), 'path' => 'src/domain/catalog.ts', 'line' => 1, 'remark' => 'Le plafond passe à 20 % sans prévenir.', 'severity' => 'major'],
+            ['source' => 'RG-042', 'path' => 'src/domain/catalog.ts', 'line' => 99, 'remark' => 'Ligne hors du diff.', 'severity' => 'minor'],
             ['source' => 'M999', 'path' => 'src/domain/catalog.ts', 'remark' => 'Source inventée.', 'severity' => 'blocker'],
             ['source' => 'RG-042', 'path' => 'README.md', 'remark' => 'Fichier hors du diff.', 'severity' => 'blocker'],
         ]]);
@@ -86,13 +87,14 @@ final class PullRequestReviewerTest extends KernelTestCase
         self::assertStringContainsString('[RG-042](http://localhost:8080/projects/demo/rules/RG-042) Remise plafonnée** (validée) dans `src/domain/catalog.ts`', $body);
         self::assertStringContainsString('**À vérifier** : règle validée touchée sans test', $body);
         self::assertStringContainsString('Zone d\'ombre (majeur) : Deux remises se cumulent-elles ?', $body);
-        self::assertStringContainsString('**majeur** · `src/domain/catalog.ts` : Le plafond passe à 20 % sans prévenir. (source : [mémoire #'.$this->convention->getId().']', $body);
+        self::assertStringContainsString('**majeur** · `src/domain/catalog.ts:1` : Le plafond passe à 20 % sans prévenir. (source : [mémoire #'.$this->convention->getId().']', $body);
+        self::assertStringContainsString('**mineur** · `src/domain/catalog.ts` : Ligne hors du diff.', $body);
         self::assertStringContainsString('Convention · `src/domain/catalog.ts` : Les remises passent par catalog.ts, écrire à &#64;alice', $body);
         self::assertStringNotContainsString('Source inventée', $body);
         self::assertStringNotContainsString('Fichier hors du diff', $body);
         self::assertStringNotContainsString('Note privée', $body);
         self::assertStringNotContainsString('Note privée', $this->llmCalls[0]['user']);
-        self::assertStringContainsString('+const MAX = 0.2', $this->llmCalls[0]['user']);
+        self::assertStringContainsString("      -const MAX = 0.1\n    1 +const MAX = 0.2", $this->llmCalls[0]['user']);
         self::assertSame('test-model', $this->llmCalls[0]['model']);
 
         self::assertSame(['POST', '/repos/acme/shop/issues/12/comments', ['body' => $body]], $this->writes[0]);
@@ -100,6 +102,29 @@ final class PullRequestReviewerTest extends KernelTestCase
         self::assertSame(['POST', '/repos/acme/shop/check-runs'], [$method, $path]);
         self::assertSame([PullRequestReviewer::CHECK, 'head-sha', 'neutral'], [$check['name'], $check['head_sha'], $check['conclusion']]);
         self::assertStringContainsString('**RG-042** Remise plafonnée', $check['output']['summary']);
+
+        [$method, $path, $review] = $this->writes[2];
+        self::assertSame(['POST', '/repos/acme/shop/pulls/12/reviews', 'head-sha', 'COMMENT'], [$method, $path, $review['commit_id'], $review['event']]);
+        self::assertSame([['path' => 'src/domain/catalog.ts', 'line' => 1, 'side' => 'RIGHT']], array_map(static fn (array $comment): array => array_diff_key($comment, ['body' => true]), $review['comments']));
+        self::assertStringContainsString('**Majeur** : Le plafond passe à 20 % sans prévenir.', $review['comments'][0]['body']);
+        self::assertCount(3, $this->writes);
+    }
+
+    public function testThePreviousLineCommentsGoAwayUnlessSomeoneAnsweredThem(): void
+    {
+        $this->scriptLlm(fn (): array => ['remarks' => [
+            ['source' => 'M'.$this->convention->getId(), 'path' => 'src/domain/catalog.ts', 'line' => 1, 'remark' => 'Le plafond passe à 20 % sans prévenir.', 'severity' => 'major'],
+        ]]);
+        $answered = "<!-- graphe-review-line -->\n**Majeur** : Le plafond passe à 20 % sans prévenir.\n\nSource : [mémoire #".$this->convention->getId().'](http://localhost:8080/memories/'.$this->convention->getId().')';
+
+        $this->reviewer(reviewComments: [
+            ['id' => 21, 'path' => 'src/domain/catalog.ts', 'body' => "<!-- graphe-review-line -->\nancienne remarque", 'user' => ['type' => 'Bot']],
+            ['id' => 22, 'path' => 'src/domain/catalog.ts', 'body' => $answered, 'user' => ['type' => 'Bot']],
+            ['id' => 23, 'path' => 'src/domain/catalog.ts', 'body' => 'Voulu, voir le ticket.', 'user' => ['type' => 'User'], 'in_reply_to_id' => 22],
+            ['id' => 24, 'path' => 'src/domain/catalog.ts', 'body' => '<!-- graphe-review-line --> écrit par un humain', 'user' => ['type' => 'User']],
+        ])->review($this->connector, 12);
+
+        self::assertSame([['POST', '/repos/acme/shop/issues/12/comments'], ['POST', '/repos/acme/shop/check-runs'], ['DELETE', '/repos/acme/shop/pulls/comments/21']], array_map(static fn (array $write): array => \array_slice($write, 0, 2), $this->writes));
     }
 
     public function testTheCommentIsRewrittenAndTheCheckFailsWhenTheConnectorAsksForIt(): void
@@ -161,13 +186,14 @@ final class PullRequestReviewerTest extends KernelTestCase
      * @param list<array<string, mixed>> $files
      * @param list<array<string, mixed>> $commits
      * @param list<array<string, mixed>> $comments
+     * @param list<array<string, mixed>> $reviewComments
      */
-    private function reviewer(array $files = [['filename' => 'src/domain/catalog.ts', 'patch' => "-const MAX = 0.1\n+const MAX = 0.2"]], array $commits = [], array $comments = []): PullRequestReviewer
+    private function reviewer(array $files = [['filename' => 'src/domain/catalog.ts', 'patch' => "@@ -1 +1 @@\n-const MAX = 0.1\n+const MAX = 0.2"]], array $commits = [], array $comments = [], array $reviewComments = []): PullRequestReviewer
     {
-        $http = new MockHttpClient(function (string $method, string $url, array $options) use ($files, $commits, $comments): JsonMockResponse {
+        $http = new MockHttpClient(function (string $method, string $url, array $options) use ($files, $commits, $comments, $reviewComments): JsonMockResponse {
             $path = parse_url($url, \PHP_URL_PATH);
             if ('GET' !== $method && !str_contains($path, 'access_tokens')) {
-                $this->writes[] = [$method, $path, json_decode($options['body'], true)];
+                $this->writes[] = [$method, $path, json_decode($options['body'] ?? '', true)];
 
                 return new JsonMockResponse(['id' => 1]);
             }
@@ -179,6 +205,7 @@ final class PullRequestReviewerTest extends KernelTestCase
                 '/repos/acme/shop/pulls/12/files' => $files,
                 '/repos/acme/shop/pulls/12/commits' => $commits,
                 '/repos/acme/shop/issues/12/comments' => $comments,
+                '/repos/acme/shop/pulls/12/comments' => $reviewComments,
             });
         });
         openssl_pkey_export(openssl_pkey_new(['private_key_bits' => 2048, 'private_key_type' => \OPENSSL_KEYTYPE_RSA]), $pem);
