@@ -742,7 +742,7 @@ dialog::backdrop { overflow: hidden; overscroll-behavior: contain; }
 .form-stack legend { margin-bottom: var(--space-sm); color: var(--color-ink); font-weight: 600; font-size: var(--text-base); }
 .form-stack fieldset > div { display: grid; gap: var(--space-2xs); }
 .form-stack label, .form-stack__label { color: var(--color-ink); font-size: var(--text-sm); font-weight: 500; }
-.form-stack input[type="text"], .form-stack textarea, .form-stack select {
+.form-stack input:is([type="text"], [type="password"]), .form-stack textarea, .form-stack select {
     width: 100%; min-height: 2rem; padding: var(--space-2xs) var(--space-xs);
     border: var(--rule-width) solid var(--color-control); border-radius: var(--radius-sm);
     background: var(--color-card); color: var(--color-ink); font: 400 var(--text-sm)/1.5 var(--font-body);
