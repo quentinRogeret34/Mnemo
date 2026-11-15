@@ -13,6 +13,7 @@ use App\Forge\GitHubApp;
 use App\Forge\RepositoryCheckout;
 use App\Form\ConnectorType;
 use App\Llm\LlmSettings;
+use App\Llm\ModelCheck;
 use App\Message\ReviewPullRequest;
 use App\Message\SyncConnector;
 use App\Review\PullRequestReviewer;
@@ -45,6 +46,7 @@ final class ConnectorController extends AbstractController
         private readonly SecretBox $secretBox,
         private readonly GitHubApp $gitHubApp,
         private readonly PullRequestReviewer $reviewer,
+        private readonly ModelCheck $modelCheck,
     ) {
     }
 
@@ -90,7 +92,7 @@ final class ConnectorController extends AbstractController
     #[Route('/connectors/{id}', name: 'connector_show', requirements: ['id' => '\d+'], methods: ['GET'])]
     public function show(Connector $connector): Response
     {
-        return $this->render('connector/show.html.twig', ['connector' => $connector, 'inspection' => null, 'inspection_error' => null, 'oauth' => $this->oauthAvailable($connector), 'github_app' => $this->gitHubApp]);
+        return $this->render('connector/show.html.twig', ['connector' => $connector, 'inspection' => null, 'inspection_error' => null, 'oauth' => $this->oauthAvailable($connector), 'github_app' => $this->gitHubApp, 'default_review_model' => $this->llmSettings->chatModel($connector->getProject())]);
     }
 
     /**
@@ -158,7 +160,7 @@ final class ConnectorController extends AbstractController
             $error = $exception->getMessage();
         }
 
-        return $this->render('connector/show.html.twig', ['connector' => $connector, 'inspection' => $inspection, 'inspection_error' => $error, 'oauth' => $this->oauthAvailable($connector), 'github_app' => $this->gitHubApp]);
+        return $this->render('connector/show.html.twig', ['connector' => $connector, 'inspection' => $inspection, 'inspection_error' => $error, 'oauth' => $this->oauthAvailable($connector), 'github_app' => $this->gitHubApp, 'default_review_model' => $this->llmSettings->chatModel($connector->getProject())]);
     }
 
     #[Route('/connectors/{id}/sync', name: 'connector_sync', requirements: ['id' => '\d+'], methods: ['POST'])]
@@ -194,6 +196,35 @@ final class ConnectorController extends AbstractController
         $connector->setArguments(['review' => $enabled] + $connector->getArguments());
         $this->entityManager->flush();
         $this->addFlash('success', $enabled ? 'Revue activée : le bot commentera les pull requests de ce dépôt.' : 'Revue désactivée pour ce dépôt.');
+
+        return $this->redirectToRoute('connector_show', ['id' => $connector->getId()]);
+    }
+
+    /**
+     * The model that reads the diff of the pull requests of this repository; empty, the model of the project.
+     */
+    #[Route('/connectors/{id}/review-model', name: 'connector_review_model', requirements: ['id' => '\d+'], methods: ['POST'])]
+    public function reviewModel(Connector $connector, Request $request): Response
+    {
+        $this->checkToken($connector, $request);
+        if (ConnectorMode::GitHub !== $connector->getMode()) {
+            throw $this->createNotFoundException('Only a GitHub connector reviews pull requests.');
+        }
+        $model = trim($request->getPayload()->getString('model'));
+        $arguments = $connector->getArguments();
+        unset($arguments['review_model']);
+        if ('' === $model) {
+            $this->addFlash('success', \sprintf('Les revues utilisent le modèle du projet : %s.', $this->llmSettings->chatModel($connector->getProject())));
+        } elseif (mb_strlen($model) > 150 || null !== $error = $this->modelCheck->chat($model)) {
+            $this->addFlash('error', \sprintf('OpenRouter a refusé le modèle "%s" : %s', mb_substr($model, 0, 150), $error ?? 'identifiant trop long.'));
+
+            return $this->redirectToRoute('connector_show', ['id' => $connector->getId()]);
+        } else {
+            $arguments['review_model'] = $model;
+            $this->addFlash('success', \sprintf('Les revues des pull requests utilisent maintenant %s.', $model));
+        }
+        $connector->setArguments($arguments);
+        $this->entityManager->flush();
 
         return $this->redirectToRoute('connector_show', ['id' => $connector->getId()]);
     }

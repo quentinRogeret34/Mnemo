@@ -72,6 +72,7 @@ final class PullRequestReviewer
                     array_filter(array_column($files, 'patch', 'filename')),
                     array_values(array_column([...$this->knowledge->projectMemories($project), ...$memories], null, 'id')),
                     $rules,
+                    '' === ($arguments['review_model'] ?? '') ? null : (string) $arguments['review_model'],
                 );
             } catch (\Throwable $exception) {
                 $note = 'Lecture du diff par le LLM indisponible : '.$exception->getMessage();

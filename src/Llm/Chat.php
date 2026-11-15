@@ -24,17 +24,18 @@ final class Chat
      *
      * @param array<string, mixed> $schema  JSON schema of the expected object
      * @param Project|null         $project the project the call is for, which may name its own model
+     * @param string|null          $model   a model that wins over the one of the project and of the instance
      *
      * @return array<string, mixed>
      */
-    public function ask(string $system, string $user, array $schema, ?Project $project = null): array
+    public function ask(string $system, string $user, array $schema, ?Project $project = null, ?string $model = null): array
     {
         if (!$this->settings->isConfigured($this->settings->chatPlatform)) {
             throw new LlmUnavailable(\sprintf('Clé API absente pour la plateforme LLM "%s" : la renseigner dans les réglages des modèles ou dans .env.local.', $this->settings->chatPlatform));
         }
 
         $result = $this->settings->platform($this->settings->chatPlatform)->invoke(
-            $this->settings->chatModel($project),
+            $model ?? $this->settings->chatModel($project),
             new MessageBag(
                 Message::forSystem($system."\n\nRéponds uniquement par un objet JSON conforme au schéma demandé, sans texte autour."),
                 Message::ofUser($user),

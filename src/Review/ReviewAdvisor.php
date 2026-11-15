@@ -43,10 +43,11 @@ final class ReviewAdvisor
      * @param list<array{id: int, text: string, type: string}>                           $memories
      * @param list<array{code: string, title: string, statement: ?string, status: ?string}> $rules
      * @param array<string, string>                                                      $patches path => unified diff
+     * @param string|null                                                                $model   the model the connector chose for its reviews
      *
      * @return list<array{source: string, path: string, remark: string, severity: string}>
      */
-    public function remarks(Project $project, string $title, string $description, array $patches, array $memories, array $rules): array
+    public function remarks(Project $project, string $title, string $description, array $patches, array $memories, array $rules, ?string $model = null): array
     {
         $sources = [...array_map(static fn (array $memory): string => 'M'.$memory['id'], $memories), ...array_column($rules, 'code')];
         if ([] === $sources || [] === $patches) {
@@ -79,7 +80,7 @@ final class ReviewAdvisor
             ]]],
             'required' => ['remarks'],
             'additionalProperties' => false,
-        ], $project);
+        ], $project, $model);
 
         $remarks = [];
         foreach (\is_array($answer['remarks'] ?? null) ? $answer['remarks'] : [] as $remark) {

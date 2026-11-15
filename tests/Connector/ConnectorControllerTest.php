@@ -15,14 +15,18 @@ use App\Enum\NodeType;
 use App\Enum\UserStatus;
 use App\Forge\GitHubAccount;
 use App\Forge\GitHubApp;
+use App\Llm\LlmSettings;
 use App\Message\ReviewPullRequest;
 use App\Message\SyncConnector;
 use App\Security\OAuth\OAuthClient;
 use App\Security\SecretBox;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
+use Symfony\AI\Platform\Model;
+use Symfony\AI\Platform\Test\MockPlatformFactory;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
+use Symfony\Component\DependencyInjection\ServiceLocator;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\JsonMockResponse;
 
@@ -162,6 +166,42 @@ final class ConnectorControllerTest extends WebTestCase
             [new ReviewPullRequest($connector->getId(), 12)],
             array_map(static fn ($envelope): object => $envelope->getMessage(), self::getContainer()->get('messenger.transport.async')->getSent()),
         );
+    }
+
+    public function testTheModelOfTheReviewsIsChosenOnTheConnectorAndTriedFirst(): void
+    {
+        $this->client->disableReboot();
+        $platform = MockPlatformFactory::createPlatform(static fn (Model $model): string => str_contains($model->getName(), 'unknown') ? throw new \RuntimeException('No such model') : 'OK');
+        self::getContainer()->set(LlmSettings::class, new LlmSettings(new ServiceLocator(['openrouter' => static fn () => $platform]), 'openrouter', 'test-model', 'openrouter', 'test-embedding', 'test-key'));
+        $connector = new Connector();
+        $connector->setName('Forge');
+        $connector->setMode(ConnectorMode::GitHub);
+        $connector->setEndpoint('https://api.github.com');
+        $connector->setArguments(['repository' => 'acme/shop']);
+        $connector->setProject($this->entityManager->getRepository(Project::class)->findOneBy(['slug' => 'demo']));
+        $this->entityManager->persist($connector);
+        $this->entityManager->flush();
+        $show = '/connectors/'.$connector->getId();
+        $stored = function () use ($connector): array {
+            $this->entityManager->clear();
+
+            return $this->entityManager->find(Connector::class, $connector->getId())->getArguments();
+        };
+
+        $crawler = $this->client->request('GET', $show);
+        self::assertSame('test-model', $crawler->filter('#review-model')->attr('placeholder'));
+        $this->client->submit($crawler->filter('#review-model')->closest('form')->form(['model' => 'acme/unknown-chat']));
+        self::assertResponseRedirects($show);
+        self::assertArrayNotHasKey('review_model', $stored());
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('.flash', 'OpenRouter a refusé le modèle "acme/unknown-chat" : No such model');
+
+        $this->client->submit($this->client->request('GET', $show)->filter('#review-model')->closest('form')->form(['model' => ' anthropic/claude-opus-4.1 ']));
+        self::assertSame(['repository' => 'acme/shop', 'review_model' => 'anthropic/claude-opus-4.1'], $stored());
+        self::assertSame('anthropic/claude-opus-4.1', $this->client->request('GET', $show)->filter('#review-model')->attr('value'));
+
+        $this->client->submit($this->client->getCrawler()->filter('#review-model')->closest('form')->form(['model' => '']));
+        self::assertSame(['repository' => 'acme/shop'], $stored());
     }
 
     public function testAGitHubAccountIsConnectedByOAuthAndItsTokenStoredEncrypted(): void

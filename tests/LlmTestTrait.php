@@ -13,7 +13,7 @@ use Symfony\Component\DependencyInjection\ServiceLocator;
  */
 trait LlmTestTrait
 {
-    /** @var list<array{system: string, user: string}> */
+    /** @var list<array{system: string, user: string, model: string}> */
     private array $llmCalls = [];
 
     /**
@@ -24,7 +24,7 @@ trait LlmTestTrait
         $platform = MockPlatformFactory::createPlatform(function (Model $model, array|string|object $input) use ($answer): string {
             $system = $input['messages'][0]['content'];
             $user = $input['messages'][1]['content'];
-            $this->llmCalls[] = ['system' => $system, 'user' => $user];
+            $this->llmCalls[] = ['system' => $system, 'user' => $user, 'model' => $model->getName()];
 
             return json_encode($answer($system, $user), \JSON_THROW_ON_ERROR);
         });

@@ -45,13 +45,22 @@
                         · <a href="{{ github_app.installUrl }}" rel="noopener">installer l'application sur le dépôt</a>
                     {% endif %}
                 </dd>
+                <dt><label for="review-model">Modèle des revues</label></dt>
+                <dd>
+                    <form class="inline-form" method="post" action="{{ path('connector_review_model', {id: connector.id}) }}">
+                        <input type="hidden" name="_token" value="{{ token }}">
+                        <input class="input mono" id="review-model" type="text" name="model" value="{{ connector.arguments.review_model ?? '' }}" maxlength="150" autocomplete="off" spellcheck="false" placeholder="{{ default_review_model }}" aria-describedby="review-model-help">
+                        <button class="button" type="submit"><twig:ux:icon name="lucide:check" />Enregistrer</button>
+                    </form>
+                    <span class="row__sub" id="review-model-help">Identifiant OpenRouter, ex. anthropic/claude-sonnet-4.5. Vide : celui du projet ({{ default_review_model }}).</span>
+                </dd>
             {% endif %}
             <dt>Projet</dt><dd>{{ connector.project ? connector.project.name : 'aucun' }}</dd>
             <dt>Dossier</dt><dd>{{ connector.folder ? connector.folder.name : 'racine' }}</dd>
             <dt>Dernier import</dt><dd>{{ include('connector/_status.html.twig') }}</dd>
         </dl>
 
-        <div class="upload__actions">
+        <div class="upload__actions upload__actions--grid">
             <form method="post" action="{{ path('connector_sync', {id: connector.id}) }}"><input type="hidden" name="_token" value="{{ token }}"><button class="button button--primary" type="submit"><twig:ux:icon name="lucide:refresh-cw" />Synchroniser</button></form>
             <form method="post" action="{{ path('connector_inspect', {id: connector.id}) }}"><input type="hidden" name="_token" value="{{ token }}"><button class="button" type="submit"><twig:ux:icon name="lucide:plug" />Tester la connexion</button></form>
             {% if connector.mode.value == 'github' %}

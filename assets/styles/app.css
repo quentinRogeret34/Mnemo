@@ -576,6 +576,7 @@ dialog::backdrop { overflow: hidden; overscroll-behavior: contain; }
 .inline-form { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-xs); }
 .inline-form .input { flex: 1 1 12rem; max-width: 20rem; }
 .inline-form .form-errors { flex-basis: 100%; }
+.props dd .inline-form { flex: 1 1 100%; }
 
 /* Editable properties */
 .props-editor { transition: opacity var(--dur-base) var(--ease-out); }
@@ -729,6 +730,9 @@ dialog::backdrop { overflow: hidden; overscroll-behavior: contain; }
 .props--flat { margin-top: 0; }
 .block__sub { margin: var(--space-md) 0 var(--space-xs); font-size: var(--text-sm); font-weight: 600; }
 .upload__actions form { display: contents; }
+.upload__actions--grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.upload__actions--grid .button { width: 100%; white-space: normal; text-align: center; }
+@media (max-width: 40rem) { .upload__actions--grid { grid-template-columns: minmax(0, 1fr); } }
 
 /* Connector presets */
 .presets { display: grid; gap: var(--space-sm); grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr)); margin: 0; padding: 0; list-style: none; }

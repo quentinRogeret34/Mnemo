@@ -93,6 +93,7 @@ final class PullRequestReviewerTest extends KernelTestCase
         self::assertStringNotContainsString('Note privée', $body);
         self::assertStringNotContainsString('Note privée', $this->llmCalls[0]['user']);
         self::assertStringContainsString('+const MAX = 0.2', $this->llmCalls[0]['user']);
+        self::assertSame('test-model', $this->llmCalls[0]['model']);
 
         self::assertSame(['POST', '/repos/acme/shop/issues/12/comments', ['body' => $body]], $this->writes[0]);
         [$method, $path, $check] = $this->writes[1];
@@ -136,6 +137,16 @@ final class PullRequestReviewerTest extends KernelTestCase
 
         self::assertStringContainsString('Rien de connu dans le graphe', $body);
         self::assertSame([['POST', '/repos/acme/shop/check-runs', 'success']], array_map(static fn (array $write): array => [$write[0], $write[1], $write[2]['conclusion']], $this->writes));
+    }
+
+    public function testTheConnectorChoosesTheModelThatReadsTheDiff(): void
+    {
+        $this->scriptLlm(static fn (): array => ['remarks' => []]);
+        $this->connector->setArguments(['review_model' => 'anthropic/claude-opus-4.1'] + $this->connector->getArguments());
+
+        $this->reviewer()->review($this->connector, 12, false);
+
+        self::assertSame('anthropic/claude-opus-4.1', $this->llmCalls[0]['model']);
     }
 
     public function testADryRunPublishesNothing(): void
