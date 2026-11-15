@@ -56,6 +56,7 @@
             <form method="post" action="{{ path('connector_inspect', {id: connector.id}) }}"><input type="hidden" name="_token" value="{{ token }}"><button class="button" type="submit"><twig:ux:icon name="lucide:plug" />Tester la connexion</button></form>
             {% if connector.mode.value == 'github' %}
                 <form method="post" action="{{ path('connector_review', {id: connector.id}) }}"><input type="hidden" name="_token" value="{{ token }}"><button class="button" type="submit"><twig:ux:icon name="lucide:clipboard-check" />{{ connector.arguments.review ?? false ? 'Désactiver la revue des PR' : 'Activer la revue des PR' }}</button></form>
+                {% if github_app.configured %}<a class="button" href="{{ path('connector_pull_requests', {id: connector.id}) }}"><twig:ux:icon name="lucide:git-pull-request" />Pull requests ouvertes</a>{% endif %}
             {% endif %}
             {% if connector.oauthToken %}
                 <form method="post" action="{{ path('connector_oauth_disconnect', {id: connector.id}) }}"><input type="hidden" name="_token" value="{{ token }}"><button class="button" type="submit" data-confirm="Déconnecter le compte GitHub de ce connecteur ?" data-confirm-label="Déconnecter"><twig:ux:icon name="lucide:unplug" />Déconnecter GitHub</button></form>

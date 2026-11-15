@@ -14,12 +14,15 @@ use App\Enum\ConnectorTransport;
 use App\Enum\NodeType;
 use App\Enum\UserStatus;
 use App\Forge\GitHubAccount;
+use App\Forge\GitHubApp;
+use App\Message\ReviewPullRequest;
 use App\Message\SyncConnector;
 use App\Security\OAuth\OAuthClient;
 use App\Security\SecretBox;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\JsonMockResponse;
 
@@ -121,6 +124,44 @@ final class ConnectorControllerTest extends WebTestCase
         $this->client->submit($crawler->selectButton('Désactiver la revue des PR')->form());
         $this->entityManager->clear();
         self::assertFalse($this->entityManager->find(Connector::class, $connector->getId())->getArguments()['review']);
+    }
+
+    public function testTheOpenPullRequestsAreListedAndOneIsSentForReview(): void
+    {
+        $this->client->disableReboot();
+        $http = new MockHttpClient(static function (string $method, string $url, array $options): JsonMockResponse {
+            return new JsonMockResponse(match (parse_url($url, \PHP_URL_PATH)) {
+                '/repos/acme/shop/installation' => ['id' => 7],
+                '/app/installations/7/access_tokens' => ['token' => 'installation-token'],
+                '/repos/acme/shop/pulls' => 'open' === $options['query']['state'] ? [
+                    ['number' => 12, 'title' => 'Relève le plafond', 'user' => ['login' => 'alice'], 'draft' => false, 'html_url' => 'https://github.com/acme/shop/pull/12', 'updated_at' => '2026-11-15T09:30:00Z'],
+                    ['number' => 9, 'title' => 'Nouveau catalogue', 'user' => ['login' => 'bob'], 'draft' => true, 'html_url' => 'https://github.com/acme/shop/pull/9', 'updated_at' => '2026-11-14T18:00:00Z'],
+                ] : [],
+            });
+        });
+        openssl_pkey_export(openssl_pkey_new(['private_key_bits' => 2048, 'private_key_type' => \OPENSSL_KEYTYPE_RSA]), $pem);
+        self::getContainer()->set(GitHubApp::class, new GitHubApp($http, new ArrayAdapter(), '42', $pem, 'webhook-secret', ''));
+        $connector = new Connector();
+        $connector->setName('Forge');
+        $connector->setMode(ConnectorMode::GitHub);
+        $connector->setEndpoint('https://api.github.com');
+        $connector->setArguments(['repository' => 'acme/shop']);
+        $connector->setProject($this->entityManager->getRepository(Project::class)->findOneBy(['slug' => 'demo']));
+        $this->entityManager->persist($connector);
+        $this->entityManager->flush();
+        $list = '/connectors/'.$connector->getId().'/pull-requests';
+
+        $crawler = $this->client->request('GET', '/connectors/'.$connector->getId());
+        $crawler = $this->client->click($crawler->selectLink('Pull requests ouvertes')->link());
+        self::assertSame(['#12', '#9'], $crawler->filter('.list .code-chip')->each(static fn ($chip): string => $chip->text()));
+        self::assertSelectorTextContains('.list', 'bob · brouillon');
+
+        $this->client->submit($crawler->selectButton('Lancer la revue')->form());
+        self::assertResponseRedirects($list);
+        self::assertEquals(
+            [new ReviewPullRequest($connector->getId(), 12)],
+            array_map(static fn ($envelope): object => $envelope->getMessage(), self::getContainer()->get('messenger.transport.async')->getSent()),
+        );
     }
 
     public function testAGitHubAccountIsConnectedByOAuthAndItsTokenStoredEncrypted(): void

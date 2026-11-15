@@ -88,6 +88,26 @@ final class PullRequestReviewer
     }
 
     /**
+     * The open pull requests of the repository, most recently updated first, read as the GitHub App.
+     *
+     * @return list<array{number: int, title: string, author: string, draft: bool, url: string, updated_at: string}>
+     */
+    public function openPullRequests(Connector $connector): array
+    {
+        $repository = trim((string) ($connector->getArguments()['repository'] ?? ''), '/ ');
+        $pullRequests = $this->app->client($repository)->request('GET', 'repos/'.$repository.'/pulls', ['query' => ['state' => 'open', 'sort' => 'updated', 'direction' => 'desc', 'per_page' => self::PAGE]])->toArray();
+
+        return array_map(static fn (array $pullRequest): array => [
+            'number' => (int) $pullRequest['number'],
+            'title' => (string) $pullRequest['title'],
+            'author' => (string) ($pullRequest['user']['login'] ?? ''),
+            'draft' => (bool) ($pullRequest['draft'] ?? false),
+            'url' => (string) $pullRequest['html_url'],
+            'updated_at' => (string) $pullRequest['updated_at'],
+        ], $pullRequests);
+    }
+
+    /**
      * @param array<string, mixed>        $pullRequest
      * @param list<array<string, mixed>>  $rules
      * @param list<array<string, mixed>>  $unguarded

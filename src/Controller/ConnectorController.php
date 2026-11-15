@@ -13,7 +13,9 @@ use App\Forge\GitHubApp;
 use App\Forge\RepositoryCheckout;
 use App\Form\ConnectorType;
 use App\Llm\LlmSettings;
+use App\Message\ReviewPullRequest;
 use App\Message\SyncConnector;
+use App\Review\PullRequestReviewer;
 use App\Security\OAuth\OAuthClient;
 use App\Security\SecretBox;
 use Doctrine\ORM\EntityManagerInterface;
@@ -42,6 +44,7 @@ final class ConnectorController extends AbstractController
         private readonly OAuthClient $oauthClient,
         private readonly SecretBox $secretBox,
         private readonly GitHubApp $gitHubApp,
+        private readonly PullRequestReviewer $reviewer,
     ) {
     }
 
@@ -193,6 +196,36 @@ final class ConnectorController extends AbstractController
         $this->addFlash('success', $enabled ? 'Revue activée : le bot commentera les pull requests de ce dépôt.' : 'Revue désactivée pour ce dépôt.');
 
         return $this->redirectToRoute('connector_show', ['id' => $connector->getId()]);
+    }
+
+    #[Route('/connectors/{id}/pull-requests', name: 'connector_pull_requests', requirements: ['id' => '\d+'], methods: ['GET'])]
+    public function pullRequests(Connector $connector): Response
+    {
+        if (ConnectorMode::GitHub !== $connector->getMode()) {
+            throw $this->createNotFoundException('Only a GitHub connector reviews pull requests.');
+        }
+        try {
+            $pullRequests = $this->reviewer->openPullRequests($connector);
+            $error = null;
+        } catch (\Throwable $exception) {
+            $pullRequests = [];
+            $error = $exception->getMessage();
+        }
+
+        return $this->render('connector/pull_requests.html.twig', ['connector' => $connector, 'pull_requests' => $pullRequests, 'error' => $error]);
+    }
+
+    #[Route('/connectors/{id}/pull-requests/{number}/review', name: 'connector_pull_request_review', requirements: ['id' => '\d+', 'number' => '\d+'], methods: ['POST'])]
+    public function reviewPullRequest(Connector $connector, int $number, Request $request): Response
+    {
+        $this->checkToken($connector, $request);
+        if (ConnectorMode::GitHub !== $connector->getMode()) {
+            throw $this->createNotFoundException('Only a GitHub connector reviews pull requests.');
+        }
+        $this->bus->dispatch(new ReviewPullRequest($connector->getId(), $number));
+        $this->addFlash('success', \sprintf('Revue de la pull request #%d lancée : le commentaire du bot apparaît sur GitHub dans quelques instants.', $number));
+
+        return $this->redirectToRoute('connector_pull_requests', ['id' => $connector->getId()]);
     }
 
     #[Route('/connectors/{id}/delete', name: 'connector_delete', requirements: ['id' => '\d+'], methods: ['POST'])]
