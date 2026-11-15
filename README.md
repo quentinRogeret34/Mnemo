@@ -98,6 +98,13 @@ qu'une OAuth App offre pour les dépôts privés) et enregistre le jeton chiffr�
 `APP_SECRET`. Il remplace alors les en-têtes saisis, pour l'API comme pour le clone, et n'est jamais envoyé
 ailleurs qu'à github.com. Changer `APP_SECRET` oblige à reconnecter le compte.
 
+Les serveurs MCP qui demandent OAuth (Notion, Jira / Confluence, Linear sans clé...) n'ont besoin d'aucune
+application à créer : sur la page d'un connecteur HTTP, « Connecter par OAuth » suit la spécification MCP
+(métadonnées de la ressource puis du serveur d'autorisation, enregistrement dynamique du client, PKCE,
+paramètre `resource`) et revient sur `/connectors/authorize/check`. Les jetons sont gardés chiffrés sur le
+connecteur, renouvelés avant expiration (y compris par le worker), remplacent l'en-tête `Authorization` saisi
+et ne sont envoyés qu'à l'URL autorisée : la changer oblige à reconnecter.
+
 ## Bot de revue (GitHub App)
 
 Le bot commente chaque pull request d'un dépôt branché avec ce que le graphe sait des fichiers modifiés, et pose

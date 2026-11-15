@@ -34,6 +34,7 @@
                 <dt>Type</dt><dd>{{ include('memory/_type.html.twig', {type: connector.memoryType.value}) }}</dd>
             {% endif %}
             {% if connector.arguments is not empty %}<dt>Arguments</dt><dd class="mono">{{ connector.arguments|json_encode }}</dd>{% endif %}
+            {% if connector.mcpAuthorization %}<dt>Accès</dt><dd><span class="status status--validated">autorisé par OAuth</span> (remplace l'en-tête Authorization saisi)</dd>{% endif %}
             {% if connector.oauthToken %}<dt>Accès</dt><dd><span class="status status--validated">compte GitHub connecté</span> (les en-têtes saisis sont ignorés)</dd>{% endif %}
             {% if connector.mode.value == 'github' %}
                 <dt>Revue des PR</dt>
@@ -71,6 +72,11 @@
                 <form method="post" action="{{ path('connector_oauth_disconnect', {id: connector.id}) }}"><input type="hidden" name="_token" value="{{ token }}"><button class="button" type="submit" data-confirm="Déconnecter le compte GitHub de ce connecteur ?" data-confirm-label="Déconnecter"><twig:ux:icon name="lucide:unplug" />Déconnecter GitHub</button></form>
             {% elseif oauth %}
                 <form method="post" action="{{ path('connector_oauth', {id: connector.id}) }}"><input type="hidden" name="_token" value="{{ token }}"><button class="button" type="submit"><twig:ux:icon name="simple-icons:github" />Connecter avec GitHub</button></form>
+            {% endif %}
+            {% if connector.mcpAuthorization %}
+                <form method="post" action="{{ path('connector_authorize_revoke', {id: connector.id}) }}"><input type="hidden" name="_token" value="{{ token }}"><button class="button" type="submit" data-confirm="Retirer l'autorisation OAuth de ce connecteur ?" data-confirm-label="Retirer"><twig:ux:icon name="lucide:unplug" />Retirer l'autorisation OAuth</button></form>
+            {% elseif connector.transport.value == 'http' and not connector.mode.forge %}
+                <form method="post" action="{{ path('connector_authorize', {id: connector.id}) }}"><input type="hidden" name="_token" value="{{ token }}"><button class="button" type="submit"><twig:ux:icon name="lucide:key-round" />Connecter par OAuth</button></form>
             {% endif %}
         </div>
 

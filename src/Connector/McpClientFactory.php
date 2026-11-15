@@ -15,6 +15,7 @@ final class McpClientFactory
         #[Autowire(env: 'bool:MCP_CONNECTORS_ALLOW_STDIO')]
         private readonly bool $allowStdio,
         private readonly CredentialResolver $credentials,
+        private readonly McpAuthorization $authorization,
         #[Autowire('%kernel.project_dir%')]
         private readonly string $projectDir,
     ) {
@@ -38,11 +39,24 @@ final class McpClientFactory
             ->build();
 
         $client->connect(match ($connector->getTransport()) {
-            ConnectorTransport::Http => new HttpTransport($connector->getEndpoint(), $this->credentials->resolve($connector->getCredentials())),
+            ConnectorTransport::Http => new HttpTransport($connector->getEndpoint(), $this->headers($connector)),
             ConnectorTransport::Stdio => $this->stdio($connector),
         });
 
         return $client;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function headers(Connector $connector): array
+    {
+        $token = $this->authorization->accessToken($connector);
+        if (null === $token) {
+            return $this->credentials->resolve($connector->getCredentials());
+        }
+
+        return ['Authorization' => 'Bearer '.$token] + $this->credentials->resolve(array_filter($connector->getCredentials(), static fn (string $name): bool => 'authorization' !== strtolower($name), \ARRAY_FILTER_USE_KEY));
     }
 
     private function stdio(Connector $connector): StdioTransport

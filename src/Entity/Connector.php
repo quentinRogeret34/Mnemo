@@ -103,6 +103,12 @@ class Connector
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $oauthToken = null;
 
+    /**
+     * Client registration and tokens obtained by the OAuth of the MCP server, as JSON encrypted by SecretBox.
+     */
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    private ?string $mcpAuthorization = null;
+
     #[ORM\Column]
     private \DateTimeImmutable $createdAt;
 
@@ -306,6 +312,16 @@ class Connector
     public function setOauthToken(?string $oauthToken): void
     {
         $this->oauthToken = $oauthToken;
+    }
+
+    public function getMcpAuthorization(): ?string
+    {
+        return $this->mcpAuthorization;
+    }
+
+    public function setMcpAuthorization(?string $mcpAuthorization): void
+    {
+        $this->mcpAuthorization = $mcpAuthorization;
     }
 
     /** @return array<string, string> */

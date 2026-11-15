@@ -3,6 +3,7 @@
 namespace App\Tests\Connector;
 
 use App\Connector\CredentialResolver;
+use App\Connector\McpAuthorization;
 use App\Connector\McpClientFactory;
 use App\Entity\Connector;
 use App\Entity\Node;
@@ -20,6 +21,7 @@ use App\Message\ReviewPullRequest;
 use App\Message\SyncConnector;
 use App\Security\OAuth\OAuthClient;
 use App\Security\SecretBox;
+use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\AI\Platform\Model;
@@ -29,6 +31,8 @@ use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\DependencyInjection\ServiceLocator;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\JsonMockResponse;
+use Symfony\Component\HttpClient\Response\MockResponse;
+use Symfony\Component\Lock\LockFactory;
 
 final class ConnectorControllerTest extends WebTestCase
 {
@@ -259,6 +263,84 @@ final class ConnectorControllerTest extends WebTestCase
         self::assertNull($stored()->getOauthToken());
     }
 
+    public function testAnMcpServerIsAuthorizedByOAuthAndItsTokenRefreshed(): void
+    {
+        $this->client->disableReboot();
+        $requests = [];
+        $http = new MockHttpClient(static function (string $method, string $url, array $options) use (&$requests): MockResponse {
+            $requests[] = [$method, $url, $options['body'] ?? ''];
+
+            return match ($method.' '.$url) {
+                'POST https://mcp.example.com/mcp' => new MockResponse('', ['http_code' => 401, 'response_headers' => ['WWW-Authenticate: Bearer resource_metadata="https://mcp.example.com/.well-known/oauth-protected-resource/mcp", scope="read write"']]),
+                'GET https://mcp.example.com/.well-known/oauth-protected-resource/mcp' => new JsonMockResponse(['resource' => 'https://mcp.example.com/mcp', 'authorization_servers' => ['https://auth.example.com']]),
+                'GET https://auth.example.com/.well-known/oauth-authorization-server' => new JsonMockResponse(['authorization_endpoint' => 'https://auth.example.com/authorize', 'token_endpoint' => 'https://auth.example.com/token', 'registration_endpoint' => 'https://auth.example.com/register', 'code_challenge_methods_supported' => ['S256']]),
+                'POST https://auth.example.com/register' => new JsonMockResponse(['client_id' => 'client-1']),
+                'POST https://auth.example.com/token' => str_contains($options['body'], 'grant_type=refresh_token')
+                    ? new JsonMockResponse(['access_token' => 'at-2', 'token_type' => 'Bearer', 'expires_in' => 3600])
+                    : new JsonMockResponse(['access_token' => 'at-1', 'token_type' => 'Bearer', 'refresh_token' => 'rt-1', 'expires_in' => 3600]),
+                default => new MockResponse('', ['http_code' => 404]),
+            };
+        });
+        $container = self::getContainer();
+        $authorization = new McpAuthorization($http, $container->get(SecretBox::class), $container->get(Connection::class), $container->get(LockFactory::class));
+        $container->set(McpAuthorization::class, $authorization);
+        $connector = new Connector();
+        $connector->setName('Notion');
+        $connector->setEndpoint('https://mcp.example.com/mcp');
+        $connector->setMode(ConnectorMode::ToolDocument);
+        $connector->setTool('notion-fetch');
+        $this->entityManager->persist($connector);
+        $this->entityManager->flush();
+        $show = '/connectors/'.$connector->getId();
+        $stored = function () use ($connector): Connector {
+            $this->entityManager->clear();
+
+            return $this->entityManager->find(Connector::class, $connector->getId());
+        };
+        $authorize = function () use ($show): array {
+            $this->client->submit($this->client->request('GET', $show)->selectButton('Connecter par OAuth')->form());
+            self::assertStringStartsWith('https://auth.example.com/authorize?', (string) $this->client->getResponse()->headers->get('Location'));
+            parse_str((string) parse_url($this->client->getResponse()->headers->get('Location'), \PHP_URL_QUERY), $query);
+
+            return $query;
+        };
+
+        $query = $authorize();
+        self::assertSame(['code', 'client-1', 'http://localhost/connectors/authorize/check', 'S256', 'https://mcp.example.com/mcp', 'read write'], [$query['response_type'], $query['client_id'], $query['redirect_uri'], $query['code_challenge_method'], $query['resource'], $query['scope']]);
+        self::assertSame(['http://localhost/connectors/authorize/check'], json_decode($requests[3][2], true)['redirect_uris']);
+        $this->client->request('GET', '/connectors/authorize/check?code=abc&state=forged');
+        self::assertResponseRedirects('/connectors');
+        self::assertNull($stored()->getMcpAuthorization());
+
+        $query = $authorize();
+        $this->client->request('GET', '/connectors/authorize/check?code=abc&state='.$query['state']);
+        self::assertResponseRedirects($show);
+        parse_str(end($requests)[2], $exchange);
+        self::assertSame(['authorization_code', 'abc', 'client-1', 'https://mcp.example.com/mcp'], [$exchange['grant_type'], $exchange['code'], $exchange['client_id'], $exchange['resource']]);
+        self::assertSame($query['code_challenge'], rtrim(strtr(base64_encode(hash('sha256', $exchange['code_verifier'], true)), '+/', '-_'), '='));
+        $connector = $stored();
+        self::assertStringNotContainsString('at-1', (string) $connector->getMcpAuthorization());
+        self::assertSame('at-1', $authorization->accessToken($connector));
+
+        $secretBox = $container->get(SecretBox::class);
+        $connector->setMcpAuthorization($secretBox->encrypt(json_encode(['expires_at' => (string) (time() - 1)] + json_decode($secretBox->decrypt((string) $connector->getMcpAuthorization()), true))));
+        $this->entityManager->flush();
+        self::assertSame('at-2', $authorization->accessToken($connector));
+        parse_str(end($requests)[2], $refresh);
+        self::assertSame(['refresh_token', 'rt-1', 'https://mcp.example.com/mcp'], [$refresh['grant_type'], $refresh['refresh_token'], $refresh['resource']]);
+        $connector = $stored();
+        self::assertSame('at-2', $authorization->accessToken($connector));
+        self::assertSame('rt-1', json_decode($secretBox->decrypt((string) $connector->getMcpAuthorization()), true)['refresh_token']);
+
+        $connector->setEndpoint('https://attacker.example.com/mcp');
+        self::assertNull($authorization->accessToken($connector), 'The token must never leave for another server.');
+
+        $crawler = $this->client->request('GET', $show);
+        self::assertSelectorTextContains('.props', 'autorisé par OAuth');
+        $this->client->submit($crawler->selectButton('Retirer l\'autorisation OAuth')->form());
+        self::assertNull($stored()->getMcpAuthorization());
+    }
+
     public function testTheRepositoriesOfAGitHubAccountAreListedAndConnected(): void
     {
         $this->client->disableReboot();
@@ -447,7 +529,7 @@ final class ConnectorControllerTest extends WebTestCase
     public function testPresetPrefillsTheForm(): void
     {
         $crawler = $this->client->request('GET', '/connectors');
-        self::assertSame(['DeepWiki', 'Context7', 'mem0', 'GitHub (code et historique)', 'GitLab (code et historique)', 'GitHub', 'Linear'], $crawler->filter('.preset__name')->each(static fn ($name): string => $name->text()));
+        self::assertSame(['DeepWiki', 'Context7', 'mem0', 'GitHub (code et historique)', 'GitLab (code et historique)', 'GitHub', 'Notion', 'Jira / Confluence', 'Linear'], $crawler->filter('.preset__name')->each(static fn ($name): string => $name->text()));
 
         $crawler = $this->client->request('GET', '/connectors/new?preset=mem0');
         self::assertSelectorTextContains('.callout--info', 'Définir MEM0_API_KEY dans .env.local.');
@@ -471,6 +553,6 @@ final class ConnectorControllerTest extends WebTestCase
         $connector->setEndpoint('php tests/Fixtures/mcp/server.php');
 
         $this->expectExceptionMessage('Les connecteurs STDIO sont désactivés');
-        (new McpClientFactory(false, new CredentialResolver([], new SecretBox('test')), '/app'))->connect($connector);
+        (new McpClientFactory(false, new CredentialResolver([], new SecretBox('test')), self::getContainer()->get(McpAuthorization::class), '/app'))->connect($connector);
     }
 }

@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Connector\ConnectorPresets;
 use App\Connector\ConnectorRunner;
+use App\Connector\McpAuthorization;
 use App\Connector\McpClientFactory;
 use App\Entity\Connector;
 use App\Entity\ConnectorRun;
@@ -33,6 +34,7 @@ use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 final class ConnectorController extends AbstractController
 {
     private const OAUTH_STATE = 'connector_oauth';
+    private const AUTHORIZATION_STATE = 'connector_authorization';
 
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
@@ -47,6 +49,7 @@ final class ConnectorController extends AbstractController
         private readonly GitHubApp $gitHubApp,
         private readonly PullRequestReviewer $reviewer,
         private readonly ModelCheck $modelCheck,
+        private readonly McpAuthorization $authorization,
     ) {
     }
 
@@ -57,7 +60,6 @@ final class ConnectorController extends AbstractController
             'connectors' => $this->entityManager->getRepository(Connector::class)->findBy([], ['name' => 'ASC']),
             'llm' => $this->llmSettings,
             'presets' => $this->presets->available(),
-            'unavailable_presets' => $this->presets->unavailable(),
             'github_oauth' => isset($this->oauthClient->enabled()['github']),
         ]);
     }
@@ -144,6 +146,66 @@ final class ConnectorController extends AbstractController
         $connector->setOauthToken(null);
         $this->entityManager->flush();
         $this->addFlash('success', 'Compte GitHub déconnecté. Le jeton reste valide chez GitHub tant qu\'il n\'y est pas révoqué.');
+
+        return $this->redirectToRoute('connector_show', ['id' => $connector->getId()]);
+    }
+
+    /**
+     * Sends the user to the authorization server of an MCP server that asks for OAuth (Notion, Atlassian...).
+     */
+    #[Route('/connectors/{id}/authorize', name: 'connector_authorize', requirements: ['id' => '\d+'], methods: ['POST'])]
+    public function authorize(Connector $connector, Request $request): Response
+    {
+        $this->checkToken($connector, $request);
+        if (ConnectorTransport::Http !== $connector->getTransport() || $connector->getMode()->isForge()) {
+            throw $this->createNotFoundException('Only an HTTP MCP connector is authorized by OAuth.');
+        }
+        $state = bin2hex(random_bytes(16));
+        try {
+            $flow = $this->authorization->start($connector, $this->generateUrl('connector_authorize_check', [], UrlGeneratorInterface::ABSOLUTE_URL), $state);
+        } catch (\Throwable $exception) {
+            $this->addFlash('error', \sprintf('Autorisation OAuth impossible : %s', $exception->getMessage()));
+
+            return $this->redirectToRoute('connector_show', ['id' => $connector->getId()]);
+        }
+        $request->getSession()->set(self::AUTHORIZATION_STATE, ['state' => $state, 'connector' => $connector->getId(), 'flow' => $flow['pending']]);
+
+        return $this->redirect($flow['url']);
+    }
+
+    #[Route('/connectors/authorize/check', name: 'connector_authorize_check', methods: ['GET'])]
+    public function authorizeCheck(Request $request): Response
+    {
+        $pending = $request->getSession()->remove(self::AUTHORIZATION_STATE);
+        $connector = \is_array($pending) && hash_equals((string) $pending['state'], $request->query->getString('state')) ? $this->entityManager->find(Connector::class, $pending['connector']) : null;
+        if (null === $connector) {
+            $this->addFlash('error', 'L\'autorisation OAuth a expiré, recommencer.');
+
+            return $this->redirectToRoute('connector_index');
+        }
+
+        if ($request->query->has('error')) {
+            $this->addFlash('error', \sprintf('Autorisation refusée : %s', $request->query->getString('error_description') ?: $request->query->getString('error')));
+        } else {
+            try {
+                $this->authorization->finish($connector, $pending['flow'], $request->query->getString('code'));
+                $this->entityManager->flush();
+                $this->addFlash('success', 'Connecteur autorisé : il s\'adresse au serveur MCP avec le jeton OAuth.');
+            } catch (\Throwable $exception) {
+                $this->addFlash('error', \sprintf('Le serveur d\'autorisation a refusé la connexion : %s', $exception->getMessage()));
+            }
+        }
+
+        return $this->redirectToRoute('connector_show', ['id' => $connector->getId()]);
+    }
+
+    #[Route('/connectors/{id}/authorize/revoke', name: 'connector_authorize_revoke', requirements: ['id' => '\d+'], methods: ['POST'])]
+    public function authorizeRevoke(Connector $connector, Request $request): Response
+    {
+        $this->checkToken($connector, $request);
+        $connector->setMcpAuthorization(null);
+        $this->entityManager->flush();
+        $this->addFlash('success', 'Autorisation OAuth retirée de ce connecteur. Le jeton reste valide chez le fournisseur tant qu\'il n\'y est pas révoqué.');
 
         return $this->redirectToRoute('connector_show', ['id' => $connector->getId()]);
     }

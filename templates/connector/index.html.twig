@@ -43,6 +43,7 @@
             {% set preset_icons = {
                 deepwiki: 'lucide:book-open', context7: 'lucide:library', mem0: 'lucide:brain', linear: 'lucide:kanban',
                 'github-api': 'simple-icons:github', 'gitlab-api': 'simple-icons:gitlab', github: 'simple-icons:github',
+                notion: 'simple-icons:notion', atlassian: 'simple-icons:atlassian',
             } %}
             {% for key, preset in presets %}
                 <li class="preset">
@@ -57,7 +58,6 @@
                 </li>
             {% endfor %}
         </ul>
-        <p class="row__sub preset__later">Pas encore possible, OAuth requis : {% for preset in unavailable_presets %}<span title="{{ preset.reason }}">{{ preset.label }}</span>{{ not loop.last ? ', ' }}{% endfor %}.</p>
     </section>
 
     <section class="block" aria-labelledby="llm-title">

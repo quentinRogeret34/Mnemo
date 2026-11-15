@@ -372,7 +372,7 @@ MCP, connecteurs MCP, front.
 | 2. Docs métier | Dépôt md / pdf / docx, dossiers, rattachement à N projets, lecture Markdown et PDF, règles `RG-xxx` (démo), lien document ↔ code éditable | Extraction du texte pdf / docx, extraction des règles par LLM, liens explicites `RG-xxx` dans le code, validation / rejet des liens inférés |
 | 3. Mémoire | Onglet Mémoires façon mem0 (types, historique ADD / UPDATE, liens vers code / docs / règles), `add_memory` MCP, import depuis mem0 par connecteur. Au 2026-11-10 : extraction par LLM (`app:learn`, outil `learn`) avec file de validation, archivage (`supersedes`), fiche ADR, doublons et contradictions par LLM, vérification contre le graphe, import d'une banque AIDD | Recherche des voisins par vecteurs (mots-clés aujourd'hui), lecture planifiée des transcripts |
 | 4. Clients | Serveur MCP (8 outils), HTTP + STDIO. Au 2026-11-10 : adaptateur Claude Code dans le plugin `quentin` de la devbox `quentin-dev` (MCP + hooks `SessionStart`, `PostToolUse` Read, `SessionEnd` / `PreCompact` vers `learn`), endpoints `GET /api/context`, `GET /api/file-context`, `POST /api/learn` | API REST complète, recherche sémantique, authentification |
-| 5. Connecteurs | Connecteurs MCP génériques (ressources → documents, outil → document ou mémoires), modèles DeepWiki, Context7, mem0, GitHub, Linear, `app:connector:sync` | Scheduler + Messenger, suppression des éléments disparus, OAuth (Notion, Atlassian, GitLab), connecteurs API directs, écran d'activité |
+| 5. Connecteurs | Connecteurs MCP génériques (ressources → documents, outil → document ou mémoires), modèles DeepWiki, Context7, mem0, GitHub, Linear, `app:connector:sync`. Au 2026-11-15 : OAuth MCP générique (découverte, enregistrement dynamique, PKCE), modèles Notion et Jira / Confluence | Scheduler + Messenger, suppression des éléments disparus, OAuth GitLab, connecteurs API directs, écran d'activité |
 | 6. Wiki | Vue graphe de voisinage (1 ou 2 sauts). Au 2026-11-10 : jardinage (rapport de dérive), zones d'ombre des règles, signaux de capacité (base du plan du wiki) | Wiki, communautés dans le front, Ask, codemap |
 
 Prochaines étapes proposées, dans l'ordre :
@@ -422,8 +422,8 @@ Prochaines étapes proposées, dans l'ordre :
 - Multi-utilisateur : scoping des mémoires par utilisateur (comme `user_id` de mem0) ?
 - Modèle d'embedding et dimension de la colonne vecteur.
 - Premier connecteur API direct : GitLab ou GitHub ?
-- OAuth pour les connecteurs MCP (Notion, Atlassian, GitLab) : à implémenter ou
-  passer par des serveurs locaux ?
+- OAuth pour les connecteurs MCP : tranché le 2026-11-15, flux OAuth de la spec MCP
+  implémenté dans l'application (Notion, Atlassian) ; reste GitLab.
 - Wiki : généré en tâche planifiée ou à la demande ?
 - Wiki : stocké en base seulement, ou exporté aussi en Markdown dans le dépôt
   pour relecture en revue git (approche CodeAlmanac) ?

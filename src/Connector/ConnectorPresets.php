@@ -124,6 +124,41 @@ final class ConnectorPresets
                 'Nom et arguments de l\'outil non vérifiés sans token : utiliser « Tester la connexion » puis ajuster.',
             ],
         ],
+        'notion' => [
+            'label' => 'Notion',
+            'description' => 'Page ou base Notion, importée en document.',
+            'docs' => 'https://developers.notion.com/docs/mcp',
+            'auth' => 'OAuth',
+            'checked' => false,
+            'endpoint' => 'https://mcp.notion.com/mcp',
+            'credentials' => [],
+            'mode' => ConnectorMode::ToolDocument,
+            'tool' => 'notion-fetch',
+            'arguments' => ['id' => 'https://www.notion.so/page'],
+            'notes' => [
+                'Enregistrer, puis « Connecter par OAuth » sur la page du connecteur et choisir les pages partagées.',
+                'Remplacer l\'URL par celle de la page ou de la base à importer.',
+                'Autre outil : notion-search ({"query": "..."}). Vérifier les noms avec « Tester la connexion ».',
+            ],
+        ],
+        'atlassian' => [
+            'label' => 'Jira / Confluence',
+            'description' => 'Tickets Jira (JQL) ou pages Confluence, importés en document.',
+            'docs' => 'https://support.atlassian.com/rovo/docs/getting-started-with-the-atlassian-remote-mcp-server/',
+            'auth' => 'OAuth',
+            'checked' => false,
+            'endpoint' => 'https://mcp.atlassian.com/v1/mcp',
+            'credentials' => [],
+            'mode' => ConnectorMode::ToolDocument,
+            'tool' => 'searchJiraIssuesUsingJql',
+            'arguments' => ['cloudId' => 'exemple.atlassian.net', 'jql' => 'project = ABC ORDER BY updated DESC'],
+            'notes' => [
+                'Enregistrer, puis « Connecter par OAuth » sur la page du connecteur avec un compte du site Atlassian.',
+                'cloudId : le site (exemple.atlassian.net) ou l\'identifiant donné par l\'outil getAccessibleAtlassianResources.',
+                'Confluence : outil getConfluencePage ({"cloudId": "...", "pageId": "..."}). Vérifier les noms avec « Tester la connexion ».',
+                'Un administrateur du site peut devoir autoriser le domaine de l\'application.',
+            ],
+        ],
         'linear' => [
             'label' => 'Linear',
             'description' => 'Tickets et projets Linear.',
@@ -137,19 +172,10 @@ final class ConnectorPresets
             'arguments' => [],
             'notes' => [
                 'Définir LINEAR_API_KEY dans .env.local (Settings → Security & access).',
-                'Linear privilégie OAuth ; l\'accès par clé est documenté par des tiers. Tester la connexion, puis choisir l\'outil à appeler.',
+                'Ou sans clé : vider les en-têtes, enregistrer, puis « Connecter par OAuth » sur la page du connecteur.',
+                'Tester la connexion, puis choisir l\'outil à appeler.',
             ],
         ],
-    ];
-
-    /**
-     * Providers whose MCP server needs an OAuth flow, which connectors do not support yet.
-     *
-     * @var array<string, array{label: string, reason: string}>
-     */
-    private const UNAVAILABLE = [
-        'notion' => ['label' => 'Notion', 'reason' => 'Serveur hébergé en OAuth uniquement ; le serveur local demande Node.js dans l\'image et STDIO.'],
-        'atlassian' => ['label' => 'Jira / Confluence', 'reason' => 'Serveur hébergé Atlassian en OAuth.'],
     ];
 
     /**
@@ -158,14 +184,6 @@ final class ConnectorPresets
     public function available(): array
     {
         return self::AVAILABLE;
-    }
-
-    /**
-     * @return array<string, array{label: string, reason: string}>
-     */
-    public function unavailable(): array
-    {
-        return self::UNAVAILABLE;
     }
 
     /**

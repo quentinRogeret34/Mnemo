@@ -772,8 +772,6 @@ dialog::backdrop { overflow: hidden; overscroll-behavior: contain; }
 .preset__name { color: var(--color-ink); font-weight: 600; }
 .preset__text { font-size: var(--text-sm); }
 .preset .button { margin-top: var(--space-xs); }
-.preset__later { margin-top: var(--space-sm); }
-.preset__later span { text-decoration: underline dotted; text-underline-offset: 2px; cursor: help; }
 .callout--info { font-size: var(--text-sm); line-height: 1.55; }
 .callout--info ul { margin: var(--space-2xs) 0; padding-left: var(--space-lg); }
 .callout--info p + p, .callout--info ul + p { margin-top: var(--space-2xs); }
