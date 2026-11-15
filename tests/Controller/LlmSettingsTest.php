@@ -10,6 +10,7 @@ use App\Enum\MemoryType;
 use App\Enum\NodeType;
 use App\Enum\UserStatus;
 use App\Llm\LlmSettings;
+use App\Llm\ModelDirectory;
 use App\Memory\MemoryStore;
 use App\Message\ReindexNodes;
 use App\MessageHandler\ReindexNodesHandler;
@@ -17,6 +18,8 @@ use App\Security\SecretBox;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use Psr\Log\NullLogger;
+use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\DependencyInjection\ServiceLocator;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\JsonMockResponse;
@@ -93,6 +96,42 @@ final class LlmSettingsTest extends WebTestCase
         $form['llm_settings[removeKey]']->tick();
         $this->client->submit($form);
         self::assertFalse($settings->isConfigured('openrouter'));
+    }
+
+    public function testTheModelFieldsOfferTheFavouritesAndTheChatModelsThatCallTools(): void
+    {
+        self::getContainer()->set(ModelDirectory::class, new ModelDirectory(
+            new MockHttpClient(new JsonMockResponse(['data' => [
+                ['id' => 'acme/no-tools', 'name' => 'Acme: No tools', 'supported_parameters' => ['response_format']],
+                ['id' => 'acme/chat', 'name' => 'Acme: Chat', 'context_length' => 131072, 'pricing' => ['prompt' => '0.0000001', 'completion' => '0.0000004'], 'supported_parameters' => ['tools', 'structured_outputs']],
+                ['id' => 'acme/free', 'name' => 'Acme: Free', 'pricing' => ['prompt' => '0', 'completion' => '0'], 'supported_parameters' => ['tools', 'response_format']],
+            ]])),
+            new ArrayAdapter(),
+            $this->entityManager,
+            self::getContainer()->get(LlmSettings::class),
+            new NullLogger(),
+        ));
+        $this->entityManager->persist(new Setting(LlmSettings::KEY, self::getContainer()->get(SecretBox::class)->encrypt('sk-or-secret')));
+        $this->entityManager->flush();
+
+        $crawler = $this->client->request('GET', '/settings/llm');
+        self::assertSame('model-picker', $crawler->filter('#llm_settings_chatModel')->attr('data-controller'));
+        self::assertSame('/settings/llm/models/embedding', $crawler->filter('#llm_settings_embeddingModel')->attr('data-model-picker-url-value'));
+        $this->client->submit($crawler->selectButton('Enregistrer')->form(['llm_settings[favoriteModels]' => 'acme/free, acme/chat,acme/free,']));
+        self::assertResponseRedirects('/settings/llm');
+        self::assertSame('acme/free,acme/chat', $this->client->followRedirect()->filter('#llm_settings_favoriteModels')->attr('value'));
+
+        $this->client->request('GET', '/settings/llm/models/chat');
+        self::assertSame([
+            'favorites' => ['acme/free', 'acme/chat'],
+            'models' => [
+                ['id' => 'acme/chat', 'name' => 'Acme: Chat', 'context' => 131072, 'prompt' => 0.1, 'completion' => 0.4],
+                ['id' => 'acme/free', 'name' => 'Acme: Free', 'context' => null, 'prompt' => 0, 'completion' => 0],
+            ],
+        ], json_decode($this->client->getResponse()->getContent(), true));
+
+        $this->client->request('GET', '/settings/llm/models/embedding');
+        self::assertContains('mistralai/mistral-embed-2312', array_column(json_decode($this->client->getResponse()->getContent(), true)['models'], 'id'));
     }
 
     public function testAProjectNamesItsOwnModelsAndItsContentIsIndexedWithThem(): void

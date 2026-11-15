@@ -21,7 +21,6 @@
         <dt>Embeddings</dt><dd><span class="mono">{{ llm.embeddingModel }}</span></dd>
     </dl>
 
-    <datalist id="embedding-models">{% for model in llm.embeddingModels %}<option value="{{ model }}">{% endfor %}</datalist>
     {{ form_start(form, {attr: {class: 'form-stack', novalidate: 'novalidate'}}) }}
         <fieldset>
             <legend>Clé</legend>
@@ -33,6 +32,7 @@
             <legend>Modèles</legend>
             {{ form_row(form.chatModel) }}
             {{ form_row(form.embeddingModel) }}
+            {{ form_row(form.favoriteModels) }}
             <div class="upload__actions">
                 <button class="button button--primary" type="submit">Enregistrer</button>
                 <span>Chaque enregistrement essaie la clé et les deux modèles par un appel court.</span>

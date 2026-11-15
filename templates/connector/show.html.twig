@@ -49,7 +49,7 @@
                 <dd>
                     <form class="inline-form" method="post" action="{{ path('connector_review_model', {id: connector.id}) }}">
                         <input type="hidden" name="_token" value="{{ token }}">
-                        <input class="input mono" id="review-model" type="text" name="model" value="{{ connector.arguments.review_model ?? '' }}" maxlength="150" autocomplete="off" spellcheck="false" placeholder="{{ default_review_model }}" aria-describedby="review-model-help">
+                        <input class="input mono" id="review-model" type="text" name="model" value="{{ connector.arguments.review_model ?? '' }}" maxlength="150" autocomplete="off" spellcheck="false" placeholder="{{ default_review_model }}" aria-describedby="review-model-help" data-controller="model-picker" data-model-picker-url-value="{{ path('llm_models', {kind: 'chat'}) }}">
                         <button class="button" type="submit"><twig:ux:icon name="lucide:check" />Enregistrer</button>
                     </form>
                     <span class="row__sub" id="review-model-help">Identifiant OpenRouter, ex. anthropic/claude-sonnet-4.5. Vide : celui du projet ({{ default_review_model }}).</span>

@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Entity\Setting;
 use App\Form\LlmSettingsType;
 use App\Llm\LlmSettings;
+use App\Llm\ModelDirectory;
 use App\Llm\ModelCheck;
 use App\Message\ReindexNodes;
 use App\Security\ProjectScope;
@@ -12,6 +13,7 @@ use App\Security\SecretBox;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Form\FormError;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -30,6 +32,7 @@ final class LlmSettingsController extends AbstractController
         private readonly SecretBox $secretBox,
         private readonly ProjectScope $projectScope,
         private readonly MessageBusInterface $bus,
+        private readonly ModelDirectory $models,
     ) {
     }
 
@@ -44,6 +47,7 @@ final class LlmSettingsController extends AbstractController
         $form = $this->createForm(LlmSettingsType::class, [
             'chatModel' => $this->stored(LlmSettings::CHAT_MODEL)?->getValue(),
             'embeddingModel' => $this->stored(LlmSettings::EMBEDDING_MODEL)?->getValue(),
+            'favoriteModels' => implode(',', $this->models->favorites()),
         ]);
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid()) {
@@ -66,6 +70,8 @@ final class LlmSettingsController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->store(LlmSettings::CHAT_MODEL, '' === $chat ? null : $chat);
             $this->store(LlmSettings::EMBEDDING_MODEL, '' === $embedding ? null : $embedding);
+            $favorites = array_values(array_unique(array_filter(array_map('trim', explode(',', (string) $form->get('favoriteModels')->getData())))));
+            $this->store(ModelDirectory::FAVORITES, [] === $favorites ? null : json_encode($favorites, \JSON_THROW_ON_ERROR | \JSON_UNESCAPED_SLASHES));
             if ('' !== $key) {
                 $this->store(LlmSettings::KEY, $this->secretBox->encrypt($key));
             } elseif ($remove) {
@@ -84,6 +90,18 @@ final class LlmSettingsController extends AbstractController
         }
 
         return $this->render('settings/llm.html.twig', ['form' => $form, 'llm' => $this->settings], new Response(status: $form->isSubmitted() ? Response::HTTP_UNPROCESSABLE_ENTITY : Response::HTTP_OK));
+    }
+
+    /**
+     * What the model fields offer, for whoever may edit one: the catalogue is public, the favourites are model names.
+     */
+    #[Route('/settings/llm/models/{kind}', name: 'llm_models', requirements: ['kind' => 'chat|embedding'], methods: ['GET'])]
+    public function models(string $kind): JsonResponse
+    {
+        return $this->json([
+            'favorites' => $this->models->favorites(),
+            'models' => 'chat' === $kind ? $this->models->chatModels() : $this->models->embeddingModels(),
+        ]);
     }
 
     private function stored(string $name): ?Setting

@@ -30,4 +30,8 @@ return [
     'cytoscape' => ['version' => '3.34.4'],
     'invokers-polyfill' => ['version' => '1.0.4'],
     '@oddbird/popover-polyfill' => ['version' => '0.7.3'],
+    'tom-select' => ['version' => '2.7.0'],
+    '@orchidjs/sifter' => ['version' => '1.1.0'],
+    '@orchidjs/unicode-variants' => ['version' => '1.2.2'],
+    'tom-select/dist/css/tom-select.min.css' => ['version' => '2.7.0', 'type' => 'css'],
 ];

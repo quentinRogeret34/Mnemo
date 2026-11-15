@@ -24,7 +24,6 @@
         </form>
     {% endif %}
 
-    <datalist id="embedding-models">{% for model in llm.embeddingModels %}<option value="{{ model }}">{% endfor %}</datalist>
     {{ form_start(form, {attr: {class: 'form-stack project-settings', novalidate: 'novalidate'}}) }}
         <fieldset>
             <legend>Projet</legend>

@@ -13,12 +13,14 @@ use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 
 final class ProjectType extends AbstractType
 {
     public function __construct(
         private readonly ProjectResolver $projectResolver,
         private readonly LlmSettings $llmSettings,
+        private readonly UrlGeneratorInterface $urlGenerator,
     ) {
     }
 
@@ -54,13 +56,13 @@ final class ProjectType extends AbstractType
                     'label' => 'Modèle de chat',
                     'required' => false,
                     'help' => 'Identifiant OpenRouter, ex. anthropic/claude-sonnet-4.5. Vide : celui de l\'instance.',
-                    'attr' => ['autocomplete' => 'off', 'spellcheck' => 'false', 'placeholder' => $this->llmSettings->chatModel()],
+                    'attr' => ['autocomplete' => 'off', 'spellcheck' => 'false', 'placeholder' => $this->llmSettings->chatModel(), 'data-controller' => 'model-picker', 'data-model-picker-url-value' => $this->urlGenerator->generate('llm_models', ['kind' => 'chat'])],
                 ])
                 ->add('embeddingModel', TextType::class, [
                     'label' => 'Modèle d\'embeddings',
                     'required' => false,
                     'help' => 'À choisir dans la liste. En changer réindexe le contenu du projet. Vide : celui de l\'instance.',
-                    'attr' => ['autocomplete' => 'off', 'spellcheck' => 'false', 'list' => 'embedding-models', 'placeholder' => $this->llmSettings->embeddingModel()],
+                    'attr' => ['autocomplete' => 'off', 'spellcheck' => 'false', 'placeholder' => $this->llmSettings->embeddingModel(), 'data-controller' => 'model-picker', 'data-model-picker-url-value' => $this->urlGenerator->generate('llm_models', ['kind' => 'embedding'])],
                 ]);
         }
         if ($options['groups']) {
