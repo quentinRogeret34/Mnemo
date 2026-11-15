@@ -573,6 +573,36 @@ dialog::backdrop { overflow: hidden; overscroll-behavior: contain; }
 .input--compact { width: min(100%, 18rem); }
 .select { max-width: 100%; }
 
+/* Selects: room for the arrow, which a drawn chevron replaces so that it follows the theme. */
+.select, .form-stack select {
+    appearance: none; padding-right: 2rem; cursor: pointer;
+    background-image: linear-gradient(45deg, transparent 50%, var(--color-muted) 50%), linear-gradient(135deg, var(--color-muted) 50%, transparent 50%);
+    background-position: calc(100% - 0.95rem) 52%, calc(100% - 0.65rem) 52%;
+    background-size: 0.3rem 0.3rem;
+    background-repeat: no-repeat;
+}
+.select { padding-left: var(--space-sm); }
+@supports (appearance: base-select) {
+    .select, .form-stack select, .select::picker(select), .form-stack select::picker(select) { appearance: base-select; }
+    .select, .form-stack select { display: inline-flex; align-items: center; gap: var(--space-xs); padding-right: var(--space-xs); background-image: none; }
+    .form-stack select { display: flex; }
+    :is(.select, .form-stack select)::picker-icon {
+        content: ""; width: 0.375rem; height: 0.375rem; margin: -0.2rem 0.2rem 0 auto;
+        border: solid var(--color-muted); border-width: 0 1.5px 1.5px 0; rotate: 45deg;
+        transition: rotate var(--dur-fast) var(--ease-out), margin var(--dur-fast) var(--ease-out);
+    }
+    :is(.select, .form-stack select):open::picker-icon { rotate: 225deg; margin-top: 0.2rem; }
+    :is(.select, .form-stack select)::picker(select) {
+        margin-top: var(--space-2xs); padding: var(--space-2xs);
+        border: var(--rule-width) solid var(--color-rule-2); border-radius: var(--radius-md);
+        background: var(--color-card); color: var(--color-ink); box-shadow: var(--shadow-pop);
+    }
+    :is(.select, .form-stack select) option { padding: var(--space-2xs) var(--space-xs); border-radius: var(--radius-sm); font-size: var(--text-sm); cursor: pointer; }
+    :is(.select, .form-stack select) option:is(:hover, :focus-visible) { outline: 0; background: var(--color-hover); }
+    :is(.select, .form-stack select) option:checked { background: var(--color-selected); font-weight: 500; }
+    :is(.select, .form-stack select) option::checkmark { color: var(--color-accent); }
+}
+
 .inline-form { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-xs); }
 .inline-form .input { flex: 1 1 12rem; max-width: 20rem; }
 .inline-form .form-errors { flex-basis: 100%; }
@@ -666,7 +696,7 @@ dialog::backdrop { overflow: hidden; overscroll-behavior: contain; }
 .memory-editor__text {
     display: block; width: 100%; padding: var(--space-xs) 0; resize: vertical;
     border: 0; border-bottom: var(--rule-width) solid transparent; background: transparent;
-    color: var(--color-ink); font: 600 var(--text-xl)/1.4 var(--font-body); letter-spacing: -0.015em;
+    color: var(--color-ink); font: 400 var(--text-lg)/1.6 var(--font-body);
     transition: border-color var(--dur-fast) var(--ease-out);
 }
 .memory-editor__text:hover { border-bottom-color: var(--color-rule); }
