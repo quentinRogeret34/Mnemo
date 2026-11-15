@@ -29,6 +29,8 @@ final class ProjectChatTest extends WebTestCase
     private Project $project;
     /** @var list<string> the conversation as the model received it, one JSON per call */
     private array $requests = [];
+    /** @var list<string> the tools as the model received them, one JSON per call */
+    private array $tools = [];
 
     protected function setUp(): void
     {
@@ -57,6 +59,9 @@ final class ProjectChatTest extends WebTestCase
         self::assertStringContainsString('Bonjour.', $this->requests[0]);
         self::assertStringContainsString('"role":"tool"', $this->requests[1]);
         self::assertStringContainsString('Une remise ne d', $this->requests[1]);
+        // Mistral refuses a tool without "parameters": list_rules takes no argument.
+        self::assertStringContainsString('"name":"list_rules","description":"Liste les règles métier du projet : code, titre, énoncé et statut (validated ou to_review).","parameters":{"type":"object","properties":{}}', $this->tools[0]);
+        self::assertSame(substr_count($this->tools[0], '"name":'), substr_count($this->tools[0], '"parameters":'));
     }
 
     public function testARuleAddedInTheChatWaitsForValidationAndIsShownInTheConversation(): void
@@ -115,8 +120,9 @@ final class ProjectChatTest extends WebTestCase
      */
     private function scriptModel(array $answers): void
     {
-        $platform = MockPlatformFactory::createPlatform(function ($model, array|string|object $input) use (&$answers): ToolCallResult|string {
+        $platform = MockPlatformFactory::createPlatform(function ($model, array|string|object $input, array $options = []) use (&$answers): ToolCallResult|string {
             $this->requests[] = json_encode($input, \JSON_UNESCAPED_UNICODE | \JSON_THROW_ON_ERROR);
+            $this->tools[] = json_encode($options['tools'] ?? [], \JSON_UNESCAPED_UNICODE | \JSON_THROW_ON_ERROR);
 
             return array_shift($answers) ?? throw new \LogicException('The model was called more often than scripted.');
         });

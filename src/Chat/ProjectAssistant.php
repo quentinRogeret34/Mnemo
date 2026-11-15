@@ -55,7 +55,7 @@ final class ProjectAssistant
             $this->settings->platform($this->settings->chatPlatform),
             $this->settings->chatModel($project),
             [new SystemPromptInputProcessor(\sprintf(self::SYSTEM, $project->getName()))],
-            toolbox: new FaultTolerantToolbox(new Toolbox([$tools])),
+            toolbox: new ObjectParametersToolbox(new FaultTolerantToolbox(new Toolbox([$tools]))),
             maxToolCalls: self::MAX_TOOL_CALLS,
         );
         $messages = new MessageBag();
