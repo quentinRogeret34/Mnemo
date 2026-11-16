@@ -102,7 +102,7 @@ final class MemoryStore
      */
     public function setAdr(Node $memory, array $adr): void
     {
-        $adr = array_filter(array_map('trim', array_intersect_key($adr, array_flip(self::ADR_FIELDS))), 'strlen');
+        $adr = array_filter(array_map('trim', array_intersect_key($adr, array_flip(self::ADR_FIELDS))), static fn (string $value): bool => '' !== $value);
         $metadata = $memory->getMetadata();
         if ($adr === ($metadata['adr'] ?? [])) {
             return;

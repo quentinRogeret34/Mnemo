@@ -4,11 +4,14 @@ namespace App\Form;
 
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
-use Symfony\UX\Dropzone\Form\DropzoneType;
 use Symfony\Component\Validator\Constraints\All;
 use Symfony\Component\Validator\Constraints\Count;
 use Symfony\Component\Validator\Constraints\File;
+use Symfony\UX\Dropzone\Form\DropzoneType;
 
+/**
+ * @extends AbstractType<array<string, mixed>>
+ */
 final class DocumentUploadType extends AbstractType
 {
     public function buildForm(FormBuilderInterface $builder, array $options): void

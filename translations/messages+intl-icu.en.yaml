@@ -272,6 +272,7 @@ connector:
         done: '{created} created · {updated} updated · {unchanged} unchanged'
         failed: 'failed on {date}'
         never: 'never synced'
+    stdio_disabled: 'STDIO connectors are disabled (MCP_CONNECTORS_ALLOW_STDIO=0): they run a command in the container.'
     unchecked: 'to check'
     unchecked_title: 'Tool name not checked without access'
     unchecked_tool: 'Tool name not checked: test the connection after saving.'
@@ -688,6 +689,9 @@ llm:
     key_missing_help: 'without a key, nothing that needs an LLM runs'
     lede: 'OpenRouter key and models of the whole instance: memory extraction, verification, assistant, review bot, search by meaning. A project can name its own models in its settings; the key stays this one.'
     models: Models
+    refused_chat: 'OpenRouter refused this chat model: {error}'
+    refused_chat_key: 'OpenRouter refused the chat model with this key: {error}'
+    refused_embedding: 'OpenRouter refused the embedding model: {error}'
     save_help: 'Each save tries the key and both models with a short call.'
     unavailable: 'No API key for the LLM platform "{platform}": set it in the language model settings or in .env.local.'
 locale:

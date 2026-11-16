@@ -2,7 +2,6 @@
 
 namespace App\Tests\Forge;
 
-use App\Connector\ConnectorRunner;
 use App\Connector\CredentialResolver;
 use App\Entity\Connector;
 use App\Entity\Node;
@@ -273,6 +272,5 @@ final class ForgeImporterTest extends WebTestCase
         self::assertResponseStatusCodeSame(422);
         self::assertStringContainsString('Indiquer le dépôt', $this->client->getResponse()->getContent());
         self::assertStringContainsString('alimente un projet', $this->client->getResponse()->getContent());
-        self::assertInstanceOf(ConnectorRunner::class, self::getContainer()->get(ConnectorRunner::class));
     }
 }

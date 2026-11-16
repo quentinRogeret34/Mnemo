@@ -7,8 +7,8 @@ use App\Entity\Node;
 use App\Entity\Project;
 use App\Enum\NodeType;
 use App\Graph\GraphReader;
-use App\Search\HybridSearch;
 use App\Llm\Chat;
+use App\Search\HybridSearch;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**

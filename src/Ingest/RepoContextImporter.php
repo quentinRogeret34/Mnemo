@@ -211,7 +211,8 @@ final class RepoContextImporter
         $current = null;
         $inCode = false;
         $flush = static function () use (&$current, &$bullets, &$title, &$section): void {
-            if (null !== $current && '' !== $current) {
+            /** @var string|null $current */
+            if ('' !== (string) $current) {
                 $bullets[] = implode(' / ', array_filter([$title, $section])).' : '.$current;
             }
             $current = null;
@@ -328,6 +329,6 @@ final class RepoContextImporter
             $finder->depth($depth);
         }
 
-        return array_values(array_map(static fn (\SplFileInfo $file): string => substr($file->getPathname(), \strlen($root) + 1), iterator_to_array($finder, false)));
+        return array_map(static fn (\SplFileInfo $file): string => substr($file->getPathname(), \strlen($root) + 1), iterator_to_array($finder, false));
     }
 }

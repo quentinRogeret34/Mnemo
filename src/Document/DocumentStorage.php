@@ -109,7 +109,7 @@ final class DocumentStorage
     public function folder(?string $path): ?Folder
     {
         $folder = null;
-        foreach (array_filter(array_map('trim', explode('/', (string) $path)), 'strlen') as $name) {
+        foreach (array_filter(array_map('trim', explode('/', (string) $path)), static fn (string $value): bool => '' !== $value) as $name) {
             // A folder created in this loop is not flushed yet and cannot have children to look up.
             $child = null !== $folder && null === $folder->getId() ? null : $this->entityManager->getRepository(Folder::class)->findOneBy(['name' => $name, 'parent' => $folder]);
             if (null === $child) {

@@ -206,6 +206,7 @@ final class PullRequestReviewerTest extends KernelTestCase
                 '/repos/acme/shop/pulls/12/commits' => $commits,
                 '/repos/acme/shop/issues/12/comments' => $comments,
                 '/repos/acme/shop/pulls/12/comments' => $reviewComments,
+                default => throw new \LogicException('Unexpected request to '.$path),
             });
         });
         openssl_pkey_export(openssl_pkey_new(['private_key_bits' => 2048, 'private_key_type' => \OPENSSL_KEYTYPE_RSA]), $pem);

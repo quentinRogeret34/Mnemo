@@ -2,6 +2,7 @@
 
 namespace App\Tests\Rule;
 
+use App\Document\DocumentStorage;
 use App\Entity\Edge;
 use App\Entity\Node;
 use App\Entity\Project;
@@ -9,7 +10,6 @@ use App\Enum\Confidence;
 use App\Enum\EdgeOrigin;
 use App\Enum\NodeType;
 use App\Graph\KnowledgeReader;
-use App\Document\DocumentStorage;
 use App\Tests\LlmTestTrait;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;

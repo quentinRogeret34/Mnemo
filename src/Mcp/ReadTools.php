@@ -6,9 +6,9 @@ use App\Document\DocumentStorage;
 use App\Entity\Node;
 use App\Entity\Project;
 use App\Enum\NodeType;
+use App\Export\MemoryBlockExporter;
 use App\Graph\CapabilityDetector;
 use App\Graph\GraphReader;
-use App\Export\MemoryBlockExporter;
 use App\Graph\KnowledgeReader;
 use App\Search\HybridSearch;
 use App\Security\ProjectScope;
@@ -68,7 +68,7 @@ final class ReadTools
         int $limit = 20,
     ): array {
         $this->requireProject(null === $project ? [] : [$project]);
-        $found = $this->hybridSearch->search($query, null === $project ? null : $this->project($project), array_values($types), max(1, min(50, $limit)));
+        $found = $this->hybridSearch->search($query, null === $project ? null : $this->project($project), $types, max(1, min(50, $limit)));
 
         return [
             'results' => array_map(fn (array $result): array => $result + ['url' => $this->url($result)], $found['results']),

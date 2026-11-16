@@ -161,7 +161,7 @@ final class ForgeImporter
     }
 
     /**
-     * @param array<string, mixed>                                                                    $metadata
+     * @param array<string, mixed>                                                                     $metadata
      * @param array{created: int, updated: int, unchanged: int, skipped: list<string>, error: ?string} $report
      */
     private function upsert(Project $project, NodeType $type, string $externalId, string $label, array $metadata, array &$report): Node
@@ -261,7 +261,7 @@ final class ForgeImporter
     }
 
     /**
-     * @param list<ForgeTicket>                                                                       $merged
+     * @param list<ForgeTicket>                                                                        $merged
      * @param array{created: int, updated: int, unchanged: int, skipped: list<string>, error: ?string} $report
      */
     private function learnReviews(ForgeClient $client, Project $project, string $prefix, array $merged, array &$report): void

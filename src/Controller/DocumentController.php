@@ -124,6 +124,9 @@ final class DocumentController extends AbstractController
         return $response;
     }
 
+    /**
+     * @param FormInterface<array<string, mixed>> $form
+     */
     private function handleUpload(FormInterface $form, Request $request, ?Folder $folder, ?Project $project): bool
     {
         $form->handleRequest($request);

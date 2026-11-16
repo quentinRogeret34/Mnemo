@@ -67,6 +67,9 @@ final class ProjectResolver
         return \strlen($repository) > 255 ? '' : (str_ends_with($repository, '.git') ? substr($repository, 0, -4) : $repository);
     }
 
+    /**
+     * @phpstan-impure
+     */
     private function locate(string $cwd, string $slug, string $repository): ?Project
     {
         $projects = $this->entityManager->getRepository(Project::class);

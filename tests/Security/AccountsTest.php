@@ -176,7 +176,11 @@ final class AccountsTest extends WebTestCase
         $this->entityManager->persist($orphanKey);
         $this->entityManager->flush();
         $this->client->restart();
-        $context = fn (string $bearer): string => json_decode($this->client->request('GET', '/api/context?project=demo', server: ['HTTP_AUTHORIZATION' => 'Bearer '.$bearer]) ? $this->client->getResponse()->getContent() : '', true)['context'];
+        $context = function (string $bearer): string {
+            $this->client->request('GET', '/api/context?project=demo', server: ['HTTP_AUTHORIZATION' => 'Bearer '.$bearer]);
+
+            return json_decode((string) $this->client->getResponse()->getContent(), true)['context'];
+        };
         self::assertStringContainsString('Astuce du back.', $context($token));
         self::assertStringNotContainsString('Alice préfère', $context($token));
         self::assertStringNotContainsString('Astuce du back.', $context($orphanToken));
@@ -199,7 +203,11 @@ final class AccountsTest extends WebTestCase
         $this->entityManager->flush();
         $this->entityManager->clear();
         $this->client->restart();
-        $context = fn (string $name): array => json_decode($this->client->request('GET', '/api/context?cwd=/home/dev/shop&repository=github.com/acme/shop', server: ['HTTP_AUTHORIZATION' => 'Bearer '.$tokens[$name]]) ? $this->client->getResponse()->getContent() : '', true);
+        $context = function (string $name) use ($tokens): array {
+            $this->client->request('GET', '/api/context?cwd=/home/dev/shop&repository=github.com/acme/shop', server: ['HTTP_AUTHORIZATION' => 'Bearer '.$tokens[$name]]);
+
+            return json_decode((string) $this->client->getResponse()->getContent(), true);
+        };
 
         self::assertNull($context('carol')['project']);
         self::assertSame(['project' => 'shop', 'created' => true], array_intersect_key($context('bob'), ['project' => 1, 'created' => 1]));

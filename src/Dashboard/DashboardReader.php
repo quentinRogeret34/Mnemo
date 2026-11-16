@@ -69,7 +69,7 @@ final class DashboardReader
 
     public function firstActivity(): ?\DateTimeImmutable
     {
-        $first = $this->connection->fetchOne("SELECT LEAST((SELECT MIN(created_at) FROM mcp_call), (SELECT MIN(created_at) FROM node WHERE type = :memory))", ['memory' => NodeType::Memory->value]);
+        $first = $this->connection->fetchOne('SELECT LEAST((SELECT MIN(created_at) FROM mcp_call), (SELECT MIN(created_at) FROM node WHERE type = :memory))', ['memory' => NodeType::Memory->value]);
 
         return null === $first || false === $first ? null : new \DateTimeImmutable($first);
     }

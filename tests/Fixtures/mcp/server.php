@@ -22,6 +22,6 @@ Server::builder()
         'get_memories',
         description: 'mem0-like memory listing',
     )
-    ->addTool(static fn (): string => "Semaine calme : 3 tickets fermés.", 'weekly_report', description: 'Weekly report')
+    ->addTool(static fn (): string => 'Semaine calme : 3 tickets fermés.', 'weekly_report', description: 'Weekly report')
     ->build()
     ->run(new StdioTransport());

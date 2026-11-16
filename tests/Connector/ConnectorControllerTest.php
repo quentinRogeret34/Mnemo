@@ -23,9 +23,9 @@ use App\Security\OAuth\OAuthClient;
 use App\Security\SecretBox;
 use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\AI\Platform\Model;
 use Symfony\AI\Platform\Test\MockPlatformFactory;
+use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\DependencyInjection\ServiceLocator;
@@ -145,6 +145,7 @@ final class ConnectorControllerTest extends WebTestCase
                     ['number' => 12, 'title' => 'Relève le plafond', 'user' => ['login' => 'alice'], 'draft' => false, 'html_url' => 'https://github.com/acme/shop/pull/12', 'updated_at' => '2026-11-15T09:30:00Z'],
                     ['number' => 9, 'title' => 'Nouveau catalogue', 'user' => ['login' => 'bob'], 'draft' => true, 'html_url' => 'https://github.com/acme/shop/pull/9', 'updated_at' => '2026-11-14T18:00:00Z'],
                 ] : [],
+                default => throw new \LogicException('Unexpected request to '.$url),
             });
         });
         openssl_pkey_export(openssl_pkey_new(['private_key_bits' => 2048, 'private_key_type' => \OPENSSL_KEYTYPE_RSA]), $pem);

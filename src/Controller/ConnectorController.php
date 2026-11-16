@@ -29,8 +29,9 @@ use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Routing\Attribute\Route;
-use Symfony\Component\Translation\TranslatableMessage;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Symfony\Component\Translation\TranslatableMessage;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 final class ConnectorController extends AbstractController
 {
@@ -51,6 +52,7 @@ final class ConnectorController extends AbstractController
         private readonly PullRequestReviewer $reviewer,
         private readonly ModelCheck $modelCheck,
         private readonly McpAuthorization $authorization,
+        private readonly TranslatorInterface $translator,
     ) {
     }
 
@@ -80,7 +82,7 @@ final class ConnectorController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && ConnectorTransport::Stdio === $connector->getTransport() && !$this->clientFactory->stdioAllowed()) {
-            $form->get('transport')->addError(new FormError('Les connecteurs STDIO sont désactivés (MCP_CONNECTORS_ALLOW_STDIO=0) : ils exécutent une commande dans le conteneur.'));
+            $form->get('transport')->addError(new FormError($this->translator->trans('connector.stdio_disabled')));
         }
         if ($form->isSubmitted() && $form->isValid()) {
             $this->entityManager->persist($connector);

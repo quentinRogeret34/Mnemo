@@ -71,6 +71,7 @@ final class OAuthClient
             'github' => $this->github($token),
             'gitlab' => $this->gitlab($token),
             'google' => $this->google($token),
+            default => throw new \InvalidArgumentException(\sprintf('Unknown sign-in provider "%s".', $provider)),
         };
     }
 

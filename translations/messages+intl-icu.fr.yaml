@@ -272,6 +272,7 @@ connector:
         done: '{created} créés · {updated} mis à jour · {unchanged} inchangés'
         failed: 'échec le {date}'
         never: 'jamais synchronisé'
+    stdio_disabled: 'Les connecteurs STDIO sont désactivés (MCP_CONNECTORS_ALLOW_STDIO=0) : ils exécutent une commande dans le conteneur.'
     unchecked: 'à vérifier'
     unchecked_title: "Nom de l'outil non vérifié sans accès"
     unchecked_tool: "Nom de l'outil non vérifié : tester la connexion après l'enregistrement."
@@ -688,6 +689,9 @@ llm:
     key_missing_help: 'sans clé, rien de ce qui demande un LLM ne tourne'
     lede: "Clé OpenRouter et modèles de toute l'instance : extraction des mémoires, vérification, assistant, bot de revue, recherche par le sens. Un projet peut nommer ses propres modèles dans ses réglages ; la clé reste celle-ci."
     models: Modèles
+    refused_chat: 'OpenRouter a refusé ce modèle de chat : {error}'
+    refused_chat_key: 'OpenRouter a refusé le modèle de chat avec cette clé : {error}'
+    refused_embedding: "OpenRouter a refusé le modèle d'embeddings : {error}"
     save_help: 'Chaque enregistrement essaie la clé et les deux modèles par un appel court.'
     unavailable: 'Clé API absente pour la plateforme LLM "{platform}" : la renseigner dans les réglages des modèles ou dans .env.local.'
 locale:

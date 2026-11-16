@@ -10,8 +10,8 @@ use App\Enum\NodeType;
 use App\Enum\ProposalKind;
 use App\Enum\ProposalStatus;
 use App\Memory\MemoryStore;
-use Doctrine\DBAL\ParameterType;
 use App\Security\MemoryAccess;
+use Doctrine\DBAL\ParameterType;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**

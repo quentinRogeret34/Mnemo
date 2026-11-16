@@ -25,6 +25,7 @@ use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Translation\TranslatableMessage;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 final class ProjectController extends AbstractController
 {
@@ -38,6 +39,7 @@ final class ProjectController extends AbstractController
         private readonly LlmSettings $llmSettings,
         private readonly ModelCheck $modelCheck,
         private readonly MessageBusInterface $bus,
+        private readonly TranslatorInterface $translator,
     ) {
     }
 
@@ -83,10 +85,10 @@ final class ProjectController extends AbstractController
         $configured = $this->llmSettings->isConfigured('openrouter');
         if ($form->isSubmitted() && $form->isValid() && $configured) {
             if ($chatModel !== $this->llmSettings->chatModel($project) && null !== $error = $this->modelCheck->chat($this->llmSettings->chatModel($project))) {
-                $form->get('chatModel')->addError(new FormError('OpenRouter a refusé ce modèle de chat : '.$error));
+                $form->get('chatModel')->addError(new FormError($this->translator->trans('llm.refused_chat', ['error' => $error])));
             }
             if ($embeddingModel !== $this->llmSettings->embeddingModel($project) && null !== $error = $this->modelCheck->embedding($this->llmSettings->embeddingModel($project))) {
-                $form->get('embeddingModel')->addError(new FormError('OpenRouter a refusé ce modèle d\'embeddings : '.$error));
+                $form->get('embeddingModel')->addError(new FormError($this->translator->trans('llm.refused_embedding', ['error' => $error])));
             }
         }
         if ($form->isSubmitted() && $form->isValid()) {
@@ -160,6 +162,9 @@ final class ProjectController extends AbstractController
         }
     }
 
+    /**
+     * @param FormInterface<Project> $form
+     */
     private function saveGroups(FormInterface $form, Project $project): void
     {
         if (!$form->has('groups')) {

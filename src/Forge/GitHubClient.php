@@ -48,7 +48,7 @@ final class GitHubClient implements ForgeClient
         );
         $commits = $this->all(array_map(fn (array $row) => $this->http->request('GET', $this->path('/pulls/'.$row['number'].'/commits'), ['query' => ['per_page' => self::PAGE]]), $rows));
 
-        return array_values(array_map(fn (array $row, array $list): ForgeTicket => $this->ticket($row, true, array_column($list, 'sha')), $rows, $commits));
+        return array_map(fn (array $row, array $list): ForgeTicket => $this->ticket($row, true, array_column($list, 'sha')), $rows, $commits);
     }
 
     public function issues(?\DateTimeImmutable $since, int $limit): array

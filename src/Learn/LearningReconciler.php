@@ -3,8 +3,8 @@
 namespace App\Learn;
 
 use App\Entity\Project;
-use App\Search\HybridSearch;
 use App\Llm\Chat;
+use App\Search\HybridSearch;
 
 /**
  * Compares a candidate with the closest existing memories: new, covered, updates, supersedes or retracts one of them.

@@ -42,10 +42,10 @@ final class ReviewAdvisor
     }
 
     /**
-     * @param list<array{id: int, text: string, type: string}>                           $memories
+     * @param list<array{id: int, text: string, type: string}>                              $memories
      * @param list<array{code: string, title: string, statement: ?string, status: ?string}> $rules
-     * @param array<string, string>                                                      $patches path => unified diff
-     * @param string|null                                                                $model   the model the connector chose for its reviews
+     * @param array<string, string>                                                         $patches  path => unified diff
+     * @param string|null                                                                   $model    the model the connector chose for its reviews
      *
      * @return list<array{source: string, path: string, line: ?int, remark: string, severity: string}>
      */
@@ -110,6 +110,8 @@ final class ReviewAdvisor
      * Prefixes the lines of a unified diff with their number in the new file, so that a remark can name one.
      *
      * @param array<int, true>|null $added filled with the numbers of the added lines
+     *
+     * @param-out array<int, true> $added
      */
     private static function numbered(string $patch, ?array &$added): string
     {

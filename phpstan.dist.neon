@@ -1,0 +1,38 @@
+parameters:
+    level: 6
+    paths:
+        - bin/
+        - config/
+        - public/
+        - src/
+        - tests/
+    excludePaths:
+        - config/reference.php
+    symfony:
+        containerXmlPath: var/cache/test/App_KernelTestDebugContainer.xml
+    ignoreErrors:
+        # Mistral wants "properties" sent as a JSON object: an empty array would be encoded as [].
+        -
+            identifier: argument.type
+            path: src/Chat/ObjectParametersToolbox.php
+        # The test environment declares messenger.transport.async as in-memory://, typed as a plain TransportInterface.
+        -
+            message: '#TransportInterface::getSent\(\)#'
+            path: tests/
+        # DomCrawler's Form::offsetGet() returns a field or an array of fields.
+        -
+            identifier: method.nonObject
+            path: tests/
+        # The mock HTTP clients fill these variables by reference, which PHPStan does not follow.
+        -
+            identifier: staticMethod.impossibleType
+            path: tests/Connector/ConnectorControllerTest.php
+        -
+            identifier: offsetAccess.notFound
+            path: tests/Review/PullRequestReviewerTest.php
+        -
+            identifier: identical.alwaysTrue
+            path: tests/Forge/ForgeImporterTest.php
+        -
+            identifier: nullCoalesce.variable
+            path: tests/Forge/ForgeImporterTest.php

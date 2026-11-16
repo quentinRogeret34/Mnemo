@@ -172,7 +172,7 @@ final class ConnectorRunner
     private function importToolMemories(Client $client, Connector $connector, array &$report): void
     {
         $items = json_decode($this->callTool($client, $connector), true);
-        foreach (array_filter(explode('.', (string) $connector->getItemsPath()), 'strlen') as $key) {
+        foreach (array_filter(explode('.', (string) $connector->getItemsPath()), static fn (string $value): bool => '' !== $value) as $key) {
             $items = \is_array($items) ? ($items[$key] ?? null) : null;
         }
         if (!\is_array($items) || !array_is_list($items)) {

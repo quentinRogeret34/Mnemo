@@ -5,7 +5,6 @@ namespace App\Tests\Connector;
 use App\Connector\ConnectorRunner;
 use App\Entity\Connector;
 use App\Entity\ConnectorRun;
-use App\Entity\Folder;
 use App\Entity\Project;
 use App\Enum\ConnectorMode;
 use App\Enum\ConnectorSchedule;

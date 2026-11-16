@@ -11,6 +11,9 @@ use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Validator\Constraints\Length;
 
+/**
+ * @extends AbstractType<array<string, mixed>>
+ */
 final class LlmSettingsType extends AbstractType
 {
     public function __construct(

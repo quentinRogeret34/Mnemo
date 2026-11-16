@@ -68,14 +68,14 @@ final class WriteTools
     }
 
     /**
-     * @param string       $text     one short, self-contained fact, decision, convention or learning
-     * @param string       $type     kind of memory
-     * @param list<string> $projects slugs of the projects the memory is about
-     * @param list<string> $files    code file paths, in those projects, the memory is about
-     * @param list<string> $rules    business rule codes, in those projects, the memory is about (e.g. RG-001)
-     * @param string|null  $agent    name of the calling agent, e.g. claude-code
+     * @param string       $text       one short, self-contained fact, decision, convention or learning
+     * @param string       $type       kind of memory
+     * @param list<string> $projects   slugs of the projects the memory is about
+     * @param list<string> $files      code file paths, in those projects, the memory is about
+     * @param list<string> $rules      business rule codes, in those projects, the memory is about (e.g. RG-001)
+     * @param string|null  $agent      name of the calling agent, e.g. claude-code
      * @param string       $visibility who sees the memory: project (everyone on its projects), private (the key's owner only) or group
-     * @param string|null  $group    name of the group, for the group visibility
+     * @param string|null  $group      name of the group, for the group visibility
      *
      * @return array<string, mixed>
      */
@@ -101,7 +101,7 @@ final class WriteTools
             throw new ToolCallException('The memory text must contain between 1 and 1000 characters.');
         }
         $memoryType = MemoryType::tryFrom($type) ?? throw new ToolCallException(\sprintf('Unknown type "%s". Use one of: %s.', $type, implode(', ', array_column(MemoryType::cases(), 'value'))));
-        $this->requireProject(array_values($projects));
+        $this->requireProject($projects);
         $projectEntities = array_map($this->project(...), $projects);
 
         $memory = $this->memoryStore->findByText($text);
@@ -121,7 +121,7 @@ final class WriteTools
         }
         $this->entityManager->flush();
 
-        $notFound = $this->memoryStore->linkReferences($memory, $projectEntities, array_values($files), array_values($rules));
+        $notFound = $this->memoryStore->linkReferences($memory, $projectEntities, $files, $rules);
         $this->entityManager->flush();
 
         return [
@@ -156,7 +156,7 @@ final class WriteTools
         if (\strlen($content) > self::MAX_DOCUMENT_BYTES) {
             throw new ToolCallException('The content exceeds 1 MB.');
         }
-        $this->requireProject(array_values($projects));
+        $this->requireProject($projects);
         $projectEntities = array_map($this->project(...), $projects);
 
         $document = $this->documentStorage->storeContent($this->documentStorage->folder($folder), '# '.$title."\n\n".preg_replace('/\A\s*#\s+.+\R/', '', $content, 1), $title, 'md', ['source' => 'mcp']);

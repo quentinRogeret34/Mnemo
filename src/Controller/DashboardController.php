@@ -3,10 +3,8 @@
 namespace App\Controller;
 
 use App\Dashboard\DashboardReader;
-use App\Entity\Project;
 use App\Pagination\Page;
 use App\Security\ProjectScope;
-use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
@@ -19,7 +17,6 @@ final class DashboardController extends AbstractController
 
     public function __construct(
         private readonly DashboardReader $reader,
-        private readonly EntityManagerInterface $entityManager,
         private readonly ProjectScope $projectScope,
     ) {
     }

@@ -111,12 +111,12 @@ final class PullRequestReviewer
     }
 
     /**
-     * @param array<string, mixed>        $pullRequest
-     * @param list<array<string, mixed>>  $rules
-     * @param list<array<string, mixed>>  $unguarded
-     * @param list<array<string, string>> $remarks
-     * @param list<array<string, mixed>>  $memories
-     * @param array<string, list<array<string, mixed>>> $history
+     * @param array<string, mixed>                                                                        $pullRequest
+     * @param list<array<string, mixed>>                                                                  $rules
+     * @param list<array<string, mixed>>                                                                  $unguarded
+     * @param list<array{source: string, path: string, line: int|null, remark: string, severity: string}> $remarks
+     * @param list<array<string, mixed>>                                                                  $memories
+     * @param array<string, list<array<string, mixed>>>                                                   $history
      */
     private function render(Project $project, array $pullRequest, array $rules, array $unguarded, array $remarks, array $memories, array $history, ?string $note): string
     {

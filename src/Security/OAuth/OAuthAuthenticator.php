@@ -37,7 +37,7 @@ final class OAuthAuthenticator extends AbstractAuthenticator
     ) {
     }
 
-    public function supports(Request $request): ?bool
+    public function supports(Request $request): bool
     {
         return 'oauth_check' === $request->attributes->get('_route');
     }
@@ -64,12 +64,12 @@ final class OAuthAuthenticator extends AbstractAuthenticator
         return new SelfValidatingPassport(new UserBadge($user->getUserIdentifier(), static fn (): User => $user));
     }
 
-    public function onAuthenticationSuccess(Request $request, TokenInterface $token, string $firewallName): ?Response
+    public function onAuthenticationSuccess(Request $request, TokenInterface $token, string $firewallName): Response
     {
         return new RedirectResponse($this->urlGenerator->generate('dashboard'));
     }
 
-    public function onAuthenticationFailure(Request $request, AuthenticationException $exception): ?Response
+    public function onAuthenticationFailure(Request $request, AuthenticationException $exception): Response
     {
         $request->getSession()->set(SecurityRequestAttributes::AUTHENTICATION_ERROR, $exception);
 

@@ -5,8 +5,8 @@ namespace App\Controller;
 use App\Entity\Setting;
 use App\Form\LlmSettingsType;
 use App\Llm\LlmSettings;
-use App\Llm\ModelDirectory;
 use App\Llm\ModelCheck;
+use App\Llm\ModelDirectory;
 use App\Message\ReindexNodes;
 use App\Security\ProjectScope;
 use App\Security\SecretBox;
@@ -19,6 +19,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Translation\TranslatableMessage;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
  * Key and models of the whole instance, set from the interface instead of the environment.
@@ -34,6 +35,7 @@ final class LlmSettingsController extends AbstractController
         private readonly ProjectScope $projectScope,
         private readonly MessageBusInterface $bus,
         private readonly ModelDirectory $models,
+        private readonly TranslatorInterface $translator,
     ) {
     }
 
@@ -58,36 +60,37 @@ final class LlmSettingsController extends AbstractController
             $embedding = trim((string) $form->get('embeddingModel')->getData());
             $indexed = $this->settings->isConfigured('openrouter') ? $this->settings->embeddingModel() : null;
 
+            $error = null;
             // Without a key to call with, the models are saved as they are.
             if ('' !== $key || (!$remove && $this->settings->isConfigured('openrouter'))) {
                 $tried = '' === $key ? null : $key;
                 if (null !== $error = $this->modelCheck->chat('' === $chat ? $this->settings->defaultChatModel : $chat, $tried)) {
-                    $form->get('' === $key ? 'chatModel' : 'apiKey')->addError(new FormError('OpenRouter a refusé le modèle de chat avec cette clé : '.$error));
+                    $form->get('' === $key ? 'chatModel' : 'apiKey')->addError(new FormError($this->translator->trans('llm.refused_chat_key', ['error' => $error])));
                 } elseif (null !== $error = $this->modelCheck->embedding('' === $embedding ? $this->settings->defaultEmbeddingModel : $embedding, $tried)) {
-                    $form->get('embeddingModel')->addError(new FormError('OpenRouter a refusé le modèle d\'embeddings : '.$error));
+                    $form->get('embeddingModel')->addError(new FormError($this->translator->trans('llm.refused_embedding', ['error' => $error])));
                 }
             }
-        }
-        if ($form->isSubmitted() && $form->isValid()) {
-            $this->store(LlmSettings::CHAT_MODEL, '' === $chat ? null : $chat);
-            $this->store(LlmSettings::EMBEDDING_MODEL, '' === $embedding ? null : $embedding);
-            $favorites = array_values(array_unique(array_filter(array_map('trim', explode(',', (string) $form->get('favoriteModels')->getData())))));
-            $this->store(ModelDirectory::FAVORITES, [] === $favorites ? null : json_encode($favorites, \JSON_THROW_ON_ERROR | \JSON_UNESCAPED_SLASHES));
-            if ('' !== $key) {
-                $this->store(LlmSettings::KEY, $this->secretBox->encrypt($key));
-            } elseif ($remove) {
-                $this->store(LlmSettings::KEY, null);
-            }
-            $this->entityManager->flush();
-            $this->settings->reset();
+            if (null === $error) {
+                $this->store(LlmSettings::CHAT_MODEL, '' === $chat ? null : $chat);
+                $this->store(LlmSettings::EMBEDDING_MODEL, '' === $embedding ? null : $embedding);
+                $favorites = array_values(array_unique(array_filter(array_map('trim', explode(',', (string) $form->get('favoriteModels')->getData())))));
+                $this->store(ModelDirectory::FAVORITES, [] === $favorites ? null : json_encode($favorites, \JSON_THROW_ON_ERROR | \JSON_UNESCAPED_SLASHES));
+                if ('' !== $key) {
+                    $this->store(LlmSettings::KEY, $this->secretBox->encrypt($key));
+                } elseif ($remove) {
+                    $this->store(LlmSettings::KEY, null);
+                }
+                $this->entityManager->flush();
+                $this->settings->reset();
 
-            $reindex = $this->settings->isConfigured('openrouter') && $indexed !== $this->settings->embeddingModel();
-            if ($reindex) {
-                $this->bus->dispatch(new ReindexNodes());
-            }
-            $this->addFlash('success', new TranslatableMessage($reindex ? 'flash.llm.saved_reindex' : 'flash.llm.saved'));
+                $reindex = $this->settings->isConfigured('openrouter') && $indexed !== $this->settings->embeddingModel();
+                if ($reindex) {
+                    $this->bus->dispatch(new ReindexNodes());
+                }
+                $this->addFlash('success', new TranslatableMessage($reindex ? 'flash.llm.saved_reindex' : 'flash.llm.saved'));
 
-            return $this->redirectToRoute('llm_settings');
+                return $this->redirectToRoute('llm_settings');
+            }
         }
 
         return $this->render('settings/llm.html.twig', ['form' => $form, 'llm' => $this->settings], new Response(status: $form->isSubmitted() ? Response::HTTP_UNPROCESSABLE_ENTITY : Response::HTTP_OK));

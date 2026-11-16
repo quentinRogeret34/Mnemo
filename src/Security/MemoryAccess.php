@@ -81,8 +81,7 @@ final class MemoryAccess
         return match ($visibility) {
             MemoryVisibility::Project => $owner,
             MemoryVisibility::Personal => null === $viewer
-                ? throw new \InvalidArgumentException('Une mémoire privée a besoin d\'un auteur : se connecter, ou utiliser une clé d\'API rattachée à un utilisateur.')
-                : $owner + ['visibility' => MemoryVisibility::Personal->value],
+                ? throw new \InvalidArgumentException('Une mémoire privée a besoin d\'un auteur : se connecter, ou utiliser une clé d\'API rattachée à un utilisateur.') : $owner + ['visibility' => MemoryVisibility::Personal->value],
             MemoryVisibility::Group => null !== $groupId && (null === $viewer || $viewer->isSuperAdmin() || $viewer->getGroups()->exists(static fn (int $key, UserGroup $group): bool => $group->getId() === $groupId))
                 ? $owner + ['visibility' => MemoryVisibility::Group->value, 'group_id' => $groupId]
                 : throw new \InvalidArgumentException('Choisir un de ses groupes pour une mémoire de groupe.'),

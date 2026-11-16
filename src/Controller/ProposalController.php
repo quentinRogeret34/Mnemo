@@ -2,7 +2,6 @@
 
 namespace App\Controller;
 
-use App\Entity\Project;
 use App\Entity\Proposal;
 use App\Enum\ProposalKind;
 use App\Enum\ProposalStatus;

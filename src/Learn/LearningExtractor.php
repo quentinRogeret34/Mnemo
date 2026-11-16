@@ -92,9 +92,9 @@ final class LearningExtractor
         }
 
         $axis = static fn (string $name): int => max(0, min(10, (int) ($item[$name] ?? 0)));
-        $strings = static fn (mixed $list): array => \is_array($list) ? array_values(array_unique(array_filter(array_map(static fn (mixed $value): string => \is_string($value) ? trim($value) : '', $list), 'strlen'))) : [];
+        $strings = static fn (mixed $list): array => \is_array($list) ? array_values(array_unique(array_filter(array_map(static fn (mixed $value): string => \is_string($value) ? trim($value) : '', $list), static fn (string $value): bool => '' !== $value))) : [];
         $adr = MemoryType::Decision === $type && \is_array($item['adr'] ?? null)
-            ? array_filter(array_map(static fn (mixed $value): string => \is_string($value) ? trim($value) : '', array_intersect_key($item['adr'], array_flip(MemoryStore::ADR_FIELDS))), 'strlen')
+            ? array_filter(array_map(static fn (mixed $value): string => \is_string($value) ? trim($value) : '', array_intersect_key($item['adr'], array_flip(MemoryStore::ADR_FIELDS))), static fn (string $value): bool => '' !== $value)
             : [];
 
         return new Candidate(
