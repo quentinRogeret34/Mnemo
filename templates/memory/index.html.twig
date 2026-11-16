@@ -1,29 +1,29 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Mémoires{{ project ? ' · ' ~ project.name }}{% endblock %}
+{% block title %}{{ 'nav.memories'|trans }}{{ project ? ' · ' ~ project.name }}{% endblock %}
 
 {% block crumbs %}
     {% if project %}
         <a href="{{ path('project_show', {slug: project.slug}) }}">{{ project.name }}</a>
         <span class="crumbs__sep" aria-hidden="true">/</span>
     {% endif %}
-    <span class="crumbs__current">Mémoires</span>
+    <span class="crumbs__current">{{ 'nav.memories'|trans }}</span>
 {% endblock %}
 
 {% block header_actions %}
-    <a class="button" href="{{ path('memory_graph', project ? {project: project.slug} : {}) }}">Graphe</a>
+    <a class="button" href="{{ path('memory_graph', project ? {project: project.slug} : {}) }}">{{ 'memory.graph_short'|trans }}</a>
 {% endblock %}
 
 {% block body %}
-    {% set verdicts = {verified: 'Vérifiée', refuted: 'Réfutée', conflict: 'Sources en conflit', unverified: 'Non vérifiable', none: 'Jamais vérifiée'} %}
+    {% set verdicts = {verified: 'verdict.verified', refuted: 'verdict.refuted', conflict: 'verdict.conflict', unverified: 'verdict.unverified', none: 'verdict.never'} %}
     {% set filtered = q or type or archived or verdict or source %}
     <div class="view-head">
-        <h1><twig:ux:icon name="lucide:lightbulb" />Mémoires</h1>
-        <span class="view-head__meta">{{ memories.total }}{{ project ? ' rattachées à ' ~ project.name }}</span>
+        <h1><twig:ux:icon name="lucide:lightbulb" />{{ 'nav.memories'|trans }}</h1>
+        <span class="view-head__meta">{{ project ? 'memory.index.count_project'|trans({count: memories.total, name: project.name}) : memories.total }}</span>
     </div>
 
     <details class="memory-new" {% if form.vars.submitted %}open{% endif %}>
-        <summary class="button"><twig:ux:icon name="lucide:plus" />Nouvelle mémoire</summary>
+        <summary class="button"><twig:ux:icon name="lucide:plus" />{{ 'memory.new'|trans }}</summary>
         {{ form_start(form, {attr: {novalidate: 'novalidate'}}) }}
             {{ form_label(form.text, null, {label_attr: {class: 'visually-hidden'}}) }}
             {{ form_widget(form.text, {attr: {class: 'input memory-new__text'}}) }}
@@ -32,44 +32,44 @@
                 {{ form_widget(form.type, {attr: {class: 'select'}}) }}
                 {{ form_label(form.visibility, null, {label_attr: {class: 'visually-hidden'}}) }}
                 {{ form_widget(form.visibility, {attr: {class: 'select'}}) }}
-                <button class="button button--primary" type="submit"><twig:ux:icon name="lucide:plus" />Ajouter la mémoire</button>
-                <span class="row__sub">{{ project ? 'Rattachée à ' ~ project.name : 'Sans projet, à rattacher ensuite' }}</span>
+                <button class="button button--primary" type="submit"><twig:ux:icon name="lucide:plus" />{{ 'memory.index.add'|trans }}</button>
+                <span class="row__sub">{{ project ? 'memory.index.attached_to'|trans({name: project.name}) : 'memory.index.no_project'|trans }}</span>
             </div>
             {% for error in form.text.vars.errors %}<p class="form-errors">{{ error.message }}</p>{% endfor %}
         {{ form_end(form) }}
     </details>
 
     <form class="filters" method="get" action="{{ path('memory_index') }}" role="search" data-controller="autosubmit">
-        <input class="input filters__search" type="search" name="q" value="{{ q }}" placeholder="Rechercher dans le texte" aria-label="Chercher dans les mémoires">
-        <select class="select" name="project" aria-label="Projet" data-action="autosubmit#submit">
-            <option value="">Tous les projets</option>
+        <input class="input filters__search" type="search" name="q" value="{{ q }}" placeholder="{{ 'memory.index.search'|trans }}" aria-label="{{ 'memory.index.search_label'|trans }}">
+        <select class="select" name="project" aria-label="{{ 'memory.index.project'|trans }}" data-action="autosubmit#submit">
+            <option value="">{{ 'nav.all_projects'|trans }}</option>
             {% for item in projects %}<option value="{{ item.slug }}" {{ project and project.id == item.id ? 'selected' }}>{{ item.name }}</option>{% endfor %}
         </select>
-        <select class="select" name="type" aria-label="Type" data-action="autosubmit#submit">
-            <option value="">Tous les types</option>
-            {% for item in types %}<option value="{{ item.value }}" {{ type == item ? 'selected' }}>{{ item.label }}</option>{% endfor %}
+        <select class="select" name="type" aria-label="{{ 'form.memory.type'|trans }}" data-action="autosubmit#submit">
+            <option value="">{{ 'memory.index.all_types'|trans }}</option>
+            {% for item in types %}<option value="{{ item.value }}" {{ type == item ? 'selected' }}>{{ item|trans }}</option>{% endfor %}
         </select>
-        <select class="select" name="verdict" aria-label="Vérification" data-action="autosubmit#submit">
-            <option value="">Toute vérification</option>
-            {% for value, label in verdicts %}<option value="{{ value }}" {{ verdict == value ? 'selected' }}>{{ label }}</option>{% endfor %}
+        <select class="select" name="verdict" aria-label="{{ 'memory.verification'|trans }}" data-action="autosubmit#submit">
+            <option value="">{{ 'memory.index.any_verification'|trans }}</option>
+            {% for value, label in verdicts %}<option value="{{ value }}" {{ verdict == value ? 'selected' }}>{{ label|trans }}</option>{% endfor %}
         </select>
-        <select class="select" name="source" aria-label="Source" data-action="autosubmit#submit">
-            <option value="">Toutes les sources</option>
+        <select class="select" name="source" aria-label="{{ 'memory.index.source'|trans }}" data-action="autosubmit#submit">
+            <option value="">{{ 'memory.index.all_sources'|trans }}</option>
             {% for item in sources %}<option value="{{ item }}" {{ source == item ? 'selected' }}>{{ item }}</option>{% endfor %}
         </select>
-        <select class="select" name="archived" aria-label="Statut" data-action="autosubmit#submit">
-            <option value="0">Actives</option>
-            <option value="1" {{ archived ? 'selected' }}>Archivées</option>
+        <select class="select" name="archived" aria-label="{{ 'memory.index.status'|trans }}" data-action="autosubmit#submit">
+            <option value="0">{{ 'memory.index.active'|trans }}</option>
+            <option value="1" {{ archived ? 'selected' }}>{{ 'memory.index.archived'|trans }}</option>
         </select>
-        <button class="button" type="submit">Filtrer</button>
-        {% if filtered %}<a class="button button--ghost" href="{{ path('memory_index', project ? {project: project.slug} : {}) }}">Réinitialiser</a>{% endif %}
+        <button class="button" type="submit">{{ 'common.filter'|trans }}</button>
+        {% if filtered %}<a class="button button--ghost" href="{{ path('memory_index', project ? {project: project.slug} : {}) }}">{{ 'common.reset'|trans }}</a>{% endif %}
     </form>
 
     {% if memories.items is empty %}
         {% if filtered %}
-            <p class="block__empty">Aucune mémoire ne correspond.</p>
+            <p class="block__empty">{{ 'memory.index.no_match'|trans }}</p>
         {% else %}
-            <twig:EmptyState title="Aucune mémoire" text="En ajouter une ci-dessus ; les agents (Claude Code, MCP) les envoient aussi automatiquement.">
+            <twig:EmptyState :title="'memory.index.empty'|trans" :text="'memory.index.empty_text'|trans">
                 <twig:block name="icon"><twig:ux:icon name="lucide:lightbulb" /></twig:block>
             </twig:EmptyState>
         {% endif %}
@@ -77,7 +77,7 @@
         <div class="table-wrap">
             <table class="data-table data-table--memories">
                 <thead>
-                    <tr><th>Type</th><th>Mémoire</th><th>Projets</th><th>Vérification</th><th class="num">Liens</th><th>Source</th><th class="num">Mise à jour</th></tr>
+                    <tr><th>{{ 'form.memory.type'|trans }}</th><th>{{ 'form.memory.text'|trans }}</th><th>{{ 'nav.projects'|trans }}</th><th>{{ 'memory.verification'|trans }}</th><th class="num">{{ 'memory.index.links'|trans }}</th><th>{{ 'memory.index.source'|trans }}</th><th class="num">{{ 'memory.index.updated'|trans }}</th></tr>
                 </thead>
                 <tbody>
                     {% for memory in memories.items %}
@@ -85,15 +85,15 @@
                             <td>{{ include('memory/_type.html.twig', {type: memory.type}) }}</td>
                             <td class="data-table__main">
                                 <a class="memory-text" href="{{ path('memory_show', {id: memory.id}) }}">{{ memory.text }}</a>
-                                {% if memory.demo %}<span class="tag tag--demo">Démo</span>{% endif %}
-                                {% if memory.visibility != 'project' %}<span class="tag">{{ memory.visibility == 'private' ? 'privée' : 'groupe' }}</span>{% endif %}
-                                {% if memory.status != 'active' %}<span class="tag">{{ memory.status == 'superseded' ? 'remplacée' : 'retirée' }}</span>{% endif %}
+                                {% if memory.demo %}<span class="tag tag--demo">{{ 'common.demo'|trans }}</span>{% endif %}
+                                {% if memory.visibility != 'project' %}<span class="tag">{{ (memory.visibility == 'private' ? 'memory.tag.private' : 'memory.tag.group')|trans }}</span>{% endif %}
+                                {% if memory.status != 'active' %}<span class="tag">{{ (memory.status == 'superseded' ? 'memory.tag.superseded' : 'memory.tag.retired')|trans }}</span>{% endif %}
                             </td>
                             <td>{{ memory.projects ?? '-' }}</td>
                             <td>{% if memory.verdict %}{{ include('memory/_verdict.html.twig', {verdict: memory.verdict}) }}{% else %}<span class="row__sub">-</span>{% endif %}</td>
                             <td class="num">{{ memory.links }}</td>
                             <td><span class="row__sub">{{ memory.source ?? '-' }}</span></td>
-                            <td class="num">{{ memory.updated_at|date('d/m/Y') }}</td>
+                            <td class="num">{{ memory.updated_at|format_date('short') }}</td>
                         </tr>
                     {% endfor %}
                 </tbody>

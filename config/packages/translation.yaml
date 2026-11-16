@@ -1,0 +1,14 @@
+framework:
+    default_locale: en
+    enabled_locales: [en, fr]
+    set_locale_from_accept_language: true
+    translator:
+        default_path: '%kernel.project_dir%/translations'
+        fallbacks: [en]
+        providers:
+
+when@test:
+    framework:
+        default_locale: fr
+        # Without an Accept-Language header, the first enabled locale would win over default_locale.
+        set_locale_from_accept_language: false

@@ -3,16 +3,16 @@
 {% set token = csrf_token('connector-' ~ connector.id) %}
 {% set report = connector.lastReport %}
 
-{% block title %}{{ connector.name }} · Connexions{% endblock %}
+{% block title %}{{ connector.name }} · {{ 'nav.connectors'|trans }}{% endblock %}
 
 {% block crumbs %}
-    <a href="{{ path('connector_index') }}">Connexions</a>
+    <a href="{{ path('connector_index') }}">{{ 'nav.connectors'|trans }}</a>
     <span class="crumbs__sep" aria-hidden="true">/</span>
     <span class="crumbs__current">{{ connector.name }}</span>
 {% endblock %}
 
 {% block header_actions %}
-    <a class="button" href="{{ path('connector_edit', {id: connector.id}) }}"><twig:ux:icon name="lucide:pencil" />Modifier</a>
+    <a class="button" href="{{ path('connector_edit', {id: connector.id}) }}"><twig:ux:icon name="lucide:pencil" />{{ 'common.edit'|trans }}</a>
 {% endblock %}
 
 {% block body %}
@@ -21,95 +21,95 @@
         <h1 class="page__title">{{ connector.name }}</h1>
 
         <dl class="props">
-            <dt>{{ connector.transport.value == 'http' ? 'URL' : 'Commande' }}</dt><dd class="mono">{{ connector.endpoint }}</dd>
-            <dt>{{ connector.transport.value == 'http' ? 'En-têtes' : 'Variables' }}</dt>
+            <dt>{{ (connector.transport.value == 'http' ? 'connector.show.url' : 'connector.show.command')|trans }}</dt><dd class="mono">{{ connector.endpoint }}</dd>
+            <dt>{{ (connector.transport.value == 'http' ? 'connector.show.headers' : 'connector.show.variables')|trans }}</dt>
             <dd>
                 {% for name, value in connector.credentials %}
                     <span class="tag mono">{{ name }}: {{ 'env:' in value ? value : '••••••' }}</span>
-                {% else %}<span class="row__sub">aucun</span>{% endfor %}
+                {% else %}<span class="row__sub">{{ 'connector.show.none'|trans }}</span>{% endfor %}
             </dd>
-            <dt>Import</dt><dd>{{ connector.mode.label }}{% if connector.tool %} · outil <span class="mono">{{ connector.tool }}</span>{% endif %}</dd>
+            <dt>{{ 'form.connector.mode'|trans }}</dt><dd>{{ connector.mode|trans }}{% if connector.tool %} · {{ 'connector.show.tool'|trans }} <span class="mono">{{ connector.tool }}</span>{% endif %}</dd>
             {% if connector.mode.value == 'tool_memories' %}
-                <dt>Liste</dt><dd class="mono">{{ connector.itemsPath ?: '(racine)' }} → {{ connector.textField ?: 'memory | text | content' }}</dd>
-                <dt>Type</dt><dd>{{ include('memory/_type.html.twig', {type: connector.memoryType.value}) }}</dd>
+                <dt>{{ 'connector.show.list'|trans }}</dt><dd class="mono">{{ connector.itemsPath ?: 'connector.show.root'|trans }} → {{ connector.textField ?: 'memory | text | content' }}</dd>
+                <dt>{{ 'form.memory.type'|trans }}</dt><dd>{{ include('memory/_type.html.twig', {type: connector.memoryType.value}) }}</dd>
             {% endif %}
-            {% if connector.arguments is not empty %}<dt>Arguments</dt><dd class="mono">{{ connector.arguments|json_encode }}</dd>{% endif %}
-            {% if connector.mcpAuthorization %}<dt>Accès</dt><dd><span class="status status--validated">autorisé par OAuth</span> (remplace l'en-tête Authorization saisi)</dd>{% endif %}
-            {% if connector.oauthToken %}<dt>Accès</dt><dd><span class="status status--validated">compte GitHub connecté</span> (les en-têtes saisis sont ignorés)</dd>{% endif %}
+            {% if connector.arguments is not empty %}<dt>{{ 'connector.show.arguments'|trans }}</dt><dd class="mono">{{ connector.arguments|json_encode }}</dd>{% endif %}
+            {% if connector.mcpAuthorization %}<dt>{{ 'connector.show.access'|trans }}</dt><dd><span class="status status--validated">{{ 'connector.show.oauth'|trans }}</span> {{ 'connector.show.oauth_note'|trans }}</dd>{% endif %}
+            {% if connector.oauthToken %}<dt>{{ 'connector.show.access'|trans }}</dt><dd><span class="status status--validated">{{ 'connector.show.github'|trans }}</span> {{ 'connector.show.github_note'|trans }}</dd>{% endif %}
             {% if connector.mode.value == 'github' %}
-                <dt>Revue des PR</dt>
+                <dt>{{ 'connector.show.review'|trans }}</dt>
                 <dd>
-                    {% if connector.arguments.review ?? false %}<span class="status status--validated">bot actif</span>{% else %}<span class="row__sub">inactive</span>{% endif %}
+                    {% if connector.arguments.review ?? false %}<span class="status status--validated">{{ 'connector.show.bot_on'|trans }}</span>{% else %}<span class="row__sub">{{ 'connector.show.bot_off'|trans }}</span>{% endif %}
                     {% if not github_app.configured %}
-                        <span class="row__sub">· application GitHub non configurée (variables <span class="mono">GITHUB_APP_*</span>)</span>
+                        <span class="row__sub">· {{ 'connector.show.app_missing'|trans({variables: '<span class="mono">GITHUB_APP_*</span>'})|raw }}</span>
                     {% elseif github_app.installUrl %}
-                        · <a href="{{ github_app.installUrl }}" rel="noopener">installer l'application sur le dépôt</a>
+                        · <a href="{{ github_app.installUrl }}" rel="noopener">{{ 'connector.show.install_app'|trans }}</a>
                     {% endif %}
                 </dd>
-                <dt><label for="review-model">Modèle des revues</label></dt>
+                <dt><label for="review-model">{{ 'connector.show.review_model'|trans }}</label></dt>
                 <dd>
                     <form class="inline-form" method="post" action="{{ path('connector_review_model', {id: connector.id}) }}">
                         <input type="hidden" name="_token" value="{{ token }}">
                         <input class="input mono" id="review-model" type="text" name="model" value="{{ connector.arguments.review_model ?? '' }}" maxlength="150" autocomplete="off" spellcheck="false" placeholder="{{ default_review_model }}" aria-describedby="review-model-help" data-controller="model-picker" data-model-picker-url-value="{{ path('llm_models', {kind: 'chat'}) }}">
-                        <button class="button" type="submit"><twig:ux:icon name="lucide:check" />Enregistrer</button>
+                        <button class="button" type="submit"><twig:ux:icon name="lucide:check" />{{ 'common.save'|trans }}</button>
                     </form>
-                    <span class="row__sub" id="review-model-help">Identifiant OpenRouter, ex. anthropic/claude-sonnet-4.5. Vide : celui du projet ({{ default_review_model }}).</span>
+                    <span class="row__sub" id="review-model-help">{{ 'connector.show.review_model_help'|trans({model: default_review_model}) }}</span>
                 </dd>
             {% endif %}
-            <dt>Projet</dt><dd>{{ connector.project ? connector.project.name : 'aucun' }}</dd>
-            <dt>Dossier</dt><dd>{{ connector.folder ? connector.folder.name : 'racine' }}</dd>
-            <dt>Dernier import</dt><dd>{{ include('connector/_status.html.twig') }}</dd>
+            <dt>{{ 'memory.index.project'|trans }}</dt><dd>{{ connector.project ? connector.project.name : 'connector.show.none'|trans }}</dd>
+            <dt>{{ 'document.props.folder'|trans }}</dt><dd>{{ connector.folder ? connector.folder.name : 'connector.show.root_folder'|trans }}</dd>
+            <dt>{{ 'connector.show.last_import'|trans }}</dt><dd>{{ include('connector/_status.html.twig') }}</dd>
         </dl>
 
         <div class="upload__actions upload__actions--grid">
-            <form method="post" action="{{ path('connector_sync', {id: connector.id}) }}"><input type="hidden" name="_token" value="{{ token }}"><button class="button button--primary" type="submit"><twig:ux:icon name="lucide:refresh-cw" />Synchroniser</button></form>
-            <form method="post" action="{{ path('connector_inspect', {id: connector.id}) }}"><input type="hidden" name="_token" value="{{ token }}"><button class="button" type="submit"><twig:ux:icon name="lucide:plug" />Tester la connexion</button></form>
+            <form method="post" action="{{ path('connector_sync', {id: connector.id}) }}"><input type="hidden" name="_token" value="{{ token }}"><button class="button button--primary" type="submit"><twig:ux:icon name="lucide:refresh-cw" />{{ 'connector.show.sync'|trans }}</button></form>
+            <form method="post" action="{{ path('connector_inspect', {id: connector.id}) }}"><input type="hidden" name="_token" value="{{ token }}"><button class="button" type="submit"><twig:ux:icon name="lucide:plug" />{{ 'connector.show.test'|trans }}</button></form>
             {% if connector.mode.value == 'github' %}
-                <form method="post" action="{{ path('connector_review', {id: connector.id}) }}"><input type="hidden" name="_token" value="{{ token }}"><button class="button" type="submit"><twig:ux:icon name="lucide:clipboard-check" />{{ connector.arguments.review ?? false ? 'Désactiver la revue des PR' : 'Activer la revue des PR' }}</button></form>
-                {% if github_app.configured %}<a class="button" href="{{ path('connector_pull_requests', {id: connector.id}) }}"><twig:ux:icon name="lucide:git-pull-request" />Pull requests ouvertes</a>{% endif %}
+                <form method="post" action="{{ path('connector_review', {id: connector.id}) }}"><input type="hidden" name="_token" value="{{ token }}"><button class="button" type="submit"><twig:ux:icon name="lucide:clipboard-check" />{{ (connector.arguments.review ?? false ? 'connector.show.review_disable' : 'connector.show.review_enable')|trans }}</button></form>
+                {% if github_app.configured %}<a class="button" href="{{ path('connector_pull_requests', {id: connector.id}) }}"><twig:ux:icon name="lucide:git-pull-request" />{{ 'connector.pr.open'|trans }}</a>{% endif %}
             {% endif %}
             {% if connector.oauthToken %}
-                <form method="post" action="{{ path('connector_oauth_disconnect', {id: connector.id}) }}"><input type="hidden" name="_token" value="{{ token }}"><button class="button" type="submit" data-confirm="Déconnecter le compte GitHub de ce connecteur ?" data-confirm-label="Déconnecter"><twig:ux:icon name="lucide:unplug" />Déconnecter GitHub</button></form>
+                <form method="post" action="{{ path('connector_oauth_disconnect', {id: connector.id}) }}"><input type="hidden" name="_token" value="{{ token }}"><button class="button" type="submit" data-confirm="{{ 'connector.show.disconnect_confirm'|trans }}" data-confirm-label="{{ 'connector.show.disconnect'|trans }}"><twig:ux:icon name="lucide:unplug" />{{ 'connector.show.disconnect_github'|trans }}</button></form>
             {% elseif oauth %}
-                <form method="post" action="{{ path('connector_oauth', {id: connector.id}) }}"><input type="hidden" name="_token" value="{{ token }}"><button class="button" type="submit"><twig:ux:icon name="simple-icons:github" />Connecter avec GitHub</button></form>
+                <form method="post" action="{{ path('connector_oauth', {id: connector.id}) }}"><input type="hidden" name="_token" value="{{ token }}"><button class="button" type="submit"><twig:ux:icon name="simple-icons:github" />{{ 'connector.github.connect'|trans }}</button></form>
             {% endif %}
             {% if connector.mcpAuthorization %}
-                <form method="post" action="{{ path('connector_authorize_revoke', {id: connector.id}) }}"><input type="hidden" name="_token" value="{{ token }}"><button class="button" type="submit" data-confirm="Retirer l'autorisation OAuth de ce connecteur ?" data-confirm-label="Retirer"><twig:ux:icon name="lucide:unplug" />Retirer l'autorisation OAuth</button></form>
+                <form method="post" action="{{ path('connector_authorize_revoke', {id: connector.id}) }}"><input type="hidden" name="_token" value="{{ token }}"><button class="button" type="submit" data-confirm="{{ 'connector.show.revoke_confirm'|trans }}" data-confirm-label="{{ 'form.upload.remove'|trans }}"><twig:ux:icon name="lucide:unplug" />{{ 'connector.show.revoke'|trans }}</button></form>
             {% elseif connector.transport.value == 'http' and not connector.mode.forge %}
-                <form method="post" action="{{ path('connector_authorize', {id: connector.id}) }}"><input type="hidden" name="_token" value="{{ token }}"><button class="button" type="submit"><twig:ux:icon name="lucide:key-round" />Connecter par OAuth</button></form>
+                <form method="post" action="{{ path('connector_authorize', {id: connector.id}) }}"><input type="hidden" name="_token" value="{{ token }}"><button class="button" type="submit"><twig:ux:icon name="lucide:key-round" />{{ 'connector.show.authorize'|trans }}</button></form>
             {% endif %}
         </div>
 
         {% if report and report.error %}
-            <p class="form-errors block">Dernier import en échec : {{ report.error }}</p>
+            <p class="form-errors block">{{ 'connector.show.last_failed'|trans({error: report.error}) }}</p>
         {% endif %}
         {% if report and report.skipped is not empty %}
             <section class="block" aria-labelledby="skipped-title">
-                <div class="block__head"><h2 id="skipped-title">Ignorés au dernier import</h2><span class="block__count">{{ report.skipped|length }}</span></div>
+                <div class="block__head"><h2 id="skipped-title">{{ 'connector.show.skipped'|trans }}</h2><span class="block__count">{{ report.skipped|length }}</span></div>
                 <ul class="list">{% for item in report.skipped %}<li class="row"><span></span><span class="row__sub">{{ item }}</span></li>{% endfor %}</ul>
             </section>
         {% endif %}
 
         {% if inspection_error %}
-            <p class="form-errors block" role="alert">Connexion impossible : {{ inspection_error }}</p>
+            <p class="form-errors block" role="alert">{{ 'connector.show.connection_failed'|trans({error: inspection_error}) }}</p>
         {% elseif inspection %}
             <section class="block" aria-labelledby="inspect-title">
-                <div class="block__head"><h2 id="inspect-title">Serveur {{ inspection.server }}</h2></div>
-                <h3 class="block__sub">Outils <span class="block__count">{{ inspection.tools|length }}</span></h3>
+                <div class="block__head"><h2 id="inspect-title">{{ 'connector.show.server'|trans({name: inspection.server}) }}</h2></div>
+                <h3 class="block__sub">{{ 'connector.show.tools'|trans }} <span class="block__count">{{ inspection.tools|length }}</span></h3>
                 <ul class="list">
-                    {% for tool in inspection.tools %}<li class="row"><span class="code-chip">{{ tool.name }}</span><span class="row__sub">{{ tool.description }}</span></li>{% else %}<li class="block__empty">Aucun outil.</li>{% endfor %}
+                    {% for tool in inspection.tools %}<li class="row"><span class="code-chip">{{ tool.name }}</span><span class="row__sub">{{ tool.description }}</span></li>{% else %}<li class="block__empty">{{ 'connector.show.no_tool'|trans }}</li>{% endfor %}
                 </ul>
-                <h3 class="block__sub">Ressources <span class="block__count">{{ inspection.resources|length }}</span></h3>
+                <h3 class="block__sub">{{ 'connector.show.resources'|trans }} <span class="block__count">{{ inspection.resources|length }}</span></h3>
                 <ul class="list">
-                    {% for resource in inspection.resources %}<li class="row"><span class="code-chip">{{ resource.mime_type ?? '?' }}</span><span class="row__title"><span>{{ resource.name }}</span><span class="row__sub mono">{{ resource.uri }}</span></span></li>{% else %}<li class="block__empty">Aucune ressource.</li>{% endfor %}
+                    {% for resource in inspection.resources %}<li class="row"><span class="code-chip">{{ resource.mime_type ?? '?' }}</span><span class="row__title"><span>{{ resource.name }}</span><span class="row__sub mono">{{ resource.uri }}</span></span></li>{% else %}<li class="block__empty">{{ 'connector.show.no_resource'|trans }}</li>{% endfor %}
                 </ul>
             </section>
         {% endif %}
 
         <form class="danger-zone" method="post" action="{{ path('connector_delete', {id: connector.id}) }}">
             <input type="hidden" name="_token" value="{{ token }}">
-            <button class="button button--danger" type="submit" data-confirm="Supprimer le connecteur {{ connector.name }} ?" data-confirm-label="Supprimer"><twig:ux:icon name="lucide:trash-2" />Supprimer le connecteur</button>
-            <span class="row__sub">Les documents et mémoires déjà importés sont conservés.</span>
+            <button class="button button--danger" type="submit" data-confirm="{{ 'connector.show.delete_confirm'|trans({name: connector.name}) }}" data-confirm-label="{{ 'common.delete'|trans }}"><twig:ux:icon name="lucide:trash-2" />{{ 'connector.show.delete'|trans }}</button>
+            <span class="row__sub">{{ 'connector.show.delete_help'|trans }}</span>
         </form>
     </article>
 {% endblock %}

@@ -1,26 +1,26 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Connexions{% endblock %}
+{% block title %}{{ 'nav.connectors'|trans }}{% endblock %}
 
-{% block crumbs %}<span class="crumbs__current">Connexions</span>{% endblock %}
+{% block crumbs %}<span class="crumbs__current">{{ 'nav.connectors'|trans }}</span>{% endblock %}
 
 {% block header_actions %}
-    {% if github_oauth %}<a class="button" href="{{ path('github_repositories') }}"><twig:ux:icon name="simple-icons:github" />Dépôts GitHub</a>{% endif %}
-    <a class="button button--primary" href="{{ path('connector_new') }}"><twig:ux:icon name="lucide:plus" />Nouveau connecteur</a>
+    {% if github_oauth %}<a class="button" href="{{ path('github_repositories') }}"><twig:ux:icon name="simple-icons:github" />{{ 'connector.github.title'|trans }}</a>{% endif %}
+    <a class="button button--primary" href="{{ path('connector_new') }}"><twig:ux:icon name="lucide:plus" />{{ 'connector.new'|trans }}</a>
 {% endblock %}
 
 {% block body %}
     <div class="view-head">
-        <h1><twig:ux:icon name="lucide:plug" />Connecteurs</h1>
+        <h1><twig:ux:icon name="lucide:plug" />{{ 'project.settings.connectors'|trans }}</h1>
         <span class="view-head__meta">{{ connectors|length }}</span>
     </div>
 
     {% if connectors is empty %}
-        <twig:EmptyState title="Aucun connecteur" text="Un connecteur lit l'historique d'un dépôt GitHub ou GitLab (commits, pull et merge requests, issues), ou se branche sur un serveur MCP externe (mem0, DeepWiki...) et importe ses ressources en documents ou en mémoires.">
+        <twig:EmptyState :title="'connector.empty'|trans" :text="'connector.empty_text'|trans">
             <twig:block name="icon"><twig:ux:icon name="lucide:plug" /></twig:block>
             <twig:block name="actions">
-                <a class="button button--primary" href="{{ path('connector_new') }}"><twig:ux:icon name="lucide:plus" />Nouveau connecteur</a>
-                {% if github_oauth %}<a class="button" href="{{ path('github_repositories') }}"><twig:ux:icon name="simple-icons:github" />Brancher des dépôts GitHub</a>{% endif %}
+                <a class="button button--primary" href="{{ path('connector_new') }}"><twig:ux:icon name="lucide:plus" />{{ 'connector.new'|trans }}</a>
+                {% if github_oauth %}<a class="button" href="{{ path('github_repositories') }}"><twig:ux:icon name="simple-icons:github" />{{ 'palette.github'|trans }}</a>{% endif %}
             </twig:block>
         </twig:EmptyState>
     {% else %}
@@ -29,7 +29,7 @@
                 <li>
                     <a class="row" href="{{ path('connector_show', {id: connector.id}) }}">
                         <span class="code-chip">{{ connector.mode.forge ? connector.mode.value|upper : connector.transport.value|upper }}</span>
-                        <span class="row__title"><span>{{ connector.name }}</span><span class="row__sub">{{ connector.mode.label }}{{ connector.project ? ' · ' ~ connector.project.name }}</span></span>
+                        <span class="row__title"><span>{{ connector.name }}</span><span class="row__sub">{{ connector.mode|trans }}{{ connector.project ? ' · ' ~ connector.project.name }}</span></span>
                         <span class="row__meta">{{ include('connector/_status.html.twig') }}</span>
                     </a>
                 </li>
@@ -38,7 +38,7 @@
     {% endif %}
 
     <section class="block" aria-labelledby="presets-title">
-        <div class="block__head"><h2 id="presets-title">Démarrer avec un fournisseur</h2></div>
+        <div class="block__head"><h2 id="presets-title">{{ 'connector.presets'|trans }}</h2></div>
         <ul class="presets">
             {% set preset_icons = {
                 deepwiki: 'lucide:book-open', context7: 'lucide:library', mem0: 'lucide:brain', linear: 'lucide:kanban',
@@ -49,25 +49,25 @@
                 <li class="preset">
                     <div class="preset__head">
                         {{ ux_icon(preset_icons[key] ?? 'lucide:plug') }}
-                        <span class="preset__name">{{ preset.label }}</span>
-                        {% if not preset.checked %}<span class="tag tag--demo" title="Nom de l'outil non vérifié sans accès">à vérifier</span>{% endif %}
+                        <span class="preset__name">{{ ('connector.preset.' ~ key ~ '.label')|trans }}</span>
+                        {% if not preset.checked %}<span class="tag tag--demo" title="{{ 'connector.unchecked_title'|trans }}">{{ 'connector.unchecked'|trans }}</span>{% endif %}
                     </div>
-                    <p class="preset__text">{{ preset.description }}</p>
-                    <p class="row__sub">Authentification : {{ preset.auth }}</p>
-                    <a class="button" href="{{ path('connector_new', {preset: key}) }}"><twig:ux:icon name="lucide:settings" />Configurer</a>
+                    <p class="preset__text">{{ ('connector.preset.' ~ key ~ '.description')|trans }}</p>
+                    <p class="row__sub">{{ 'connector.auth'|trans({auth: ('connector.preset.' ~ key ~ '.auth')|trans}) }}</p>
+                    <a class="button" href="{{ path('connector_new', {preset: key}) }}"><twig:ux:icon name="lucide:settings" />{{ 'connector.configure'|trans }}</a>
                 </li>
             {% endfor %}
         </ul>
     </section>
 
     <section class="block" aria-labelledby="llm-title">
-        <div class="block__head"><h2 id="llm-title">Modèles de langage</h2></div>
+        <div class="block__head"><h2 id="llm-title">{{ 'nav.llm'|trans }}</h2></div>
         <dl class="props props--flat">
             <dt>Chat</dt><dd><span class="mono">{{ llm.chatPlatform }} / {{ llm.chatModel }}</span></dd>
             <dt>Embeddings</dt><dd><span class="mono">{{ llm.embeddingPlatform }} / {{ llm.embeddingModel }}</span></dd>
-            <dt>Clé OpenRouter</dt>
-            <dd>{% if llm.isConfigured('openrouter') %}<span class="status status--validated">configurée</span>{% else %}<span class="status">absente</span>{% endif %}</dd>
+            <dt>{{ 'form.llm.api_key'|trans }}</dt>
+            <dd>{% if llm.isConfigured('openrouter') %}<span class="status status--validated">{{ 'connector.key_set'|trans }}</span>{% else %}<span class="status">{{ 'connector.key_missing'|trans }}</span>{% endif %}</dd>
         </dl>
-        <p class="row__sub">Clé et modèles se règlent dans <a class="link" href="{{ path('llm_settings') }}">Modèles de langage</a>, ou par l'environnement (<code>OPENROUTER_API_KEY</code>, <code>LLM_MODEL</code>, <code>EMBEDDING_MODEL</code>). Vérifier avec <code>bin/console app:llm:check</code>.</p>
+        <p class="row__sub">{{ 'connector.llm_help'|trans({link: '<a class="link" href="' ~ path('llm_settings') ~ '">' ~ 'nav.llm'|trans|e ~ '</a>', env: '<code>OPENROUTER_API_KEY</code>, <code>LLM_MODEL</code>, <code>EMBEDDING_MODEL</code>', command: '<code>bin/console app:llm:check</code>'})|raw }}</p>
     </section>
 {% endblock %}

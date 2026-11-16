@@ -67,6 +67,6 @@ final class ShadowAreaDetectorTest extends WebTestCase
 
         self::assertSame(1, self::getContainer()->get(KnowledgeReader::class)->rules($this->project)[0]['shadow_areas']);
         $crawler = $this->client->request('GET', '/projects/demo/rules');
-        self::assertStringContainsString('1 zones d\'ombre', $crawler->filter('.row__meta')->text());
+        self::assertStringContainsString('1 zone d\'ombre', $crawler->filter('.row__meta')->text());
     }
 }

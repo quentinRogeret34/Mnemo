@@ -25,6 +25,8 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Translation\TranslatableMessage;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 final class MemoryController extends AbstractController
 {
@@ -39,6 +41,7 @@ final class MemoryController extends AbstractController
         private readonly MemoryGalaxy $memoryGalaxy,
         private readonly ProjectScope $projectScope,
         private readonly MemoryAccess $memoryAccess,
+        private readonly TranslatorInterface $translator,
     ) {
     }
 
@@ -126,7 +129,7 @@ final class MemoryController extends AbstractController
 
         $this->entityManager->remove($memory);
         $this->entityManager->flush();
-        $this->addFlash('success', 'Mémoire supprimée.');
+        $this->addFlash('success', new TranslatableMessage('flash.memory.deleted'));
 
         return $this->redirectToRoute('memory_index');
     }
@@ -141,7 +144,7 @@ final class MemoryController extends AbstractController
         $viewer = $this->projectScope->viewer();
         $owner = $memory->getMetadata()['owner_id'] ?? null;
         if (null !== $viewer && !$viewer->isSuperAdmin() && $owner !== $viewer->getId()) {
-            $this->addFlash('error', 'Seul l\'auteur de la mémoire ou un super admin change sa visibilité.');
+            $this->addFlash('error', new TranslatableMessage('flash.memory.visibility_denied'));
 
             return $this->redirectToRoute('memory_show', ['id' => $id]);
         }
@@ -159,7 +162,7 @@ final class MemoryController extends AbstractController
         }
         $memory->annotate(['owner_id' => $owner ?? ($metadata['owner_id'] ?? null)] + $metadata + array_diff_key($memory->getMetadata(), ['visibility' => 1, 'group_id' => 1, 'owner_id' => 1]));
         $this->entityManager->flush();
-        $this->addFlash('success', 'Visibilité modifiée.');
+        $this->addFlash('success', new TranslatableMessage('flash.memory.visibility_changed'));
 
         return $this->redirectToRoute('memory_show', ['id' => $id]);
     }
@@ -174,16 +177,16 @@ final class MemoryController extends AbstractController
 
         $project = $memory->getProjects()->first();
         if (false === $project) {
-            $this->addFlash('error', 'Rattacher la mémoire à un projet pour la vérifier contre son graphe.');
+            $this->addFlash('error', new TranslatableMessage('flash.memory.verify_needs_project'));
 
             return $this->redirectToRoute('memory_show', ['id' => $id]);
         }
 
         try {
             $verification = $this->memoryVerifier->verify($memory, $project);
-            $this->addFlash('success', \sprintf('Vérification terminée : %s.', ['verified' => 'vérifiée', 'refuted' => 'réfutée', 'conflict' => 'sources en conflit', 'unverified' => 'non vérifiable'][$verification['verdict']]));
+            $this->addFlash('success', new TranslatableMessage('flash.memory.verified', ['verdict' => $verification['verdict']]));
         } catch (LlmUnavailable|\UnexpectedValueException $exception) {
-            $this->addFlash('error', $exception->getMessage());
+            $this->addFlash('error', $exception instanceof LlmUnavailable ? $exception->translatable() : $exception->getMessage());
         }
 
         return $this->redirectToRoute('memory_show', ['id' => $id]);
@@ -203,12 +206,12 @@ final class MemoryController extends AbstractController
     {
         $viewer = $this->projectScope->viewer();
         $groups = null === $viewer || $viewer->isSuperAdmin() ? $this->entityManager->getRepository(UserGroup::class)->findBy([], ['name' => 'ASC']) : $viewer->getGroups()->getValues();
-        $choices = ['Visible par le projet' => MemoryVisibility::Project->value];
+        $choices = [$this->translator->trans('memory.visibility.project') => MemoryVisibility::Project->value];
         foreach ($groups as $group) {
-            $choices['Groupe '.$group->getName()] = 'group:'.$group->getId();
+            $choices[$this->translator->trans('memory.visibility.group', ['name' => $group->getName()])] = 'group:'.$group->getId();
         }
 
-        return $choices + (null === $viewer ? [] : ['Privée (moi seul)' => MemoryVisibility::Personal->value]);
+        return $choices + (null === $viewer ? [] : [$this->translator->trans('memory.visibility.private') => MemoryVisibility::Personal->value]);
     }
 
     private function findMemory(int $id): Node

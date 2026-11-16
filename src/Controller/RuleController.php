@@ -18,6 +18,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Translation\TranslatableMessage;
 
 final class RuleController extends AbstractController
 {
@@ -53,7 +54,7 @@ final class RuleController extends AbstractController
         return $this->render('rule/show.html.twig', [
             'project' => $project,
             'rule' => $rule,
-            'categories' => array_combine(array_column(ShadowCategory::cases(), 'value'), array_map(static fn (ShadowCategory $category): string => $category->label(), ShadowCategory::cases())),
+            'categories' => array_column(ShadowCategory::cases(), null, 'value'),
             'sources' => $this->knowledgeReader->ruleSources($rule),
             'mentions' => $this->knowledgeReader->ruleMentions($rule),
             'implementations' => $this->knowledgeReader->ruleImplementations($rule),
@@ -69,9 +70,9 @@ final class RuleController extends AbstractController
 
         try {
             $areas = $this->shadowAreaDetector->analyze($rule);
-            $this->addFlash('success', [] === $areas ? 'Aucune zone d\'ombre trouvée.' : \sprintf('%d zones d\'ombre trouvées.', \count($areas)));
+            $this->addFlash('success', new TranslatableMessage('flash.rule.shadow_areas', ['count' => \count($areas)]));
         } catch (LlmUnavailable|\UnexpectedValueException $exception) {
-            $this->addFlash('error', $exception->getMessage());
+            $this->addFlash('error', $exception instanceof LlmUnavailable ? $exception->translatable() : $exception->getMessage());
         }
 
         return $this->redirectToRoute('rule_show', ['slug' => $project->getSlug(), 'code' => $code, '_fragment' => 'shadow-title']);
@@ -95,7 +96,7 @@ final class RuleController extends AbstractController
         $validated = 'validated' === $request->getPayload()->getString('status');
         $rule->update($rule->getLabel(), $rule->getPath(), $rule->getLine(), ['status' => $validated ? 'validated' : 'to_review'] + $rule->getMetadata());
         $this->entityManager->flush();
-        $this->addFlash('success', $validated ? 'Règle validée : elle rejoint la mémoire du projet donnée aux agents.' : 'Règle remise à valider.');
+        $this->addFlash('success', new TranslatableMessage($validated ? 'flash.rule.validated' : 'flash.rule.unvalidated'));
 
         return $this->redirectToRoute('rule_show', ['slug' => $project->getSlug(), 'code' => $code]);
     }

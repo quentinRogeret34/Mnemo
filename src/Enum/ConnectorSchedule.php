@@ -2,19 +2,18 @@
 
 namespace App\Enum;
 
-enum ConnectorSchedule: string
+use Symfony\Contracts\Translation\TranslatableInterface;
+use Symfony\Contracts\Translation\TranslatorInterface;
+
+enum ConnectorSchedule: string implements TranslatableInterface
 {
     case Manual = 'manual';
     case Hourly = 'hourly';
     case Daily = 'daily';
 
-    public function label(): string
+    public function trans(TranslatorInterface $translator, ?string $locale = null): string
     {
-        return match ($this) {
-            self::Manual => 'Manuelle',
-            self::Hourly => 'Toutes les heures',
-            self::Daily => 'Tous les jours',
-        };
+        return $translator->trans('enum.connector_schedule.'.$this->value, locale: $locale);
     }
 
     /**

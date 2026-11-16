@@ -1,4 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
+import { trans } from '../translator.js';
 
 const fold = (text) => text.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
 
@@ -144,6 +145,6 @@ export default class extends Controller {
     announce() {
         const count = this.visible().length;
         this.emptyTarget.hidden = count > 0;
-        this.statusTarget.textContent = count === 0 ? 'Aucun résultat' : `${count} résultat${count > 1 ? 's' : ''}`;
+        this.statusTarget.textContent = trans('js.palette.results', { count });
     }
 }

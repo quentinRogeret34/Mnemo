@@ -1,32 +1,32 @@
 {% extends 'base.html.twig' %}
 
-{% set title = asset.id ? asset.name : 'Nouveau skill' %}
+{% set title = asset.id ? asset.name : 'agent.new'|trans %}
 
 {% block title %}{{ title }} · {{ project.name }}{% endblock %}
 
 {% block crumbs %}
-    <a href="{{ path('agent_asset_index', {slug: project.slug}) }}">Skills des agents</a>
+    <a href="{{ path('agent_asset_index', {slug: project.slug}) }}">{{ 'nav.agent_assets'|trans }}</a>
     <span class="crumbs__sep" aria-hidden="true">/</span>
     <span class="crumbs__current">{{ title }}</span>
 {% endblock %}
 
 {% block body %}
     <div class="page">
-        <h1 class="page__title">{{ asset.id ? 'Modifier ' ~ asset.name : 'Nouveau skill, commande ou sous-agent' }}</h1>
+        <h1 class="page__title">{{ asset.id ? 'agent.edit'|trans({name: asset.name}) : 'agent.new_long'|trans }}</h1>
         {{ form_start(form, {attr: {class: 'form-stack', novalidate: 'novalidate'}}) }}
             <fieldset>
-                <legend>Fichier</legend>
+                <legend>{{ 'document.props.file'|trans }}</legend>
                 {{ form_row(form.kind) }}
                 {{ form_row(form.name) }}
                 {{ form_row(form.description) }}
             </fieldset>
             <fieldset>
-                <legend>Contenu</legend>
+                <legend>{{ 'agent.content'|trans }}</legend>
                 {{ form_row(form.content) }}
             </fieldset>
             <div class="upload__actions">
-                <button class="button button--primary" type="submit">Enregistrer</button>
-                <a class="button" href="{{ path('agent_asset_index', {slug: project.slug}) }}">Annuler</a>
+                <button class="button button--primary" type="submit">{{ 'common.save'|trans }}</button>
+                <a class="button" href="{{ path('agent_asset_index', {slug: project.slug}) }}">{{ 'common.cancel'|trans }}</a>
             </div>
         {{ form_end(form) }}
     </div>

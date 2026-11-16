@@ -11,6 +11,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Translation\TranslatableMessage;
 
 final class ApiKeyController extends AbstractController
 {
@@ -73,7 +74,7 @@ final class ApiKeyController extends AbstractController
         }
         $key->revoke();
         $this->entityManager->flush();
-        $this->addFlash('success', \sprintf('Clé « %s » révoquée.', $key->getName()));
+        $this->addFlash('success', new TranslatableMessage('flash.api_key.revoked', ['name' => $key->getName()]));
 
         return $this->redirectToRoute('api_key_index');
     }

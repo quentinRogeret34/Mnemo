@@ -1,14 +1,14 @@
 <section class="block" aria-labelledby="memories-title">
-    <div class="block__head"><h2 id="memories-title">Mémoires</h2><span class="block__count">{{ memories|length }}</span></div>
+    <div class="block__head"><h2 id="memories-title">{{ 'nav.memories'|trans }}</h2><span class="block__count">{{ memories|length }}</span></div>
     {% if memories is empty %}
-        <p class="block__empty">Aucune mémoire liée. Lier une mémoire depuis sa page.</p>
+        <p class="block__empty">{{ 'memory.about.empty'|trans }}</p>
     {% else %}
         <ul class="list">
             {% for memory in memories %}
                 <li>
                     <a class="row row--memory" href="{{ path('memory_show', {id: memory.id}) }}">
                         {{ include('memory/_type.html.twig', {type: memory.type}) }}
-                        <span class="row__title"><span class="memory-text">{{ memory.text }}</span>{% if memory.demo %}<span class="tag tag--demo">Démo</span>{% endif %}</span>
+                        <span class="row__title"><span class="memory-text">{{ memory.text }}</span>{% if memory.demo %}<span class="tag tag--demo">{{ 'common.demo'|trans }}</span>{% endif %}</span>
                     </a>
                 </li>
             {% endfor %}

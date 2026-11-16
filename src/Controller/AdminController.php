@@ -12,6 +12,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Translation\TranslatableMessage;
 
 /**
  * Accounts and groups, reserved to super admins by the access control on /admin.
@@ -43,7 +44,7 @@ final class AdminController extends AbstractController
         $superAdmin = $payload->getBoolean('super_admin');
 
         if ($user === $this->getUser() && (UserStatus::Active !== $status || !$superAdmin)) {
-            $this->addFlash('error', 'Un super admin ne se retire pas lui-même ses droits : un autre super admin doit le faire.');
+            $this->addFlash('error', new TranslatableMessage('flash.admin.self_demotion'));
 
             return $this->redirectToRoute('admin_users');
         }
@@ -60,7 +61,7 @@ final class AdminController extends AbstractController
             }
         }
         $this->entityManager->flush();
-        $this->addFlash('success', \sprintf('Compte de %s mis à jour.', $user->getName()));
+        $this->addFlash('success', new TranslatableMessage('flash.admin.user_updated', ['name' => $user->getName()]));
 
         return $this->redirectToRoute('admin_users');
     }
@@ -71,13 +72,13 @@ final class AdminController extends AbstractController
         $this->checkToken('admin-group-create', $request);
         $name = trim($request->getPayload()->getString('name'));
         if ('' === $name || mb_strlen($name) > 100 || null !== $this->entityManager->getRepository(UserGroup::class)->findOneBy(['name' => $name])) {
-            $this->addFlash('error', 'Donner au groupe un nom unique de 100 caractères au plus.');
+            $this->addFlash('error', new TranslatableMessage('flash.admin.group_name'));
 
             return $this->redirectToRoute('admin_users');
         }
         $this->entityManager->persist(new UserGroup($name));
         $this->entityManager->flush();
-        $this->addFlash('success', \sprintf('Groupe « %s » créé.', $name));
+        $this->addFlash('success', new TranslatableMessage('flash.admin.group_created', ['name' => $name]));
 
         return $this->redirectToRoute('admin_users');
     }
@@ -88,11 +89,11 @@ final class AdminController extends AbstractController
         $this->checkToken('admin-group-'.$group->getId(), $request);
         if ($request->getPayload()->has('delete')) {
             $this->entityManager->remove($group);
-            $this->addFlash('success', \sprintf('Groupe « %s » supprimé. Ses mémoires de groupe ne sont plus visibles que des super admins.', $group->getName()));
+            $this->addFlash('success', new TranslatableMessage('flash.admin.group_deleted', ['name' => $group->getName()]));
         } else {
             $slugs = $request->getPayload()->all('projects');
             $group->setProjects([] === $slugs ? [] : $this->entityManager->getRepository(Project::class)->findBy(['slug' => $slugs]));
-            $this->addFlash('success', \sprintf('Projets du groupe « %s » mis à jour.', $group->getName()));
+            $this->addFlash('success', new TranslatableMessage('flash.admin.group_projects', ['name' => $group->getName()]));
         }
         $this->entityManager->flush();
 

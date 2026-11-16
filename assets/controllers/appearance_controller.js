@@ -5,6 +5,7 @@ const DEFAULTS = { accent: 'violet', 'text-size': 'normal' };
 
 export default class extends Controller {
     static targets = ['system'];
+    static values = { dark: String, light: String };
 
     connect() {
         this.refresh();
@@ -14,7 +15,7 @@ export default class extends Controller {
         this.check('theme', storedScheme() ?? 'system');
         Object.entries(DEFAULTS).forEach(([key, fallback]) => this.check(key, option(key) ?? fallback));
         this.element.querySelector('input[name="contrast"]').checked = option('contrast') === 'more';
-        this.systemTarget.textContent = `(actuellement ${systemScheme() === 'dark' ? 'sombre' : 'clair'})`;
+        this.systemTarget.textContent = systemScheme() === 'dark' ? this.darkValue : this.lightValue;
     }
 
     update({ target }) {

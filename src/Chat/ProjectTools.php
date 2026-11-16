@@ -19,16 +19,16 @@ use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
  * What the assistant of a project may read and write. Everything it writes is recorded, so the chat can show it:
  * a rule it adds waits for a human validation, a memory is shared with the project like any other.
  */
-#[AsTool('search', 'Cherche dans le graphe du projet : mémoires, documents métier, règles métier et fichiers de code.', 'search')]
-#[AsTool('list_rules', 'Liste les règles métier du projet : code, titre, énoncé et statut (validated ou to_review).', 'listRules')]
-#[AsTool('get_rule', 'Détail d\'une règle métier : énoncé, statut, documents sources, fichiers qui l\'implémentent, mémoires liées et zones d\'ombre.', 'getRule')]
-#[AsTool('add_rule', 'Ajoute une règle métier au projet, au statut à valider. Seulement quand l\'utilisateur le demande.', 'addRule')]
-#[AsTool('add_memory', 'Enregistre une mémoire du projet : décision, convention, apprentissage, préférence ou fait. Seulement quand l\'utilisateur le demande.', 'addMemory')]
+#[AsTool('search', 'Searches the project graph: memories, business documents, business rules and code files.', 'search')]
+#[AsTool('list_rules', 'Lists the business rules of the project: code, title, statement and status (validated or to_review).', 'listRules')]
+#[AsTool('get_rule', 'Details of a business rule: statement, status, source documents, files implementing it, linked memories and blind spots.', 'getRule')]
+#[AsTool('add_rule', 'Adds a business rule to the project, with the to_review status. Only when the user asks for it.', 'addRule')]
+#[AsTool('add_memory', 'Saves a project memory: decision, convention, learning, preference or fact. Only when the user asks for it.', 'addMemory')]
 final class ProjectTools
 {
     private ?Project $project = null;
 
-    /** @var list<array{label: string, url: string}> */
+    /** @var list<array{label: string, parameters: array<string, int|string>, url: string}> */
     private array $actions = [];
 
     public function __construct(
@@ -51,7 +51,7 @@ final class ProjectTools
     }
 
     /**
-     * @return list<array{label: string, url: string}> what was written since for()
+     * @return list<array{label: string, parameters: array<string, int|string>, url: string}> what was written since for()
      */
     public function actions(): array
     {
@@ -59,7 +59,7 @@ final class ProjectTools
     }
 
     /**
-     * @param string $query mots-clés ou question courte
+     * @param string $query keywords or a short question
      *
      * @return list<array<string, mixed>>
      */
@@ -83,7 +83,7 @@ final class ProjectTools
     }
 
     /**
-     * @param string $code code de la règle, ex. RG-042
+     * @param string $code code of the rule, e.g. RG-042
      *
      * @return array<string, mixed>
      */
@@ -91,7 +91,7 @@ final class ProjectTools
     {
         $rule = $this->entityManager->getRepository(Node::class)->findOneBy(['project' => $this->project(), 'type' => NodeType::BusinessRule, 'externalId' => trim($code)]);
         if (null === $rule) {
-            return ['error' => \sprintf('Aucune règle "%s" dans ce projet : appeler list_rules.', $code)];
+            return ['error' => \sprintf('No rule "%s" in this project: call list_rules.', $code)];
         }
         $metadata = $rule->getMetadata();
 
@@ -108,8 +108,8 @@ final class ProjectTools
     }
 
     /**
-     * @param string $title     titre court de la règle
-     * @param string $statement énoncé complet, une ou deux phrases vérifiables
+     * @param string $title     short title of the rule
+     * @param string $statement full statement, one or two checkable sentences
      *
      * @return array<string, mixed>
      */
@@ -118,7 +118,7 @@ final class ProjectTools
         $title = trim($title);
         $statement = trim($statement);
         if ('' === $title || mb_strlen($title) > 255 || '' === $statement || mb_strlen($statement) > 2000) {
-            return ['error' => 'Le titre (255 caractères au plus) et l\'énoncé (2000 au plus) sont obligatoires.'];
+            return ['error' => 'The title (255 characters at most) and the statement (2000 at most) are required.'];
         }
         $project = $this->project();
         $last = (int) $this->entityManager->getConnection()->fetchOne(
@@ -129,16 +129,16 @@ final class ProjectTools
         $this->entityManager->persist($rule);
         $this->entityManager->flush();
         $this->actions[] = [
-            'label' => \sprintf('Règle %s créée, à valider', $rule->getExternalId()),
+            'label' => 'chat.action.rule', 'parameters' => ['code' => $rule->getExternalId()],
             'url' => $this->urlGenerator->generate('rule_show', ['slug' => $project->getSlug(), 'code' => $rule->getExternalId()]),
         ];
 
-        return ['code' => $rule->getExternalId(), 'status' => 'to_review', 'note' => 'Créée au statut à valider : un humain la valide sur sa page.'];
+        return ['code' => $rule->getExternalId(), 'status' => 'to_review', 'note' => 'Created with the to_review status: a human validates it on its page.'];
     }
 
     /**
-     * @param string $text une ou deux phrases autonomes, compréhensibles sans la conversation
-     * @param string $type decision, convention, task_learning, preference ou fact
+     * @param string $text one or two self-contained sentences, understandable without the conversation
+     * @param string $type decision, convention, task_learning, preference or fact
      *
      * @return array<string, mixed>
      */
@@ -147,7 +147,7 @@ final class ProjectTools
         $text = trim($text);
         $memoryType = MemoryType::tryFrom($type);
         if ('' === $text || mb_strlen($text) > 1000 || null === $memoryType) {
-            return ['error' => 'Texte de 1 à 1000 caractères et type parmi decision, convention, task_learning, preference, fact.'];
+            return ['error' => 'Text of 1 to 1000 characters and type among decision, convention, task_learning, preference, fact.'];
         }
         $memory = $this->memoryStore->findByText($text);
         $created = null === $memory;
@@ -155,7 +155,7 @@ final class ProjectTools
         $memory->addProject($this->project());
         $this->entityManager->flush();
         if ($created) {
-            $this->actions[] = ['label' => \sprintf('Mémoire #%d enregistrée', $memory->getId()), 'url' => $this->urlGenerator->generate('memory_show', ['id' => $memory->getId()])];
+            $this->actions[] = ['label' => 'chat.action.memory', 'parameters' => ['id' => $memory->getId()], 'url' => $this->urlGenerator->generate('memory_show', ['id' => $memory->getId()])];
         }
 
         return ['id' => $memory->getId(), 'event' => $created ? 'ADD' : 'NONE'];

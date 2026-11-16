@@ -31,7 +31,7 @@ final class Chat
     public function ask(string $system, string $user, array $schema, ?Project $project = null, ?string $model = null): array
     {
         if (!$this->settings->isConfigured($this->settings->chatPlatform)) {
-            throw new LlmUnavailable(\sprintf('Clé API absente pour la plateforme LLM "%s" : la renseigner dans les réglages des modèles ou dans .env.local.', $this->settings->chatPlatform));
+            throw new LlmUnavailable($this->settings->chatPlatform);
         }
 
         $result = $this->settings->platform($this->settings->chatPlatform)->invoke(

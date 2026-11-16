@@ -2,20 +2,18 @@
 
 namespace App\Enum;
 
-enum ProposalKind: string
+use Symfony\Contracts\Translation\TranslatableInterface;
+use Symfony\Contracts\Translation\TranslatorInterface;
+
+enum ProposalKind: string implements TranslatableInterface
 {
     case Learning = 'learning';
     case Duplicate = 'duplicate';
     case Contradiction = 'contradiction';
     case Refuted = 'refuted';
 
-    public function label(): string
+    public function trans(TranslatorInterface $translator, ?string $locale = null): string
     {
-        return match ($this) {
-            self::Learning => 'Apprentissage',
-            self::Duplicate => 'Doublon',
-            self::Contradiction => 'Contradiction',
-            self::Refuted => 'Mémoire réfutée',
-        };
+        return $translator->trans('enum.proposal_kind.'.$this->value, locale: $locale);
     }
 }

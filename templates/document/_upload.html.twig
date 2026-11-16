@@ -1,4 +1,4 @@
-<section class="upload" aria-label="Ajouter des documents">
+<section class="upload" aria-label="{{ 'document.upload.label'|trans }}">
     {{ form_start(upload, {attr: {novalidate: 'novalidate'}}) }}
         {{ form_widget(upload.files) }}
         {% if upload.files.vars.errors|length > 0 or upload.vars.errors|length > 0 or upload.files|filter(child => child.vars.errors|length > 0)|length > 0 %}
@@ -9,7 +9,7 @@
             </ul>
         {% endif %}
         <div class="upload__actions">
-            <button class="button button--primary" type="submit"><twig:ux:icon name="lucide:upload" />Ajouter</button>
+            <button class="button button--primary" type="submit"><twig:ux:icon name="lucide:upload" />{{ 'common.add'|trans }}</button>
             <span>{{ hint }}</span>
         </div>
     {{ form_end(upload) }}

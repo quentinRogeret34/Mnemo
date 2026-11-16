@@ -1,48 +1,48 @@
 {% set meta = document.metadata %}
-{% set origins = {human: 'humain', llm: 'LLM', ast: 'AST', git: 'git', api: 'API'} %}
+{% set origins = {human: 'document.props.human'|trans, llm: 'LLM', ast: 'AST', git: 'git', api: 'API'} %}
 <div{{ attributes.defaults({class: 'props-editor'}) }} data-loading="addClass(is-loading)">
     <dl class="props">
-        <dt>Projets</dt>
+        <dt>{{ 'nav.projects'|trans }}</dt>
         <dd>
             {% for project in this.projects %}
                 {% set linked = document.projects.contains(project) %}
                 <button type="button" class="toggle-chip" aria-pressed="{{ linked ? 'true' : 'false' }}"
                         data-action="live#action" data-live-action-param="toggleProject" data-live-project-id-param="{{ project.id }}"
-                        title="{{ linked ? 'Détacher de ' : 'Rattacher à ' }}{{ project.name }}">
+                        title="{{ (linked ? 'document.props.detach' : 'document.props.attach')|trans({name: project.name}) }}">
                     <span class="project-dot" aria-hidden="true"></span>{{ project.name }}
                 </button>
             {% else %}
-                <span class="row__sub">aucun projet</span>
+                <span class="row__sub">{{ 'document.no_project'|trans }}</span>
             {% endfor %}
         </dd>
 
-        <dt><label for="document-folder">Dossier</label></dt>
+        <dt><label for="document-folder">{{ 'document.props.folder'|trans }}</label></dt>
         <dd>
             <select id="document-folder" class="select" data-model="folderId">
-                <option value="" {% if folderId is null %}selected{% endif %}>Racine</option>
+                <option value="" {% if folderId is null %}selected{% endif %}>{{ 'form.connector.folder_root'|trans }}</option>
                 {% for folder in this.folders %}
                     <option value="{{ folder.id }}" {% if folderId == folder.id %}selected{% endif %}>{% if folder.depth > 0 %}{% for i in 1..folder.depth %}&nbsp;&nbsp;&nbsp;{% endfor %}{% endif %}{{ folder.name }}</option>
                 {% endfor %}
             </select>
         </dd>
 
-        <dt>Code lié</dt>
+        <dt>{{ 'document.props.linked_code'|trans }}</dt>
         <dd class="props__stack">
             {% for link in this.codeLinks %}
                 <span class="link-chip">
                     <a class="mono" href="{{ path('file_show', {slug: link.project_slug, path: link.path}) }}" title="{{ link.project_name }} · {{ origins[link.origin] ?? link.origin }} · {{ link.confidence }}">{{ link.path|split('/')|last }}</a>
                     <span class="row__sub">{{ link.project_name }}</span>
-                    <button type="button" class="icon-button" aria-label="Délier {{ link.path }}"
+                    <button type="button" class="icon-button" aria-label="{{ 'document.props.unlink'|trans({path: link.path}) }}"
                             data-action="live#action" data-live-action-param="unlinkFile" data-live-edge-id-param="{{ link.edge_id }}">×</button>
                 </span>
             {% endfor %}
 
             {% if document.projects is empty %}
-                <span class="row__sub">Rattacher d'abord le document à un projet pour lier son code.</span>
+                <span class="row__sub">{{ 'document.props.attach_first'|trans }}</span>
             {% else %}
                 <span class="link-search">
                     <input class="input input--compact" type="search" data-model="debounce(150)|fileQuery" value="{{ fileQuery }}"
-                           placeholder="Lier un fichier de code" aria-label="Chercher un fichier de code à lier" autocomplete="off" spellcheck="false">
+                           placeholder="{{ 'document.props.link_file'|trans }}" aria-label="{{ 'document.props.link_file_label'|trans }}" autocomplete="off" spellcheck="false">
                     {% if this.fileResults is not empty %}
                         <span class="link-search__results" role="list">
                             {% for file in this.fileResults %}
@@ -54,20 +54,20 @@
                             {% endfor %}
                         </span>
                     {% elseif fileQuery|trim is not empty %}
-                        <span class="row__sub">Aucun fichier ne correspond.</span>
+                        <span class="row__sub">{{ 'document.props.no_file'|trans }}</span>
                     {% endif %}
                 </span>
             {% endif %}
         </dd>
 
-        <dt>Règles définies</dt>
+        <dt>{{ 'document.props.rules'|trans }}</dt>
         <dd>
-            {% for rule in this.rules %}<a class="code-chip" href="{{ path('rule_show', {slug: rule.project_slug, code: rule.code}) }}">{{ rule.code }}</a>{% else %}<span class="row__sub">aucune</span>{% endfor %}
+            {% for rule in this.rules %}<a class="code-chip" href="{{ path('rule_show', {slug: rule.project_slug, code: rule.code}) }}">{{ rule.code }}</a>{% else %}<span class="row__sub">{{ 'document.props.none'|trans }}</span>{% endfor %}
         </dd>
 
-        <dt>Fichier</dt><dd class="mono">{{ document.path }}</dd>
-        <dt>Taille</dt><dd>{{ (meta.size / 1024)|number_format(meta.size < 10240 ? 1 : 0, ',', ' ') }} Ko</dd>
-        <dt>Ajouté le</dt><dd>{{ document.createdAt|date('d/m/Y à H:i') }}</dd>
-        {% if meta.demo ?? false %}<dt>Origine</dt><dd><span class="tag tag--demo">Démo</span></dd>{% endif %}
+        <dt>{{ 'document.props.file'|trans }}</dt><dd class="mono">{{ document.path }}</dd>
+        <dt>{{ 'document.props.size'|trans }}</dt><dd>{{ 'document.props.kb'|trans({size: (meta.size / 1024)|round(meta.size < 10240 ? 1 : 0)}) }}</dd>
+        <dt>{{ 'document.props.added'|trans }}</dt><dd>{{ document.createdAt|format_datetime('medium', 'short') }}</dd>
+        {% if meta.demo ?? false %}<dt>{{ 'document.props.origin'|trans }}</dt><dd><span class="tag tag--demo">{{ 'common.demo'|trans }}</span></dd>{% endif %}
     </dl>
 </div>

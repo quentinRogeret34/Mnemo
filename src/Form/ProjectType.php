@@ -26,50 +26,51 @@ final class ProjectType extends AbstractType
 
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
-        $builder->add('name', TextType::class, ['label' => 'Nom', 'empty_data' => '', 'attr' => ['autofocus' => $options['create'], 'autocomplete' => 'off']]);
+        $builder->add('name', TextType::class, ['label' => 'form.project.name', 'empty_data' => '', 'attr' => ['autofocus' => $options['create'], 'autocomplete' => 'off']]);
         if ($options['create']) {
             $builder->add('slug', TextType::class, [
-                'label' => 'Identifiant',
+                'label' => 'form.project.slug',
                 'mapped' => false,
                 'required' => false,
-                'help' => 'Minuscules, chiffres et tirets. Vide : déduit du nom. Il ne change plus ensuite.',
+                'help' => 'form.project.slug_help',
                 'attr' => ['autocomplete' => 'off', 'spellcheck' => 'false'],
             ]);
         }
         $builder
             ->add('repository', TextType::class, [
-                'label' => 'Dépôt',
+                'label' => 'form.project.repository',
                 'required' => false,
-                'help' => 'Remote du dépôt, ex. github.com/acme/boutique : il identifie le projet depuis n\'importe quelle machine.',
+                'help' => 'form.project.repository_help',
                 'attr' => ['autocomplete' => 'off', 'spellcheck' => 'false'],
             ])
             ->add('repositoryPath', TextType::class, [
-                'label' => 'Chemin local',
+                'label' => 'form.project.repository_path',
                 'required' => false,
                 'empty_data' => '',
-                'help' => 'Dossier du dépôt sur la machine qui héberge le graphe, s\'il y est cloné.',
+                'help' => 'form.project.repository_path_help',
                 'attr' => ['autocomplete' => 'off', 'spellcheck' => 'false'],
             ]);
         if (!$options['create']) {
             $builder
                 ->add('chatModel', TextType::class, [
-                    'label' => 'Modèle de chat',
+                    'label' => 'form.llm.chat_model',
                     'required' => false,
-                    'help' => 'Identifiant OpenRouter, ex. anthropic/claude-sonnet-4.5. Vide : celui de l\'instance.',
+                    'help' => 'form.project.chat_model_help',
                     'attr' => ['autocomplete' => 'off', 'spellcheck' => 'false', 'placeholder' => $this->llmSettings->chatModel(), 'data-controller' => 'model-picker', 'data-model-picker-url-value' => $this->urlGenerator->generate('llm_models', ['kind' => 'chat'])],
                 ])
                 ->add('embeddingModel', TextType::class, [
-                    'label' => 'Modèle d\'embeddings',
+                    'label' => 'form.llm.embedding_model',
                     'required' => false,
-                    'help' => 'À choisir dans la liste. En changer réindexe le contenu du projet. Vide : celui de l\'instance.',
+                    'help' => 'form.project.embedding_model_help',
                     'attr' => ['autocomplete' => 'off', 'spellcheck' => 'false', 'placeholder' => $this->llmSettings->embeddingModel(), 'data-controller' => 'model-picker', 'data-model-picker-url-value' => $this->urlGenerator->generate('llm_models', ['kind' => 'embedding'])],
                 ]);
         }
         if ($options['groups']) {
             $builder->add('groups', EntityType::class, [
-                'label' => 'Groupes qui y accèdent',
+                'label' => 'form.project.groups',
                 'class' => UserGroup::class,
                 'choice_label' => 'name',
+                'choice_translation_domain' => false,
                 'multiple' => true,
                 'expanded' => true,
                 'mapped' => false,

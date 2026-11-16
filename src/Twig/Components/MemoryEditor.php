@@ -86,7 +86,7 @@ final class MemoryEditor
      */
     public function getAdrFields(): array
     {
-        return ['context' => 'Contexte', 'decision' => 'Décision', 'alternatives' => 'Alternatives écartées', 'consequences' => 'Conséquences'];
+        return ['context' => 'memory.adr.context', 'decision' => 'enum.memory_type.decision', 'alternatives' => 'memory.adr.alternatives', 'consequences' => 'memory.adr.consequences'];
     }
 
     /**
@@ -134,13 +134,13 @@ final class MemoryEditor
     {
         $text = trim($this->text);
         if ('' === $text || mb_strlen($text) > 1000) {
-            $this->error = 'La mémoire doit contenir entre 1 et 1000 caractères.';
+            $this->error = 'memory.editor.length';
 
             return;
         }
         $type = MemoryType::tryFrom($this->type);
         if (null === $type) {
-            $this->error = 'Type de mémoire inconnu.';
+            $this->error = 'memory.editor.unknown_type';
 
             return;
         }

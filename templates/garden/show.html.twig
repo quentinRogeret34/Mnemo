@@ -1,51 +1,51 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Jardinage · {{ project.name }}{% endblock %}
+{% block title %}{{ 'nav.garden'|trans }} · {{ project.name }}{% endblock %}
 
 {% block crumbs %}
     <a href="{{ path('project_show', {slug: project.slug}) }}">{{ project.name }}</a>
     <span class="crumbs__sep" aria-hidden="true">/</span>
-    <span class="crumbs__current">Jardinage</span>
+    <span class="crumbs__current">{{ 'nav.garden'|trans }}</span>
 {% endblock %}
 
 {% block body %}
     {% set groups = {
-        memories: {label: 'Mémoires', clean: 'Toutes rattachées, liées et vérifiées.'},
-        rules: {label: 'Règles métier', clean: 'Toutes validées, sourcées, reliées au code et analysées.'},
-        documents: {label: 'Documents', clean: 'Tous reliés à une règle, du code ou une mémoire.'},
-        links: {label: 'Liens inférés', clean: 'Aucun lien proposé par le LLM en attente de confirmation.'},
+        memories: {label: 'nav.memories', clean: 'garden.clean.memories'},
+        rules: {label: 'nav.rules', clean: 'garden.clean.rules'},
+        documents: {label: 'nav.documents', clean: 'garden.clean.documents'},
+        links: {label: 'garden.links', clean: 'garden.clean.links'},
     } %}
     {% set total = findings|reduce((sum, finding) => sum + finding.count, 0) %}
     <div class="view-head">
-        <h1><twig:ux:icon name="lucide:sprout" />Jardinage</h1>
-        <span class="view-head__meta">{{ total }} {{ total > 1 ? 'éléments à entretenir' : 'élément à entretenir' }}</span>
+        <h1><twig:ux:icon name="lucide:sprout" />{{ 'nav.garden'|trans }}</h1>
+        <span class="view-head__meta">{{ 'garden.total'|trans({count: total}) }}</span>
     </div>
-    <p class="page__lede">Le jardinage est l'entretien de la connaissance du projet : repérer ce qui n'est plus relié, plus vérifié ou jamais relu, avant que les agents ne s'appuient dessus. Cette page ne modifie rien.</p>
+    <p class="page__lede">{{ 'garden.lede'|trans }}</p>
 
     <ol class="steps">
-        <li class="steps__item"><span class="steps__title">Repérer</span><span class="row__sub">Des contrôles sans LLM listent ci-dessous ce qui a dérivé, par famille.</span></li>
+        <li class="steps__item"><span class="steps__title">{{ 'garden.step.spot'|trans }}</span><span class="row__sub">{{ 'garden.step.spot_text'|trans }}</span></li>
         <li class="steps__item">
-            <span class="steps__title">Comparer</span>
-            <span class="row__sub">Un passage LLM cherche les mémoires en double ou qui se contredisent.</span>
+            <span class="steps__title">{{ 'garden.step.compare'|trans }}</span>
+            <span class="row__sub">{{ 'garden.step.compare_text'|trans }}</span>
             <form method="post" action="{{ path('garden_duplicates', {slug: project.slug}) }}">
                 <input type="hidden" name="_token" value="{{ csrf_token('garden-' ~ project.slug) }}">
-                <button class="button" type="submit">Chercher doublons et contradictions</button>
+                <button class="button" type="submit">{{ 'garden.step.compare_button'|trans }}</button>
             </form>
         </li>
         <li class="steps__item">
-            <span class="steps__title">Corriger</span>
-            <span class="row__sub">Chaque correction se décide à la main, depuis la fiche concernée ou dans la file de validation.</span>
-            <a class="button" href="{{ path('proposal_index', {project: project.slug}) }}">À valider{% if pending > 0 %} ({{ pending }} en attente){% endif %}</a>
+            <span class="steps__title">{{ 'garden.step.fix'|trans }}</span>
+            <span class="row__sub">{{ 'garden.step.fix_text'|trans }}</span>
+            <a class="button" href="{{ path('proposal_index', {project: project.slug}) }}">{{ 'nav.to_review'|trans }}{% if pending > 0 %} ({{ 'proposal.pending'|trans({count: pending}) }}){% endif %}</a>
         </li>
     </ol>
 
-    <section class="tiles" aria-label="État par famille">
+    <section class="tiles" aria-label="{{ 'garden.state'|trans }}">
         {% for key, group in groups %}
             {% set count = findings|filter(finding => finding.group == key)|reduce((sum, finding) => sum + finding.count, 0) %}
             <a class="tile tile--link{{ count == 0 ? ' tile--clean' }}" href="#group-{{ key }}">
-                <span class="tile__label">{{ group.label }}</span>
+                <span class="tile__label">{{ group.label|trans }}</span>
                 <span class="tile__value">{{ count }}</span>
-                <span class="tile__sub">{{ count == 0 ? 'Rien à entretenir' : 'à entretenir' }}</span>
+                <span class="tile__sub">{{ (count == 0 ? 'garden.nothing' : 'garden.to_tend')|trans }}</span>
             </a>
         {% endfor %}
     </section>
@@ -53,17 +53,17 @@
     {% for key, group in groups %}
         {% set group_findings = findings|filter(finding => finding.group == key) %}
         <div class="garden-group" id="group-{{ key }}">
-            <h2 class="garden-group__title">{{ group.label }}</h2>
+            <h2 class="garden-group__title">{{ group.label|trans }}</h2>
             {% if group_findings is empty %}
-                <p class="block__empty">{{ group.clean }}</p>
+                <p class="block__empty">{{ group.clean|trans }}</p>
             {% endif %}
             {% for finding in group_findings %}
                 <section class="finding" aria-labelledby="finding-{{ finding.key }}">
                     <details {% if finding.count <= 8 %}open{% endif %}>
                         <summary class="finding__head">
-                            <h3 id="finding-{{ finding.key }}">{{ finding.title }}</h3>
+                            <h3 id="finding-{{ finding.key }}">{{ ('garden.finding.' ~ finding.key ~ '.title')|trans }}</h3>
                             <span class="block__count">{{ finding.count }}</span>
-                            <span class="row__sub finding__hint">{{ finding.hint }}</span>
+                            <span class="row__sub finding__hint">{{ ('garden.finding.' ~ finding.key ~ '.hint')|trans }}</span>
                         </summary>
                         <ul class="list">
                             {% for item in finding.items %}
@@ -80,7 +80,7 @@
                                 </li>
                             {% endfor %}
                         </ul>
-                        {% if finding.count > finding.items|length %}<p class="row__sub">Et {{ finding.count - finding.items|length }} autres.</p>{% endif %}
+                        {% if finding.count > finding.items|length %}<p class="row__sub">{{ 'garden.more'|trans({count: finding.count - finding.items|length}) }}</p>{% endif %}
                     </details>
                 </section>
             {% endfor %}

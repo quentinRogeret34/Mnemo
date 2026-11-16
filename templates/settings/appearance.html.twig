@@ -1,47 +1,61 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Apparence{% endblock %}
+{% block title %}{{ 'nav.appearance'|trans }}{% endblock %}
 
-{% block crumbs %}<span class="crumbs__current">Apparence</span>{% endblock %}
+{% block crumbs %}<span class="crumbs__current">{{ 'nav.appearance'|trans }}</span>{% endblock %}
 
 {% block body %}
     <div class="view-head">
-        <h1><twig:ux:icon name="lucide:palette" />Apparence</h1>
+        <h1><twig:ux:icon name="lucide:palette" />{{ 'nav.appearance'|trans }}</h1>
     </div>
-    <p class="page__lede">Ces réglages sont enregistrés dans ce navigateur et s'appliquent tout de suite. Sans JavaScript, l'interface suit les préférences du système.</p>
-
-    <form class="panel form-stack appearance" data-controller="appearance" data-action="change->appearance#update theme:change@window->appearance#refresh">
+    <form class="panel form-stack appearance" method="post" action="{{ path('locale') }}">
+        <input type="hidden" name="_token" value="{{ csrf_token('locale') }}">
         <fieldset>
-            <legend>Thème</legend>
+            <legend>{{ 'appearance.language'|trans }}</legend>
             <div class="choices">
-                <label class="key-form__check"><input type="radio" name="theme" value="system" checked> Système <span data-appearance-target="system"></span></label>
-                <label class="key-form__check"><input type="radio" name="theme" value="light"> Clair</label>
-                <label class="key-form__check"><input type="radio" name="theme" value="dark"> Sombre</label>
+                {% for locale in locales %}
+                    <label class="key-form__check"><input type="radio" name="locale" value="{{ locale }}" {{ locale == app.request.locale ? 'checked' }}> {{ ('locale.' ~ locale)|trans }}</label>
+                {% endfor %}
+            </div>
+            <p class="help-text">{{ 'appearance.language_help'|trans }}</p>
+        </fieldset>
+        <div><button class="button button--primary" type="submit">{{ 'appearance.language_submit'|trans }}</button></div>
+    </form>
+
+    <p class="page__lede">{{ 'appearance.lede'|trans }}</p>
+
+    <form class="panel form-stack appearance" data-controller="appearance" data-appearance-dark-value="{{ 'appearance.currently_dark'|trans }}" data-appearance-light-value="{{ 'appearance.currently_light'|trans }}" data-action="change->appearance#update theme:change@window->appearance#refresh">
+        <fieldset>
+            <legend>{{ 'appearance.theme'|trans }}</legend>
+            <div class="choices">
+                <label class="key-form__check"><input type="radio" name="theme" value="system" checked> {{ 'appearance.system'|trans }} <span data-appearance-target="system"></span></label>
+                <label class="key-form__check"><input type="radio" name="theme" value="light"> {{ 'appearance.light'|trans }}</label>
+                <label class="key-form__check"><input type="radio" name="theme" value="dark"> {{ 'appearance.dark'|trans }}</label>
             </div>
         </fieldset>
         <fieldset>
-            <legend>Couleur d'accent</legend>
+            <legend>{{ 'appearance.accent'|trans }}</legend>
             <div class="choices">
                 <label class="key-form__check"><input type="radio" name="accent" value="violet" checked><span class="swatch" data-accent="violet"></span> Violet</label>
                 <label class="key-form__check"><input type="radio" name="accent" value="cobalt"><span class="swatch" data-accent="cobalt"></span> Cobalt</label>
-                <label class="key-form__check"><input type="radio" name="accent" value="vert"><span class="swatch" data-accent="vert"></span> Vert</label>
-                <label class="key-form__check"><input type="radio" name="accent" value="ambre"><span class="swatch" data-accent="ambre"></span> Ambre</label>
+                <label class="key-form__check"><input type="radio" name="accent" value="vert"><span class="swatch" data-accent="vert"></span> {{ 'appearance.green'|trans }}</label>
+                <label class="key-form__check"><input type="radio" name="accent" value="ambre"><span class="swatch" data-accent="ambre"></span> {{ 'appearance.amber'|trans }}</label>
                 <label class="key-form__check"><input type="radio" name="accent" value="rose"><span class="swatch" data-accent="rose"></span> Rose</label>
             </div>
-            <p class="help-text">Les couleurs des graphiques et du graphe des mémoires ne changent pas.</p>
+            <p class="help-text">{{ 'appearance.accent_help'|trans }}</p>
         </fieldset>
         <fieldset>
-            <legend>Contraste</legend>
+            <legend>{{ 'appearance.contrast'|trans }}</legend>
             <div class="choices">
-                <label class="key-form__check"><input type="checkbox" name="contrast" value="more"> Contraste élevé</label>
+                <label class="key-form__check"><input type="checkbox" name="contrast" value="more"> {{ 'appearance.contrast_more'|trans }}</label>
             </div>
-            <p class="help-text">Textes secondaires et bordures renforcés, liens soulignés. Toujours actif quand le système demande plus de contraste.</p>
+            <p class="help-text">{{ 'appearance.contrast_help'|trans }}</p>
         </fieldset>
         <fieldset>
-            <legend>Taille du texte</legend>
+            <legend>{{ 'appearance.text_size'|trans }}</legend>
             <div class="choices">
-                <label class="key-form__check"><input type="radio" name="text-size" value="normal" checked> Normale</label>
-                <label class="key-form__check"><input type="radio" name="text-size" value="large"> Grande</label>
+                <label class="key-form__check"><input type="radio" name="text-size" value="normal" checked> {{ 'appearance.text_normal'|trans }}</label>
+                <label class="key-form__check"><input type="radio" name="text-size" value="large"> {{ 'appearance.text_large'|trans }}</label>
             </div>
         </fieldset>
     </form>

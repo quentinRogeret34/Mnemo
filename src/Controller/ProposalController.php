@@ -16,6 +16,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Translation\TranslatableMessage;
 
 final class ProposalController extends AbstractController
 {
@@ -64,7 +65,7 @@ final class ProposalController extends AbstractController
             return $this->back($request);
         }
 
-        $this->addFlash('success', null === $memory ? 'Proposition appliquée.' : \sprintf('Proposition appliquée : « %s ».', $memory->getLabel()));
+        $this->addFlash('success', null === $memory ? new TranslatableMessage('flash.proposal.applied') : new TranslatableMessage('flash.proposal.applied_memory', ['memory' => $memory->getLabel()]));
 
         return $this->back($request);
     }
@@ -75,7 +76,7 @@ final class ProposalController extends AbstractController
         $this->checkToken($proposal, $request);
         try {
             $this->applier->reject($proposal);
-            $this->addFlash('success', 'Proposition rejetée.');
+            $this->addFlash('success', new TranslatableMessage('flash.proposal.rejected'));
         } catch (\InvalidArgumentException $exception) {
             $this->addFlash('error', $exception->getMessage());
         }

@@ -391,7 +391,7 @@ final class ConnectorControllerTest extends WebTestCase
         self::assertResponseRedirects('/connectors');
         $sent = array_map(static fn ($envelope): object => $envelope->getMessage(), self::getContainer()->get('messenger.transport.async')->getSent());
         $this->client->followRedirect();
-        self::assertSelectorTextContains('.flash', '2 dépôt(s) branché(s) sur Demo project');
+        self::assertSelectorTextContains('.flash', '2 dépôts branchés sur Demo project');
 
         $this->entityManager->clear();
         $connectors = $this->entityManager->getRepository(Connector::class)->findBy(['name' => ['acme/shop', 'acme/blog']], ['id' => 'ASC']);
@@ -455,7 +455,7 @@ final class ConnectorControllerTest extends WebTestCase
         $this->client->submit($form);
         self::assertResponseRedirects('/projects/demo/settings');
         $crawler = $this->client->followRedirect();
-        self::assertSelectorTextContains('.flash', '1 dépôt(s) branché(s) sur Demo project');
+        self::assertSelectorTextContains('.flash', '1 dépôt branché sur Demo project');
         self::assertSame('acme/shop', $crawler->filter('section[aria-labelledby="connectors-title"] .row__title > span')->first()->text());
         self::assertCount(0, $crawler->filter('section[aria-labelledby="connectors-title"] a.row'));
         self::assertSame('demo', $this->entityManager->getRepository(Connector::class)->findOneBy(['name' => 'acme/shop'])->getProject()->getSlug());

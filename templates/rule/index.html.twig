@@ -1,32 +1,32 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Règles métier · {{ project.name }}{% endblock %}
+{% block title %}{{ 'nav.rules'|trans }} · {{ project.name }}{% endblock %}
 
 {% block crumbs %}
     <a href="{{ path('project_show', {slug: project.slug}) }}">{{ project.name }}</a>
     <span class="crumbs__sep" aria-hidden="true">/</span>
-    <span class="crumbs__current">Règles métier</span>
+    <span class="crumbs__current">{{ 'nav.rules'|trans }}</span>
 {% endblock %}
 
 {% block body %}
     <div class="view-head">
-        <h1><twig:ux:icon name="lucide:clipboard-check" />Règles métier</h1>
+        <h1><twig:ux:icon name="lucide:clipboard-check" />{{ 'nav.rules'|trans }}</h1>
         <span class="view-head__meta">{{ rules.total }}</span>
     </div>
 
-    <nav class="tabs" aria-label="Filtrer par statut">
-        <a href="{{ path('rule_index', {slug: project.slug}) }}" {% if status is null %}aria-current="page"{% endif %}>Toutes</a>
-        <a href="{{ path('rule_index', {slug: project.slug, status: 'to_review'}) }}" {% if status == 'to_review' %}aria-current="page"{% endif %}>À valider</a>
-        <a href="{{ path('rule_index', {slug: project.slug, status: 'validated'}) }}" {% if status == 'validated' %}aria-current="page"{% endif %}>Validées</a>
+    <nav class="tabs" aria-label="{{ 'rule.index.filter_status'|trans }}">
+        <a href="{{ path('rule_index', {slug: project.slug}) }}" {% if status is null %}aria-current="page"{% endif %}>{{ 'common.all'|trans }}</a>
+        <a href="{{ path('rule_index', {slug: project.slug, status: 'to_review'}) }}" {% if status == 'to_review' %}aria-current="page"{% endif %}>{{ 'nav.to_review'|trans }}</a>
+        <a href="{{ path('rule_index', {slug: project.slug, status: 'validated'}) }}" {% if status == 'validated' %}aria-current="page"{% endif %}>{{ 'rule.index.validated'|trans }}</a>
     </nav>
 
     {% if rules.items is empty %}
         {% if status %}
-            <p class="block__empty">Aucune règle dans ce statut.</p>
+            <p class="block__empty">{{ 'rule.index.none_in_status'|trans }}</p>
         {% else %}
-            <twig:EmptyState title="Aucune règle métier" text="Les règles viennent de l'extraction des documents métier du projet.">
+            <twig:EmptyState :title="'rule.index.empty'|trans" :text="'rule.index.empty_text'|trans">
                 <twig:block name="icon"><twig:ux:icon name="lucide:clipboard-check" /></twig:block>
-                <twig:block name="actions"><a class="button" href="{{ path('project_show', {slug: project.slug}) }}"><twig:ux:icon name="lucide:upload" />Déposer des documents</a></twig:block>
+                <twig:block name="actions"><a class="button" href="{{ path('project_show', {slug: project.slug}) }}"><twig:ux:icon name="lucide:upload" />{{ 'rule.index.drop_documents'|trans }}</a></twig:block>
             </twig:EmptyState>
         {% endif %}
     {% else %}
@@ -37,13 +37,13 @@
                         <span class="code-chip">{{ rule.code }}</span>
                         <span class="row__title">
                             <span>{{ rule.title }}</span>
-                            {% if rule.demo %}<span class="tag tag--demo">Démo</span>{% endif %}
+                            {% if rule.demo %}<span class="tag tag--demo">{{ 'common.demo'|trans }}</span>{% endif %}
                         </span>
                         <span class="row__meta">
-                            <span class="status status--{{ rule.status }}">{{ rule.status == 'validated' ? 'Validée' : 'À valider' }}</span>
-                            {% if rule.shadow_areas > 0 %}<span title="Zones d'ombre à lever avec le métier">{{ rule.shadow_areas }} zones d'ombre</span>{% endif %}
-                            <span title="Documents sources">{{ rule.documents }} doc.</span>
-                            <span title="Fichiers liés, dont vérifiés">{{ rule.files }} fichiers · {{ rule.verified_files }} vérifiés</span>
+                            <span class="status status--{{ rule.status }}">{{ (rule.status == 'validated' ? 'rule.validated' : 'nav.to_review')|trans }}</span>
+                            {% if rule.shadow_areas > 0 %}<span title="{{ 'rule.index.shadow_title'|trans }}">{{ 'rule.index.shadow_count'|trans({count: rule.shadow_areas}) }}</span>{% endif %}
+                            <span title="{{ 'rule.source_documents'|trans }}">{{ 'document.docs_count'|trans({count: rule.documents}) }}</span>
+                            <span title="{{ 'rule.index.files_title'|trans }}">{{ 'project.index.files'|trans({count: rule.files}) }} · {{ 'rule.index.verified_count'|trans({count: rule.verified_files}) }}</span>
                         </span>
                     </a>
                 </li>

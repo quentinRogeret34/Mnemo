@@ -107,6 +107,6 @@ final class GardenTest extends WebTestCase
 
         self::assertResponseRedirects('/projects/demo/garden');
         $this->client->followRedirect();
-        self::assertSelectorTextContains('.flash', '0 mémoires comparées');
+        self::assertSelectorTextContains('.flash', '0 mémoire comparée');
     }
 }

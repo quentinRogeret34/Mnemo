@@ -94,7 +94,7 @@ final class DocumentWorkspaceTest extends WebTestCase
         $this->entityManager->flush();
 
         $component = $this->createLiveComponent('DocumentProperties', ['document' => $document]);
-        self::assertStringContainsString('Rattacher d\'abord le document à un projet', (string) $component->render());
+        self::assertStringContainsString('Rattacher d\'abord le document à un projet', $component->render()->crawler()->text());
 
         $component->call('toggleProject', ['projectId' => $this->project->getId()]);
         $component->call('toggleProject', ['projectId' => $this->otherProject->getId()]);

@@ -1,0 +1,178 @@
+    {% set pages = [
+        {id: 'tableau-de-bord', title: 'Dashboard', url: path('dashboard'), what: "The activity of the graph over a period: stored memories, memories recalled by the agents, requests received by the MCP server and pending proposals.", how: [
+            "Pick the period at the top (24 h, 7 d, 30 d, 90 d, all). Both charts and the counters follow the period; “Memory types” always shows the current state.",
+            "“Recalled memories” counts the memories returned by the search, file_context and get_document tools: what the agents actually read again.",
+            "“Search types” details what the agents ask the search tool for (memories, documents, rules, code). A search without a filter counts for all four.",
+            "“Search mode” tells whether search answered by keywords only or in hybrid mode. Hybrid needs a key for the embedding model and the worker service (or bin/console app:index) to compute the vectors, and then also finds by meaning.",
+            "The table at the bottom lists the latest MCP calls with the query, the number of results and the duration.",
+        ]},
+        {id: 'activite', title: 'Activity', url: path('activity'), what: "What entered the graph, day by day: commits, pull and merge requests, issues, documents, memories and rules. It sums up the team's work.", how: [
+            "Pick 24 h, 7 d or 30 d. The counters at the top give the volume per type; the feed lists each entry with its author.",
+            "“Syncs” shows the latest runs of the connectors, manual or scheduled, and those that failed.",
+            "A scheduled connector (every hour or every day) syncs on its own when the worker service runs: docker compose up -d worker.",
+        ]},
+        {id: 'projets', title: 'Projects', url: path('project_index'), what: "A project matches a git repository. It owns its code and its business rules; documents and memories can be shared between several projects.", how: [
+            "Click a row to unfold it: repository path and clickable counters (documents, rules, memories, code, to review).",
+            "The “…” menu opens each section of the project directly. The picker at the top of the sidebar switches project from any page.",
+            "A project is created on its own at the first session of a machine with the Claude Code plugin, or from the command line: bin/console app:project:create <slug> \"<Name>\" <path>. Then app:ingest:code for the code graph.",
+        ]},
+        {id: 'documents', title: 'Documents', url: path('document_index'), what: "Business documents (Markdown, PDF, Word): specifications, meeting notes, guidelines. They are filed in folders and attached to one or more projects.", how: [
+            "“All documents” is the shared space, with the folder tree. The Documents page of a project only shows those attached to it.",
+            "Drop a file in the upload area to add it. On the page of a document: folder, projects, rules it defines and code files it documents.",
+            "Connectors and the import_document MCP tool also add documents.",
+        ]},
+        {id: 'regles', title: 'Business rules', url: null, what: "The rules extracted from the documents (RG-001...), with their statement, their source document and the code implementing them.", how: [
+            "A rule is “to review” until a human has read its statement. Only validated rules go into the memory block of the agents.",
+            "The page of a rule shows its sources, its implementations with the confidence of each link (EXTRACTED, INFERRED, VERIFIED) and its blind spots: the cases the statement leaves open.",
+            "The blind spot analysis runs with bin/console app:rule:shadow <project> [code].",
+        ]},
+        {id: 'memoires', title: 'Memories', url: path('memory_index'), what: "Short, self-contained facts kept about a project: decisions, conventions, learnings, preferences, facts. They come from the agents (MCP), from LLM extraction or are entered by hand.", how: [
+            "The table filters by project, type, verification, source and status; the search covers the text. “New memory” opens the form.",
+            "On the page: edit the text, link the memory to code, a rule or a document, verify it against the graph, read its history.",
+            "A superseded or retracted memory is archived, never deleted: the “Archived” filter finds them.",
+        ]},
+        {id: 'graphe-memoires', title: 'Memory graph', url: path('memory_graph'), what: "A satellite view: each memory orbits the subject it talks about. It shows at a glance where knowledge gathers and what is linked to nothing.", how: [
+            "The big points are the subjects (square: code file, diamond: rule, triangle: document, hexagon: project). Their size follows the number of memories attached.",
+            "Hovering a point isolates its neighbourhood and shows its text below the graph. Clicking opens its page. The wheel zooms, dragging pans.",
+            "A memory with no link orbits its project: a candidate to link from its page.",
+        ]},
+        {id: 'a-valider', title: 'To review', url: path('proposal_index'), what: "The queue of the LLM's proposals. Nothing it proposes enters the graph without going through here.", how: [
+            "Learning: a memory extracted from a conversation, a diff, a file or a review. The text can be edited before applying; “Evidence and source” shows where it comes from.",
+            "Duplicate and contradiction: choose the memory to keep, the other is merged or archived.",
+            "Refuted: verification found the memory contradicted by the graph; applying retracts it.",
+            "Reject drops the proposal without changing anything.",
+        ]},
+        {id: 'jardinage', title: 'Gardening', url: null, what: "The upkeep of a project's knowledge. The page spots what has drifted, without changing anything: it is a list of things to read again.", how: [
+            "Memories: with no project nor link, whose links were all rejected, never verified or changed since their verification.",
+            "Business rules: to review, with no source document, with no linked code, never analysed for blind spots.",
+            "Documents linked to nothing, and links inferred by the LLM never confirmed.",
+            "“Look for duplicates and contradictions” runs an LLM pass; the pairs found arrive in To review. From the command line: bin/console app:garden <project> [--llm].",
+        ]},
+        {id: 'code', title: 'Code', url: null, what: "The code graph of a project, imported from graphify: files, symbols and dependencies.", how: [
+            "The code search (/ key) covers file paths and symbol names. ⌘K (Ctrl+K) opens the command palette, everywhere: pages, projects, actions, memories and files of the open project.",
+            "The page of a file lists its symbols, what it depends on, what uses it, and the rules, documents and memories linked to it. The graph shows its neighbourhood at 1 or 2 hops.",
+            "The tags at the top of the Code page are the capabilities detected in the paths (api, ui, database...).",
+        ]},
+        {id: 'connexions', title: 'Connectors', url: path('connector_index'), what: "The connectors feeding the graph from outside: the history of a GitHub or GitLab repository, or the content of other MCP servers (DeepWiki, Context7, mem0...).", how: [
+            "GitHub and GitLab (code and history): with “code_graph”, the repository is cloned on the server, its code graph built by graphify, its README, docs/ and agent conventions imported; the sync then runs in the background. Commits, pull or merge requests, issues and authors become nodes of the project. A commit is linked to the files it touches, a PR to its commits and to the issues it closes, and any text citing a rule (RG-042) is linked to it.",
+            "The history shows on the page of each file, on the page of the cited rules, and in the file_context MCP tool. Gardening flags the memories whose code changed since their verification.",
+            "Start from a preset or set the server URL and the tool to call. “Test the connection” lists the tools of the remote server.",
+            "“Sync” imports the content; bin/console app:connector:sync [id] does the same from the command line.",
+        ]},
+        {id: 'utilisateurs', title: 'Users and groups', url: null, what: "Accounts, their rights and the groups. Reserved to super admins (Users menu).", how: [
+            "Sign-in with GitHub, GitLab or Google: a provider shows on the sign-in page as soon as its client id is configured (OAUTH_* variables). The callback URL to declare at the provider is https://<domain>/oauth/<github|gitlab|google>/check.",
+            "An account whose verified email is listed in APP_ADMIN_EMAILS is created super admin at its first sign-in. All others are created “pending” and see nothing until a super admin activates them. As a fallback: bin/console app:user:promote <email>, or the password admin account.",
+            "The GitHub OAuth app also serves the connectors: on a “GitHub (code and history)” connector, the “Connect with GitHub” button asks for access to the repositories (repo scope) and stores the encrypted token in the database, instead of a token set in the environment variables.",
+            "A group brings users and projects together: a user only sees the projects of their groups. The “all projects” views, the shared document space and the connectors stay with the super admin.",
+            "Visibility of a memory: “Project” (everyone with access to the project, the default), “Group” (the members of a group) or “Private” (its author and their agents). It is chosen at creation, on the memory page, or with the visibility parameter of the add_memory MCP tool.",
+            "A super admin sees every memory. The team LLM passes (duplicates, memory block written to a file) only read the memories shared with the project.",
+        ]},
+        {id: 'cles-api', title: 'API keys', url: path('api_key_index'), what: "The tokens the agents present to /mcp and /api when access is restricted.", how: [
+            "Create one key per agent or per machine. The token is shown only once; only its fingerprint is stored.",
+            "A key belongs to the user who creates it and acts on their behalf: same projects, same private and group memories. Limited to projects, it only sees and writes in those.",
+            "Access is restricted with APP_ACCESS_ROLE=ROLE_USER in .env.local: the site goes behind /login (admin user, password hashed in APP_ADMIN_PASSWORD_HASH) and the agents must send Authorization: Bearer <key>.",
+            "Revoking a key cuts it off at once. From the command line: bin/console app:api-key:create <name> [--project=slug].",
+        ]},
+    ] %}
+
+    <div class="wiki">
+        <nav class="wiki__toc" aria-label="Contents">
+            <span class="nav-group__label">Pages</span>
+            {% for page in pages %}<a class="tree__item" href="#{{ page.id }}">{{ page.title }}</a>{% endfor %}
+            <a class="tree__item" href="#agents">Agents and MCP</a>
+            <a class="tree__item" href="#plugin">Claude Code plugin</a>
+            <a class="tree__item" href="#deploiement">Deployment</a>
+        </nav>
+        <article class="wiki__body prose">
+            <h1 class="page__title">Wiki</h1>
+            <p>Project graph links code, business documents, business rules and agent memories in a single graph, and gives it back to humans (this site) and to AI agents (MCP server). This page explains what each screen is for.</p>
+            <p>The usual path: declare a project, ingest its code and documents, let the agents send learnings, review the proposals, then keep it tidy with gardening.</p>
+
+            {% for page in pages %}
+                <section id="{{ page.id }}" class="wiki__section">
+                    <h2>{{ page.title }}</h2>
+                    <p>{{ page.what }}</p>
+                    <ul>{% for line in page.how %}<li>{{ line }}</li>{% endfor %}</ul>
+                    {% if page.url %}<p><a href="{{ page.url }}">Open {{ page.title }}</a></p>{% else %}<p>This page opens from a project, in the sidebar.</p>{% endif %}
+                </section>
+            {% endfor %}
+
+            <section id="agents" class="wiki__section">
+                <h2>Agents and MCP</h2>
+                <p>Agents (Claude Code, Cursor, Codex...) plug into the MCP server at <code>/mcp</code>. Each tool call is counted on the dashboard.</p>
+                <ul>
+                    <li><code>list_projects</code>, <code>search</code>, <code>file_context</code>, <code>get_document</code>, <code>memory_block</code>: read the graph.</li>
+                    <li><code>add_memory</code>: stores a memory directly. <code>learn</code>: sends a source from which the LLM extracts proposals to review.</li>
+                    <li><code>import_document</code>: adds a Markdown document.</li>
+                </ul>
+                <p>The content returned to the agents comes from users or external tools: it is always marked as data, never as an instruction.</p>
+            </section>
+
+            <section id="plugin" class="wiki__section">
+                <h2>Claude Code plugin</h2>
+                <p>The repository holds its Claude Code plugin, in <code>claude-plugin/</code>. It is turned on project by project and brings the MCP server, the project memory at the start of a session, the context of each file read and the sending of learnings at the end of a session (secrets masked, to review here afterwards).</p>
+                <p>In the project's <code>.claude/settings.json</code>, committed:</p>
+                <pre><code>{
+  "extraKnownMarketplaces": {
+    "graphe": { "source": { "source": "github", "repo": "quentinRogeret34/RAG" } }
+  },
+  "enabledPlugins": { "graphe@graphe": true },
+  "env": {
+    "GRAPHE_URL": "{{ app.request.schemeAndHttpHost }}"
+  }
+}</code></pre>
+                <p>In <code>.claude/settings.local.json</code>, not committed, the key created in <a href="{{ path('api_key_index') }}">API keys</a>:</p>
+                <pre><code>{ "env": { "GRAPHE_API_KEY": "gk_..." } }</code></pre>
+                <ul>
+                    <li>The project is recognised by the <code>origin</code> remote, otherwise by the working directory. Unknown, it is created at the first session and joins the groups of the key's owner; a key limited to some projects creates nothing.</li>
+                    <li><code>GRAPHE_PROJECT</code>, optional, forces the project slug instead of deriving it from the repository.</li>
+                    <li><code>GRAPHE_DISABLED=1</code> turns the hooks off, <code>GRAPHE_CAPTURE=0</code> only turns off sending the transcripts.</li>
+                    <li>The machine needs <code>python3</code>. From a local clone, the marketplace source can be <code>{ "source": "directory", "path": "/path/to/the/repository" }</code>.</li>
+                </ul>
+            </section>
+
+            <section id="deploiement" class="wiki__section">
+                <h2>Deploying on a server</h2>
+                <p>For a VPS (OVH, Contabo, Hetzner, Scaleway...) running Debian or Ubuntu. The repository provides the production image (<code>Dockerfile</code>, <code>prod</code> target) and <code>compose.prod.yaml</code>: application, worker and Postgres with pgvector. FrankenPHP gets the HTTPS certificate on its own.</p>
+
+                <h3>1. Prepare the server</h3>
+                <ul>
+                    <li>2 vCPUs and 4 GB of memory are enough. Install Docker with its Compose plugin (<a href="https://docs.docker.com/engine/install/" rel="noopener noreferrer" target="_blank">Docker documentation</a>).</li>
+                    <li>Create a DNS A (and AAAA) record from the domain to the server's address.</li>
+                    <li>Open ports 22, 80 and 443 in the firewall of the host and of the server. Postgres is not published.</li>
+                </ul>
+
+                <h3>2. Configure</h3>
+                <pre><code>git clone git@github.com:quentinRogeret34/RAG.git graphe &amp;&amp; cd graphe
+cp .env.prod.dist .env.prod.local
+openssl rand -hex 32    # APP_SECRET
+openssl rand -hex 24    # POSTGRES_PASSWORD</code></pre>
+                <p>Fill in <code>.env.prod.local</code>: domain (<code>SERVER_NAME</code>), both secrets, the LLM keys, the connector tokens and the OAuth ids of the sign-in providers (see <a href="#utilisateurs">Users and groups</a>). Then the password of the fallback <code>admin</code> account:</p>
+                <pre><code>docker compose -f docker/compose.prod.yaml --env-file .env.prod.local build
+docker compose -f docker/compose.prod.yaml --env-file .env.prod.local run --rm --no-deps php bin/console security:hash-password</code></pre>
+                <p>Paste the hash in <code>APP_ADMIN_PASSWORD_HASH</code>, doubling each <code>$</code> (<code>$$</code>), otherwise Compose reads it as a variable.</p>
+
+                <h3>3. Start</h3>
+                <pre><code>docker compose -f docker/compose.prod.yaml --env-file .env.prod.local up -d
+docker compose -f docker/compose.prod.yaml --env-file .env.prod.local exec php bin/console doctrine:migrations:migrate --no-interaction
+docker compose -f docker/compose.prod.yaml --env-file .env.prod.local exec php bin/console app:llm:check</code></pre>
+                <p>The site answers on <code>https://&lt;domain&gt;</code>, behind <code>/login</code>. The agents go through <code>/mcp</code> and <code>/api</code> with an API key.</p>
+
+                <h3>4. Connect the projects</h3>
+                <ul>
+                    <li>Nothing to declare: each project is created at the first session of a machine, from its remote repository. To choose the slug and the name, declare it first: <code>bin/console app:project:create &lt;slug&gt; "&lt;Name&gt;" &lt;path&gt;</code>, and set <code>GRAPHE_PROJECT</code> on the machines.</li>
+                    <li>Create one key per machine in API keys, then install the <a href="#plugin">plugin</a> in each repository.</li>
+                    <li>The code graph is built on the server: create a “GitHub (code and history)” or GitLab connector on the project, it clones the repository and runs graphify at each sync. Otherwise, build it on a machine (<code>graphify extract --code-only</code>), copy <code>graph.json</code> to the server and run <code>bin/console app:ingest:code &lt;slug&gt; /tmp/graph.json</code>.</li>
+                    <li>Add a scheduled GitHub or GitLab connector for the history: the worker syncs it on its own.</li>
+                </ul>
+
+                <h3>5. Update and back up</h3>
+                <pre><code>git pull
+docker compose -f docker/compose.prod.yaml --env-file .env.prod.local up -d --build
+docker compose -f docker/compose.prod.yaml --env-file .env.prod.local exec php bin/console doctrine:migrations:migrate --no-interaction
+
+docker compose -f docker/compose.prod.yaml --env-file .env.prod.local exec -T database pg_dump -U app app | gzip &gt; graphe-$(date +%F).sql.gz</code></pre>
+                <p>To back up: this dump (graph, memories, vectors) and the <code>storage</code> volume (files of the uploaded documents). The <code>caddy_data</code> volume keeps the certificates.</p>
+            </section>
+        </article>
+    </div>

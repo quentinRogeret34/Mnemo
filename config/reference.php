@@ -305,7 +305,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         },
  *     },
  *     translator?: bool|array{ // Translator configuration
- *         enabled?: bool|Param, // Default: false
+ *         enabled?: bool|Param, // Default: true
  *         fallbacks?: Param|string|list<scalar|Param|null>,
  *         logging?: bool|Param, // Default: false
  *         formatter?: scalar|Param|null, // Default: "translator.formatter.default"
@@ -1930,7 +1930,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         enabled?: bool|Param, // Default: true
  *     },
  *     intl?: bool|array{
- *         enabled?: bool|Param, // Default: false
+ *         enabled?: bool|Param, // Default: true
  *     },
  *     cssinliner?: bool|array{
  *         enabled?: bool|Param, // Default: false
@@ -2391,6 +2391,16 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *     },
  *     ignore_not_found?: bool|Param, // Ignore error when an icon is not found. Set to 'true' to fail silently. // Default: false
  * }
+ * @psalm-type UxTranslatorConfig = array{
+ *     dump_directory?: scalar|Param|null, // The directory where translations and TypeScript types are dumped. // Default: "%kernel.project_dir%/var/translations"
+ *     dump_typescript?: bool|Param, // Control whether TypeScript types are dumped alongside translations. Disable this if you do not use TypeScript (e.g. in production when using AssetMapper). // Default: true
+ *     domains?: Param|string|array{ // List of domains to include/exclude from the generated translations. Prefix with a `!` to exclude a domain.
+ *         type?: scalar|Param|null,
+ *         elements?: list<scalar|Param|null>,
+ *         ...<string, mixed>
+ *     },
+ *     keys_patterns?: Param|string|list<scalar|Param|null>,
+ * }
  * @psalm-type ConfigType = array{
  *     imports?: ImportsConfig,
  *     parameters?: ParametersConfig,
@@ -2407,6 +2417,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *     security?: SecurityConfig,
  *     mcp?: McpConfig,
  *     ux_icons?: UxIconsConfig,
+ *     ux_translator?: UxTranslatorConfig,
  *     "when@dev"?: array{
  *         imports?: ImportsConfig,
  *         parameters?: ParametersConfig,
@@ -2424,6 +2435,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         security?: SecurityConfig,
  *         mcp?: McpConfig,
  *         ux_icons?: UxIconsConfig,
+ *         ux_translator?: UxTranslatorConfig,
  *     },
  *     "when@prod"?: array{
  *         imports?: ImportsConfig,
@@ -2441,6 +2453,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         security?: SecurityConfig,
  *         mcp?: McpConfig,
  *         ux_icons?: UxIconsConfig,
+ *         ux_translator?: UxTranslatorConfig,
  *     },
  *     "when@test"?: array{
  *         imports?: ImportsConfig,
@@ -2458,6 +2471,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         security?: SecurityConfig,
  *         mcp?: McpConfig,
  *         ux_icons?: UxIconsConfig,
+ *         ux_translator?: UxTranslatorConfig,
  *     },
  *     ...<string, ExtensionType|array{ // extra keys must follow the when@%env% pattern or match an extension alias
  *         imports?: ImportsConfig,

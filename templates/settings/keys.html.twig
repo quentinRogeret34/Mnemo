@@ -1,63 +1,63 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Clés d'API{% endblock %}
+{% block title %}{{ 'nav.api_keys'|trans }}{% endblock %}
 
-{% block crumbs %}<span class="crumbs__current">Clés d'API</span>{% endblock %}
+{% block crumbs %}<span class="crumbs__current">{{ 'nav.api_keys'|trans }}</span>{% endblock %}
 
 {% block body %}
     <div class="view-head">
-        <h1><twig:ux:icon name="lucide:key-round" />Clés d'API</h1>
+        <h1><twig:ux:icon name="lucide:key-round" />{{ 'nav.api_keys'|trans }}</h1>
         <span class="view-head__meta">{{ keys|length }}</span>
     </div>
-    <p class="page__lede">Une clé identifie un agent ou un poste qui appelle <span class="mono">/mcp</span> et <span class="mono">/api</span>, avec l'en-tête <span class="mono">Authorization: Bearer &lt;clé&gt;</span>. Limitée à des projets, elle ne lit et n'écrit que dans ceux-là.</p>
+    <p class="page__lede">{{ 'keys.lede'|trans({mcp: '<span class="mono">/mcp</span>', api: '<span class="mono">/api</span>', header: '<span class="mono">Authorization: Bearer &lt;' ~ 'keys.key'|trans|e ~ '&gt;</span>'})|raw }}</p>
 
     {% if token %}
         <div class="archived-banner" role="status" {{ stimulus_controller('clipboard') }}>
-            <span>Clé créée. Elle ne sera plus affichée : la copier maintenant.</span>
+            <span>{{ 'keys.created'|trans }}</span>
             <code class="mono" id="new-token" {{ stimulus_target('clipboard', 'source') }}>{{ token }}</code>
-            <button class="button button--primary" type="button" {{ stimulus_action('clipboard', 'copy') }}><twig:ux:icon name="lucide:copy" /><span {{ stimulus_target('clipboard', 'label') }}>Copier</span></button>
+            <button class="button button--primary" type="button" {{ stimulus_action('clipboard', 'copy') }}><twig:ux:icon name="lucide:copy" /><span {{ stimulus_target('clipboard', 'label') }}>{{ 'keys.copy'|trans }}</span></button>
         </div>
     {% endif %}
 
     <form class="panel key-form" method="post" action="{{ path('api_key_index') }}">
         <input type="hidden" name="_token" value="{{ csrf_token('api-key-create') }}">
-        <label for="key-name">Nom</label>
+        <label for="key-name">{{ 'form.project.name'|trans }}</label>
         <input class="input" id="key-name" type="text" name="name" maxlength="100" placeholder="claude-code-portable" required>
         {% if error %}<p class="form-errors">{{ error }}</p>{% endif %}
         {% if projects is not empty %}
             <fieldset class="key-form__projects">
-                <legend>Projets autorisés <span class="row__sub">aucun coché : tous les projets</span></legend>
+                <legend>{{ 'keys.projects'|trans }} <span class="row__sub">{{ 'keys.projects_help'|trans }}</span></legend>
                 {% for project in projects %}
                     <label class="key-form__check"><input type="checkbox" name="projects[]" value="{{ project.slug }}"> {{ project.name }}</label>
                 {% endfor %}
             </fieldset>
         {% endif %}
-        <button class="button button--primary" type="submit"><twig:ux:icon name="lucide:plus" />Créer la clé</button>
+        <button class="button button--primary" type="submit"><twig:ux:icon name="lucide:plus" />{{ 'keys.create'|trans }}</button>
     </form>
 
     {% if keys is empty %}
-        <twig:EmptyState title="Aucune clé" text="Tant que l'accès n'est pas restreint (APP_ACCESS_ROLE=ROLE_USER), les agents appellent le serveur sans clé.">
+        <twig:EmptyState :title="'keys.empty'|trans" :text="'keys.empty_text'|trans">
             <twig:block name="icon"><twig:ux:icon name="lucide:key-round" /></twig:block>
         </twig:EmptyState>
     {% else %}
         <div class="table-wrap">
             <table class="data-table">
-                <thead><tr><th>Nom</th><th>Clé</th><th>Projets</th><th class="num">Créée</th><th class="num">Dernier usage</th><th></th></tr></thead>
+                <thead><tr><th>{{ 'form.project.name'|trans }}</th><th>{{ 'llm.key'|trans }}</th><th>{{ 'nav.projects'|trans }}</th><th class="num">{{ 'keys.created_at'|trans }}</th><th class="num">{{ 'keys.last_used'|trans }}</th><th></th></tr></thead>
                 <tbody>
                     {% for key in keys %}
                         <tr class="{{ key.revoked ? 'row--archived' }}">
                             <td>{{ key.name }}</td>
                             <td class="mono">{{ key.prefix }}…</td>
-                            <td>{{ key.projects is empty ? 'Tous' : key.projects|map(project => project.name)|join(', ') }}</td>
-                            <td class="num">{{ key.createdAt|date('d/m/Y') }}</td>
-                            <td class="num">{{ key.lastUsedAt ? key.lastUsedAt|date('d/m/Y H:i') : '-' }}</td>
+                            <td>{{ key.projects is empty ? 'keys.all'|trans : key.projects|map(project => project.name)|join(', ') }}</td>
+                            <td class="num">{{ key.createdAt|format_date('short') }}</td>
+                            <td class="num">{{ key.lastUsedAt ? key.lastUsedAt|format_datetime('short', 'short') : '-' }}</td>
                             <td class="num">
                                 {% if key.revoked %}
-                                    <span class="tag">révoquée</span>
+                                    <span class="tag">{{ 'keys.revoked'|trans }}</span>
                                 {% else %}
                                     <form method="post" action="{{ path('api_key_revoke', {id: key.id}) }}">
                                         <input type="hidden" name="_token" value="{{ csrf_token('api-key-revoke-' ~ key.id) }}">
-                                        <button class="button button--danger" type="submit" data-confirm="Révoquer la clé {{ key.name }} ?" data-confirm-label="Révoquer la clé">Révoquer</button>
+                                        <button class="button button--danger" type="submit" data-confirm="{{ 'keys.revoke_confirm'|trans({name: key.name}) }}" data-confirm-label="{{ 'keys.revoke_key'|trans }}">{{ 'keys.revoke'|trans }}</button>
                                     </form>
                                 {% endif %}
                             </td>

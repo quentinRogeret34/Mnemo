@@ -18,21 +18,20 @@ final class MemoryFormType extends AbstractType
     {
         $builder
             ->add('text', TextareaType::class, [
-                'label' => 'Mémoire',
-                'attr' => ['placeholder' => 'Un fait court et autonome, ex. : « Les seuils de détection sont centralisés dans catalog.ts. »', 'rows' => 2],
-                'constraints' => [new NotBlank(message: 'Écrire la mémoire.'), new Length(max: 1000, maxMessage: '1000 caractères maximum.')],
+                'label' => 'form.memory.text',
+                'attr' => ['placeholder' => 'form.memory.text_placeholder', 'rows' => 2],
+                'constraints' => [new NotBlank(message: 'memory.text.blank'), new Length(max: 1000, maxMessage: 'memory.text.too_long')],
             ])
             ->add('type', EnumType::class, [
-                'label' => 'Type',
+                'label' => 'form.memory.type',
                 'class' => MemoryType::class,
-                'choice_label' => static fn (MemoryType $type): string => $type->label(),
             ])
-            ->add('visibility', ChoiceType::class, ['label' => 'Visibilité', 'choices' => $options['visibilities']]);
+            ->add('visibility', ChoiceType::class, ['label' => 'form.memory.visibility', 'choices' => $options['visibilities']]);
     }
 
     public function configureOptions(OptionsResolver $resolver): void
     {
-        $resolver->setDefault('visibilities', ['Visible par le projet' => 'project']);
+        $resolver->setDefault('visibilities', ['memory.visibility.project' => 'project']);
         $resolver->setAllowedTypes('visibilities', 'array');
     }
 }

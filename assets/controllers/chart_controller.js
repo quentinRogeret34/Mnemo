@@ -40,10 +40,10 @@ export default class extends Controller {
     label(point, long = false) {
         const date = new Date(point.at);
         if (this.hourlyValue) {
-            return date.toLocaleString('fr-FR', long ? { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' } : { hour: '2-digit', minute: '2-digit' });
+            return date.toLocaleString(document.documentElement.lang, long ? { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' } : { hour: '2-digit', minute: '2-digit' });
         }
 
-        return date.toLocaleDateString('fr-FR', long ? { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' } : { day: '2-digit', month: 'short' });
+        return date.toLocaleDateString(document.documentElement.lang, long ? { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' } : { day: '2-digit', month: 'short' });
     }
 
     draw() {
@@ -65,7 +65,7 @@ export default class extends Controller {
             const value = (max / 4) * tick;
             svg.append(
                 node('line', { class: tick === 0 ? 'chart__axis' : 'chart__grid', x1: PAD.left, x2: width - PAD.right, y1: y(value), y2: y(value) }),
-                node('text', { class: 'chart__tick', x: PAD.left - 8, y: y(value) + 4, 'text-anchor': 'end' }, new Intl.NumberFormat('fr-FR', { notation: max >= 10000 ? 'compact' : 'standard' }).format(value)),
+                node('text', { class: 'chart__tick', x: PAD.left - 8, y: y(value) + 4, 'text-anchor': 'end' }, new Intl.NumberFormat(document.documentElement.lang, { notation: max >= 10000 ? 'compact' : 'standard' }).format(value)),
             );
         }
 
@@ -108,7 +108,7 @@ export default class extends Controller {
         this.dot.setAttribute('visibility', 'visible');
 
         this.tooltipTarget.replaceChildren(
-            Object.assign(document.createElement('strong'), { textContent: `${new Intl.NumberFormat('fr-FR').format(points[index].value)} ${this.unitValue}` }),
+            Object.assign(document.createElement('strong'), { textContent: `${new Intl.NumberFormat(document.documentElement.lang).format(points[index].value)} ${this.unitValue}` }),
             Object.assign(document.createElement('span'), { textContent: this.label(points[index], true) }),
         );
         this.tooltipTarget.hidden = false;

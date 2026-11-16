@@ -2,19 +2,18 @@
 
 namespace App\Enum;
 
-enum AgentAssetKind: string
+use Symfony\Contracts\Translation\TranslatableInterface;
+use Symfony\Contracts\Translation\TranslatorInterface;
+
+enum AgentAssetKind: string implements TranslatableInterface
 {
     case Skill = 'skill';
     case Command = 'command';
     case Agent = 'agent';
 
-    public function label(): string
+    public function trans(TranslatorInterface $translator, ?string $locale = null): string
     {
-        return match ($this) {
-            self::Skill => 'Skill',
-            self::Command => 'Commande',
-            self::Agent => 'Sous-agent',
-        };
+        return $translator->trans('enum.agent_asset_kind.'.$this->value, locale: $locale);
     }
 
     /**

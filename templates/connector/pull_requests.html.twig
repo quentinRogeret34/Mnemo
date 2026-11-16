@@ -5,7 +5,7 @@
 {% block title %}Pull requests · {{ connector.name }}{% endblock %}
 
 {% block crumbs %}
-    <a href="{{ path('connector_index') }}">Connexions</a>
+    <a href="{{ path('connector_index') }}">{{ 'nav.connectors'|trans }}</a>
     <span class="crumbs__sep" aria-hidden="true">/</span>
     <a href="{{ path('connector_show', {id: connector.id}) }}">{{ connector.name }}</a>
     <span class="crumbs__sep" aria-hidden="true">/</span>
@@ -14,13 +14,13 @@
 
 {% block body %}
     <div class="view-head">
-        <h1><twig:ux:icon name="lucide:git-pull-request" />Pull requests ouvertes</h1>
+        <h1><twig:ux:icon name="lucide:git-pull-request" />{{ 'connector.pr.open'|trans }}</h1>
         {% if error is null %}<span class="view-head__meta">{{ pull_requests|length }}</span>{% endif %}
     </div>
-    <p class="page__lede">Le bot relit la pull request avec le graphe du projet, puis publie son commentaire et le check <span class="mono">graphe/rules</span> sur GitHub, comme à chaque push.</p>
+    <p class="page__lede">{{ 'connector.pr.lede'|trans({check: '<span class="mono">graphe/rules</span>'})|raw }}</p>
 
     {% if error %}
-        <p class="form-errors block" role="alert">Lecture des pull requests impossible : {{ error }}</p>
+        <p class="form-errors block" role="alert">{{ 'connector.pr.error'|trans({error: error}) }}</p>
     {% else %}
         <ul class="list">
             {% for pull_request in pull_requests %}
@@ -28,12 +28,12 @@
                     <span class="code-chip">#{{ pull_request.number }}</span>
                     <span class="row__title">
                         <a href="{{ pull_request.url }}" rel="noopener">{{ pull_request.title }}</a>
-                        <span class="row__sub">{{ pull_request.author }}{{ pull_request.draft ? ' · brouillon' }} · mise à jour {{ pull_request.updated_at|date('d/m/Y H:i') }}</span>
+                        <span class="row__sub">{{ pull_request.author }}{{ pull_request.draft ? ' · ' ~ 'connector.pr.draft'|trans }} · {{ 'connector.pr.updated'|trans({date: pull_request.updated_at|format_datetime('short', 'short')}) }}</span>
                     </span>
-                    <form method="post" action="{{ path('connector_pull_request_review', {id: connector.id, number: pull_request.number}) }}"><input type="hidden" name="_token" value="{{ token }}"><button class="button" type="submit"><twig:ux:icon name="lucide:clipboard-check" />Lancer la revue</button></form>
+                    <form method="post" action="{{ path('connector_pull_request_review', {id: connector.id, number: pull_request.number}) }}"><input type="hidden" name="_token" value="{{ token }}"><button class="button" type="submit"><twig:ux:icon name="lucide:clipboard-check" />{{ 'connector.pr.review'|trans }}</button></form>
                 </li>
             {% else %}
-                <li class="block__empty">Aucune pull request ouverte.</li>
+                <li class="block__empty">{{ 'connector.pr.none'|trans }}</li>
             {% endfor %}
         </ul>
     {% endif %}

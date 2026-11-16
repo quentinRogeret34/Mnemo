@@ -2,7 +2,10 @@
 
 namespace App\Enum;
 
-enum ConnectorMode: string
+use Symfony\Contracts\Translation\TranslatableInterface;
+use Symfony\Contracts\Translation\TranslatorInterface;
+
+enum ConnectorMode: string implements TranslatableInterface
 {
     case Resources = 'resources';
     case ToolDocument = 'tool_document';
@@ -10,15 +13,9 @@ enum ConnectorMode: string
     case GitHub = 'github';
     case GitLab = 'gitlab';
 
-    public function label(): string
+    public function trans(TranslatorInterface $translator, ?string $locale = null): string
     {
-        return match ($this) {
-            self::Resources => 'Ressources → documents',
-            self::ToolDocument => 'Outil → un document',
-            self::ToolMemories => 'Outil → mémoires',
-            self::GitHub => 'GitHub → code, commits, PR, issues',
-            self::GitLab => 'GitLab → code, commits, MR, issues',
-        };
+        return $translator->trans('enum.connector_mode.'.$this->value, locale: $locale);
     }
 
     /**

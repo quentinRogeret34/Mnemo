@@ -1,30 +1,30 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Documents · {{ project.name }}{% endblock %}
+{% block title %}{{ 'nav.documents'|trans }} · {{ project.name }}{% endblock %}
 
 {% block crumbs %}
     <a href="{{ path('project_show', {slug: project.slug}) }}">{{ project.name }}</a>
     <span class="crumbs__sep" aria-hidden="true">/</span>
-    <span class="crumbs__current">Documents</span>
+    <span class="crumbs__current">{{ 'nav.documents'|trans }}</span>
 {% endblock %}
 
 {% block header_actions %}
-    <a class="button" href="{{ path('document_index') }}">Tous les dossiers</a>
+    <a class="button" href="{{ path('document_index') }}">{{ 'document.all_folders'|trans }}</a>
 {% endblock %}
 
 {% block body %}
     <div class="view-head">
-        <h1><twig:ux:icon name="lucide:file-text" />Documents</h1>
-        <span class="view-head__meta">{{ documents.total }} rattachés à {{ project.name }}</span>
+        <h1><twig:ux:icon name="lucide:file-text" />{{ 'nav.documents'|trans }}</h1>
+        <span class="view-head__meta">{{ 'document.count_project'|trans({count: documents.total, name: project.name}) }}</span>
     </div>
 
-    {{ include('document/_upload.html.twig', {upload: upload, hint: '.md, .pdf, .docx · 32 Mo max · rattachés à ' ~ project.name}) }}
+    {{ include('document/_upload.html.twig', {upload: upload, hint: 'document.hint_project'|trans({name: project.name})}) }}
 
     {% if documents.items is empty %}
-        <twig:EmptyState title="Aucun document rattaché à ce projet" text="Déposer des fichiers ci-dessus, ou rattacher un document existant depuis sa page.">
+        <twig:EmptyState :title="'document.project_empty'|trans" :text="'document.project_empty_text'|trans">
             <twig:block name="icon"><twig:ux:icon name="lucide:file-text" /></twig:block>
             <details class="empty-state__more">
-                <summary>Charger la démo</summary>
+                <summary>{{ 'document.load_demo'|trans }}</summary>
                 <pre><code>bin/console app:demo {{ project.slug }}</code></pre>
             </details>
         </twig:EmptyState>

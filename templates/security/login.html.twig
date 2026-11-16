@@ -1,31 +1,31 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="{{ app.request.locale }}">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         {{ include('_appearance_head.html.twig') }}
-        <title>Connexion · Graphe projet</title>
+        <title>{{ 'login.title'|trans }} · {{ 'app.name'|trans }}</title>
         {{ importmap('app') }}
     </head>
     <body>
         <main class="login">
             <div class="login__card">
-                <span class="workspace"><span class="workspace__mark" aria-hidden="true">G</span>Graphe projet</span>
-                <h1>Connexion</h1>
+                <span class="workspace"><span class="workspace__mark" aria-hidden="true">G</span>{{ 'app.name'|trans }}</span>
+                <h1>{{ 'login.title'|trans }}</h1>
                 {% if error %}<p class="flash flash--error" role="alert">{{ error.messageKey|trans(error.messageData, 'security') }}</p>{% endif %}
                 {% for key, label in providers %}
-                    <a class="button login__provider" href="{{ path('oauth_connect', {provider: key}) }}">{% if key == 'github' %}<twig:ux:icon name="simple-icons:github" />{% endif %}Continuer avec {{ label }}</a>
+                    <a class="button login__provider" href="{{ path('oauth_connect', {provider: key}) }}">{% if key == 'github' %}<twig:ux:icon name="simple-icons:github" />{% endif %}{{ 'login.continue_with'|trans({provider: label}) }}</a>
                 {% endfor %}
-                {% if providers is empty %}<p class="row__sub">Aucun fournisseur de connexion n'est configuré (variables <span class="mono">OAUTH_*</span>).</p>{% endif %}
+                {% if providers is empty %}<p class="row__sub">{{ 'login.no_provider'|trans({variables: '<span class="mono">OAUTH_*</span>'})|raw }}</p>{% endif %}
                 <details class="login__password" {% if error and last_username %}open{% endif %}>
-                    <summary class="row__sub">Compte de secours (mot de passe)</summary>
+                    <summary class="row__sub">{{ 'login.fallback'|trans }}</summary>
             <form method="post" action="{{ path('login') }}">
-                <label for="username">Identifiant</label>
+                <label for="username">{{ 'login.username'|trans }}</label>
                 <input class="input" id="username" type="text" name="_username" value="{{ last_username }}" autocomplete="username" required autofocus>
-                <label for="password">Mot de passe</label>
+                <label for="password">{{ 'login.password'|trans }}</label>
                 <input class="input" id="password" type="password" name="_password" autocomplete="current-password" required>
                 <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
-                <button class="button button--primary" type="submit">Se connecter</button>
+                <button class="button button--primary" type="submit">{{ 'login.submit'|trans }}</button>
             </form>
                 </details>
             </div>

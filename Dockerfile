@@ -22,6 +22,7 @@ ENV APP_ENV=prod
 COPY . .
 
 RUN composer install --no-dev --optimize-autoloader --no-interaction \
+    && php bin/console cache:warmup \
     && php bin/console asset-map:compile \
     && mkdir -p var/storage var/repos var/lock
 

@@ -55,12 +55,12 @@ final class ProjectChatTest extends WebTestCase
 
         self::assertSame(['answer' => 'La remise est plafonnée à 10 % (RG-042).', 'actions' => []], $reply);
         self::assertCount(2, $this->requests);
-        self::assertStringContainsString('assistant du projet « Demo project »', $this->requests[0]);
+        self::assertStringContainsString('assistant of the \\"Demo project\\" project', $this->requests[0]);
         self::assertStringContainsString('Bonjour.', $this->requests[0]);
         self::assertStringContainsString('"role":"tool"', $this->requests[1]);
         self::assertStringContainsString('Une remise ne d', $this->requests[1]);
         // Mistral refuses a tool without "parameters": list_rules takes no argument.
-        self::assertStringContainsString('"name":"list_rules","description":"Liste les règles métier du projet : code, titre, énoncé et statut (validated ou to_review).","parameters":{"type":"object","properties":{}}', $this->tools[0]);
+        self::assertStringContainsString('"name":"list_rules","description":"Lists the business rules of the project: code, title, statement and status (validated or to_review).","parameters":{"type":"object","properties":{}}', $this->tools[0]);
         self::assertSame(substr_count($this->tools[0], '"name":'), substr_count($this->tools[0], '"parameters":'));
     }
 
@@ -103,7 +103,8 @@ final class ProjectChatTest extends WebTestCase
         self::assertSame('NONE', $tools->addMemory('Le plafond des remises se règle dans catalog.ts.', 'decision')['event']);
         self::assertArrayHasKey('error', $tools->addMemory('Texte', 'inconnu'));
         self::assertCount(1, $tools->actions());
-        self::assertStringStartsWith('Mémoire #', $tools->actions()[0]['label']);
+        self::assertSame('chat.action.memory', $tools->actions()[0]['label']);
+        self::assertArrayHasKey('id', $tools->actions()[0]['parameters']);
     }
 
     public function testThePageOffersTheChat(): void

@@ -1,4 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
+import { trans } from '../translator.js';
 import cytoscape from 'cytoscape';
 import { resolveColor } from '../color.js';
 
@@ -26,7 +27,7 @@ export default class extends Controller {
         const { nodes, edges } = this.galaxy;
         this.graph?.destroy();
         this.emptyTarget.hidden = nodes.length > 0;
-        this.countTarget.textContent = `${nodes.filter((node) => node.kind === 'memory').length} mémoires · ${nodes.filter((node) => node.kind !== 'memory').length} sujets`;
+        this.countTarget.textContent = trans('js.galaxy.count', { memories: nodes.filter((node) => node.kind === 'memory').length, subjects: nodes.filter((node) => node.kind !== 'memory').length });
         if (nodes.length === 0) {
             return;
         }
@@ -85,7 +86,7 @@ export default class extends Controller {
         this.graph.on('mouseout', 'node', () => {
             this.graph.elements().removeClass('dim focus');
             this.canvasTarget.style.cursor = '';
-            this.detailTarget.textContent = 'Survoler un point pour lire la mémoire ou le sujet ; cliquer pour ouvrir sa fiche.';
+            this.detailTarget.textContent = trans('js.galaxy.hint');
         });
         this.graph.on('tap', 'node', (event) => {
             if (event.target.data('url')) {

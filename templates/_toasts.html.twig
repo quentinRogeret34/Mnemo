@@ -1,9 +1,9 @@
-<div class="toasts" role="region" aria-label="Notifications" data-controller="toast" data-action="mouseenter->toast#pause mouseleave->toast#resume focusin->toast#pause focusout->toast#resume">
+<div class="toasts" role="region" aria-label="{{ 'toast.region'|trans }}" data-controller="toast" data-action="mouseenter->toast#pause mouseleave->toast#resume focusin->toast#pause focusout->toast#resume">
     {% for type, messages in app.flashes(['success', 'error']) %}
         {% for message in messages %}
             <div class="flash{{ type == 'error' ? ' flash--error' }}" role="{{ type == 'error' ? 'alert' : 'status' }}" data-toast-target="item">
-                <span class="flash__text">{{ message }}</span>
-                <button class="flash__close" type="button" aria-label="Fermer la notification" data-action="toast#close" hidden><twig:ux:icon name="lucide:x" /></button>
+                <span class="flash__text">{{ message|trans }}</span>
+                <button class="flash__close" type="button" aria-label="{{ 'toast.close'|trans }}" data-action="toast#close" hidden><twig:ux:icon name="lucide:x" /></button>
             </div>
         {% endfor %}
     {% endfor %}

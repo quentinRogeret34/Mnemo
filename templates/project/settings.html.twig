@@ -1,16 +1,16 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Réglages · {{ project.name }}{% endblock %}
+{% block title %}{{ 'nav.settings'|trans }} · {{ project.name }}{% endblock %}
 
 {% block crumbs %}
     <a href="{{ path('project_show', {slug: project.slug}) }}">{{ project.name }}</a>
     <span class="crumbs__sep" aria-hidden="true">/</span>
-    <span class="crumbs__current">Réglages</span>
+    <span class="crumbs__current">{{ 'nav.settings'|trans }}</span>
 {% endblock %}
 
 {% block body %}
     <div class="view-head">
-        <h1><twig:ux:icon name="lucide:settings" />Réglages</h1>
+        <h1><twig:ux:icon name="lucide:settings" />{{ 'nav.settings'|trans }}</h1>
         <span class="view-head__meta mono">{{ project.slug }}</span>
     </div>
 
@@ -18,15 +18,15 @@
     {% if project.archived %}
         <form class="archived-banner" role="status" method="post" action="{{ path('project_restore', {slug: project.slug}) }}">
             <input type="hidden" name="_token" value="{{ token }}">
-            <strong>Projet archivé</strong>
-            <span class="row__sub">Absent des listes, ignoré par les agents, connecteurs à l'arrêt. Ses pages restent lisibles par leur adresse.</span>
-            <button class="button" type="submit"><twig:ux:icon name="lucide:archive-restore" />Restaurer le projet</button>
+            <strong>{{ 'project.settings.archived'|trans }}</strong>
+            <span class="row__sub">{{ 'project.settings.archived_text'|trans }}</span>
+            <button class="button" type="submit"><twig:ux:icon name="lucide:archive-restore" />{{ 'project.settings.restore'|trans }}</button>
         </form>
     {% endif %}
 
     {{ form_start(form, {attr: {class: 'form-stack project-settings', novalidate: 'novalidate'}}) }}
         <fieldset>
-            <legend>Projet</legend>
+            <legend>{{ 'project.settings.project'|trans }}</legend>
             {{ form_errors(form) }}
             {{ form_row(form.name) }}
             {{ form_row(form.repository) }}
@@ -34,29 +34,29 @@
             {% if form.groups is defined %}{{ include('project/_groups.html.twig', {field: form.groups}) }}{% endif %}
         </fieldset>
         <fieldset>
-            <legend>Modèles de langage</legend>
+            <legend>{{ 'nav.llm'|trans }}</legend>
             {{ form_row(form.chatModel) }}
             {{ form_row(form.embeddingModel) }}
             <div class="upload__actions">
-                <button class="button button--primary" type="submit">Enregistrer les réglages</button>
+                <button class="button button--primary" type="submit">{{ 'common.save_settings'|trans }}</button>
             </div>
         </fieldset>
     {{ form_end(form) }}
 
     <section class="block" aria-labelledby="connectors-title">
         <div class="block__head">
-            <h2 id="connectors-title">Connecteurs</h2>
+            <h2 id="connectors-title">{{ 'project.settings.connectors'|trans }}</h2>
             <span class="view-head__meta">{{ connectors|length }}</span>
         </div>
         {% if connectors is empty %}
-            <p class="block__empty">Aucun connecteur n'alimente ce projet.</p>
+            <p class="block__empty">{{ 'project.settings.no_connector'|trans }}</p>
         {% else %}
             <ul class="list">
                 {% for connector in connectors %}
                     <li>
                         <{{ scoped ? 'div' : 'a' }} class="row" {% if not scoped %}href="{{ path('connector_show', {id: connector.id}) }}"{% endif %}>
                             <span class="code-chip">{{ connector.mode.forge ? connector.mode.value|upper : connector.transport.value|upper }}</span>
-                            <span class="row__title"><span>{{ connector.name }}</span><span class="row__sub">{{ connector.mode.label }}</span></span>
+                            <span class="row__title"><span>{{ connector.name }}</span><span class="row__sub">{{ connector.mode|trans }}</span></span>
                             <span class="row__meta">{{ include('connector/_status.html.twig') }}</span>
                         </{{ scoped ? 'div' : 'a' }}>
                     </li>
@@ -64,31 +64,31 @@
             </ul>
         {% endif %}
         {% if github_oauth %}
-            <p class="project-settings__action"><a class="button" href="{{ path('github_repositories', {project: project.slug}) }}"><twig:ux:icon name="simple-icons:github" />Brancher des dépôts GitHub</a></p>
+            <p class="project-settings__action"><a class="button" href="{{ path('github_repositories', {project: project.slug}) }}"><twig:ux:icon name="simple-icons:github" />{{ 'palette.github'|trans }}</a></p>
         {% endif %}
     </section>
 
-    <section class="danger-zone" id="danger" aria-label="Archiver ou supprimer le projet">
+    <section class="danger-zone" id="danger" aria-label="{{ 'project.settings.danger'|trans }}">
         {% if not project.archived %}
             <form method="post" action="{{ path('project_archive', {slug: project.slug}) }}">
                 <input type="hidden" name="_token" value="{{ token }}">
-                <button class="button" type="submit" data-confirm="Archiver {{ project.name }} ? Les agents ne le liront plus et ses connecteurs ne se synchroniseront plus." data-confirm-label="Archiver"><twig:ux:icon name="lucide:archive" />Archiver le projet</button>
+                <button class="button" type="submit" data-confirm="{{ 'project.archive_confirm'|trans({name: project.name}) }}" data-confirm-label="{{ 'project.archive'|trans }}"><twig:ux:icon name="lucide:archive" />{{ 'project.settings.archive'|trans }}</button>
             </form>
         {% endif %}
-        <button class="button button--danger" type="button" commandfor="project-delete" command="show-modal"><twig:ux:icon name="lucide:trash-2" />Supprimer le projet</button>
-        <span class="row__sub">L'archivage se défait. La suppression est irréversible.</span>
+        <button class="button button--danger" type="button" commandfor="project-delete" command="show-modal"><twig:ux:icon name="lucide:trash-2" />{{ 'project.settings.delete'|trans }}</button>
+        <span class="row__sub">{{ 'project.settings.danger_text'|trans }}</span>
     </section>
 
     <dialog class="dialog" id="project-delete" closedby="any" aria-labelledby="project-delete-title">
-        <h2 class="dialog__title" id="project-delete-title">Supprimer {{ project.name }} ?</h2>
-        <p class="dialog__text">Son graphe de code, ses règles métier et ses {{ connectors|length }} connecteur(s), clones compris, sont supprimés. Ses documents et ses mémoires restent dans l'espace, détachés du projet. Irréversible.</p>
+        <h2 class="dialog__title" id="project-delete-title">{{ 'project.settings.delete_title'|trans({name: project.name}) }}</h2>
+        <p class="dialog__text">{{ 'project.settings.delete_text'|trans({count: connectors|length}) }}</p>
         <form class="key-form project-delete" method="post" action="{{ path('project_delete', {slug: project.slug}) }}">
             <input type="hidden" name="_token" value="{{ token }}">
-            <label for="project-delete-confirm">Retaper <code class="mono">{{ project.slug }}</code> pour confirmer</label>
+            <label for="project-delete-confirm">{{ 'project.settings.retype'|trans({slug: '<code class="mono">' ~ project.slug|e ~ '</code>'})|raw }}</label>
             <input class="input" id="project-delete-confirm" type="text" name="confirm" required pattern="{{ project.slug }}" autocomplete="off" autocapitalize="off" spellcheck="false">
             <div class="dialog__actions">
-                <button class="button" type="button" commandfor="project-delete" command="close" autofocus>Annuler</button>
-                <button class="button button--danger" type="submit"><twig:ux:icon name="lucide:trash-2" />Supprimer définitivement</button>
+                <button class="button" type="button" commandfor="project-delete" command="close" autofocus>{{ 'common.cancel'|trans }}</button>
+                <button class="button button--danger" type="submit"><twig:ux:icon name="lucide:trash-2" />{{ 'project.settings.delete_forever'|trans }}</button>
             </div>
         </form>
     </dialog>

@@ -1,9 +1,9 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}{{ current ? current.name ~ ' · ' }}Documents{% endblock %}
+{% block title %}{{ current ? current.name ~ ' · ' }}{{ 'nav.documents'|trans }}{% endblock %}
 
 {% block crumbs %}
-    {% if current %}<a href="{{ path('document_index') }}">Documents</a>{% else %}<span class="crumbs__current">Documents</span>{% endif %}
+    {% if current %}<a href="{{ path('document_index') }}">{{ 'nav.documents'|trans }}</a>{% else %}<span class="crumbs__current">{{ 'nav.documents'|trans }}</span>{% endif %}
     {% for folder in ancestors %}
         <span class="crumbs__sep" aria-hidden="true">/</span>
         {% if loop.last %}<span class="crumbs__current">{{ folder.name }}</span>{% else %}<a href="{{ path('document_index', {folder: folder.id}) }}">{{ folder.name }}</a>{% endif %}
@@ -12,10 +12,10 @@
 
 {% block body %}
     <div class="explorer">
-        <nav class="tree" aria-label="Dossiers">
+        <nav class="tree" aria-label="{{ 'document.folders'|trans }}">
             <a class="tree__item" href="{{ path('document_index') }}" {% if current is null %}aria-current="page"{% endif %}>
                 <twig:ux:icon name="lucide:folder" class="icon nav-item__icon" />
-                <span class="nav-item__label">Tous les dossiers</span>
+                <span class="nav-item__label">{{ 'document.all_folders'|trans }}</span>
             </a>
             {% for folder in folders %}
                 <a class="tree__item" style="--depth: {{ folder.depth + 1 }}" href="{{ path('document_index', {folder: folder.id}) }}" {% if current and current.id == folder.id %}aria-current="page"{% endif %}>
@@ -28,8 +28,8 @@
 
         <div class="explorer__content">
             <div class="view-head">
-                <h1><twig:ux:icon name="lucide:folder-open" />{{ current ? current.name : 'Documents' }}</h1>
-                <span class="view-head__meta">{{ documents.total }}{{ current is null ? ' à la racine' }}</span>
+                <h1><twig:ux:icon name="lucide:folder-open" />{{ current ? current.name : 'nav.documents'|trans }}</h1>
+                <span class="view-head__meta">{{ current is null ? 'document.at_root'|trans({count: documents.total}) : documents.total }}</span>
             </div>
 
             {% set children = folders|filter(folder => folder.parent_id == (current ? current.id : null)) %}
@@ -40,7 +40,7 @@
                             <a class="row" href="{{ path('document_index', {folder: folder.id}) }}">
                                 <twig:ux:icon name="lucide:folder" class="icon nav-item__icon" />
                                 <span class="row__title"><span>{{ folder.name }}</span></span>
-                                <span class="row__meta">{{ folder.documents }} doc.</span>
+                                <span class="row__meta">{{ 'document.docs_count'|trans({count: folder.documents}) }}</span>
                             </a>
                         </li>
                     {% endfor %}
@@ -51,16 +51,16 @@
                 {{ include('document/_rows.html.twig', {documents: documents.items, show_folder: false, show_projects: true}) }}
                 {{ include('_pager.html.twig', {page: documents}) }}
             {% elseif children is empty %}
-                <p class="block__empty">Dossier vide. Déposer des fichiers ou créer un sous-dossier.</p>
+                <p class="block__empty">{{ 'document.empty_folder'|trans }}</p>
             {% endif %}
 
             <div class="explorer__tools">
-                {{ include('document/_upload.html.twig', {upload: upload, hint: '.md, .pdf, .docx · 32 Mo max · ajoutés dans ' ~ (current ? '« ' ~ current.name ~ ' »' : 'la racine')}) }}
+                {{ include('document/_upload.html.twig', {upload: upload, hint: current ? 'document.hint_folder'|trans({name: current.name}) : 'document.hint_root'|trans}) }}
 
                 {{ form_start(folder_form, {attr: {class: 'inline-form', novalidate: 'novalidate'}}) }}
                     {{ form_label(folder_form.name, null, {label_attr: {class: 'visually-hidden'}}) }}
                     {{ form_widget(folder_form.name, {attr: {class: 'input'}}) }}
-                    <button class="button" type="submit"><twig:ux:icon name="lucide:plus" />Créer le dossier</button>
+                    <button class="button" type="submit"><twig:ux:icon name="lucide:plus" />{{ 'document.create_folder'|trans }}</button>
                     {% for error in folder_form.name.vars.errors %}<p class="form-errors">{{ error.message }}</p>{% endfor %}
                 {{ form_end(folder_form) }}
             </div>

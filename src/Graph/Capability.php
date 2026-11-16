@@ -2,12 +2,15 @@
 
 namespace App\Graph;
 
+use Symfony\Contracts\Translation\TranslatableInterface;
+use Symfony\Contracts\Translation\TranslatorInterface;
+
 /**
  * What a project does, detected from concrete facts in its file paths, after AIDD's capability signals
  * (github.com/ai-driven-dev/framework, MIT). The code graph holds parsed code files only: manifests and most
  * configuration files are not there, so a capability visible only in them is missed.
  */
-enum Capability: string
+enum Capability: string implements TranslatableInterface
 {
     case Api = 'api';
     case Ui = 'ui';
@@ -38,6 +41,11 @@ enum Capability: string
             self::Desktop => 'Desktop',
             self::Data => 'Données',
         };
+    }
+
+    public function trans(TranslatorInterface $translator, ?string $locale = null): string
+    {
+        return $translator->trans('enum.capability.'.$this->value, locale: $locale);
     }
 
     /**

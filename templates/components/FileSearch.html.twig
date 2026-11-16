@@ -1,8 +1,8 @@
 <div{{ attributes.defaults({class: 'search'}) }}>
     <label class="search__field">
-        <span class="visually-hidden">Rechercher un fichier ou un symbole</span>
+        <span class="visually-hidden">{{ 'file.search_label'|trans }}</span>
         <input class="search__input" type="search" value="{{ query }}" data-model="debounce(150)|query" data-search-input
-               placeholder="Chercher un fichier ou un symbole" autocomplete="off" spellcheck="false" autofocus>
+               placeholder="{{ 'file.search'|trans }}" autocomplete="off" spellcheck="false" autofocus>
         <kbd class="kbd" aria-hidden="true">/</kbd>
     </label>
 
@@ -10,12 +10,12 @@
     <div class="search__results" data-loading="addClass(is-loading)">
         <p class="search__meta" aria-live="polite">
             {% if query|trim is empty %}
-                <span>{{ results.total|number_format(0, ',', ' ') }} fichiers</span>
+                <span>{{ 'project.index.files'|trans({count: results.total}) }}</span>
             {% else %}
-                <span>{{ results.total|number_format(0, ',', ' ') }} {{ results.total > 1 ? 'résultats' : 'résultat' }} pour <code>{{ query|trim }}</code></span>
+                <span>{{ 'file.results'|trans({count: results.total, query: '<code>' ~ query|trim|e ~ '</code>'})|raw }}</span>
             {% endif %}
             {% if results.total > results.files|length %}
-                <span>{{ results.files|length }} premiers affichés</span>
+                <span>{{ 'file.first_shown'|trans({count: results.files|length}) }}</span>
             {% endif %}
         </p>
 
@@ -29,7 +29,7 @@
                                 {%- if parts|length > 1 %}<span class="file-row__dir">{{ parts|slice(0, -1)|join('/') }}/</span>{% endif -%}
                                 <span class="file-row__name">{{ parts|last }}</span>
                             </span>
-                            <span class="file-row__count num">{{ file.symbols }} symb.</span>
+                            <span class="file-row__count num">{{ 'file.symbols_short'|trans({count: file.symbols}) }}</span>
                             {% if file.matched_symbols %}<span class="file-row__match">{{ file.matched_symbols }}</span>{% endif %}
                         </a>
                     </li>

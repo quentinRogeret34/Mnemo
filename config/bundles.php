@@ -15,4 +15,5 @@ return [
     Symfony\Bundle\SecurityBundle\SecurityBundle::class => ['all' => true],
     Symfony\AI\McpBundle\McpBundle::class => ['all' => true],
     Symfony\UX\Icons\UXIconsBundle::class => ['all' => true],
+    Symfony\UX\Translator\UxTranslatorBundle::class => ['all' => true],
 ];

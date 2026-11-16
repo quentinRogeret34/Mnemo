@@ -5,13 +5,13 @@
                 <span class="format format--{{ document.format }}">{{ document.format }}</span>
                 <span class="row__title">
                     <span>{{ document.title }}</span>
-                    {% if document.demo %}<span class="tag tag--demo">Démo</span>{% endif %}
+                    {% if document.demo %}<span class="tag tag--demo">{{ 'common.demo'|trans }}</span>{% endif %}
                     {% if show_folder and document.folder %}<span class="row__sub">{{ document.folder }}</span>{% endif %}
                 </span>
                 <span class="row__meta">
-                    {% if show_projects %}<span class="row__projects">{{ document.projects ?? 'aucun projet' }}</span>{% endif %}
-                    <span>{{ document.rules }} {{ document.rules > 1 ? 'règles' : 'règle' }}</span>
-                    <span>{{ document.code_links }} code</span>
+                    {% if show_projects %}<span class="row__projects">{{ document.projects ?? 'document.no_project'|trans }}</span>{% endif %}
+                    <span>{{ 'document.rules_count'|trans({count: document.rules}) }}</span>
+                    <span>{{ 'document.code_count'|trans({count: document.code_links}) }}</span>
                 </span>
             </a>
         </li>

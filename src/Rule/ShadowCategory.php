@@ -2,10 +2,13 @@
 
 namespace App\Rule;
 
+use Symfony\Contracts\Translation\TranslatableInterface;
+use Symfony\Contracts\Translation\TranslatorInterface;
+
 /**
  * Locked gap categories of AIDD's shadow-areas skill (github.com/ai-driven-dev/framework, MIT).
  */
-enum ShadowCategory: string
+enum ShadowCategory: string implements TranslatableInterface
 {
     case UnstatedAssumption = 'unstated_assumption';
     case AmbiguousTerm = 'ambiguous_term';
@@ -15,17 +18,9 @@ enum ShadowCategory: string
     case MissingAcceptanceCriterion = 'missing_acceptance_criterion';
     case MissingDependency = 'missing_dependency';
 
-    public function label(): string
+    public function trans(TranslatorInterface $translator, ?string $locale = null): string
     {
-        return match ($this) {
-            self::UnstatedAssumption => 'Hypothèse implicite',
-            self::AmbiguousTerm => 'Terme ambigu',
-            self::MissingEdgeCase => 'Cas limite manquant',
-            self::MissingActor => 'Acteur manquant',
-            self::MissingFailureMode => 'Cas d\'échec manquant',
-            self::MissingAcceptanceCriterion => 'Critère d\'acceptation manquant',
-            self::MissingDependency => 'Dépendance manquante',
-        };
+        return $translator->trans('enum.shadow_category.'.$this->value, locale: $locale);
     }
 
     public function definition(): string

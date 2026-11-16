@@ -23,7 +23,7 @@ class Connector
     private ?int $id = null;
 
     #[ORM\Column(length: 100)]
-    #[Assert\NotBlank(message: 'Donner un nom au connecteur.')]
+    #[Assert\NotBlank(message: 'connector.name.blank')]
     #[Assert\Length(max: 100)]
     private string $name = '';
 
@@ -34,7 +34,7 @@ class Connector
      * URL of an HTTP server, or command line of a STDIO server.
      */
     #[ORM\Column(type: Types::TEXT)]
-    #[Assert\NotBlank(message: 'Indiquer l\'URL ou la commande du serveur.')]
+    #[Assert\NotBlank(message: 'connector.endpoint.blank')]
     private string $endpoint = '';
 
     /**
@@ -125,13 +125,13 @@ class Connector
                 $context->buildViolation('Un connecteur de forge alimente un projet : le choisir.')->atPath('project')->addViolation();
             }
             if (!\is_string($this->arguments['repository'] ?? null) || '' === trim($this->arguments['repository'])) {
-                $context->buildViolation('Indiquer le dépôt, ex. {"repository": "owner/repo"}.')->atPath('arguments')->addViolation();
+                $context->buildViolation('connector.repository.missing')->atPath('arguments')->addViolation();
             }
 
             return;
         }
         if (ConnectorMode::Resources !== $this->mode && null === $this->tool) {
-            $context->buildViolation('Indiquer l\'outil à appeler.')->atPath('tool')->addViolation();
+            $context->buildViolation('connector.tool.missing')->atPath('tool')->addViolation();
         }
     }
 

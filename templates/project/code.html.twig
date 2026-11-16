@@ -1,32 +1,32 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Code · {{ project.name }}{% endblock %}
+{% block title %}{{ 'nav.code'|trans }} · {{ project.name }}{% endblock %}
 
 {% block crumbs %}
     <a href="{{ path('project_show', {slug: project.slug}) }}">{{ project.name }}</a>
     <span class="crumbs__sep" aria-hidden="true">/</span>
-    <span class="crumbs__current">Code</span>
+    <span class="crumbs__current">{{ 'nav.code'|trans }}</span>
 {% endblock %}
 
 {% block body %}
     <div class="view-head">
-        <h1><twig:ux:icon name="lucide:code" />Code</h1>
+        <h1><twig:ux:icon name="lucide:code" />{{ 'nav.code'|trans }}</h1>
         <span class="view-head__meta mono">{{ project.repositoryPath }}</span>
     </div>
     {% if capabilities is not empty %}
-        <p class="capabilities" aria-label="Capacités détectées dans les chemins du code">
-            {% for item in capabilities %}<span class="tag" title="{{ item.evidence|join('\n') }}">{{ item.capability.label }}</span>{% endfor %}
+        <p class="capabilities" aria-label="{{ 'project.code.capabilities'|trans }}">
+            {% for item in capabilities %}<span class="tag" title="{{ item.evidence|join('\n') }}">{{ item.capability|trans }}</span>{% endfor %}
         </p>
     {% endif %}
     {% if files > 0 %}
         <twig:FileSearch :project="project" />
     {% else %}
-        <twig:EmptyState title="Aucun fichier de code" text="Le code arrive avec un connecteur GitHub ou GitLab, ou par l'import d'un graphe extrait avec graphify.">
+        <twig:EmptyState :title="'project.code.empty'|trans" :text="'project.code.empty_text'|trans">
             <twig:block name="icon"><twig:ux:icon name="lucide:code" /></twig:block>
-            <twig:block name="actions"><a class="button" href="{{ path('project_settings', {slug: project.slug}) }}"><twig:ux:icon name="lucide:settings" />Réglages du projet</a></twig:block>
+            <twig:block name="actions"><a class="button" href="{{ path('project_settings', {slug: project.slug}) }}"><twig:ux:icon name="lucide:settings" />{{ 'nav.project_settings'|trans }}</a></twig:block>
             <details class="empty-state__more">
-                <summary>En ligne de commande</summary>
-                <pre><code>graphify extract &lt;dépôt&gt; --code-only --out var/graphify/{{ project.slug }}
+                <summary>{{ 'common.command_line'|trans }}</summary>
+                <pre><code>graphify extract &lt;{{ 'project.index.cli_repository'|trans }}&gt; --code-only --out var/graphify/{{ project.slug }}
 bin/console app:ingest:code {{ project.slug }} var/graphify/{{ project.slug }}/graphify-out/graph.json --no-debug</code></pre>
             </details>
         </twig:EmptyState>

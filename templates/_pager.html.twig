@@ -2,17 +2,17 @@
 {% set name = name|default('page') %}
 {% if page.pages > 1 or page.number > 1 %}
     {% set parameters = app.current_route_parameters|merge(app.request.query.all) %}
-    <nav class="pager" aria-label="Pagination">
+    <nav class="pager" aria-label="{{ 'pager.label'|trans }}">
         {% if page.number > 1 %}
-            <a class="button" rel="prev" href="{{ path(app.current_route, parameters|merge({(name): min(page.number - 1, page.pages)})) }}">Précédente</a>
+            <a class="button" rel="prev" href="{{ path(app.current_route, parameters|merge({(name): min(page.number - 1, page.pages)})) }}">{{ 'pager.previous'|trans }}</a>
         {% else %}
-            <span class="button" aria-disabled="true">Précédente</span>
+            <span class="button" aria-disabled="true">{{ 'pager.previous'|trans }}</span>
         {% endif %}
-        <span class="pager__status">Page {{ page.number }} sur {{ max(page.pages, page.number) }} · {{ page.total|number_format(0, ',', ' ') }} au total</span>
+        <span class="pager__status">{{ 'pager.status'|trans({number: page.number, pages: max(page.pages, page.number), total: page.total}) }}</span>
         {% if page.number < page.pages %}
-            <a class="button" rel="next" href="{{ path(app.current_route, parameters|merge({(name): page.number + 1})) }}">Suivante</a>
+            <a class="button" rel="next" href="{{ path(app.current_route, parameters|merge({(name): page.number + 1})) }}">{{ 'pager.next'|trans }}</a>
         {% else %}
-            <span class="button" aria-disabled="true">Suivante</span>
+            <span class="button" aria-disabled="true">{{ 'pager.next'|trans }}</span>
         {% endif %}
     </nav>
 {% endif %}

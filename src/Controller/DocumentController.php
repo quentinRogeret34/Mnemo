@@ -23,6 +23,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Translation\TranslatableMessage;
 
 final class DocumentController extends AbstractController
 {
@@ -139,7 +140,7 @@ final class DocumentController extends AbstractController
             }
         }
         $this->entityManager->flush();
-        $this->addFlash('success', \sprintf('%d %s ajouté%s.', \count($files), \count($files) > 1 ? 'documents' : 'document', \count($files) > 1 ? 's' : ''));
+        $this->addFlash('success', new TranslatableMessage('flash.document.added', ['count' => \count($files)]));
 
         return true;
     }

@@ -1,18 +1,18 @@
 {% extends 'base.html.twig' %}
 
 {% set parts = file.path|split('/') %}
-{% set origins = {human: 'humain', llm: 'LLM', ast: 'AST', git: 'git', api: 'API'} %}
+{% set origins = {human: 'document.props.human'|trans, llm: 'LLM', ast: 'AST', git: 'git', api: 'API'} %}
 
 {% block title %}{{ parts|last }} · {{ project.name }}{% endblock %}
 
 {% block crumbs %}
-    <a href="{{ path('project_code', {slug: project.slug}) }}">Code</a>
+    <a href="{{ path('project_code', {slug: project.slug}) }}">{{ 'nav.code'|trans }}</a>
     <span class="crumbs__sep" aria-hidden="true">/</span>
     <span class="crumbs__current">{{ parts|last }}</span>
 {% endblock %}
 
 {% block header_actions %}
-    <a class="button" href="{{ path('project_code', {slug: project.slug}) }}">Fichiers <kbd class="kbd" aria-hidden="true">/</kbd></a>
+    <a class="button" href="{{ path('project_code', {slug: project.slug}) }}">{{ 'palette.files'|trans }} <kbd class="kbd" aria-hidden="true">/</kbd></a>
 {% endblock %}
 
 {% block body %}
@@ -20,20 +20,20 @@
         <h1>{{ parts|last }}</h1>
         <p class="file-head__path">{{ file.path }}</p>
         <p class="file-head__meta">
-            <span class="tag">{{ rules|length }} {{ rules|length > 1 ? 'règles métier' : 'règle métier' }}</span>
-            <span class="tag">{{ documents|length }} {{ documents|length > 1 ? 'documents' : 'document' }}</span>
-            <span class="tag">{{ memories|length }} {{ memories|length > 1 ? 'mémoires' : 'mémoire' }}</span>
-            <span class="tag">{{ symbols|length }} symboles</span>
-            <span class="tag">{{ edges.outgoing|length }} dépendances</span>
-            <span class="tag">{{ edges.incoming|length }} usages entrants</span>
+            <span class="tag">{{ 'file.count.rules'|trans({count: rules|length}) }}</span>
+            <span class="tag">{{ 'file.count.documents'|trans({count: documents|length}) }}</span>
+            <span class="tag">{{ 'file.count.memories'|trans({count: memories|length}) }}</span>
+            <span class="tag">{{ 'project.index.symbols'|trans({count: symbols|length}) }}</span>
+            <span class="tag">{{ 'file.count.dependencies'|trans({count: edges.outgoing|length}) }}</span>
+            <span class="tag">{{ 'file.count.incoming'|trans({count: edges.incoming|length}) }}</span>
             {% if file.metadata.ref ?? null %}<span class="tag mono">{{ file.metadata.ref|slice(0, 7) }}</span>{% endif %}
         </p>
     </header>
 
     <section aria-labelledby="rules-title">
-        <div class="block__head"><h2 id="rules-title">Règles métier</h2><span class="block__count">{{ rules|length }}</span></div>
+        <div class="block__head"><h2 id="rules-title">{{ 'nav.rules'|trans }}</h2><span class="block__count">{{ rules|length }}</span></div>
         {% if rules is empty %}
-            <p class="block__empty">Aucune règle métier reliée à ce fichier.</p>
+            <p class="block__empty">{{ 'file.no_rule'|trans }}</p>
         {% else %}
             <ul class="list">
                 {% for rule in rules %}
@@ -42,7 +42,7 @@
                             <span class="code-chip">{{ rule.code }}</span>
                             <span class="row__title"><span>{{ rule.title }}</span></span>
                             <span class="row__meta">
-                                <span class="status status--{{ rule.status }}">{{ rule.status == 'validated' ? 'Validée' : 'À valider' }}</span>
+                                <span class="status status--{{ rule.status }}">{{ (rule.status == 'validated' ? 'rule.validated' : 'nav.to_review')|trans }}</span>
                                 <span>{{ origins[rule.origin] ?? rule.origin }}</span>
                                 <span class="conf conf--{{ rule.confidence|lower }}">{{ rule.confidence }}</span>
                             </span>
@@ -54,9 +54,9 @@
     </section>
 
     <section class="block" aria-labelledby="docs-title">
-        <div class="block__head"><h2 id="docs-title">Documentation</h2><span class="block__count">{{ documents|length }}</span></div>
+        <div class="block__head"><h2 id="docs-title">{{ 'file.documentation'|trans }}</h2><span class="block__count">{{ documents|length }}</span></div>
         {% if documents is empty %}
-            <p class="block__empty">Aucun document relié. Lier un document depuis ses propriétés.</p>
+            <p class="block__empty">{{ 'file.no_document'|trans }}</p>
         {% else %}
             <ul class="list">
                 {% for document in documents %}
@@ -83,11 +83,11 @@
              data-graph-url-value="{{ path('file_graph', {slug: project.slug, path: file.path}) }}"
              data-graph-file-url-value="{{ path('file_show', {slug: project.slug, path: '__PATH__'}) }}">
         <div class="graph-panel__bar">
-            <h2 id="graph-title" class="graph-panel__title">Voisinage</h2>
+            <h2 id="graph-title" class="graph-panel__title">{{ 'file.neighbourhood'|trans }}</h2>
             <fieldset class="segmented">
-                <legend>Profondeur</legend>
-                <label><input type="radio" name="depth" value="1" checked data-action="graph#setDepth"><span>1 saut</span></label>
-                <label><input type="radio" name="depth" value="2" data-action="graph#setDepth"><span>2 sauts</span></label>
+                <legend>{{ 'file.depth'|trans }}</legend>
+                <label><input type="radio" name="depth" value="1" checked data-action="graph#setDepth"><span>{{ 'file.hops'|trans({count: 1}) }}</span></label>
+                <label><input type="radio" name="depth" value="2" data-action="graph#setDepth"><span>{{ 'file.hops'|trans({count: 2}) }}</span></label>
             </fieldset>
             <p class="graph-panel__legend">
                 <span><span class="legend-line" aria-hidden="true"></span>EXTRACTED</span>
@@ -95,16 +95,16 @@
             </p>
         </div>
         <div class="graph-panel__canvas">
-            <div data-graph-target="canvas" role="img" aria-label="Graphe des fichiers liés à {{ file.path }}. Cliquer sur un fichier pour ouvrir sa fiche."></div>
-            <p class="graph-panel__empty" data-graph-target="empty" hidden>Aucune relation avec un autre fichier.</p>
+            <div data-graph-target="canvas" role="img" aria-label="{{ 'file.graph_label'|trans({path: file.path}) }}"></div>
+            <p class="graph-panel__empty" data-graph-target="empty" hidden>{{ 'file.graph_empty'|trans }}</p>
         </div>
     </section>
 
     <div class="sheet">
         <aside class="sheet__aside" aria-labelledby="symbols-title">
-            <div class="block__head"><h2 id="symbols-title">Symboles</h2><span class="block__count">{{ symbols|length }}</span></div>
+            <div class="block__head"><h2 id="symbols-title">{{ 'file.symbols'|trans }}</h2><span class="block__count">{{ symbols|length }}</span></div>
             {% if symbols is empty %}
-                <p class="block__empty">Aucun symbole extrait.</p>
+                <p class="block__empty">{{ 'file.no_symbol'|trans }}</p>
             {% else %}
                 <ol class="symbols">
                     {% for symbol in symbols %}
@@ -117,7 +117,7 @@
         <div class="sheet__main">
             {% if history is not empty %}
                 <section aria-labelledby="history-title">
-                    <div class="block__head"><h2 id="history-title">Historique</h2><span class="block__count">{{ history|length }} derniers commits</span></div>
+                    <div class="block__head"><h2 id="history-title">{{ 'memory.editor.history'|trans }}</h2><span class="block__count">{{ 'file.last_commits'|trans({count: history|length}) }}</span></div>
                     <ul class="list">
                         {% for commit in history %}
                             <li class="row row--commit">
@@ -126,7 +126,7 @@
                                     <span>{{ commit.label }}</span>
                                     {% for ticket in commit.tickets %}<a class="tag" href="{{ ticket.url }}" rel="noopener noreferrer" target="_blank" title="{{ ticket.title }}">{{ ticket.ref }}</a>{% endfor %}
                                 </span>
-                                <span class="row__meta"><span>{{ commit.author }}</span><span class="num">{{ commit.date ? commit.date|date('d/m/Y') }}</span></span>
+                                <span class="row__meta"><span>{{ commit.author }}</span><span class="num">{{ commit.date ? commit.date|format_date('short') }}</span></span>
                             </li>
                         {% endfor %}
                     </ul>
@@ -134,13 +134,13 @@
             {% endif %}
 
             <section aria-labelledby="outgoing-title">
-                <div class="block__head"><h2 id="outgoing-title">Dépend de</h2><span class="block__count">{{ edges.outgoing|length }}</span></div>
-                {{ include('file/_edges.html.twig', {rows: edges.outgoing, direction: 'outgoing', other_heading: 'Fichier cible', empty: 'Aucune dépendance vers un autre fichier.'}) }}
+                <div class="block__head"><h2 id="outgoing-title">{{ 'file.depends_on'|trans }}</h2><span class="block__count">{{ edges.outgoing|length }}</span></div>
+                {{ include('file/_edges.html.twig', {rows: edges.outgoing, direction: 'outgoing', other_heading: 'file.target'|trans, empty: 'file.no_dependency'|trans}) }}
             </section>
 
             <section aria-labelledby="incoming-title">
-                <div class="block__head"><h2 id="incoming-title">Utilisé par</h2><span class="block__count">{{ edges.incoming|length }}</span></div>
-                {{ include('file/_edges.html.twig', {rows: edges.incoming, direction: 'incoming', other_heading: 'Fichier source', empty: "Aucun autre fichier ne l'utilise."}) }}
+                <div class="block__head"><h2 id="incoming-title">{{ 'file.used_by'|trans }}</h2><span class="block__count">{{ edges.incoming|length }}</span></div>
+                {{ include('file/_edges.html.twig', {rows: edges.incoming, direction: 'incoming', other_heading: 'file.source'|trans, empty: 'file.unused'|trans}) }}
             </section>
         </div>
     </div>

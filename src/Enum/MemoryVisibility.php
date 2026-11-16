@@ -2,18 +2,17 @@
 
 namespace App\Enum;
 
-enum MemoryVisibility: string
+use Symfony\Contracts\Translation\TranslatableInterface;
+use Symfony\Contracts\Translation\TranslatorInterface;
+
+enum MemoryVisibility: string implements TranslatableInterface
 {
     case Project = 'project';
     case Group = 'group';
     case Personal = 'private';
 
-    public function label(): string
+    public function trans(TranslatorInterface $translator, ?string $locale = null): string
     {
-        return match ($this) {
-            self::Project => 'Projet',
-            self::Group => 'Groupe',
-            self::Personal => 'Privée',
-        };
+        return $translator->trans('enum.memory_visibility.'.$this->value, locale: $locale);
     }
 }

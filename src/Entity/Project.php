@@ -7,8 +7,8 @@ use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity]
-#[UniqueEntity('slug', message: 'Cet identifiant est déjà pris.')]
-#[UniqueEntity('repository', message: 'Ce dépôt est déjà rattaché à un autre projet.')]
+#[UniqueEntity('slug', message: 'project.slug.taken')]
+#[UniqueEntity('repository', message: 'project.repository.taken')]
 class Project
 {
     #[ORM\Id]
@@ -42,13 +42,13 @@ class Project
 
     public function __construct(
         #[ORM\Column(length: 100, unique: true)]
-        #[Assert\NotBlank(message: 'Indiquer un identifiant : le nom ne permet pas d\'en déduire un.')]
+        #[Assert\NotBlank(message: 'project.slug.blank')]
         #[Assert\Length(max: 100)]
-        #[Assert\Regex('/^[a-z0-9]+(-[a-z0-9]+)*$/', message: 'Minuscules, chiffres et tirets seulement, ex. « mon-projet ».')]
-        #[Assert\NotIdenticalTo('new', message: 'Cet identifiant est réservé.')]
+        #[Assert\Regex('/^[a-z0-9]+(-[a-z0-9]+)*$/', message: 'project.slug.format')]
+        #[Assert\NotIdenticalTo('new', message: 'project.slug.reserved')]
         private string $slug,
         #[ORM\Column(length: 255)]
-        #[Assert\NotBlank(message: 'Donner un nom au projet.')]
+        #[Assert\NotBlank(message: 'project.name.blank')]
         #[Assert\Length(max: 255)]
         private string $name,
         #[ORM\Column(length: 1024)]

@@ -24,6 +24,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Translation\TranslatableMessage;
 
 final class ProjectController extends AbstractController
 {
@@ -58,7 +59,7 @@ final class ProjectController extends AbstractController
             $this->projectResolver->register($project);
             $this->saveGroups($form, $project);
             $this->entityManager->flush();
-            $this->addFlash('success', \sprintf('Projet « %s » créé.', $project->getName()));
+            $this->addFlash('success', new TranslatableMessage('flash.project.created', ['name' => $project->getName()]));
 
             return $this->redirectToRoute('project_settings', ['slug' => $project->getSlug()]);
         }
@@ -95,7 +96,7 @@ final class ProjectController extends AbstractController
             if ($reindex) {
                 $this->bus->dispatch(new ReindexNodes($project->getId()));
             }
-            $this->addFlash('success', $reindex ? 'Réglages mis à jour. Le contenu du projet est réindexé en arrière-plan avec son modèle d\'embeddings.' : 'Réglages du projet mis à jour.');
+            $this->addFlash('success', new TranslatableMessage($reindex ? 'flash.project.updated_reindex' : 'flash.project.updated'));
 
             return $this->redirectToRoute('project_settings', ['slug' => $project->getSlug()]);
         }
@@ -120,7 +121,7 @@ final class ProjectController extends AbstractController
         $this->checkToken($project, $request);
         $project->archive();
         $this->entityManager->flush();
-        $this->addFlash('success', \sprintf('Projet « %s » archivé.', $project->getName()));
+        $this->addFlash('success', new TranslatableMessage('flash.project.archived', ['name' => $project->getName()]));
 
         return $this->redirectToRoute('project_index');
     }
@@ -131,7 +132,7 @@ final class ProjectController extends AbstractController
         $this->checkToken($project, $request);
         $project->restore();
         $this->entityManager->flush();
-        $this->addFlash('success', \sprintf('Projet « %s » restauré.', $project->getName()));
+        $this->addFlash('success', new TranslatableMessage('flash.project.restored', ['name' => $project->getName()]));
 
         return $this->redirectToRoute('project_settings', ['slug' => $project->getSlug()]);
     }
@@ -141,13 +142,13 @@ final class ProjectController extends AbstractController
     {
         $this->checkToken($project, $request);
         if ($project->getSlug() !== trim($request->getPayload()->getString('confirm'))) {
-            $this->addFlash('error', 'L\'identifiant retapé ne correspond pas : le projet est conservé.');
+            $this->addFlash('error', new TranslatableMessage('flash.project.slug_mismatch'));
 
             return $this->redirectToRoute('project_settings', ['slug' => $project->getSlug(), '_fragment' => 'danger']);
         }
         $name = $project->getName();
         $this->projectRemover->remove($project);
-        $this->addFlash('success', \sprintf('Projet « %s » supprimé, avec son code, ses règles et ses connecteurs.', $name));
+        $this->addFlash('success', new TranslatableMessage('flash.project.deleted', ['name' => $name]));
 
         return $this->redirectToRoute('project_index');
     }

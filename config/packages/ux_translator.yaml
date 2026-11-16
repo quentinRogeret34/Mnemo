@@ -1,0 +1,7 @@
+ux_translator:
+    # The directory where the JavaScript translations are dumped
+    dump_directory: '%kernel.project_dir%/var/translations'
+    dump_typescript: false
+    domains: [messages]
+    # Only the strings the Stimulus controllers need, not the whole catalogue.
+    keys_patterns: ['js.*']

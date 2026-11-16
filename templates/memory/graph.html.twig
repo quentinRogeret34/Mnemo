@@ -1,40 +1,40 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Graphe des mémoires{{ project ? ' · ' ~ project.name }}{% endblock %}
+{% block title %}{{ 'nav.memory_graph'|trans }}{{ project ? ' · ' ~ project.name }}{% endblock %}
 
 {% block crumbs %}
     {% if project %}
         <a href="{{ path('project_show', {slug: project.slug}) }}">{{ project.name }}</a>
         <span class="crumbs__sep" aria-hidden="true">/</span>
     {% endif %}
-    <a href="{{ path('memory_index', project ? {project: project.slug} : {}) }}">Mémoires</a>
+    <a href="{{ path('memory_index', project ? {project: project.slug} : {}) }}">{{ 'nav.memories'|trans }}</a>
     <span class="crumbs__sep" aria-hidden="true">/</span>
-    <span class="crumbs__current">Graphe</span>
+    <span class="crumbs__current">{{ 'memory.graph_short'|trans }}</span>
 {% endblock %}
 
 {% block body %}
     <div class="view-head">
-        <h1><twig:ux:icon name="lucide:network" />Graphe des mémoires</h1>
-        <span class="view-head__meta">{{ project ? project.name : 'Tous les projets' }}</span>
+        <h1><twig:ux:icon name="lucide:network" />{{ 'nav.memory_graph'|trans }}</h1>
+        <span class="view-head__meta">{{ project ? project.name : 'nav.all_projects'|trans }}</span>
     </div>
-    <p class="page__lede">Chaque mémoire est un satellite du sujet dont elle parle : un fichier de code, une règle métier ou un document. Plus un sujet est gros, plus de mémoires gravitent autour. Une mémoire liée à rien tourne autour de son projet.</p>
+    <p class="page__lede">{{ 'memory.graph.lede'|trans }}</p>
 
-    <section class="panel galaxy" data-controller="galaxy" data-galaxy-url-value="{{ path('memory_graph_data', project ? {project: project.slug} : {}) }}" data-action="theme:change@window->galaxy#render" aria-label="Graphe des mémoires et de leurs sujets">
+    <section class="panel galaxy" data-controller="galaxy" data-galaxy-url-value="{{ path('memory_graph_data', project ? {project: project.slug} : {}) }}" data-action="theme:change@window->galaxy#render" aria-label="{{ 'memory.graph.label'|trans }}">
         <div class="panel__head">
             <ul class="legend">
-                <li><span class="legend__mark legend__mark--memory"></span>Mémoire</li>
-                <li><span class="legend__mark legend__mark--file"></span>Fichier de code</li>
-                <li><span class="legend__mark legend__mark--rule"></span>Règle métier</li>
-                <li><span class="legend__mark legend__mark--document"></span>Document</li>
-                <li><span class="legend__mark legend__mark--project"></span>Projet</li>
+                <li><span class="legend__mark legend__mark--memory"></span>{{ 'memory.graph.memory'|trans }}</li>
+                <li><span class="legend__mark legend__mark--file"></span>{{ 'memory.graph.file'|trans }}</li>
+                <li><span class="legend__mark legend__mark--rule"></span>{{ 'memory.graph.rule'|trans }}</li>
+                <li><span class="legend__mark legend__mark--document"></span>{{ 'memory.graph.document'|trans }}</li>
+                <li><span class="legend__mark legend__mark--project"></span>{{ 'memory.graph.project'|trans }}</li>
             </ul>
             <span class="row__sub num" data-galaxy-target="count"></span>
         </div>
         <div class="galaxy__canvas">
             <div data-galaxy-target="canvas"></div>
-            <p class="galaxy__empty" data-galaxy-target="empty" hidden>Aucune mémoire active à afficher.</p>
+            <p class="galaxy__empty" data-galaxy-target="empty" hidden>{{ 'memory.graph.empty'|trans }}</p>
         </div>
-        <p class="galaxy__detail" data-galaxy-target="detail" aria-live="polite">Survoler un point pour lire la mémoire ou le sujet ; cliquer pour ouvrir sa fiche.</p>
+        <p class="galaxy__detail" data-galaxy-target="detail" aria-live="polite">{{ 'memory.graph.hint'|trans }}</p>
     </section>
-    <p class="row__sub">Les 300 mémoires actives les plus récentes sont affichées. La liste complète, avec filtres, est dans <a class="link" href="{{ path('memory_index', project ? {project: project.slug} : {}) }}">le tableau des mémoires</a>.</p>
+    <p class="row__sub">{{ 'memory.graph.limit'|trans({link: '<a class="link" href="' ~ path('memory_index', project ? {project: project.slug} : {})|e('html_attr') ~ '">' ~ 'memory.graph.table'|trans|e ~ '</a>'})|raw }}</p>
 {% endblock %}

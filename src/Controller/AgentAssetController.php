@@ -12,6 +12,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Translation\TranslatableMessage;
 
 /**
  * Skills, slash commands and subagents of a project: edited here, written by the plugin into the ".claude"
@@ -43,7 +44,7 @@ final class AgentAssetController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->entityManager->persist($asset);
             $this->entityManager->flush();
-            $this->addFlash('success', \sprintf('%s « %s » enregistré : les agents connectés le reçoivent à leur prochaine session.', $asset->getKind()->label(), $asset->getName()));
+            $this->addFlash('success', new TranslatableMessage('flash.agent_asset.saved', ['kind' => $asset->getKind(), 'name' => $asset->getName()]));
 
             return $this->redirectToRoute('agent_asset_index', ['slug' => $project->getSlug()]);
         }
@@ -60,7 +61,7 @@ final class AgentAssetController extends AbstractController
         }
         $this->entityManager->remove($asset);
         $this->entityManager->flush();
-        $this->addFlash('success', \sprintf('« %s » supprimé : son fichier est retiré des agents connectés à leur prochaine session.', $asset->getName()));
+        $this->addFlash('success', new TranslatableMessage('flash.agent_asset.deleted', ['name' => $asset->getName()]));
 
         return $this->redirectToRoute('agent_asset_index', ['slug' => $project->getSlug()]);
     }

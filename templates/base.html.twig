@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="{{ app.request.locale }}">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         {{ include('_appearance_head.html.twig') }}
-        <title>{% block title %}Projets{% endblock %} · Graphe projet</title>
+        <title>{% block title %}{{ 'nav.projects'|trans }}{% endblock %} · {{ 'app.name'|trans }}</title>
         <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22><rect x=%223%22 y=%223%22 width=%2210%22 height=%2210%22 rx=%222.5%22 fill=%22%236250d6%22/></svg>">
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -27,7 +27,7 @@
             <twig:Sidebar :project="project ?? null" />
             <div class="main">
                 <header class="header">
-                    <nav class="crumbs" aria-label="Fil d'Ariane">{% block crumbs %}{% endblock %}</nav>
+                    <nav class="crumbs" aria-label="{{ 'layout.breadcrumbs'|trans }}">{% block crumbs %}{% endblock %}</nav>
                     <div class="header__actions">
                         {% block header_actions %}{% endblock %}
                         {% set help = {
@@ -36,11 +36,11 @@
                             proposal_index: 'a-valider', garden_show: 'jardinage', project_code: 'code', file_show: 'code',
                             connector_index: 'connexions', connector_show: 'connexions', connector_new: 'connexions', connector_edit: 'connexions', api_key_index: 'cles-api', admin_users: 'utilisateurs', activity: 'activite',
                         }[app.request.attributes.get('_route')] ?? null %}
-                        <button class="button button--ghost palette-trigger" type="button" data-action="search-hotkey#palette" aria-keyshortcuts="Meta+K Control+K"><twig:ux:icon name="lucide:search" />Rechercher <kbd class="kbd" aria-hidden="true">⌘K</kbd></button>
-                        {% if help %}<a class="button button--ghost" href="{{ path('wiki') }}#{{ help }}" title="Comprendre cette page">Aide</a>{% endif %}
+                        <button class="button button--ghost palette-trigger" type="button" data-action="search-hotkey#palette" aria-keyshortcuts="Meta+K Control+K"><twig:ux:icon name="lucide:search" />{{ 'layout.search'|trans }} <kbd class="kbd" aria-hidden="true">⌘K</kbd></button>
+                        {% if help %}<a class="button button--ghost" href="{{ path('wiki') }}#{{ help }}" title="{{ 'layout.help_title'|trans }}">{{ 'layout.help'|trans }}</a>{% endif %}
                         <button class="button button--ghost theme-toggle" type="button" data-controller="theme" data-action="theme#toggle">
-                            <span class="theme-toggle__option theme-toggle__option--dark"><twig:ux:icon name="lucide:moon" /><span class="visually-hidden">Passer au thème sombre</span></span>
-                            <span class="theme-toggle__option theme-toggle__option--light"><twig:ux:icon name="lucide:sun" /><span class="visually-hidden">Passer au thème clair</span></span>
+                            <span class="theme-toggle__option theme-toggle__option--dark"><twig:ux:icon name="lucide:moon" /><span class="visually-hidden">{{ 'layout.theme_dark'|trans }}</span></span>
+                            <span class="theme-toggle__option theme-toggle__option--light"><twig:ux:icon name="lucide:sun" /><span class="visually-hidden">{{ 'layout.theme_light'|trans }}</span></span>
                         </button>
                     </div>
                 </header>

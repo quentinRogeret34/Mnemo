@@ -5,11 +5,11 @@
         <table class="edges">
             <thead>
                 <tr>
-                    <th scope="col">Relation</th>
-                    <th scope="col">Ici</th>
+                    <th scope="col">{{ 'file.edges.relation'|trans }}</th>
+                    <th scope="col">{{ 'file.edges.here'|trans }}</th>
                     <th scope="col">{{ other_heading }}</th>
-                    <th scope="col">Confiance</th>
-                    <th scope="col">Ligne</th>
+                    <th scope="col">{{ 'file.edges.confidence'|trans }}</th>
+                    <th scope="col">{{ 'file.edges.line'|trans }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -21,7 +21,7 @@
                     {% set other_path = direction == 'outgoing' ? edge.target_path : edge.source_path %}
                     <tr>
                         <td class="edges__relation">{{ edge.relation }}</td>
-                        <td class="edges__local">{{ local_type == 'code_file' ? '(fichier)' : local_label }}</td>
+                        <td class="edges__local">{{ local_type == 'code_file' ? 'file.edges.file'|trans : local_label }}</td>
                         <td class="edges__other">
                             <a href="{{ path('file_show', {slug: project.slug, path: other_path}) }}">{{ other_path }}</a>
                             {% if other_type != 'code_file' %}<small>{{ other_label }}</small>{% endif %}

@@ -1,8 +1,8 @@
 {% set report = connector.lastReport %}
 {% if connector.lastRunAt is null %}
-    <span class="status"><twig:ux:icon name="lucide:circle-dashed" />jamais synchronisé</span>
+    <span class="status"><twig:ux:icon name="lucide:circle-dashed" />{{ 'connector.status.never'|trans }}</span>
 {% elseif report.error %}
-    <span class="status status--error" title="{{ report.error }}"><twig:ux:icon name="lucide:circle-x" />échec le {{ connector.lastRunAt|date('d/m/Y H:i') }}</span>
+    <span class="status status--error" title="{{ report.error }}"><twig:ux:icon name="lucide:circle-x" />{{ 'connector.status.failed'|trans({date: connector.lastRunAt|format_datetime('short', 'short')}) }}</span>
 {% else %}
-    <span class="status status--validated"><twig:ux:icon name="lucide:circle-check" />{{ report.created }} créés · {{ report.updated }} mis à jour · {{ report.unchanged }} inchangés · {{ connector.lastRunAt|date('d/m/Y H:i') }}</span>
+    <span class="status status--validated"><twig:ux:icon name="lucide:circle-check" />{{ 'connector.status.done'|trans({created: report.created, updated: report.updated, unchanged: report.unchanged}) }} · {{ connector.lastRunAt|format_datetime('short', 'short') }}</span>
 {% endif %}

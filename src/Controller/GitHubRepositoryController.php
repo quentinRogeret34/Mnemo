@@ -21,6 +21,7 @@ use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Translation\TranslatableMessage;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 
 /**
@@ -60,7 +61,7 @@ final class GitHubRepositoryController extends AbstractController
                 $repositories = $this->account->repositories($this->secretBox->decrypt($token));
             } catch (\Throwable) {
                 $request->getSession()->remove(self::TOKEN);
-                $this->addFlash('error', 'GitHub a refusé le jeton : reconnecter le compte.');
+                $this->addFlash('error', new TranslatableMessage('flash.github.token_refused'));
             }
         }
         $connected = array_map(
@@ -100,7 +101,7 @@ final class GitHubRepositoryController extends AbstractController
         $state = $request->getSession()->remove(self::STATE);
         $back = array_filter(['project' => (string) $request->getSession()->remove(self::PROJECT)]);
         if (!\is_string($state) || !hash_equals($state, $request->query->getString('state'))) {
-            $this->addFlash('error', 'La connexion à GitHub a expiré, recommencer.');
+            $this->addFlash('error', new TranslatableMessage('flash.github.expired'));
 
             return $this->redirectToRoute('github_repositories', $back);
         }
@@ -108,7 +109,7 @@ final class GitHubRepositoryController extends AbstractController
         try {
             $request->getSession()->set(self::TOKEN, $this->secretBox->encrypt($this->oauthClient->accessToken('github', $request->query->getString('code'), $this->callbackUrl())));
         } catch (\Throwable) {
-            $this->addFlash('error', 'GitHub a refusé la connexion.');
+            $this->addFlash('error', new TranslatableMessage('flash.github.refused'));
         }
 
         return $this->redirectToRoute('github_repositories', $back);
@@ -122,7 +123,7 @@ final class GitHubRepositoryController extends AbstractController
         $back = array_filter(['project' => $request->query->getString('project')]);
         $token = $request->getSession()->get(self::TOKEN);
         if (!\is_string($token)) {
-            $this->addFlash('error', 'La connexion à GitHub a expiré, recommencer.');
+            $this->addFlash('error', new TranslatableMessage('flash.github.expired'));
 
             return $this->redirectToRoute('github_repositories', $back);
         }
@@ -133,7 +134,7 @@ final class GitHubRepositoryController extends AbstractController
             static fn (string $repository): bool => 1 === preg_match('#^[\w.-]+/[\w.-]+$#', $repository),
         )));
         if ((!$perRepository && (null === $project || $project->isArchived() || !$this->projectScope->allows($project))) || [] === $repositories) {
-            $this->addFlash('error', 'Choisir un projet et au moins un dépôt.');
+            $this->addFlash('error', new TranslatableMessage('flash.github.choose'));
 
             return $this->redirectToRoute('github_repositories', $back);
         }
@@ -163,11 +164,11 @@ final class GitHubRepositoryController extends AbstractController
         $request->getSession()->remove(self::TOKEN);
         if ([] !== $connectors) {
             $this->addFlash('success', $perRepository
-                ? \sprintf('%d dépôt(s) branché(s), chacun sur son projet : clonés et analysés en arrière-plan.', \count($connectors))
-                : \sprintf('%d dépôt(s) branché(s) sur %s : clonés et analysés en arrière-plan.', \count($connectors), $project->getName()));
+                ? new TranslatableMessage('flash.github.connected_each', ['count' => \count($connectors)])
+                : new TranslatableMessage('flash.github.connected', ['count' => \count($connectors), 'name' => $project->getName()]));
         }
         if ([] !== $skipped) {
-            $this->addFlash('error', \sprintf('Pas de projet possible pour %s : un projet archivé ou hors de portée a déjà ce dépôt, ou son nom est pris.', implode(', ', $skipped)));
+            $this->addFlash('error', new TranslatableMessage('flash.github.skipped', ['repositories' => implode(', ', $skipped)]));
         }
 
         $single = $project ?? (1 === \count($connectors) ? $connectors[0]->getProject() : null);

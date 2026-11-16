@@ -1,0 +1,977 @@
+activity:
+    by_type: 'Entrées par type'
+    connector: Connecteur
+    created: Créés
+    empty: "Rien n'est entré dans le graphe sur la période"
+    empty_text: "Les commits et tickets arrivent avec les connecteurs, les documents et les mémoires dès qu'ils sont ajoutés."
+    feed: Fil
+    kind:
+        commit: commit
+        document: document
+        memory: mémoire
+        rule: règle
+    lede: 'Ce qui est entré dans le graphe : le travail récupéré par les connecteurs, les documents déposés et les mémoires ajoutées.'
+    no_run: "Aucune synchronisation. Un connecteur se lance à la main, ou seul s'il est planifié et que le service {worker} tourne."
+    runs: Synchronisations
+    state: État
+    trigger: Déclencheur
+    trigger_manual: manuel
+    trigger_schedule: planifié
+    trigger_webhook: webhook
+    type:
+        commit: Commits
+        ticket: 'PR, MR et issues'
+    updated: Modifiés
+    when: Quand
+admin:
+    empty: 'Aucun compte. Un email listé dans APP_ADMIN_EMAILS devient super admin à sa première connexion par un fournisseur.'
+    group_create: 'Créer le groupe'
+    group_delete_confirm: 'Supprimer le groupe {name} ?'
+    group_name: 'Nom du groupe'
+    group_placeholder: 'Équipe back'
+    group_projects: 'Projets du groupe {name}'
+    groups: Groupes
+    groups_help: "Un groupe donne à ses membres l'accès à ses projets, et permet de partager une mémoire avec eux seulement."
+    groups_of: 'Groupes de {name}'
+    lede: "Un compte se crée à la première connexion par GitHub, GitLab ou Google, puis attend ici d'être activé. Un utilisateur ne voit que les projets de ses groupes ; un super admin voit tout et gère cette page."
+    members: '{count, plural, one {# membre} other {# membres}}'
+    never: 'jamais connecté'
+    no_group: 'Aucun groupe'
+    pending: 'en attente'
+    seen: 'vu le {date}'
+    status_of: 'Statut de {name}'
+    title: 'Utilisateurs et groupes'
+agent:
+    content: Contenu
+    delete_confirm: 'Supprimer {name} ?'
+    edit: 'Modifier {name}'
+    empty: 'Aucun skill'
+    empty_text: 'Écrire ici un skill, une commande ou un sous-agent : tous les postes connectés au projet le reçoivent, sans rien commiter dans le dépôt.'
+    lede: "Skills, commandes et sous-agents du projet. Le plugin les écrit dans le dossier {folder} de chaque Claude Code connecté au projet, au début de ses sessions, et retire ceux qui sont supprimés ici. Un fichier local du même nom n'est jamais écrasé."
+    new: 'Nouveau skill'
+    new_long: 'Nouveau skill, commande ou sous-agent'
+    updated: Modifié
+app:
+    name: 'Graphe projet'
+appearance:
+    accent: "Couleur d'accent"
+    accent_help: 'Les couleurs des graphiques et du graphe des mémoires ne changent pas.'
+    amber: Ambre
+    contrast: Contraste
+    contrast_help: 'Textes secondaires et bordures renforcés, liens soulignés. Toujours actif quand le système demande plus de contraste.'
+    contrast_more: 'Contraste élevé'
+    currently_dark: '(actuellement sombre)'
+    currently_light: '(actuellement clair)'
+    dark: Sombre
+    green: Vert
+    language: Langue
+    language_help: "Enregistrée pour cette session. Sans choix, la langue du navigateur s'applique."
+    language_submit: 'Changer de langue'
+    lede: "Ces réglages sont enregistrés dans ce navigateur et s'appliquent tout de suite. Sans JavaScript, l'interface suit les préférences du système."
+    light: Clair
+    system: Système
+    text_large: Grande
+    text_normal: Normale
+    text_size: 'Taille du texte'
+    theme: Thème
+chat:
+    action:
+        memory: 'Mémoire #{id} enregistrée'
+        rule: 'Règle {code} créée, à valider'
+    empty: "Poser une question sur le projet, ou demander d'enregistrer une règle ou une décision."
+    error: "L'assistant n'a pas pu répondre : {error}"
+    example1: 'Quelles règles métier concernent les remises ?'
+    example2: "Qu'a-t-on décidé sur l'authentification ?"
+    example3: 'Ajoute une règle : une commande de plus de 500 € demande une validation.'
+    lede: 'Il répond à partir des règles, mémoires, documents et code du projet, et enregistre une règle ou une mémoire quand on le lui demande. Une règle ajoutée ici reste à valider.'
+    message: Message
+    no_answer: 'Pas de réponse.'
+    placeholder: 'Demander quelque chose sur {name}'
+    reset: 'Nouvelle conversation'
+    send: Envoyer
+    thinking: Réflexion...
+    you: Vous
+common:
+    add: Ajouter
+    all: Toutes
+    cancel: Annuler
+    change: Changer
+    command_line: 'En ligne de commande'
+    delete: Supprimer
+    demo: Démo
+    edit: Modifier
+    failed: échec
+    filter: Filtrer
+    open: Ouvrir
+    reset: Réinitialiser
+    save: Enregistrer
+    save_settings: 'Enregistrer les réglages'
+confirm:
+    accept: Confirmer
+    title: 'Confirmer cette action ?'
+connector:
+    auth: 'Authentification : {auth}'
+    configure: Configurer
+    destination: Destination
+    docs: 'Documentation {name}'
+    edit: 'Modifier le connecteur'
+    empty: 'Aucun connecteur'
+    empty_text: "Un connecteur lit l'historique d'un dépôt GitHub ou GitLab (commits, pull et merge requests, issues), ou se branche sur un serveur MCP externe (mem0, DeepWiki...) et importe ses ressources en documents ou en mémoires."
+    github:
+        already: 'déjà branché'
+        choose_project: 'Choisir un projet'
+        connect: 'Connecter avec GitHub'
+        existing: 'Projets existants'
+        lede: 'Chaque dépôt coché devient un connecteur « GitHub (code et historique) » : le serveur le clone, calcule son graphe de code et importe son historique dans le projet choisi.'
+        new_per_repository: 'Un nouveau projet par dépôt'
+        new_per_repository_help: "« Un nouveau projet par dépôt » crée un projet nommé d'après chaque dépôt coché, ou reprend celui qui a déjà ce dépôt."
+        none: 'Aucun dépôt visible avec ce compte.'
+        private: privé
+        public: public
+        scope: 'Accès en lecture aux dépôts, privés compris (scope « repo »).'
+        submit: 'Brancher les dépôts cochés'
+        title: 'Dépôts GitHub'
+    key_missing: absente
+    key_set: configurée
+    llm_help: "Clé et modèles se règlent dans {link}, ou par l'environnement ({env}). Vérifier avec {command}."
+    new: 'Nouveau connecteur'
+    pr:
+        draft: brouillon
+        error: 'Lecture des pull requests impossible : {error}'
+        lede: 'Le bot relit la pull request avec le graphe du projet, puis publie son commentaire et le check {check} sur GitHub, comme à chaque push.'
+        none: 'Aucune pull request ouverte.'
+        open: 'Pull requests ouvertes'
+        review: 'Lancer la revue'
+        updated: 'mise à jour {date}'
+    prefilled: 'Prérempli pour {name}.'
+    preset:
+        atlassian:
+            auth: OAuth
+            description: 'Tickets Jira (JQL) ou pages Confluence, importés en document.'
+            label: 'Jira / Confluence'
+            notes:
+                - 'Enregistrer, puis « Connecter par OAuth » sur la page du connecteur avec un compte du site Atlassian.'
+                - "cloudId : le site (exemple.atlassian.net) ou l'identifiant donné par l'outil getAccessibleAtlassianResources."
+                - 'Confluence : outil getConfluencePage (''{"cloudId": "...", "pageId": "..."}''). Vérifier les noms avec « Tester la connexion ».'
+                - "Un administrateur du site peut devoir autoriser le domaine de l'application."
+        context7:
+            auth: 'Aucune ; clé facultative'
+            description: "Documentation à jour d'une bibliothèque (Symfony, Doctrine...), importée en document."
+            label: Context7
+            notes:
+                - "libraryId s'obtient avec l'outil resolve-library-id (format /org/project)."
+                - 'Avec une clé (context7.com/dashboard) : ajouter « CONTEXT7_API_KEY: env:CONTEXT7_API_KEY » et la variable dans .env.local.'
+        deepwiki:
+            auth: Aucune
+            description: 'Wiki généré pour un dépôt GitHub public, importé en document.'
+            label: DeepWiki
+            notes:
+                - 'Remplacer « owner/repo » par le dépôt, ex. symfony/ai.'
+                - 'Dépôts publics uniquement, déjà indexés sur deepwiki.com. Le wiki peut être long.'
+                - 'Autres outils : read_wiki_structure (plan des pages), ask_wiki_question.'
+        github-api:
+            auth: 'Personal access token (lecture seule)'
+            description: "Graphe du code, docs, commits, pull requests et issues d'un dépôt, reliés aux règles du projet."
+            label: 'GitHub (code et historique)'
+            notes:
+                - "Remplacer « owner/repo » et choisir le projet : c'est son graphe de code qui reçoit l'historique."
+                - "Définir GITHUB_TOKEN dans .env.local et l'ajouter à MCP_CONNECTORS_ENV. Un dépôt public se lit sans jeton : vider le champ des en-têtes."
+                - "« code_graph: true » clone le dépôt sur le serveur (branche par défaut, ou « branch »), calcule son graphe avec graphify sans LLM et importe README, docs/ et conventions d'agents. Le jeton doit pouvoir lire le contenu."
+                - 'Premier passage : 200 commits, 100 pull requests et 100 issues les plus récents. Les suivants ne lisent que le delta.'
+                - '« learn_reviews: true » envoie les revues des pull requests fusionnées au LLM ; les apprentissages arrivent dans À valider.'
+                - '« review: true » fait commenter chaque pull request par le bot (application GitHub installée sur le dépôt) : règles métier touchées, décisions liées, ce que le diff contredit. « review_llm: false » retire la lecture du diff par le LLM, « review_check: "fail" » fait échouer le check graphe/rules au lieu d''avertir.'
+        github:
+            auth: 'Personal access token'
+            description: "Issues d'un dépôt, importées en document."
+            label: GitHub
+            notes:
+                - 'Définir GITHUB_MCP_TOKEN dans .env.local (token avec accès en lecture au dépôt).'
+                - "Nom et arguments de l'outil non vérifiés sans token : utiliser « Tester la connexion » puis ajuster."
+        gitlab-api:
+            auth: 'Access token (read_api)'
+            description: "Graphe du code, docs, commits, merge requests et issues d'un projet GitLab, reliés aux règles."
+            label: 'GitLab (code et historique)'
+            notes:
+                - "Remplacer « groupe/projet » par le chemin du projet. Instance auto-hébergée : changer l'URL en https://gitlab.exemple.com/api/v4."
+                - "Définir GITLAB_TOKEN dans .env.local et l'ajouter à MCP_CONNECTORS_ENV."
+                - '« code_graph: true » clone le dépôt sur le serveur et calcule son graphe avec graphify ; le jeton a alors besoin de read_repository.'
+                - 'Premier passage : 200 commits, 100 merge requests et 100 issues les plus récents. Les suivants ne lisent que le delta.'
+        linear:
+            auth: 'Clé API Linear'
+            description: 'Tickets et projets Linear.'
+            label: Linear
+            notes:
+                - 'Définir LINEAR_API_KEY dans .env.local (Settings → Security & access).'
+                - 'Ou sans clé : vider les en-têtes, enregistrer, puis « Connecter par OAuth » sur la page du connecteur.'
+                - "Tester la connexion, puis choisir l'outil à appeler."
+        mem0:
+            auth: 'Clé API mem0'
+            description: 'Mémoires existantes de mem0, importées en mémoires sans doublon.'
+            label: mem0
+            notes:
+                - 'Définir MEM0_API_KEY dans .env.local.'
+                - 'Une page par import : augmenter « page » pour les suivantes. Filtrer avec ''{"filters": {"AND": [{"app_id": "mon-app"}]}}''.'
+                - "Toutes les mémoires reçoivent le même type ; le type mem0 d'origine n'est pas repris."
+        notion:
+            auth: OAuth
+            description: 'Page ou base Notion, importée en document.'
+            label: Notion
+            notes:
+                - 'Enregistrer, puis « Connecter par OAuth » sur la page du connecteur et choisir les pages partagées.'
+                - "Remplacer l'URL par celle de la page ou de la base à importer."
+                - 'Autre outil : notion-search (''{"query": "..."}''). Vérifier les noms avec « Tester la connexion ».'
+    preset_notes: 'Notes sur {name}'
+    presets: 'Démarrer avec un fournisseur'
+    server: Serveur
+    show:
+        access: Accès
+        app_missing: 'application GitHub non configurée (variables {variables})'
+        arguments: Arguments
+        authorize: 'Connecter par OAuth'
+        bot_off: inactive
+        bot_on: 'bot actif'
+        command: Commande
+        connection_failed: 'Connexion impossible : {error}'
+        delete: 'Supprimer le connecteur'
+        delete_confirm: 'Supprimer le connecteur {name} ?'
+        delete_help: 'Les documents et mémoires déjà importés sont conservés.'
+        disconnect: Déconnecter
+        disconnect_confirm: 'Déconnecter le compte GitHub de ce connecteur ?'
+        disconnect_github: 'Déconnecter GitHub'
+        github: 'compte GitHub connecté'
+        github_note: '(les en-têtes saisis sont ignorés)'
+        headers: En-têtes
+        install_app: "installer l'application sur le dépôt"
+        last_failed: 'Dernier import en échec : {error}'
+        last_import: 'Dernier import'
+        list: Liste
+        no_resource: 'Aucune ressource.'
+        no_tool: 'Aucun outil.'
+        none: aucun
+        oauth: 'autorisé par OAuth'
+        oauth_note: "(remplace l'en-tête Authorization saisi)"
+        resources: Ressources
+        review: 'Revue des PR'
+        review_disable: 'Désactiver la revue des PR'
+        review_enable: 'Activer la revue des PR'
+        review_model: 'Modèle des revues'
+        review_model_help: 'Identifiant OpenRouter, ex. anthropic/claude-sonnet-4.5. Vide : celui du projet ({model}).'
+        revoke: "Retirer l'autorisation OAuth"
+        revoke_confirm: "Retirer l'autorisation OAuth de ce connecteur ?"
+        root: (racine)
+        root_folder: racine
+        server: 'Serveur {name}'
+        skipped: 'Ignorés au dernier import'
+        sync: Synchroniser
+        test: 'Tester la connexion'
+        tool: outil
+        tools: Outils
+        url: URL
+        variables: Variables
+    status:
+        done: '{created} créés · {updated} mis à jour · {unchanged} inchangés'
+        failed: 'échec le {date}'
+        never: 'jamais synchronisé'
+    unchecked: 'à vérifier'
+    unchecked_title: "Nom de l'outil non vérifié sans accès"
+    unchecked_tool: "Nom de l'outil non vérifié : tester la connexion après l'enregistrement."
+dashboard:
+    active: '{count} actives'
+    average: '{value} en moyenne'
+    chart_daily: '{title} par jour'
+    chart_hourly: '{title} par heure'
+    client: Client
+    created: 'Mémoires créées'
+    day: Jour
+    duration: Durée
+    failed: '{count} en échec'
+    hour: Heure
+    hybrid: 'Hybride (sémantique)'
+    in_total: '{count, number} au total'
+    key_figures: 'Chiffres clés'
+    keyword: Mots-clés
+    lookups: '{count, plural, one {# lecture} other {# lectures}}'
+    out_of: '{value} sur {total}'
+    pending: '{count, plural, one {proposition en attente} other {propositions en attente}}'
+    period:
+        24h: 'sur 24 heures'
+        30d: 'sur 30 jours'
+        7d: 'sur 7 jours'
+        90d: 'sur 90 jours'
+        all: 'depuis le début'
+    query: 'Recherche ou fichier'
+    recalled: 'Mémoires rappelées'
+    recalled_title: 'Mémoires renvoyées aux agents par search, file_context et get_document'
+    recent: 'Dernières requêtes MCP'
+    recent_empty: "Aucune requête enregistrée. Brancher un agent sur {endpoint} : chaque appel d'outil apparaît ici."
+    refresh: Actualiser
+    requests: 'Requêtes MCP'
+    search_empty: 'Aucune recherche sur la période.'
+    search_mode: 'Mode de recherche'
+    search_mode_note: 'mots-clés seuls, ou mots-clés et sens'
+    search_types: 'Types de recherche'
+    search_types_note: 'ce que les agents demandent à search'
+    see_memories: 'Voir les mémoires'
+    stored: 'Mémoires stockées'
+    tool: Outil
+    tools: 'Outils MCP appelés'
+    tools_empty: 'Aucun appel MCP sur la période.'
+    types: 'Types de mémoires'
+    types_empty: 'Aucune mémoire active.'
+    unit_memories: mémoires
+    unit_requests: requêtes
+    values: 'Voir les valeurs'
+document:
+    all_folders: 'Tous les dossiers'
+    at_root: '{count} à la racine'
+    code_count: '{count} code'
+    count_project: '{count} rattachés à {name}'
+    create_folder: 'Créer le dossier'
+    defined_rules: 'Règles métier définies'
+    docs_count: '{count} doc.'
+    download: Télécharger
+    empty_folder: 'Dossier vide. Déposer des fichiers ou créer un sous-dossier.'
+    folders: Dossiers
+    hint_folder: '.md, .pdf, .docx · 32 Mo max · ajoutés dans « {name} »'
+    hint_project: '.md, .pdf, .docx · 32 Mo max · rattachés à {name}'
+    hint_root: '.md, .pdf, .docx · 32 Mo max · ajoutés dans la racine'
+    load_demo: 'Charger la démo'
+    no_preview: "Pas encore d'aperçu pour les fichiers Word. Le texte sera extrait avec l'ingestion des documents."
+    no_project: 'aucun projet'
+    no_rule: 'Aucune règle rattachée à ce document.'
+    open_pdf: 'Ouvrir le PDF'
+    project_empty: 'Aucun document rattaché à ce projet'
+    project_empty_text: 'Déposer des fichiers ci-dessus, ou rattacher un document existant depuis sa page.'
+    props:
+        added: 'Ajouté le'
+        attach: 'Rattacher à {name}'
+        attach_first: "Rattacher d'abord le document à un projet pour lier son code."
+        detach: 'Détacher de {name}'
+        file: Fichier
+        folder: Dossier
+        human: humain
+        kb: '{size, number} Ko'
+        link_file: 'Lier un fichier de code'
+        link_file_label: 'Chercher un fichier de code à lier'
+        linked_code: 'Code lié'
+        no_file: 'Aucun fichier ne correspond.'
+        none: aucune
+        origin: Origine
+        rules: 'Règles définies'
+        size: Taille
+        unlink: 'Délier {path}'
+    rules_count: '{count, plural, one {# règle} other {# règles}}'
+    upload:
+        label: 'Ajouter des documents'
+enum:
+    agent_asset_kind:
+        agent: Sous-agent
+        command: Commande
+        skill: Skill
+    capability:
+        api: 'API HTTP'
+        auth: Authentification
+        cli: 'Ligne de commande'
+        data: Données
+        database: 'Base de données'
+        deployment: Déploiement
+        desktop: Desktop
+        infra: Infrastructure
+        messaging: 'Messages asynchrones'
+        mobile: Mobile
+        realtime: 'Temps réel'
+        ui: Interface
+    connector_mode:
+        github: 'GitHub → code, commits, PR, issues'
+        gitlab: 'GitLab → code, commits, MR, issues'
+        resources: 'Ressources → documents'
+        tool_document: 'Outil → un document'
+        tool_memories: 'Outil → mémoires'
+    connector_schedule:
+        daily: 'Tous les jours'
+        hourly: 'Toutes les heures'
+        manual: Manuelle
+    connector_transport:
+        http: 'HTTP (serveur distant)'
+        stdio: 'STDIO (commande locale)'
+    memory_type:
+        convention: Convention
+        decision: Décision
+        fact: Fait
+        preference: Préférence
+        task_learning: Apprentissage
+    memory_visibility:
+        group: Groupe
+        private: Privée
+        project: Projet
+    proposal_kind:
+        contradiction: Contradiction
+        duplicate: Doublon
+        learning: Apprentissage
+        refuted: 'Mémoire réfutée'
+    shadow_category:
+        ambiguous_term: 'Terme ambigu'
+        missing_acceptance_criterion: "Critère d'acceptation manquant"
+        missing_actor: 'Acteur manquant'
+        missing_dependency: 'Dépendance manquante'
+        missing_edge_case: 'Cas limite manquant'
+        missing_failure_mode: "Cas d'échec manquant"
+        unstated_assumption: 'Hypothèse implicite'
+    user_status:
+        active: Actif
+        disabled: Désactivé
+        pending: 'En attente'
+file:
+    count:
+        dependencies: '{count, plural, one {# dépendance} other {# dépendances}}'
+        documents: '{count, plural, one {# document} other {# documents}}'
+        incoming: '{count, plural, one {# usage entrant} other {# usages entrants}}'
+        memories: '{count, plural, one {# mémoire} other {# mémoires}}'
+        rules: '{count, plural, one {# règle métier} other {# règles métier}}'
+    depends_on: 'Dépend de'
+    depth: Profondeur
+    documentation: Documentation
+    edges:
+        confidence: Confiance
+        file: (fichier)
+        here: Ici
+        line: Ligne
+        relation: Relation
+    first_shown: '{count} premiers affichés'
+    graph_empty: 'Aucune relation avec un autre fichier.'
+    graph_label: 'Graphe des fichiers liés à {path}. Cliquer sur un fichier pour ouvrir sa fiche.'
+    hops: '{count, plural, one {# saut} other {# sauts}}'
+    last_commits: '{count} derniers commits'
+    neighbourhood: Voisinage
+    no_dependency: 'Aucune dépendance vers un autre fichier.'
+    no_document: 'Aucun document relié. Lier un document depuis ses propriétés.'
+    no_rule: 'Aucune règle métier reliée à ce fichier.'
+    no_symbol: 'Aucun symbole extrait.'
+    results: '{count, plural, one {# résultat} other {# résultats}} pour {query}'
+    search: 'Chercher un fichier ou un symbole'
+    search_label: 'Rechercher un fichier ou un symbole'
+    source: 'Fichier source'
+    symbols: Symboles
+    symbols_short: '{count} symb.'
+    target: 'Fichier cible'
+    unused: "Aucun autre fichier ne l'utilise."
+    used_by: 'Utilisé par'
+flash:
+    admin:
+        group_created: 'Groupe « {name} » créé.'
+        group_deleted: 'Groupe « {name} » supprimé. Ses mémoires de groupe ne sont plus visibles que des super admins.'
+        group_name: 'Donner au groupe un nom unique de 100 caractères au plus.'
+        group_projects: 'Projets du groupe « {name} » mis à jour.'
+        self_demotion: 'Un super admin ne se retire pas lui-même ses droits : un autre super admin doit le faire.'
+        user_updated: 'Compte de {name} mis à jour.'
+    agent_asset:
+        deleted: '« {name} » supprimé : son fichier est retiré des agents connectés à leur prochaine session.'
+        saved: '{kind} « {name} » enregistré : les agents connectés le reçoivent à leur prochaine session.'
+    api_key:
+        revoked: 'Clé « {name} » révoquée.'
+    connector:
+        deleted: 'Connecteur supprimé. Les documents et mémoires importés sont conservés.'
+        github_connected: 'Compte GitHub connecté : ce connecteur lit le dépôt avec son jeton.'
+        github_disconnected: "Compte GitHub déconnecté. Le jeton reste valide chez GitHub tant qu'il n'y est pas révoqué."
+        imported: 'Import terminé : {created} créés, {updated} mis à jour, {unchanged} inchangés, {skipped} ignorés.'
+        model_too_long: 'identifiant trop long.'
+        oauth_authorized: "Connecteur autorisé : il s'adresse au serveur MCP avec le jeton OAuth."
+        oauth_denied: 'Autorisation refusée : {error}'
+        oauth_expired: "L'autorisation OAuth a expiré, recommencer."
+        oauth_impossible: 'Autorisation OAuth impossible : {error}'
+        oauth_refused: "Le serveur d'autorisation a refusé la connexion : {error}"
+        oauth_removed: "Autorisation OAuth retirée de ce connecteur. Le jeton reste valide chez le fournisseur tant qu'il n'y est pas révoqué."
+        review_disabled: 'Revue désactivée pour ce dépôt.'
+        review_enabled: 'Revue activée : le bot commentera les pull requests de ce dépôt.'
+        review_model: 'Les revues des pull requests utilisent maintenant {model}.'
+        review_model_default: 'Les revues utilisent le modèle du projet : {model}.'
+        review_model_refused: 'OpenRouter a refusé le modèle "{model}" : {error}'
+        review_started: 'Revue de la pull request #{number} lancée : le commentaire du bot apparaît sur GitHub dans quelques instants.'
+        sync_started: "Synchronisation lancée : le dépôt est cloné et analysé en arrière-plan, le résultat apparaît dans l'historique."
+    document:
+        added: '{count, plural, one {# document ajouté.} other {# documents ajoutés.}}'
+    garden:
+        compared: '{compared, plural, one {# mémoire comparée} other {# mémoires comparées}} : {proposed, plural, =0 {aucune proposition ajoutée} one {# proposition ajoutée} other {# propositions ajoutées}} à valider.'
+    github:
+        choose: 'Choisir un projet et au moins un dépôt.'
+        connected: '{count, plural, one {# dépôt branché} other {# dépôts branchés}} sur {name} : clonés et analysés en arrière-plan.'
+        connected_each: '{count, plural, one {# dépôt branché} other {# dépôts branchés}}, chacun sur son projet : clonés et analysés en arrière-plan.'
+        expired: 'La connexion à GitHub a expiré, recommencer.'
+        refused: 'GitHub a refusé la connexion.'
+        skipped: 'Pas de projet possible pour {repositories} : un projet archivé ou hors de portée a déjà ce dépôt, ou son nom est pris.'
+        token_refused: 'GitHub a refusé le jeton : reconnecter le compte.'
+    llm:
+        saved: 'Réglages des modèles enregistrés.'
+        saved_reindex: "Réglages enregistrés. Le contenu est réindexé en arrière-plan avec le modèle d'embeddings."
+    memory:
+        deleted: 'Mémoire supprimée.'
+        verified: 'Vérification terminée : {verdict, select, verified {vérifiée} refuted {réfutée} conflict {sources en conflit} other {non vérifiable}}.'
+        verify_needs_project: 'Rattacher la mémoire à un projet pour la vérifier contre son graphe.'
+        visibility_changed: 'Visibilité modifiée.'
+        visibility_denied: "Seul l'auteur de la mémoire ou un super admin change sa visibilité."
+    project:
+        archived: 'Projet « {name} » archivé.'
+        created: 'Projet « {name} » créé.'
+        deleted: 'Projet « {name} » supprimé, avec son code, ses règles et ses connecteurs.'
+        restored: 'Projet « {name} » restauré.'
+        slug_mismatch: "L'identifiant retapé ne correspond pas : le projet est conservé."
+        updated: 'Réglages du projet mis à jour.'
+        updated_reindex: "Réglages mis à jour. Le contenu du projet est réindexé en arrière-plan avec son modèle d'embeddings."
+    proposal:
+        applied: 'Proposition appliquée.'
+        applied_memory: 'Proposition appliquée : « {memory} ».'
+        rejected: 'Proposition rejetée.'
+    rule:
+        shadow_areas: "{count, plural, =0 {Aucune zone d'ombre trouvée.} one {# zone d'ombre trouvée.} other {# zones d'ombre trouvées.}}"
+        unvalidated: 'Règle remise à valider.'
+        validated: 'Règle validée : elle rejoint la mémoire du projet donnée aux agents.'
+form:
+    agent_asset:
+        content: 'Instructions (Markdown)'
+        content_help: 'Le corps du fichier. Commencer par un bloc « --- » pour fournir son propre front matter (allowed-tools, model...) : il est alors gardé tel quel.'
+        description: Description
+        description_help: "Ce que ça fait et quand s'en servir : Claude Code choisit un skill ou un sous-agent d'après cette phrase."
+        kind: Type
+        name: Nom
+        name_help: "Nom du fichier et, pour une commande, ce qu'on tape après « / ». Ex. revue-de-pr."
+    connector:
+        arguments: "Arguments de l'outil (JSON)"
+        credentials: "En-têtes HTTP ou variables d'environnement"
+        credentials_help: 'Une ligne par valeur, « Nom: valeur ». Écrire « env:NOM » (ex. « Bearer env:GITHUB_MCP_TOKEN ») pour lire un secret dans .env.local au lieu de le stocker en base. Seules les variables listées dans MCP_CONNECTORS_ENV sont lisibles.'
+        endpoint: 'URL ou commande'
+        endpoint_help: 'HTTP : https://mcp.example.com/mcp. STDIO : commande lancée dans le conteneur, ex. php mon-serveur.php.'
+        folder: 'Dossier des documents'
+        folder_root: Racine
+        items_path: 'Chemin de la liste'
+        items_path_help: 'Mode mémoires : chemin de la liste dans la réponse JSON, ex. « results ». Vide si la réponse est la liste.'
+        memory_type: 'Type des mémoires'
+        mode: Import
+        name: Nom
+        project: 'Rattacher au projet'
+        schedule: Synchronisation
+        schedule_help: 'Automatique : demande le service worker (docker compose up -d worker).'
+        text_field: 'Champ du texte'
+        text_field_help: 'Mode mémoires : champ qui contient le texte. Par défaut : memory, text ou content.'
+        tool: 'Outil à appeler'
+        tool_help: 'Pour les modes « Outil ». « Tester la connexion » liste les outils disponibles.'
+        transport: Transport
+    folder:
+        name: 'Nouveau dossier'
+        name_placeholder: 'Nom du dossier'
+    llm:
+        api_key: 'Clé OpenRouter'
+        api_key_help: "Vide : la clé actuelle est conservée. Elle est chiffrée en base et n'est plus jamais affichée."
+        chat_model: 'Modèle de chat'
+        chat_model_help: 'Identifiant OpenRouter, ex. anthropic/claude-sonnet-4.5. Il doit savoir appeler des outils et répondre en JSON. Vide : celui du serveur.'
+        embedding_model: "Modèle d'embeddings"
+        embedding_model_help: "À choisir dans la liste, ex. openai/text-embedding-3-small. En changer relance l'indexation de tout le contenu. Vide : celui du serveur."
+        favorites: 'Modèles favoris'
+        favorites_help: "Proposés en tête de liste dans chaque champ de modèle, pour toute l'instance."
+        favorites_placeholder: 'Ajouter un modèle'
+        remove_key: 'Retirer la clé enregistrée ici'
+    memory:
+        text: Mémoire
+        text_placeholder: 'Un fait court et autonome, ex. : « Les seuils de détection sont centralisés dans catalog.ts. »'
+        type: Type
+        visibility: Visibilité
+    project:
+        chat_model_help: "Identifiant OpenRouter, ex. anthropic/claude-sonnet-4.5. Vide : celui de l'instance."
+        embedding_model_help: "À choisir dans la liste. En changer réindexe le contenu du projet. Vide : celui de l'instance."
+        groups: 'Groupes qui y accèdent'
+        name: Nom
+        repository: Dépôt
+        repository_help: "Remote du dépôt, ex. github.com/acme/boutique : il identifie le projet depuis n'importe quelle machine."
+        repository_path: 'Chemin local'
+        repository_path_help: "Dossier du dépôt sur la machine qui héberge le graphe, s'il y est cloné."
+        slug: Identifiant
+        slug_help: 'Minuscules, chiffres et tirets. Vide : déduit du nom. Il ne change plus ensuite.'
+    upload:
+        placeholder: 'Déposer des fichiers .md, .pdf ou .docx, ou cliquer pour parcourir'
+        remove: Retirer
+garden:
+    clean:
+        documents: 'Tous reliés à une règle, du code ou une mémoire.'
+        links: 'Aucun lien proposé par le LLM en attente de confirmation.'
+        memories: 'Toutes rattachées, liées et vérifiées.'
+        rules: 'Toutes validées, sourcées, reliées au code et analysées.'
+    finding:
+        inferred_edges:
+            hint: 'Proposés par le LLM : les confirmer ou les délier depuis les fiches.'
+            title: 'Liens inférés jamais validés'
+        isolated_documents:
+            hint: 'Ni règle, ni code, ni mémoire : les relier ou les détacher du projet.'
+            title: 'Documents reliés à rien'
+        orphan_memories:
+            hint: 'Les rattacher à un projet, les lier, ou les supprimer.'
+            title: 'Mémoires sans projet ni lien'
+        rules_not_analyzed:
+            hint: "Lancer l'analyse (bin/console app:rule:shadow)."
+            title: "Règles jamais analysées (zones d'ombre)"
+        rules_to_review:
+            hint: "Relire l'énoncé extrait et le valider."
+            title: 'Règles à valider'
+        rules_without_code:
+            hint: 'Lier le code qui implémente la règle.'
+            title: 'Règles sans code relié'
+        rules_without_source:
+            hint: 'Retrouver le document qui définit la règle.'
+            title: 'Règles sans document source'
+        stale_memories:
+            hint: 'Un commit a touché un fichier lié après la vérification : relancer la vérification ou corriger la mémoire.'
+            title: 'Mémoires dont le code a changé depuis leur vérification'
+        unlinked_memories:
+            hint: 'Le sujet de la mémoire a peut-être changé : la relier ou la retirer.'
+            title: 'Mémoires dont tous les liens ont été rejetés'
+        unverified_memories:
+            hint: 'Lancer la vérification (bin/console app:verify).'
+            title: 'Mémoires jamais vérifiées ou modifiées depuis'
+    lede: "Le jardinage est l'entretien de la connaissance du projet : repérer ce qui n'est plus relié, plus vérifié ou jamais relu, avant que les agents ne s'appuient dessus. Cette page ne modifie rien."
+    links: 'Liens inférés'
+    more: 'Et {count} autres.'
+    nothing: 'Rien à entretenir'
+    state: 'État par famille'
+    step:
+        compare: Comparer
+        compare_button: 'Chercher doublons et contradictions'
+        compare_text: 'Un passage LLM cherche les mémoires en double ou qui se contredisent.'
+        fix: Corriger
+        fix_text: 'Chaque correction se décide à la main, depuis la fiche concernée ou dans la file de validation.'
+        spot: Repérer
+        spot_text: 'Des contrôles sans LLM listent ci-dessous ce qui a dérivé, par famille.'
+    to_tend: 'à entretenir'
+    total: '{count, plural, one {# élément à entretenir} other {# éléments à entretenir}}'
+js:
+    confirm: Confirmer
+    copied: Copiée
+    galaxy:
+        count: '{memories, plural, one {# mémoire} other {# mémoires}} · {subjects, plural, one {# sujet} other {# sujets}}'
+        hint: 'Survoler un point pour lire la mémoire ou le sujet ; cliquer pour ouvrir sa fiche.'
+    model:
+        all: 'Tous les modèles'
+        clear: 'Revenir au modèle par défaut'
+        favorites: Favoris
+        free: gratuit
+        no_results: 'Aucun modèle de la liste ne correspond.'
+        price: '{prompt} / {completion} par M'
+        remove: Retirer
+        use: 'Utiliser {model}'
+    palette:
+        results: '{count, plural, =0 {Aucun résultat} one {# résultat} other {# résultats}}'
+keys:
+    all: Tous
+    copy: Copier
+    create: 'Créer la clé'
+    created: 'Clé créée. Elle ne sera plus affichée : la copier maintenant.'
+    created_at: Créée
+    empty: 'Aucune clé'
+    empty_text: "Tant que l'accès n'est pas restreint (APP_ACCESS_ROLE=ROLE_USER), les agents appellent le serveur sans clé."
+    key: clé
+    last_used: 'Dernier usage'
+    lede: "Une clé identifie un agent ou un poste qui appelle {mcp} et {api}, avec l'en-tête {header}. Limitée à des projets, elle ne lit et n'écrit que dans ceux-là."
+    projects: 'Projets autorisés'
+    projects_help: 'aucun coché : tous les projets'
+    revoke: Révoquer
+    revoke_confirm: 'Révoquer la clé {name} ?'
+    revoke_key: 'Révoquer la clé'
+    revoked: révoquée
+layout:
+    breadcrumbs: "Fil d'Ariane"
+    help: Aide
+    help_title: 'Comprendre cette page'
+    search: Rechercher
+    theme_dark: 'Passer au thème sombre'
+    theme_light: 'Passer au thème clair'
+llm:
+    key: Clé
+    key_environment: "lue dans l'environnement"
+    key_interface: 'enregistrée ici'
+    key_missing_help: 'sans clé, rien de ce qui demande un LLM ne tourne'
+    lede: "Clé OpenRouter et modèles de toute l'instance : extraction des mémoires, vérification, assistant, bot de revue, recherche par le sens. Un projet peut nommer ses propres modèles dans ses réglages ; la clé reste celle-ci."
+    models: Modèles
+    save_help: 'Chaque enregistrement essaie la clé et les deux modèles par un appel court.'
+    unavailable: 'Clé API absente pour la plateforme LLM "{platform}" : la renseigner dans les réglages des modèles ou dans .env.local.'
+locale:
+    en: English
+    fr: Français
+login:
+    continue_with: 'Continuer avec {provider}'
+    fallback: 'Compte de secours (mot de passe)'
+    no_provider: "Aucun fournisseur de connexion n'est configuré (variables {variables})."
+    password: 'Mot de passe'
+    submit: 'Se connecter'
+    title: Connexion
+    username: Identifiant
+memory:
+    about:
+        empty: 'Aucune mémoire liée. Lier une mémoire depuis sa page.'
+    adr:
+        alternatives: 'Alternatives écartées'
+        consequences: Conséquences
+        context: Contexte
+    editor:
+        adr: 'Fiche de décision'
+        created: 'Créée le'
+        history: Historique
+        length: 'La mémoire doit contenir entre 1 et 1000 caractères.'
+        link: 'Lier un fichier, un document ou une règle'
+        link_label: 'Chercher un fichier, un document ou une règle à lier'
+        linked_to: 'Liée à'
+        no_match: 'Rien ne correspond.'
+        no_match_project: 'Rien ne correspond (rattacher un projet pour lier son code et ses règles).'
+        previous_kept: "La version précédente reste dans l'historique."
+        unknown_type: 'Type de mémoire inconnu.'
+        updated: 'Modifiée le'
+    graph:
+        document: Document
+        empty: 'Aucune mémoire active à afficher.'
+        file: 'Fichier de code'
+        hint: 'Survoler un point pour lire la mémoire ou le sujet ; cliquer pour ouvrir sa fiche.'
+        label: 'Graphe des mémoires et de leurs sujets'
+        lede: 'Chaque mémoire est un satellite du sujet dont elle parle : un fichier de code, une règle métier ou un document. Plus un sujet est gros, plus de mémoires gravitent autour. Une mémoire liée à rien tourne autour de son projet.'
+        limit: 'Les 300 mémoires actives les plus récentes sont affichées. La liste complète, avec filtres, est dans {link}.'
+        memory: Mémoire
+        project: Projet
+        rule: 'Règle métier'
+        table: 'le tableau des mémoires'
+    graph_short: Graphe
+    index:
+        active: Actives
+        add: 'Ajouter la mémoire'
+        all_sources: 'Toutes les sources'
+        all_types: 'Tous les types'
+        any_verification: 'Toute vérification'
+        archived: Archivées
+        attached_to: 'Rattachée à {name}'
+        count_project: '{count} rattachées à {name}'
+        empty: 'Aucune mémoire'
+        empty_text: 'En ajouter une ci-dessus ; les agents (Claude Code, MCP) les envoient aussi automatiquement.'
+        links: Liens
+        no_match: 'Aucune mémoire ne correspond.'
+        no_project: 'Sans projet, à rattacher ensuite'
+        project: Projet
+        search: 'Rechercher dans le texte'
+        search_label: 'Chercher dans les mémoires'
+        source: Source
+        status: Statut
+        updated: 'Mise à jour'
+    new: 'Nouvelle mémoire'
+    show:
+        archived_text: "Archivée : n'apparaît plus dans la recherche ni chez les agents."
+        by: par
+        delete: 'Supprimer la mémoire'
+        delete_confirm: 'Supprimer cette mémoire et ses liens ?'
+        delete_help: 'Supprime aussi ses liens. Irréversible.'
+        group_deleted: supprimé
+        never_verified: 'Jamais vérifiée contre le graphe.'
+        replaces: Remplace
+        retired: Retirée
+        sources: 'Sources :'
+        superseded: Remplacée
+        text_changed: 'Le texte a changé depuis : à revérifier.'
+        tier_graph: 'Graphe du code, sans LLM'
+        tier_knowledge: 'Règles, documents et code liés, un appel LLM'
+        tier_none: 'Aucune source'
+        verify: Vérifier
+        verify_help: 'Chemins cités contre le graphe du code, puis règles et documents liés.'
+        visibility_help: 'Projet : tous ceux qui ont accès à ses projets. Groupe : ses membres. Privée : son auteur et ses agents.'
+        who_sees: 'Qui voit cette mémoire'
+    source:
+        aidd: 'banque AIDD'
+        chat: 'assistant du projet'
+        connector: connecteur
+        demo: démo
+        learn: 'extraite par LLM'
+        manual: 'saisie manuelle'
+        mcp: 'agent (MCP)'
+    tag:
+        group: groupe
+        private: privée
+        retired: retirée
+        superseded: remplacée
+    verification: Vérification
+    visibility:
+        group: 'Groupe {name}'
+        private: 'Privée (moi seul)'
+        project: 'Visible par le projet'
+nav:
+    activity: Activité
+    agent_assets: 'Skills des agents'
+    all_documents: 'Tous les documents'
+    all_memories: 'Toutes les mémoires'
+    all_projects: 'Tous les projets'
+    api_keys: "Clés d'API"
+    appearance: Apparence
+    assistant: Assistant
+    code: Code
+    connectors: Connexions
+    count_to_review: '{count} à valider'
+    dashboard: 'Tableau de bord'
+    documents: Documents
+    filter_projects: 'Filtrer les projets'
+    garden: Jardinage
+    hint_code: code
+    hint_commands: commandes
+    llm: 'Modèles de langage'
+    logout: 'Se déconnecter'
+    memories: Mémoires
+    memory_graph: 'Graphe des mémoires'
+    no_project: 'Aucun projet'
+    no_project_matches: 'Aucun projet ne correspond'
+    project_settings: 'Réglages du projet'
+    projects: Projets
+    rules: 'Règles métier'
+    settings: Réglages
+    switch_project: 'Changer de projet'
+    to_review: 'À valider'
+    users: Utilisateurs
+    wiki: Wiki
+    workspace: Espace
+pager:
+    label: Pagination
+    next: Suivante
+    previous: Précédente
+    status: 'Page {number} sur {pages} · {total, number} au total'
+palette:
+    actions: Actions
+    appearance: 'Apparence et thème'
+    close: fermer
+    empty: 'Aucun résultat.'
+    enter: Entrée
+    escape: Échap
+    files: Fichiers
+    github: 'Brancher des dépôts GitHub'
+    input: 'Chercher une page, un projet, une action ou une mémoire'
+    input_with_files: 'Chercher une page, un projet, une action, une mémoire ou un fichier'
+    label: 'Palette de commandes'
+    navigate: naviguer
+    open: ouvrir
+    pages: Pages
+    placeholder: Chercher…
+    project_settings: 'Réglages du projet {name}'
+    results: Résultats
+pending:
+    text: "Le compte {account} existe mais n'est pas actif. Un super admin doit l'activer avant qu'il ne donne accès au graphe."
+    title: 'Compte en attente'
+period:
+    24h: '24 h'
+    30d: '30 j'
+    7d: '7 j'
+    90d: '90 j'
+    all: Tout
+    label: Période
+project:
+    archive: Archiver
+    archive_confirm: 'Archiver {name} ? Les agents ne le liront plus et ses connecteurs ne se synchroniseront plus.'
+    archived: Archivé
+    code:
+        capabilities: 'Capacités détectées dans les chemins du code'
+        empty: 'Aucun fichier de code'
+        empty_text: "Le code arrive avec un connecteur GitHub ou GitLab, ou par l'import d'un graphe extrait avec graphify."
+    create: 'Créer le projet'
+    groups_help: 'Leurs membres voient le projet. Un super admin voit tous les projets.'
+    index:
+        actions_for: 'Actions pour {name}'
+        active: Actifs
+        archived: Archivés
+        cli_lede: "Extraire le graphe d'un dépôt avec graphify, puis l'importer :"
+        cli_name: Nom
+        cli_repository: dépôt
+        code_files: 'Fichiers de code'
+        edges: '{count, plural, one {# arête} other {# arêtes}}'
+        empty_archived: 'Aucun projet archivé'
+        empty_archived_text: 'Un projet archivé reste lisible, mais les agents ne le lisent plus et ses connecteurs ne se synchronisent plus.'
+        empty_text: "Un projet réunit le code d'un dépôt, ses documents, ses règles métier et ses mémoires."
+        files: '{count, plural, one {# fichier} other {# fichiers}}'
+        filter_state: 'Filtrer par état'
+        see_active: 'Voir les projets actifs'
+        symbols: '{count, plural, one {# symbole} other {# symboles}}'
+    new: 'Nouveau projet'
+    new_lede: "Un projet regroupe les documents, les règles, les mémoires et le code d'un dépôt."
+    open_form: 'Ouvrir le formulaire'
+    restore: Restaurer
+    settings:
+        archive: 'Archiver le projet'
+        archived: 'Projet archivé'
+        archived_text: "Absent des listes, ignoré par les agents, connecteurs à l'arrêt. Ses pages restent lisibles par leur adresse."
+        connectors: Connecteurs
+        danger: 'Archiver ou supprimer le projet'
+        danger_text: "L'archivage se défait. La suppression est irréversible."
+        delete: 'Supprimer le projet'
+        delete_forever: 'Supprimer définitivement'
+        delete_text: "Son graphe de code, ses règles métier et {count, plural, one {son connecteur} other {ses # connecteurs}}, clones compris, sont supprimés. Ses documents et ses mémoires restent dans l'espace, détachés du projet. Irréversible."
+        delete_title: 'Supprimer {name} ?'
+        no_connector: "Aucun connecteur n'alimente ce projet."
+        project: Projet
+        restore: 'Restaurer le projet'
+        retype: 'Retaper {slug} pour confirmer'
+proposal:
+    apply: Appliquer
+    archives: 'Archive :'
+    axes: 'durabilité {durability}, réutilisation {reuse}, adéquation {fit}, risque {risk}'
+    empty: "Rien à valider. Les propositions arrivent avec {command}, l'outil MCP {tool}, le jardinage et la vérification des mémoires."
+    evidence: Preuve
+    evidence_source: 'Preuve et source'
+    filter_kind: 'Filtrer par sorte'
+    keep: "Garder (l'autre est archivée) :"
+    keep_merge: "Garder (l'autre est fusionnée dedans puis archivée) :"
+    lede: "Ce que le LLM propose n'entre dans le graphe qu'une fois appliqué ici. Une mémoire remplacée ou retirée est archivée, pas supprimée."
+    lesson: 'Texte de la mémoire'
+    links: 'Liens proposés'
+    page: fiche
+    pending: '{count} en attente'
+    pending_project: '{count} en attente pour {name}'
+    reject: Rejeter
+    replaces_text: 'Remplace le texte de :'
+    retract: 'Retirer :'
+    retract_memory: 'Retirer la mémoire'
+    retracts: Retire
+    score: 'score {score}/10'
+    source:
+        conversation: conversation
+        diff: diff
+        file: fichier
+        review: revue
+    updates: 'Met à jour'
+    verdict: 'Verdict {verdict} : {reason}'
+    why: Pourquoi
+rule:
+    index:
+        drop_documents: 'Déposer des documents'
+        empty: 'Aucune règle métier'
+        empty_text: "Les règles viennent de l'extraction des documents métier du projet."
+        files_title: 'Fichiers liés, dont vérifiés'
+        filter_status: 'Filtrer par statut'
+        none_in_status: 'Aucune règle dans ce statut.'
+        shadow_count: "{count, plural, one {# zone d'ombre} other {# zones d'ombre}}"
+        shadow_title: "Zones d'ombre à lever avec le métier"
+        validated: Validées
+        verified_count: '{count, plural, one {# vérifié} other {# vérifiés}}'
+    show:
+        analyse: Analyser
+        blocker: Bloquant
+        implemented_by: 'Implémentée par'
+        last_analysis: 'Dernière analyse le {date} ; réanalyser remplace la liste.'
+        major: Majeur
+        mentions: "Citée dans l'historique"
+        minor: Mineur
+        never_analysed: 'Jamais analysée : ce que la règle laisse deviner au développeur (hypothèses, termes ambigus, cas limites...).'
+        no_document: 'Aucun document ne définit cette règle.'
+        no_file: 'Aucun fichier de code relié à cette règle.'
+        reanalyse: Réanalyser
+        resolved: Résolue
+        shadow: "Zones d'ombre"
+        sources: Sources
+        unvalidate: 'Remettre à valider'
+        validate: 'Valider la règle'
+    source_documents: 'Documents sources'
+    validated: Validée
+toast:
+    close: 'Fermer la notification'
+    region: Notifications
+verdict:
+    conflict: 'Sources en conflit'
+    never: 'Jamais vérifiée'
+    refuted: Réfutée
+    title: 'Vérification contre le graphe'
+    unverified: 'Non vérifiable'
+    verified: Vérifiée

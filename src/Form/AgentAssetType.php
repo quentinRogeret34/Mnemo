@@ -16,13 +16,13 @@ final class AgentAssetType extends AbstractType
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
-            ->add('kind', EnumType::class, ['label' => 'Type', 'class' => AgentAssetKind::class, 'choice_label' => static fn (AgentAssetKind $kind): string => $kind->label()])
-            ->add('name', TextType::class, ['label' => 'Nom', 'empty_data' => '', 'help' => 'Nom du fichier et, pour une commande, ce qu\'on tape après « / ». Ex. revue-de-pr.'])
-            ->add('description', TextType::class, ['label' => 'Description', 'empty_data' => '', 'help' => 'Ce que ça fait et quand s\'en servir : Claude Code choisit un skill ou un sous-agent d\'après cette phrase.'])
+            ->add('kind', EnumType::class, ['label' => 'form.agent_asset.kind', 'class' => AgentAssetKind::class])
+            ->add('name', TextType::class, ['label' => 'form.agent_asset.name', 'empty_data' => '', 'help' => 'form.agent_asset.name_help'])
+            ->add('description', TextType::class, ['label' => 'form.agent_asset.description', 'empty_data' => '', 'help' => 'form.agent_asset.description_help'])
             ->add('content', TextareaType::class, [
-                'label' => 'Instructions (Markdown)',
+                'label' => 'form.agent_asset.content',
                 'empty_data' => '',
-                'help' => 'Le corps du fichier. Commencer par un bloc « --- » pour fournir son propre front matter (allowed-tools, model...) : il est alors gardé tel quel.',
+                'help' => 'form.agent_asset.content_help',
                 'attr' => ['rows' => 18],
             ]);
     }

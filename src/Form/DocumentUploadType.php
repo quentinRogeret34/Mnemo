@@ -17,11 +17,11 @@ final class DocumentUploadType extends AbstractType
             'label' => false,
             'multiple' => true,
             'max_files' => 20,
-            'placeholder' => 'Déposer des fichiers .md, .pdf ou .docx, ou cliquer pour parcourir',
-            'remove_label' => 'Retirer',
+            'placeholder' => 'form.upload.placeholder',
+            'remove_label' => 'form.upload.remove',
             'attr' => ['accept' => '.md,.pdf,.docx'],
             'constraints' => [
-                new Count(min: 1, minMessage: 'Ajouter au moins un fichier.'),
+                new Count(min: 1, minMessage: 'upload.min'),
                 new All([
                     new File(
                         maxSize: '32M',
@@ -31,9 +31,9 @@ final class DocumentUploadType extends AbstractType
                             'pdf' => ['application/pdf'],
                             'docx' => ['application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/zip'],
                         ],
-                        extensionsMessage: 'Format non pris en charge ({{ extension }}). Formats acceptés : {{ extensions }}.',
-                        mimeTypesMessage: 'Le contenu du fichier ne correspond pas à son extension ({{ type }}).',
-                        maxSizeMessage: 'Fichier trop lourd ({{ size }} {{ suffix }}), maximum {{ limit }} {{ suffix }}.',
+                        extensionsMessage: 'upload.extension',
+                        mimeTypesMessage: 'upload.mime_type',
+                        maxSizeMessage: 'upload.max_size',
                     ),
                 ]),
             ],

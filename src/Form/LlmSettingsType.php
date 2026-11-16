@@ -23,32 +23,32 @@ final class LlmSettingsType extends AbstractType
     {
         $builder
             ->add('apiKey', PasswordType::class, [
-                'label' => 'Clé OpenRouter',
+                'label' => 'form.llm.api_key',
                 'required' => false,
-                'help' => 'Vide : la clé actuelle est conservée. Elle est chiffrée en base et n\'est plus jamais affichée.',
+                'help' => 'form.llm.api_key_help',
                 'attr' => ['autocomplete' => 'off', 'placeholder' => 'sk-or-...'],
                 'constraints' => [new Length(max: 500)],
             ])
-            ->add('removeKey', CheckboxType::class, ['label' => 'Retirer la clé enregistrée ici', 'required' => false])
+            ->add('removeKey', CheckboxType::class, ['label' => 'form.llm.remove_key', 'required' => false])
             ->add('chatModel', TextType::class, [
-                'label' => 'Modèle de chat',
+                'label' => 'form.llm.chat_model',
                 'required' => false,
-                'help' => 'Identifiant OpenRouter, ex. anthropic/claude-sonnet-4.5. Il doit savoir appeler des outils et répondre en JSON. Vide : celui du serveur.',
+                'help' => 'form.llm.chat_model_help',
                 'attr' => $this->picker('chat') + ['placeholder' => $this->settings->defaultChatModel],
                 'constraints' => [new Length(max: 150)],
             ])
             ->add('embeddingModel', TextType::class, [
-                'label' => 'Modèle d\'embeddings',
+                'label' => 'form.llm.embedding_model',
                 'required' => false,
-                'help' => 'À choisir dans la liste, ex. openai/text-embedding-3-small. En changer relance l\'indexation de tout le contenu. Vide : celui du serveur.',
+                'help' => 'form.llm.embedding_model_help',
                 'attr' => $this->picker('embedding') + ['placeholder' => $this->settings->defaultEmbeddingModel],
                 'constraints' => [new Length(max: 150)],
             ])
             ->add('favoriteModels', TextType::class, [
-                'label' => 'Modèles favoris',
+                'label' => 'form.llm.favorites',
                 'required' => false,
-                'help' => 'Proposés en tête de liste dans chaque champ de modèle, pour toute l\'instance.',
-                'attr' => $this->picker('chat', true) + ['placeholder' => 'Ajouter un modèle'],
+                'help' => 'form.llm.favorites_help',
+                'attr' => $this->picker('chat', true) + ['placeholder' => 'form.llm.favorites_placeholder'],
                 'constraints' => [new Length(max: 5000)],
             ]);
     }

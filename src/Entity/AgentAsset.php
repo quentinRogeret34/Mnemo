@@ -14,7 +14,7 @@ use Symfony\Component\Validator\Constraints as Assert;
  */
 #[ORM\Entity]
 #[ORM\UniqueConstraint(name: 'agent_asset_unique', columns: ['project_id', 'kind', 'name'])]
-#[UniqueEntity(['project', 'kind', 'name'], message: 'Ce nom est déjà pris pour ce type dans le projet.', errorPath: 'name')]
+#[UniqueEntity(['project', 'kind', 'name'], message: 'agent_asset.name.taken', errorPath: 'name')]
 class AgentAsset
 {
     #[ORM\Id]
@@ -26,18 +26,18 @@ class AgentAsset
     private AgentAssetKind $kind = AgentAssetKind::Skill;
 
     #[ORM\Column(length: 64)]
-    #[Assert\NotBlank(message: 'Donner un nom.')]
+    #[Assert\NotBlank(message: 'agent_asset.name.blank')]
     #[Assert\Length(max: 64)]
-    #[Assert\Regex('/^[a-z0-9]+(-[a-z0-9]+)*$/', message: 'Minuscules, chiffres et tirets seulement, ex. « revue-de-pr » : c\'est le nom du fichier.')]
+    #[Assert\Regex('/^[a-z0-9]+(-[a-z0-9]+)*$/', message: 'agent_asset.name.format')]
     private string $name = '';
 
     #[ORM\Column(length: 500)]
-    #[Assert\NotBlank(message: 'Dire quand l\'utiliser : Claude choisit d\'après cette description.')]
+    #[Assert\NotBlank(message: 'agent_asset.description.blank')]
     #[Assert\Length(max: 500)]
     private string $description = '';
 
     #[ORM\Column(type: Types::TEXT)]
-    #[Assert\NotBlank(message: 'Écrire les instructions.')]
+    #[Assert\NotBlank(message: 'agent_asset.content.blank')]
     #[Assert\Length(max: 100000)]
     private string $content = '';
 

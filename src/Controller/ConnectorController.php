@@ -29,6 +29,7 @@ use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Translation\TranslatableMessage;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 
 final class ConnectorController extends AbstractController
@@ -88,7 +89,7 @@ final class ConnectorController extends AbstractController
             return $this->redirectToRoute('connector_show', ['id' => $connector->getId()]);
         }
 
-        return $this->render('connector/edit.html.twig', ['connector' => $connector, 'form' => $form, 'preset' => $presetData], new Response(status: $form->isSubmitted() ? Response::HTTP_UNPROCESSABLE_ENTITY : Response::HTTP_OK));
+        return $this->render('connector/edit.html.twig', ['connector' => $connector, 'form' => $form, 'preset' => $presetData, 'preset_key' => $preset], new Response(status: $form->isSubmitted() ? Response::HTTP_UNPROCESSABLE_ENTITY : Response::HTTP_OK));
     }
 
     #[Route('/connectors/{id}', name: 'connector_show', requirements: ['id' => '\d+'], methods: ['GET'])]
@@ -123,7 +124,7 @@ final class ConnectorController extends AbstractController
         $pending = $request->getSession()->remove(self::OAUTH_STATE);
         $connector = \is_array($pending) && hash_equals((string) $pending['state'], $request->query->getString('state')) ? $this->entityManager->find(Connector::class, $pending['connector']) : null;
         if (null === $connector || !$this->oauthAvailable($connector)) {
-            $this->addFlash('error', 'La connexion à GitHub a expiré, recommencer.');
+            $this->addFlash('error', new TranslatableMessage('flash.github.expired'));
 
             return $this->redirectToRoute('connector_index');
         }
@@ -131,9 +132,9 @@ final class ConnectorController extends AbstractController
         try {
             $connector->setOauthToken($this->secretBox->encrypt($this->oauthClient->accessToken('github', $request->query->getString('code'), $this->generateUrl('connector_oauth_check', [], UrlGeneratorInterface::ABSOLUTE_URL))));
             $this->entityManager->flush();
-            $this->addFlash('success', 'Compte GitHub connecté : ce connecteur lit le dépôt avec son jeton.');
+            $this->addFlash('success', new TranslatableMessage('flash.connector.github_connected'));
         } catch (\Throwable) {
-            $this->addFlash('error', 'GitHub a refusé la connexion.');
+            $this->addFlash('error', new TranslatableMessage('flash.github.refused'));
         }
 
         return $this->redirectToRoute('connector_show', ['id' => $connector->getId()]);
@@ -145,7 +146,7 @@ final class ConnectorController extends AbstractController
         $this->checkToken($connector, $request);
         $connector->setOauthToken(null);
         $this->entityManager->flush();
-        $this->addFlash('success', 'Compte GitHub déconnecté. Le jeton reste valide chez GitHub tant qu\'il n\'y est pas révoqué.');
+        $this->addFlash('success', new TranslatableMessage('flash.connector.github_disconnected'));
 
         return $this->redirectToRoute('connector_show', ['id' => $connector->getId()]);
     }
@@ -164,7 +165,7 @@ final class ConnectorController extends AbstractController
         try {
             $flow = $this->authorization->start($connector, $this->generateUrl('connector_authorize_check', [], UrlGeneratorInterface::ABSOLUTE_URL), $state);
         } catch (\Throwable $exception) {
-            $this->addFlash('error', \sprintf('Autorisation OAuth impossible : %s', $exception->getMessage()));
+            $this->addFlash('error', new TranslatableMessage('flash.connector.oauth_impossible', ['error' => $exception->getMessage()]));
 
             return $this->redirectToRoute('connector_show', ['id' => $connector->getId()]);
         }
@@ -179,20 +180,20 @@ final class ConnectorController extends AbstractController
         $pending = $request->getSession()->remove(self::AUTHORIZATION_STATE);
         $connector = \is_array($pending) && hash_equals((string) $pending['state'], $request->query->getString('state')) ? $this->entityManager->find(Connector::class, $pending['connector']) : null;
         if (null === $connector) {
-            $this->addFlash('error', 'L\'autorisation OAuth a expiré, recommencer.');
+            $this->addFlash('error', new TranslatableMessage('flash.connector.oauth_expired'));
 
             return $this->redirectToRoute('connector_index');
         }
 
         if ($request->query->has('error')) {
-            $this->addFlash('error', \sprintf('Autorisation refusée : %s', $request->query->getString('error_description') ?: $request->query->getString('error')));
+            $this->addFlash('error', new TranslatableMessage('flash.connector.oauth_denied', ['error' => $request->query->getString('error_description') ?: $request->query->getString('error')]));
         } else {
             try {
                 $this->authorization->finish($connector, $pending['flow'], $request->query->getString('code'));
                 $this->entityManager->flush();
-                $this->addFlash('success', 'Connecteur autorisé : il s\'adresse au serveur MCP avec le jeton OAuth.');
+                $this->addFlash('success', new TranslatableMessage('flash.connector.oauth_authorized'));
             } catch (\Throwable $exception) {
-                $this->addFlash('error', \sprintf('Le serveur d\'autorisation a refusé la connexion : %s', $exception->getMessage()));
+                $this->addFlash('error', new TranslatableMessage('flash.connector.oauth_refused', ['error' => $exception->getMessage()]));
             }
         }
 
@@ -205,7 +206,7 @@ final class ConnectorController extends AbstractController
         $this->checkToken($connector, $request);
         $connector->setMcpAuthorization(null);
         $this->entityManager->flush();
-        $this->addFlash('success', 'Autorisation OAuth retirée de ce connecteur. Le jeton reste valide chez le fournisseur tant qu\'il n\'y est pas révoqué.');
+        $this->addFlash('success', new TranslatableMessage('flash.connector.oauth_removed'));
 
         return $this->redirectToRoute('connector_show', ['id' => $connector->getId()]);
     }
@@ -232,13 +233,13 @@ final class ConnectorController extends AbstractController
         // Cloning a repository and building its graph takes minutes: the worker does it.
         if ($connector->getMode()->isForge() && true === ($connector->getArguments()['code_graph'] ?? false)) {
             $this->bus->dispatch(new SyncConnector($connector->getId(), ConnectorRun::MANUAL));
-            $this->addFlash('success', 'Synchronisation lancée : le dépôt est cloné et analysé en arrière-plan, le résultat apparaît dans l\'historique.');
+            $this->addFlash('success', new TranslatableMessage('flash.connector.sync_started'));
 
             return $this->redirectToRoute('connector_show', ['id' => $connector->getId()]);
         }
         $report = $this->runner->sync($connector);
         if (null === $report['error']) {
-            $this->addFlash('success', \sprintf('Import terminé : %d créés, %d mis à jour, %d inchangés, %d ignorés.', $report['created'], $report['updated'], $report['unchanged'], \count($report['skipped'])));
+            $this->addFlash('success', new TranslatableMessage('flash.connector.imported', ['created' => $report['created'], 'updated' => $report['updated'], 'unchanged' => $report['unchanged'], 'skipped' => \count($report['skipped'])]));
         }
 
         return $this->redirectToRoute('connector_show', ['id' => $connector->getId()]);
@@ -257,7 +258,7 @@ final class ConnectorController extends AbstractController
         $enabled = true !== ($connector->getArguments()['review'] ?? false);
         $connector->setArguments(['review' => $enabled] + $connector->getArguments());
         $this->entityManager->flush();
-        $this->addFlash('success', $enabled ? 'Revue activée : le bot commentera les pull requests de ce dépôt.' : 'Revue désactivée pour ce dépôt.');
+        $this->addFlash('success', new TranslatableMessage($enabled ? 'flash.connector.review_enabled' : 'flash.connector.review_disabled'));
 
         return $this->redirectToRoute('connector_show', ['id' => $connector->getId()]);
     }
@@ -276,14 +277,14 @@ final class ConnectorController extends AbstractController
         $arguments = $connector->getArguments();
         unset($arguments['review_model']);
         if ('' === $model) {
-            $this->addFlash('success', \sprintf('Les revues utilisent le modèle du projet : %s.', $this->llmSettings->chatModel($connector->getProject())));
+            $this->addFlash('success', new TranslatableMessage('flash.connector.review_model_default', ['model' => $this->llmSettings->chatModel($connector->getProject())]));
         } elseif (mb_strlen($model) > 150 || null !== $error = $this->modelCheck->chat($model)) {
-            $this->addFlash('error', \sprintf('OpenRouter a refusé le modèle "%s" : %s', mb_substr($model, 0, 150), $error ?? 'identifiant trop long.'));
+            $this->addFlash('error', new TranslatableMessage('flash.connector.review_model_refused', ['model' => mb_substr($model, 0, 150), 'error' => $error ?? new TranslatableMessage('flash.connector.model_too_long')]));
 
             return $this->redirectToRoute('connector_show', ['id' => $connector->getId()]);
         } else {
             $arguments['review_model'] = $model;
-            $this->addFlash('success', \sprintf('Les revues des pull requests utilisent maintenant %s.', $model));
+            $this->addFlash('success', new TranslatableMessage('flash.connector.review_model', ['model' => $model]));
         }
         $connector->setArguments($arguments);
         $this->entityManager->flush();
@@ -316,7 +317,7 @@ final class ConnectorController extends AbstractController
             throw $this->createNotFoundException('Only a GitHub connector reviews pull requests.');
         }
         $this->bus->dispatch(new ReviewPullRequest($connector->getId(), $number));
-        $this->addFlash('success', \sprintf('Revue de la pull request #%d lancée : le commentaire du bot apparaît sur GitHub dans quelques instants.', $number));
+        $this->addFlash('success', new TranslatableMessage('flash.connector.review_started', ['number' => $number]));
 
         return $this->redirectToRoute('connector_pull_requests', ['id' => $connector->getId()]);
     }
@@ -328,7 +329,7 @@ final class ConnectorController extends AbstractController
         $this->checkout->remove($connector);
         $this->entityManager->remove($connector);
         $this->entityManager->flush();
-        $this->addFlash('success', 'Connecteur supprimé. Les documents et mémoires importés sont conservés.');
+        $this->addFlash('success', new TranslatableMessage('flash.connector.deleted'));
 
         return $this->redirectToRoute('connector_index');
     }

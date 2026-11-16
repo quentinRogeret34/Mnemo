@@ -2,7 +2,10 @@
 
 namespace App\Enum;
 
-enum MemoryType: string
+use Symfony\Contracts\Translation\TranslatableInterface;
+use Symfony\Contracts\Translation\TranslatorInterface;
+
+enum MemoryType: string implements TranslatableInterface
 {
     case Decision = 'decision';
     case Convention = 'convention';
@@ -19,5 +22,10 @@ enum MemoryType: string
             self::Preference => 'Préférence',
             self::Fact => 'Fait',
         };
+    }
+
+    public function trans(TranslatorInterface $translator, ?string $locale = null): string
+    {
+        return $translator->trans('enum.memory_type.'.$this->value, locale: $locale);
     }
 }

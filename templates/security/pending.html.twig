@@ -1,22 +1,22 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="{{ app.request.locale }}">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         {{ include('_appearance_head.html.twig') }}
-        <title>Compte en attente · Graphe projet</title>
+        <title>{{ 'pending.title'|trans }} · {{ 'app.name'|trans }}</title>
         {{ importmap('app') }}
     </head>
     <body>
         <main class="login">
             <div class="login__card">
-                <span class="workspace"><span class="workspace__mark" aria-hidden="true">G</span>Graphe projet</span>
-                <h1>Compte en attente</h1>
+                <span class="workspace"><span class="workspace__mark" aria-hidden="true">G</span>{{ 'app.name'|trans }}</span>
+                <h1>{{ 'pending.title'|trans }}</h1>
                 {% if app.user %}
-                    <p>Le compte <strong>{{ app.user.userIdentifier }}</strong> existe mais n'est pas actif. Un super admin doit l'activer avant qu'il ne donne accès au graphe.</p>
-                    <a class="button" href="{{ path('logout') }}">Se déconnecter</a>
+                    <p>{{ 'pending.text'|trans({account: '<strong>' ~ app.user.userIdentifier|e ~ '</strong>'})|raw }}</p>
+                    <a class="button" href="{{ path('logout') }}">{{ 'nav.logout'|trans }}</a>
                 {% else %}
-                    <a class="button button--primary" href="{{ path('login') }}">Se connecter</a>
+                    <a class="button button--primary" href="{{ path('login') }}">{{ 'login.submit'|trans }}</a>
                 {% endif %}
             </div>
         </main>

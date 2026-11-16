@@ -2,7 +2,7 @@
 
 {% set token = csrf_token('github-repositories') %}
 
-{% block title %}Dépôts GitHub · Connexions{% endblock %}
+{% block title %}{{ 'connector.github.title'|trans }} · {{ 'nav.connectors'|trans }}{% endblock %}
 
 {% set back = selected ? {project: selected.slug} : {} %}
 
@@ -11,40 +11,40 @@
         <a href="{{ path('project_settings', {slug: selected.slug}) }}">{{ selected.name }}</a>
         <span class="crumbs__sep" aria-hidden="true">/</span>
     {% elseif not scoped %}
-        <a href="{{ path('connector_index') }}">Connexions</a>
+        <a href="{{ path('connector_index') }}">{{ 'nav.connectors'|trans }}</a>
         <span class="crumbs__sep" aria-hidden="true">/</span>
     {% endif %}
-    <span class="crumbs__current">Dépôts GitHub</span>
+    <span class="crumbs__current">{{ 'connector.github.title'|trans }}</span>
 {% endblock %}
 
 {% block body %}
     <div class="view-head">
-        <h1><twig:ux:icon name="simple-icons:github" />Dépôts GitHub</h1>
+        <h1><twig:ux:icon name="simple-icons:github" />{{ 'connector.github.title'|trans }}</h1>
         {% if repositories is not null %}<span class="view-head__meta">{{ repositories|length }}</span>{% endif %}
     </div>
-    <p class="page__lede">Chaque dépôt coché devient un connecteur « GitHub (code et historique) » : le serveur le clone, calcule son graphe de code et importe son historique dans le projet choisi.</p>
+    <p class="page__lede">{{ 'connector.github.lede'|trans }}</p>
 
     {% if repositories is null %}
         <form method="post" action="{{ path('github_repositories_oauth') }}">
             <input type="hidden" name="_token" value="{{ token }}">
             <input type="hidden" name="project" value="{{ selected ? selected.slug }}">
-            <button class="button button--primary" type="submit"><twig:ux:icon name="simple-icons:github" />Connecter avec GitHub</button>
-            <span class="row__sub">Accès en lecture aux dépôts, privés compris (scope « repo »).</span>
+            <button class="button button--primary" type="submit"><twig:ux:icon name="simple-icons:github" />{{ 'connector.github.connect'|trans }}</button>
+            <span class="row__sub">{{ 'connector.github.scope'|trans }}</span>
         </form>
     {% else %}
         <form class="key-form" method="post" action="{{ path('github_repositories_connect', back) }}">
             <input type="hidden" name="_token" value="{{ token }}">
-            <label for="github-project">Projet</label>
+            <label for="github-project">{{ 'memory.index.project'|trans }}</label>
             <select class="select" id="github-project" name="project" required>
-                <option value="">Choisir un projet</option>
-                {% if may_create %}<option value="new" {{ not selected and projects is empty ? 'selected' }}>Un nouveau projet par dépôt</option>{% endif %}
+                <option value="">{{ 'connector.github.choose_project'|trans }}</option>
+                {% if may_create %}<option value="new" {{ not selected and projects is empty ? 'selected' }}>{{ 'connector.github.new_per_repository'|trans }}</option>{% endif %}
                 {% if projects is not empty %}
-                    <optgroup label="Projets existants">
+                    <optgroup label="{{ 'connector.github.existing'|trans }}">
                         {% for project in projects %}<option value="{{ project.id }}" {{ selected and selected.id == project.id ? 'selected' }}>{{ project.name }}</option>{% endfor %}
                     </optgroup>
                 {% endif %}
             </select>
-            {% if may_create %}<p class="row__sub">« Un nouveau projet par dépôt » crée un projet nommé d'après chaque dépôt coché, ou reprend celui qui a déjà ce dépôt.</p>{% endif %}
+            {% if may_create %}<p class="row__sub">{{ 'connector.github.new_per_repository_help'|trans }}</p>{% endif %}
             <ul class="list">
                 {% for repository in repositories %}
                     {% set already = repository.full_name|lower in connected %}
@@ -53,13 +53,13 @@
                             <input type="checkbox" name="repositories[]" value="{{ repository.full_name }}" {{ already ? 'disabled' }}>
                             <span class="mono">{{ repository.full_name }}</span>
                         </label>
-                        <span class="row__sub">{{ repository.private ? 'privé' : 'public' }}{{ already ? ' · déjà branché' }}{{ repository.description ? ' · ' ~ repository.description }}</span>
+                        <span class="row__sub">{{ (repository.private ? 'connector.github.private' : 'connector.github.public')|trans }}{{ already ? ' · ' ~ 'connector.github.already'|trans }}{{ repository.description ? ' · ' ~ repository.description }}</span>
                     </li>
                 {% else %}
-                    <li class="block__empty">Aucun dépôt visible avec ce compte.</li>
+                    <li class="block__empty">{{ 'connector.github.none'|trans }}</li>
                 {% endfor %}
             </ul>
-            <button class="button button--primary" type="submit"><twig:ux:icon name="lucide:plug" />Brancher les dépôts cochés</button>
+            <button class="button button--primary" type="submit"><twig:ux:icon name="lucide:plug" />{{ 'connector.github.submit'|trans }}</button>
         </form>
     {% endif %}
 {% endblock %}

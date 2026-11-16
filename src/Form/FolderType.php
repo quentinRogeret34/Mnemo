@@ -13,9 +13,9 @@ final class FolderType extends AbstractType
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder->add('name', TextType::class, [
-            'label' => 'Nouveau dossier',
-            'attr' => ['placeholder' => 'Nom du dossier', 'autocomplete' => 'off'],
-            'constraints' => [new NotBlank(message: 'Donner un nom au dossier.'), new Length(max: 255)],
+            'label' => 'form.folder.name',
+            'attr' => ['placeholder' => 'form.folder.name_placeholder', 'autocomplete' => 'off'],
+            'constraints' => [new NotBlank(message: 'folder.name.blank'), new Length(max: 255)],
         ]);
     }
 }

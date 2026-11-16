@@ -1,36 +1,36 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}{{ connector.id ? connector.name : 'Nouveau connecteur' }}{% endblock %}
+{% block title %}{{ connector.id ? connector.name : 'connector.new'|trans }}{% endblock %}
 
 {% block crumbs %}
-    <a href="{{ path('connector_index') }}">Connexions</a>
+    <a href="{{ path('connector_index') }}">{{ 'nav.connectors'|trans }}</a>
     <span class="crumbs__sep" aria-hidden="true">/</span>
-    <span class="crumbs__current">{{ connector.id ? connector.name : 'Nouveau connecteur' }}</span>
+    <span class="crumbs__current">{{ connector.id ? connector.name : 'connector.new'|trans }}</span>
 {% endblock %}
 
 {% block body %}
     <div class="page">
-        <h1 class="page__title">{{ connector.id ? 'Modifier le connecteur' : 'Nouveau connecteur' }}</h1>
+        <h1 class="page__title">{{ (connector.id ? 'connector.edit' : 'connector.new')|trans }}</h1>
         {% if preset %}
-            <aside class="callout callout--info" aria-label="Notes sur {{ preset.label }}">
+            <aside class="callout callout--info" aria-label="{{ 'connector.preset_notes'|trans({name: ('connector.preset.' ~ preset_key ~ '.label')|trans}) }}">
                 <span class="callout__mark" aria-hidden="true"></span>
                 <div>
-                    <p><strong>Prérempli pour {{ preset.label }}.</strong> {% if not preset.checked %}Nom de l'outil non vérifié : tester la connexion après l'enregistrement.{% endif %}</p>
-                    <ul>{% for note in preset.notes %}<li>{{ note }}</li>{% endfor %}</ul>
-                    <p><a class="link" href="{{ preset.docs }}" rel="noopener noreferrer" target="_blank">Documentation {{ preset.label }}</a></p>
+                    <p><strong>{{ 'connector.prefilled'|trans({name: ('connector.preset.' ~ preset_key ~ '.label')|trans}) }}</strong> {% if not preset.checked %}{{ 'connector.unchecked_tool'|trans }}{% endif %}</p>
+                    <ul>{% for note in preset.notes %}<li>{{ ('connector.preset.' ~ preset_key ~ '.notes.' ~ loop.index0)|trans }}</li>{% endfor %}</ul>
+                    <p><a class="link" href="{{ preset.docs }}" rel="noopener noreferrer" target="_blank">{{ 'connector.docs'|trans({name: ('connector.preset.' ~ preset_key ~ '.label')|trans}) }}</a></p>
                 </div>
             </aside>
         {% endif %}
         {{ form_start(form, {attr: {class: 'form-stack', novalidate: 'novalidate'}}) }}
             <fieldset>
-                <legend>Serveur</legend>
+                <legend>{{ 'connector.server'|trans }}</legend>
                 {{ form_row(form.name) }}
                 {{ form_row(form.transport) }}
                 {{ form_row(form.endpoint) }}
                 {{ form_row(form.credentials) }}
             </fieldset>
             <fieldset>
-                <legend>Import</legend>
+                <legend>{{ 'form.connector.mode'|trans }}</legend>
                 {{ form_row(form.mode) }}
                 {{ form_row(form.tool) }}
                 {{ form_row(form.arguments) }}
@@ -39,14 +39,14 @@
                 {{ form_row(form.memoryType) }}
             </fieldset>
             <fieldset>
-                <legend>Destination</legend>
+                <legend>{{ 'connector.destination'|trans }}</legend>
                 {{ form_row(form.project) }}
                 {{ form_row(form.folder) }}
                 {{ form_row(form.schedule) }}
             </fieldset>
             <div class="upload__actions">
-                <button class="button button--primary" type="submit">Enregistrer</button>
-                <a class="button" href="{{ connector.id ? path('connector_show', {id: connector.id}) : path('connector_index') }}">Annuler</a>
+                <button class="button button--primary" type="submit">{{ 'common.save'|trans }}</button>
+                <a class="button" href="{{ connector.id ? path('connector_show', {id: connector.id}) : path('connector_index') }}">{{ 'common.cancel'|trans }}</a>
             </div>
         {{ form_end(form) }}
     </div>

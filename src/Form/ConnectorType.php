@@ -24,32 +24,32 @@ final class ConnectorType extends AbstractType
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
-            ->add('name', TextType::class, ['label' => 'Nom'])
-            ->add('transport', EnumType::class, ['label' => 'Transport', 'class' => ConnectorTransport::class, 'choice_label' => static fn (ConnectorTransport $transport): string => $transport->label()])
+            ->add('name', TextType::class, ['label' => 'form.connector.name'])
+            ->add('transport', EnumType::class, ['label' => 'form.connector.transport', 'class' => ConnectorTransport::class])
             ->add('endpoint', TextType::class, [
-                'label' => 'URL ou commande',
-                'help' => 'HTTP : https://mcp.example.com/mcp. STDIO : commande lancée dans le conteneur, ex. php mon-serveur.php.',
+                'label' => 'form.connector.endpoint',
+                'help' => 'form.connector.endpoint_help',
             ])
             ->add('credentials', TextareaType::class, [
-                'label' => 'En-têtes HTTP ou variables d\'environnement',
+                'label' => 'form.connector.credentials',
                 'required' => false,
-                'help' => 'Une ligne par valeur, « Nom: valeur ». Écrire « env:NOM » (ex. « Bearer env:GITHUB_MCP_TOKEN ») pour lire un secret dans .env.local au lieu de le stocker en base. Seules les variables listées dans MCP_CONNECTORS_ENV sont lisibles.',
+                'help' => 'form.connector.credentials_help',
                 'attr' => ['rows' => 3, 'placeholder' => 'Authorization: env:NOTION_MCP_TOKEN'],
             ])
-            ->add('mode', EnumType::class, ['label' => 'Import', 'class' => ConnectorMode::class, 'choice_label' => static fn (ConnectorMode $mode): string => $mode->label()])
-            ->add('tool', TextType::class, ['label' => 'Outil à appeler', 'required' => false, 'help' => 'Pour les modes « Outil ». « Tester la connexion » liste les outils disponibles.'])
+            ->add('mode', EnumType::class, ['label' => 'form.connector.mode', 'class' => ConnectorMode::class])
+            ->add('tool', TextType::class, ['label' => 'form.connector.tool', 'required' => false, 'help' => 'form.connector.tool_help'])
             ->add('arguments', TextareaType::class, [
-                'label' => 'Arguments de l\'outil (JSON)',
+                'label' => 'form.connector.arguments',
                 'required' => false,
                 'attr' => ['rows' => 3, 'placeholder' => '{"user_id": "quentin"}'],
-                'invalid_message' => 'Arguments JSON invalides : un objet est attendu, ex. {"limit": 50}.',
+                'invalid_message' => 'connector.arguments.invalid',
             ])
-            ->add('itemsPath', TextType::class, ['label' => 'Chemin de la liste', 'required' => false, 'help' => 'Mode mémoires : chemin de la liste dans la réponse JSON, ex. « results ». Vide si la réponse est la liste.'])
-            ->add('textField', TextType::class, ['label' => 'Champ du texte', 'required' => false, 'help' => 'Mode mémoires : champ qui contient le texte. Par défaut : memory, text ou content.'])
-            ->add('memoryType', EnumType::class, ['label' => 'Type des mémoires', 'class' => MemoryType::class, 'choice_label' => static fn (MemoryType $type): string => $type->label()])
-            ->add('schedule', EnumType::class, ['label' => 'Synchronisation', 'class' => ConnectorSchedule::class, 'choice_label' => static fn (ConnectorSchedule $schedule): string => $schedule->label(), 'help' => 'Automatique : demande le service worker (docker compose up -d worker).'])
-            ->add('project', EntityType::class, ['label' => 'Rattacher au projet', 'class' => Project::class, 'choice_label' => 'name', 'required' => false, 'placeholder' => 'Aucun projet'])
-            ->add('folder', EntityType::class, ['label' => 'Dossier des documents', 'class' => Folder::class, 'choice_label' => 'name', 'required' => false, 'placeholder' => 'Racine']);
+            ->add('itemsPath', TextType::class, ['label' => 'form.connector.items_path', 'required' => false, 'help' => 'form.connector.items_path_help'])
+            ->add('textField', TextType::class, ['label' => 'form.connector.text_field', 'required' => false, 'help' => 'form.connector.text_field_help'])
+            ->add('memoryType', EnumType::class, ['label' => 'form.connector.memory_type', 'class' => MemoryType::class])
+            ->add('schedule', EnumType::class, ['label' => 'form.connector.schedule', 'class' => ConnectorSchedule::class, 'help' => 'form.connector.schedule_help'])
+            ->add('project', EntityType::class, ['label' => 'form.connector.project', 'class' => Project::class, 'choice_label' => 'name', 'choice_translation_domain' => false, 'required' => false, 'placeholder' => 'nav.no_project'])
+            ->add('folder', EntityType::class, ['label' => 'form.connector.folder', 'class' => Folder::class, 'choice_label' => 'name', 'choice_translation_domain' => false, 'required' => false, 'placeholder' => 'form.connector.folder_root']);
 
         $builder->get('credentials')->addModelTransformer(new CallbackTransformer(
             static fn (?array $values): string => implode("\n", array_map(static fn (string $name, string $value): string => $name.': '.$value, array_keys($values ?? []), $values ?? [])),
@@ -60,7 +60,7 @@ final class ConnectorType extends AbstractType
                         continue;
                     }
                     if (!str_contains($line, ':')) {
-                        throw new TransformationFailedException(invalidMessage: 'Chaque ligne doit suivre la forme « Nom: valeur ».');
+                        throw new TransformationFailedException(invalidMessage: 'connector.credentials.invalid');
                     }
                     [$name, $value] = explode(':', $line, 2);
                     $values[trim($name)] = trim($value);

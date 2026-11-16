@@ -2,10 +2,10 @@
 
 {% set meta = document.metadata %}
 
-{% block title %}{{ document.label }} · Documents{% endblock %}
+{% block title %}{{ document.label }} · {{ 'nav.documents'|trans }}{% endblock %}
 
 {% block crumbs %}
-    <a href="{{ path('document_index') }}">Documents</a>
+    <a href="{{ path('document_index') }}">{{ 'nav.documents'|trans }}</a>
     {% if document.folder %}
         <span class="crumbs__sep" aria-hidden="true">/</span>
         <a href="{{ path('document_index', {folder: document.folder.id}) }}">{{ document.folder.name }}</a>
@@ -15,7 +15,7 @@
 {% endblock %}
 
 {% block header_actions %}
-    <a class="button" href="{{ path('document_file', {id: document.id}) }}">{{ meta.format == 'pdf' ? 'Ouvrir le PDF' : 'Télécharger' }}</a>
+    <a class="button" href="{{ path('document_file', {id: document.id}) }}">{{ (meta.format == 'pdf' ? 'document.open_pdf' : 'document.download')|trans }}</a>
 {% endblock %}
 
 {% block body %}
@@ -30,13 +30,13 @@
         {% elseif meta.format == 'pdf' %}
             <iframe class="pdf-frame" src="{{ path('document_file', {id: document.id}) }}" title="{{ document.label }}"></iframe>
         {% else %}
-            <p class="block__empty">Pas encore d'aperçu pour les fichiers Word. Le texte sera extrait avec l'ingestion des documents.</p>
+            <p class="block__empty">{{ 'document.no_preview'|trans }}</p>
         {% endif %}
 
         <section class="block" aria-labelledby="rules-title">
-            <div class="block__head"><h2 id="rules-title">Règles métier définies</h2><span class="block__count">{{ rules|length }}</span></div>
+            <div class="block__head"><h2 id="rules-title">{{ 'document.defined_rules'|trans }}</h2><span class="block__count">{{ rules|length }}</span></div>
             {% if rules is empty %}
-                <p class="block__empty">Aucune règle rattachée à ce document.</p>
+                <p class="block__empty">{{ 'document.no_rule'|trans }}</p>
             {% else %}
                 <ul class="list">
                     {% for rule in rules %}
@@ -45,7 +45,7 @@
                                 <span class="code-chip">{{ rule.code }}</span>
                                 <span class="row__title"><span>{{ rule.title }}</span></span>
                                 <span class="row__meta">
-                                    <span class="status status--{{ rule.status }}">{{ rule.status == 'validated' ? 'Validée' : 'À valider' }}</span>
+                                    <span class="status status--{{ rule.status }}">{{ (rule.status == 'validated' ? 'rule.validated' : 'nav.to_review')|trans }}</span>
                                     <span class="conf conf--{{ rule.confidence|lower }}">{{ rule.confidence }}</span>
                                 </span>
                             </a>

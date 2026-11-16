@@ -1,9 +1,9 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Mémoire{% endblock %}
+{% block title %}{{ 'form.memory.text'|trans }}{% endblock %}
 
 {% block crumbs %}
-    <a href="{{ path('memory_index') }}">Mémoires</a>
+    <a href="{{ path('memory_index') }}">{{ 'nav.memories'|trans }}</a>
     <span class="crumbs__sep" aria-hidden="true">/</span>
     <span class="crumbs__current">{{ memory.label }}</span>
 {% endblock %}
@@ -13,9 +13,9 @@
     <article class="page">
         {% if status != 'active' %}
             <p class="archived-banner" role="status">
-                <strong>{{ status == 'superseded' ? 'Remplacée' : 'Retirée' }}</strong>
-                {% for item in supersession.replaced_by %}par <a href="{{ path('memory_show', {id: item.id}) }}">{{ item.text }}</a>{{ not loop.last ? ', ' }}{% endfor %}
-                <span class="row__sub">Archivée : n'apparaît plus dans la recherche ni chez les agents.</span>
+                <strong>{{ (status == 'superseded' ? 'memory.show.superseded' : 'memory.show.retired')|trans }}</strong>
+                {% for item in supersession.replaced_by %}{{ 'memory.show.by'|trans }} <a href="{{ path('memory_show', {id: item.id}) }}">{{ item.text }}</a>{{ not loop.last ? ', ' }}{% endfor %}
+                <span class="row__sub">{{ 'memory.show.archived_text'|trans }}</span>
             </p>
         {% endif %}
 
@@ -23,7 +23,7 @@
 
         {% if supersession.replaces is not empty %}
             <section class="block" aria-labelledby="replaces-title">
-                <div class="block__head"><h2 id="replaces-title">Remplace</h2><span class="block__count">{{ supersession.replaces|length }}</span></div>
+                <div class="block__head"><h2 id="replaces-title">{{ 'memory.show.replaces'|trans }}</h2><span class="block__count">{{ supersession.replaces|length }}</span></div>
                 <ul class="list">
                     {% for item in supersession.replaces %}
                         <li><a class="row row--memory row--archived" href="{{ path('memory_show', {id: item.id}) }}"><span class="row__title"><span class="memory-text">{{ item.text }}</span></span></a></li>
@@ -36,49 +36,49 @@
         {% set current = visibility == 'group' ? 'group:' ~ (memory.metadata.group_id ?? '') : visibility %}
         <section class="block" aria-labelledby="visibility-title">
             <div class="block__head">
-                <h2 id="visibility-title">Visibilité</h2>
-                <span class="tag">{{ visibility == 'private' ? 'Privée' : (visibility == 'group' ? 'Groupe ' ~ (group ? group.name : 'supprimé') : 'Projet') }}</span>
+                <h2 id="visibility-title">{{ 'form.memory.visibility'|trans }}</h2>
+                <span class="tag">{{ visibility == 'private' ? 'enum.memory_visibility.private'|trans : (visibility == 'group' ? 'memory.visibility.group'|trans({name: group ? group.name : 'memory.show.group_deleted'|trans}) : 'enum.memory_visibility.project'|trans) }}</span>
             </div>
             <form class="inline-form" method="post" action="{{ path('memory_visibility', {id: memory.id}) }}">
                 <input type="hidden" name="_token" value="{{ csrf_token('visibility-memory-' ~ memory.id) }}">
-                <label class="visually-hidden" for="visibility">Qui voit cette mémoire</label>
+                <label class="visually-hidden" for="visibility">{{ 'memory.show.who_sees'|trans }}</label>
                 <select class="select" id="visibility" name="visibility">
                     {% for label, value in visibilities %}<option value="{{ value }}" {{ value == current ? 'selected' }}>{{ label }}</option>{% endfor %}
                 </select>
-                <button class="button" type="submit">Changer</button>
-                <span class="row__sub">Projet : tous ceux qui ont accès à ses projets. Groupe : ses membres. Privée : son auteur et ses agents.</span>
+                <button class="button" type="submit">{{ 'common.change'|trans }}</button>
+                <span class="row__sub">{{ 'memory.show.visibility_help'|trans }}</span>
             </form>
         </section>
 
         {% set verification = memory.metadata.verification ?? null %}
         <section class="block" aria-labelledby="verification-title">
             <div class="block__head">
-                <h2 id="verification-title">Vérification</h2>
+                <h2 id="verification-title">{{ 'memory.verification'|trans }}</h2>
                 {% if verification %}{{ include('memory/_verdict.html.twig', {verdict: verification.verdict}) }}{% endif %}
             </div>
             {% if verification %}
-                {% if verification.text != memory.label %}<p class="row__sub">Le texte a changé depuis : à revérifier.</p>{% endif %}
+                {% if verification.text != memory.label %}<p class="row__sub">{{ 'memory.show.text_changed'|trans }}</p>{% endif %}
                 <p class="verification__reason">{{ verification.reason }}</p>
                 {% if verification.sources is not empty %}
-                    <p class="row__sub">Sources : {% for source in verification.sources %}{{ source.label }}{{ not loop.last ? ', ' }}{% endfor %}</p>
+                    <p class="row__sub">{{ 'memory.show.sources'|trans }} {% for source in verification.sources %}{{ source.label }}{{ not loop.last ? ', ' }}{% endfor %}</p>
                 {% endif %}
-                <p class="row__sub">{{ {graph: 'Graphe du code, sans LLM', knowledge: 'Règles, documents et code liés, un appel LLM', none: 'Aucune source'}[verification.tier] ?? verification.tier }} · {{ verification.at|date('d/m/Y H:i') }}</p>
+                <p class="row__sub">{{ ({graph: 'memory.show.tier_graph', knowledge: 'memory.show.tier_knowledge', none: 'memory.show.tier_none'}[verification.tier] ?? verification.tier)|trans }} · {{ verification.at|format_datetime('short', 'short') }}</p>
             {% else %}
-                <p class="block__empty">Jamais vérifiée contre le graphe.</p>
+                <p class="block__empty">{{ 'memory.show.never_verified'|trans }}</p>
             {% endif %}
             {% if status == 'active' %}
                 <form class="inline-form" method="post" action="{{ path('memory_verify', {id: memory.id}) }}">
                     <input type="hidden" name="_token" value="{{ csrf_token('verify-memory-' ~ memory.id) }}">
-                    <button class="button" type="submit">Vérifier</button>
-                    <span class="row__sub">Chemins cités contre le graphe du code, puis règles et documents liés.</span>
+                    <button class="button" type="submit">{{ 'memory.show.verify'|trans }}</button>
+                    <span class="row__sub">{{ 'memory.show.verify_help'|trans }}</span>
                 </form>
             {% endif %}
         </section>
 
         <form class="danger-zone" method="post" action="{{ path('memory_delete', {id: memory.id}) }}">
             <input type="hidden" name="_token" value="{{ csrf_token('delete-memory-' ~ memory.id) }}">
-            <button class="button button--danger" type="submit" data-confirm="Supprimer cette mémoire et ses liens ?" data-confirm-label="Supprimer"><twig:ux:icon name="lucide:trash-2" />Supprimer la mémoire</button>
-            <span class="row__sub">Supprime aussi ses liens. Irréversible.</span>
+            <button class="button button--danger" type="submit" data-confirm="{{ 'memory.show.delete_confirm'|trans }}" data-confirm-label="{{ 'common.delete'|trans }}"><twig:ux:icon name="lucide:trash-2" />{{ 'memory.show.delete'|trans }}</button>
+            <span class="row__sub">{{ 'memory.show.delete_help'|trans }}</span>
         </form>
     </article>
 {% endblock %}

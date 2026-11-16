@@ -1,12 +1,12 @@
 {% extends 'base.html.twig' %}
 
 {% set meta = rule.metadata %}
-{% set origins = {human: 'humain', llm: 'LLM', ast: 'AST', git: 'git', api: 'API'} %}
+{% set origins = {human: 'document.props.human'|trans, llm: 'LLM', ast: 'AST', git: 'git', api: 'API'} %}
 
 {% block title %}{{ rule.externalId }} · {{ project.name }}{% endblock %}
 
 {% block crumbs %}
-    <a href="{{ path('rule_index', {slug: project.slug}) }}">Règles métier</a>
+    <a href="{{ path('rule_index', {slug: project.slug}) }}">{{ 'nav.rules'|trans }}</a>
     <span class="crumbs__sep" aria-hidden="true">/</span>
     <span class="crumbs__current">{{ rule.externalId }}</span>
 {% endblock %}
@@ -17,19 +17,19 @@
         <h1 class="page__title">{{ rule.label }}</h1>
 
         <dl class="props">
-            <dt>Statut</dt>
+            <dt>{{ 'memory.index.status'|trans }}</dt>
             <dd>
-                <span class="status status--{{ meta.status ?? '' }}">{{ (meta.status ?? '') == 'validated' ? 'Validée' : 'À valider' }}</span>
+                <span class="status status--{{ meta.status ?? '' }}">{{ ((meta.status ?? '') == 'validated' ? 'rule.validated' : 'nav.to_review')|trans }}</span>
                 <form method="post" action="{{ path('rule_status', {slug: project.slug, code: rule.externalId}) }}">
                     <input type="hidden" name="_token" value="{{ csrf_token('rule-shadow-' ~ rule.id) }}">
                     <input type="hidden" name="status" value="{{ (meta.status ?? '') == 'validated' ? 'to_review' : 'validated' }}">
-                    <button class="button" type="submit">{{ (meta.status ?? '') == 'validated' ? 'Remettre à valider' : 'Valider la règle' }}</button>
+                    <button class="button" type="submit">{{ ((meta.status ?? '') == 'validated' ? 'rule.show.unvalidate' : 'rule.show.validate')|trans }}</button>
                 </form>
             </dd>
-            <dt>Sources</dt>
-            <dd>{% for source in sources %}<a class="tag" href="{{ path('document_show', {id: source.id}) }}"><span class="format format--{{ source.format }}">{{ source.format }}</span>{{ source.title }}</a>{% else %}<span class="row__sub">aucune</span>{% endfor %}</dd>
-            <dt>Code lié</dt><dd>{{ implementations|length }} fichiers</dd>
-            {% if meta.demo ?? false %}<dt>Origine</dt><dd><span class="tag tag--demo">Démo</span></dd>{% endif %}
+            <dt>{{ 'rule.show.sources'|trans }}</dt>
+            <dd>{% for source in sources %}<a class="tag" href="{{ path('document_show', {id: source.id}) }}"><span class="format format--{{ source.format }}">{{ source.format }}</span>{{ source.title }}</a>{% else %}<span class="row__sub">{{ 'document.props.none'|trans }}</span>{% endfor %}</dd>
+            <dt>{{ 'document.props.linked_code'|trans }}</dt><dd>{{ 'project.index.files'|trans({count: implementations|length}) }}</dd>
+            {% if meta.demo ?? false %}<dt>{{ 'document.props.origin'|trans }}</dt><dd><span class="tag tag--demo">{{ 'common.demo'|trans }}</span></dd>{% endif %}
         </dl>
 
         {% if meta.statement ?? null %}
@@ -37,9 +37,9 @@
         {% endif %}
 
         <section class="block" aria-labelledby="impl-title">
-            <div class="block__head"><h2 id="impl-title">Implémentée par</h2><span class="block__count">{{ implementations|length }}</span></div>
+            <div class="block__head"><h2 id="impl-title">{{ 'rule.show.implemented_by'|trans }}</h2><span class="block__count">{{ implementations|length }}</span></div>
             {% if implementations is empty %}
-                <p class="block__empty">Aucun fichier de code relié à cette règle.</p>
+                <p class="block__empty">{{ 'rule.show.no_file'|trans }}</p>
             {% else %}
                 <ul class="list">
                     {% for impl in implementations %}
@@ -60,9 +60,9 @@
         </section>
 
         <section class="block" aria-labelledby="sources-title">
-            <div class="block__head"><h2 id="sources-title">Documents sources</h2><span class="block__count">{{ sources|length }}</span></div>
+            <div class="block__head"><h2 id="sources-title">{{ 'rule.source_documents'|trans }}</h2><span class="block__count">{{ sources|length }}</span></div>
             {% if sources is empty %}
-                <p class="block__empty">Aucun document ne définit cette règle.</p>
+                <p class="block__empty">{{ 'rule.show.no_document'|trans }}</p>
             {% else %}
                 <ul class="list">
                     {% for source in sources %}
@@ -83,13 +83,13 @@
 
         {% if mentions is not empty %}
             <section class="block" aria-labelledby="mentions-title">
-                <div class="block__head"><h2 id="mentions-title">Citée dans l'historique</h2><span class="block__count">{{ mentions|length }}</span></div>
+                <div class="block__head"><h2 id="mentions-title">{{ 'rule.show.mentions'|trans }}</h2><span class="block__count">{{ mentions|length }}</span></div>
                 <ul class="list">
                     {% for mention in mentions %}
                         <li class="row row--commit">
                             <a class="code-chip" href="{{ mention.url }}" rel="noopener noreferrer" target="_blank">{{ mention.type == 'commit' ? mention.ref|slice(0, 7) : mention.ref }}</a>
                             <span class="row__title"><span>{{ mention.label }}</span>{% if mention.state %}<span class="tag">{{ mention.state }}</span>{% endif %}</span>
-                            <span class="row__meta"><span>{{ mention.author }}</span><span class="num">{{ mention.date ? mention.date|date('d/m/Y') }}</span></span>
+                            <span class="row__meta"><span>{{ mention.author }}</span><span class="num">{{ mention.date ? mention.date|format_date('short') }}</span></span>
                         </li>
                     {% endfor %}
                 </ul>
@@ -98,24 +98,24 @@
 
         {% set areas = meta.shadow_areas ?? [] %}
         <section class="block" aria-labelledby="shadow-title">
-            <div class="block__head"><h2 id="shadow-title">Zones d'ombre</h2><span class="block__count">{{ areas|length }}</span></div>
+            <div class="block__head"><h2 id="shadow-title">{{ 'rule.show.shadow'|trans }}</h2><span class="block__count">{{ areas|length }}</span></div>
             {% if meta.shadow_checked_at is not defined %}
-                <p class="block__empty">Jamais analysée : ce que la règle laisse deviner au développeur (hypothèses, termes ambigus, cas limites...).</p>
+                <p class="block__empty">{{ 'rule.show.never_analysed'|trans }}</p>
             {% elseif areas is empty %}
-                <p class="block__empty">Aucune zone d'ombre trouvée.</p>
+                <p class="block__empty">{{ 'flash.rule.shadow_areas'|trans({count: 0}) }}</p>
             {% else %}
                 <ul class="shadow-areas">
                     {% for area in areas %}
                         <li class="shadow-area shadow-area--{{ area.severity }}">
                             <div class="shadow-area__head">
-                                <span class="code-chip">{{ categories[area.category] ?? area.category }}</span>
-                                <span class="shadow-area__severity">{{ {blocker: 'Bloquant', major: 'Majeur', minor: 'Mineur'}[area.severity] ?? area.severity }}</span>
+                                <span class="code-chip">{{ (categories[area.category] ?? area.category)|trans }}</span>
+                                <span class="shadow-area__severity">{{ ({blocker: 'rule.show.blocker', major: 'rule.show.major', minor: 'rule.show.minor'}[area.severity] ?? area.severity)|trans }}</span>
                             </div>
                             <p class="shadow-area__gap">{{ area.gap }}</p>
                             {% if area.question %}<p class="shadow-area__question">{{ area.question }}</p>{% endif %}
                             <form method="post" action="{{ path('rule_shadow_resolve', {slug: project.slug, code: rule.externalId, index: loop.index0}) }}">
                                 <input type="hidden" name="_token" value="{{ csrf_token('rule-shadow-' ~ rule.id) }}">
-                                <button class="button" type="submit">Résolue</button>
+                                <button class="button" type="submit">{{ 'rule.show.resolved'|trans }}</button>
                             </form>
                         </li>
                     {% endfor %}
@@ -123,8 +123,8 @@
             {% endif %}
             <form class="inline-form" method="post" action="{{ path('rule_shadow', {slug: project.slug, code: rule.externalId}) }}">
                 <input type="hidden" name="_token" value="{{ csrf_token('rule-shadow-' ~ rule.id) }}">
-                <button class="button" type="submit">{{ meta.shadow_checked_at is defined ? 'Réanalyser' : 'Analyser' }}</button>
-                {% if meta.shadow_checked_at is defined %}<span class="row__sub">Dernière analyse le {{ meta.shadow_checked_at|date('d/m/Y H:i') }} ; réanalyser remplace la liste.</span>{% endif %}
+                <button class="button" type="submit">{{ (meta.shadow_checked_at is defined ? 'rule.show.reanalyse' : 'rule.show.analyse')|trans }}</button>
+                {% if meta.shadow_checked_at is defined %}<span class="row__sub">{{ 'rule.show.last_analysis'|trans({date: meta.shadow_checked_at|format_datetime('short', 'short')}) }}</span>{% endif %}
             </form>
         </section>
 

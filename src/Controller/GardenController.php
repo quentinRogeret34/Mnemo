@@ -13,6 +13,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Translation\TranslatableMessage;
 
 final class GardenController extends AbstractController
 {
@@ -42,9 +43,9 @@ final class GardenController extends AbstractController
 
         try {
             $report = $this->duplicateFinder->find($project);
-            $this->addFlash('success', \sprintf('%d mémoires comparées : %d propositions ajoutées à valider.', $report['compared'], $report['proposed']));
+            $this->addFlash('success', new TranslatableMessage('flash.garden.compared', ['compared' => $report['compared'], 'proposed' => $report['proposed']]));
         } catch (LlmUnavailable|\UnexpectedValueException $exception) {
-            $this->addFlash('error', $exception->getMessage());
+            $this->addFlash('error', $exception instanceof LlmUnavailable ? $exception->translatable() : $exception->getMessage());
         }
 
         return $this->redirectToRoute('garden_show', ['slug' => $project->getSlug()]);

@@ -1,0 +1,44 @@
+agent_asset:
+    content:
+        blank: 'Écrire les instructions.'
+    description:
+        blank: "Dire quand l'utiliser : Claude choisit d'après cette description."
+    name:
+        blank: 'Donner un nom.'
+        format: "Minuscules, chiffres et tirets seulement, ex. « revue-de-pr » : c'est le nom du fichier."
+        taken: 'Ce nom est déjà pris pour ce type dans le projet.'
+connector:
+    arguments:
+        invalid: 'Arguments JSON invalides : un objet est attendu, ex. {"limit": 50}.'
+    credentials:
+        invalid: 'Chaque ligne doit suivre la forme « Nom: valeur ».'
+    endpoint:
+        blank: "Indiquer l'URL ou la commande du serveur."
+    name:
+        blank: 'Donner un nom au connecteur.'
+    repository:
+        missing: 'Indiquer le dépôt, ex. {"repository": "owner/repo"}.'
+    tool:
+        missing: "Indiquer l'outil à appeler."
+folder:
+    name:
+        blank: 'Donner un nom au dossier.'
+memory:
+    text:
+        blank: 'Écrire la mémoire.'
+        too_long: '1000 caractères maximum.'
+project:
+    name:
+        blank: 'Donner un nom au projet.'
+    repository:
+        taken: 'Ce dépôt est déjà rattaché à un autre projet.'
+    slug:
+        blank: "Indiquer un identifiant : le nom ne permet pas d'en déduire un."
+        format: 'Minuscules, chiffres et tirets seulement, ex. « mon-projet ».'
+        reserved: 'Cet identifiant est réservé.'
+        taken: 'Cet identifiant est déjà pris.'
+upload:
+    extension: 'Format non pris en charge ({{ extension }}). Formats acceptés : {{ extensions }}.'
+    max_size: 'Fichier trop lourd ({{ size }} {{ suffix }}), maximum {{ limit }} {{ suffix }}.'
+    mime_type: 'Le contenu du fichier ne correspond pas à son extension ({{ type }}).'
+    min: 'Ajouter au moins un fichier.'

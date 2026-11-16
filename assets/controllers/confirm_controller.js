@@ -1,4 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
+import { trans } from '../translator.js';
 
 export default class extends Controller {
     static targets = ['title', 'accept'];
@@ -15,7 +16,7 @@ export default class extends Controller {
         event.preventDefault();
         this.#submitter = submitter;
         this.titleTarget.textContent = submitter.dataset.confirm;
-        this.acceptTarget.textContent = submitter.dataset.confirmLabel ?? 'Confirmer';
+        this.acceptTarget.textContent = submitter.dataset.confirmLabel ?? trans('js.confirm');
         this.element.showModal();
     }
 

@@ -1,61 +1,61 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Activité{{ project ? ' · ' ~ project.name }}{% endblock %}
+{% block title %}{{ 'nav.activity'|trans }}{{ project ? ' · ' ~ project.name }}{% endblock %}
 
 {% block crumbs %}
     {% if project %}
         <a href="{{ path('project_show', {slug: project.slug}) }}">{{ project.name }}</a>
         <span class="crumbs__sep" aria-hidden="true">/</span>
     {% endif %}
-    <span class="crumbs__current">Activité</span>
+    <span class="crumbs__current">{{ 'nav.activity'|trans }}</span>
 {% endblock %}
 
 {% block body %}
     {% set scope = project ? {project: project.slug} : {} %}
-    {% set period_labels = {'1d': '24 h', '7d': '7 j', '30d': '30 j'} %}
-    {% set type_labels = {commit: 'Commits', ticket: 'PR, MR et issues', document: 'Documents', memory: 'Mémoires', business_rule: 'Règles métier'} %}
-    {% set kinds = {commit: 'commit', document: 'document', memory: 'mémoire', business_rule: 'règle'} %}
+    {% set period_labels = {'1d': 'period.24h', '7d': 'period.7d', '30d': 'period.30d'} %}
+    {% set type_labels = {commit: 'activity.type.commit', ticket: 'activity.type.ticket', document: 'nav.documents', memory: 'nav.memories', business_rule: 'nav.rules'} %}
+    {% set kinds = {commit: 'activity.kind.commit', document: 'activity.kind.document', memory: 'activity.kind.memory', business_rule: 'activity.kind.rule'} %}
     <div class="view-head">
-        <h1><twig:ux:icon name="lucide:activity" />Activité</h1>
-        <span class="view-head__meta">{{ project ? project.name : 'Tous les projets' }}</span>
+        <h1><twig:ux:icon name="lucide:activity" />{{ 'nav.activity'|trans }}</h1>
+        <span class="view-head__meta">{{ project ? project.name : 'nav.all_projects'|trans }}</span>
     </div>
-    <p class="page__lede">Ce qui est entré dans le graphe : le travail récupéré par les connecteurs, les documents déposés et les mémoires ajoutées.</p>
+    <p class="page__lede">{{ 'activity.lede'|trans }}</p>
 
     <div class="filter-bar">
-        <nav class="tabs" aria-label="Période">
+        <nav class="tabs" aria-label="{{ 'period.label'|trans }}">
             {% for item in periods %}
-                <a href="{{ path('activity', scope|merge({period: item})) }}" {% if item == period %}aria-current="page"{% endif %}>{{ period_labels[item] }}</a>
+                <a href="{{ path('activity', scope|merge({period: item})) }}" {% if item == period %}aria-current="page"{% endif %}>{{ period_labels[item]|trans }}</a>
             {% endfor %}
         </nav>
     </div>
 
     {% if counts is not empty %}
-        <section class="tiles" aria-label="Entrées par type">
+        <section class="tiles" aria-label="{{ 'activity.by_type'|trans }}">
             {% for count in counts %}
-                <div class="tile"><span class="tile__label">{{ type_labels[count.label] ?? count.label }}</span><span class="tile__value">{{ count.value|number_format(0, ',', ' ') }}</span></div>
+                <div class="tile"><span class="tile__label">{{ (type_labels[count.label] ?? count.label)|trans }}</span><span class="tile__value">{{ count.value|format_number }}</span></div>
             {% endfor %}
         </section>
     {% endif %}
 
     <div class="panels">
         <section class="panel" aria-labelledby="feed-title">
-            <div class="panel__head"><h2 id="feed-title">Fil</h2></div>
+            <div class="panel__head"><h2 id="feed-title">{{ 'activity.feed'|trans }}</h2></div>
             {% for day, items in feed.items %}
-                <h3 class="block__sub">{{ day|date('d/m/Y') }} <span class="block__count">{{ items|length }}</span></h3>
+                <h3 class="block__sub">{{ day|format_date('short') }} <span class="block__count">{{ items|length }}</span></h3>
                 <ul class="list">
                     {% for item in items %}
                         {% set href = item.type == 'memory' ? path('memory_show', {id: item.id})
                             : (item.type == 'document' ? path('document_show', {id: item.id})
                             : (item.type == 'business_rule' and item.project_slug ? path('rule_show', {slug: item.project_slug, code: item.ref}) : item.url)) %}
                         <li class="row row--commit">
-                            <span class="code-chip">{{ item.type == 'ticket' ? item.ref : (item.type == 'commit' ? item.ref|slice(0, 7) : kinds[item.type]) }}</span>
+                            <span class="code-chip">{{ item.type == 'ticket' ? item.ref : (item.type == 'commit' ? item.ref|slice(0, 7) : kinds[item.type]|trans) }}</span>
                             <span class="row__title">{% if href %}<a href="{{ href }}" {% if item.type in ['commit', 'ticket'] %}rel="noopener noreferrer" target="_blank"{% endif %}><span class="memory-text">{{ item.label }}</span></a>{% else %}<span class="memory-text">{{ item.label }}</span>{% endif %}</span>
-                            <span class="row__meta"><span>{{ item.author }}</span><span class="num">{{ item.created_at|date('H:i') }}</span></span>
+                            <span class="row__meta"><span>{{ item.author }}</span><span class="num">{{ item.created_at|format_time('short') }}</span></span>
                         </li>
                     {% endfor %}
                 </ul>
             {% else %}
-                <twig:EmptyState title="Rien n'est entré dans le graphe sur la période" text="Les commits et tickets arrivent avec les connecteurs, les documents et les mémoires dès qu'ils sont ajoutés.">
+                <twig:EmptyState :title="'activity.empty'|trans" :text="'activity.empty_text'|trans">
                     <twig:block name="icon"><twig:ux:icon name="lucide:activity" /></twig:block>
                 </twig:EmptyState>
             {% endfor %}
@@ -63,22 +63,22 @@
         </section>
 
         <section class="panel" aria-labelledby="runs-title">
-            <div class="panel__head"><h2 id="runs-title">Synchronisations</h2><a class="button" href="{{ path('connector_index') }}">Connecteurs</a></div>
+            <div class="panel__head"><h2 id="runs-title">{{ 'activity.runs'|trans }}</h2><a class="button" href="{{ path('connector_index') }}">{{ 'project.settings.connectors'|trans }}</a></div>
             {% if runs.items is empty %}
-                <p class="block__empty">Aucune synchronisation. Un connecteur se lance à la main, ou seul s'il est planifié et que le service <span class="mono">worker</span> tourne.</p>
+                <p class="block__empty">{{ 'activity.no_run'|trans({worker: '<span class="mono">worker</span>'})|raw }}</p>
             {% else %}
                 <div class="table-wrap">
                     <table class="data-table">
-                        <thead><tr><th>Quand</th><th>Connecteur</th><th>Déclencheur</th><th class="num">Créés</th><th class="num">Modifiés</th><th>État</th></tr></thead>
+                        <thead><tr><th>{{ 'activity.when'|trans }}</th><th>{{ 'activity.connector'|trans }}</th><th>{{ 'activity.trigger'|trans }}</th><th class="num">{{ 'activity.created'|trans }}</th><th class="num">{{ 'activity.updated'|trans }}</th><th>{{ 'activity.state'|trans }}</th></tr></thead>
                         <tbody>
                             {% for run in runs.items %}
                                 <tr>
-                                    <td class="num">{{ run.started_at|date('d/m H:i') }}</td>
+                                    <td class="num">{{ run.started_at|format_datetime('short', 'short') }}</td>
                                     <td><a href="{{ path('connector_show', {id: run.connector_id}) }}">{{ run.connector }}</a></td>
-                                    <td>{{ {schedule: 'planifié', webhook: 'webhook'}[run.trigger] ?? 'manuel' }}</td>
+                                    <td>{{ ({schedule: 'activity.trigger_schedule', webhook: 'activity.trigger_webhook'}[run.trigger] ?? 'activity.trigger_manual')|trans }}</td>
                                     <td class="num">{{ run.report.created ?? 0 }}</td>
                                     <td class="num">{{ run.report.updated ?? 0 }}</td>
-                                    <td>{% if run.report.error ?? null %}<span class="verdict verdict--refuted" title="{{ run.report.error }}">échec</span>{% else %}<span class="verdict verdict--verified">ok</span>{% endif %}</td>
+                                    <td>{% if run.report.error ?? null %}<span class="verdict verdict--refuted" title="{{ run.report.error }}">{{ 'common.failed'|trans }}</span>{% else %}<span class="verdict verdict--verified">ok</span>{% endif %}</td>
                                 </tr>
                             {% endfor %}
                         </tbody>

@@ -2,95 +2,95 @@
 <div{{ attributes.defaults({class: 'props-editor'}) }} data-loading="addClass(is-loading)">
     <div class="page__icon">{{ include('memory/_type.html.twig', {type: memory.metadata.type}) }}</div>
 
-    <label class="visually-hidden" for="memory-text">Texte de la mémoire</label>
+    <label class="visually-hidden" for="memory-text">{{ 'proposal.lesson'|trans }}</label>
     <textarea id="memory-text" class="memory-editor__text" data-model="text" rows="2" maxlength="1000">{{ text }}</textarea>
-    {% if error %}<p class="form-errors">{{ error }}</p>{% endif %}
+    {% if error %}<p class="form-errors">{{ error|trans }}</p>{% endif %}
     {% if this.dirty %}
         <div class="memory-editor__save">
-            <button type="button" class="button button--primary" data-action="live#action" data-live-action-param="save">Enregistrer</button>
-            <span class="row__sub">La version précédente reste dans l'historique.</span>
+            <button type="button" class="button button--primary" data-action="live#action" data-live-action-param="save">{{ 'common.save'|trans }}</button>
+            <span class="row__sub">{{ 'memory.editor.previous_kept'|trans }}</span>
         </div>
     {% endif %}
 
     {% if type == 'decision' %}
         <section class="adr" aria-labelledby="adr-title">
-            <h2 id="adr-title" class="block__sub">Fiche de décision</h2>
+            <h2 id="adr-title" class="block__sub">{{ 'memory.editor.adr'|trans }}</h2>
             {% for field, label in this.adrFields %}
-                <label class="adr__label" for="adr-{{ field }}">{{ label }}</label>
+                <label class="adr__label" for="adr-{{ field }}">{{ label|trans }}</label>
                 <textarea id="adr-{{ field }}" class="adr__text" data-model="adr[{{ field }}]" rows="2" maxlength="4000">{{ adr[field] ?? '' }}</textarea>
             {% endfor %}
         </section>
     {% endif %}
 
     <dl class="props">
-        <dt><label for="memory-type">Type</label></dt>
+        <dt><label for="memory-type">{{ 'form.memory.type'|trans }}</label></dt>
         <dd>
             <select id="memory-type" class="select" data-model="type">
-                {% for item in this.types %}<option value="{{ item.value }}" {% if type == item.value %}selected{% endif %}>{{ item.label }}</option>{% endfor %}
+                {% for item in this.types %}<option value="{{ item.value }}" {% if type == item.value %}selected{% endif %}>{{ item|trans }}</option>{% endfor %}
             </select>
         </dd>
 
-        <dt>Projets</dt>
+        <dt>{{ 'nav.projects'|trans }}</dt>
         <dd>
             {% for project in this.projects %}
                 {% set linked = memory.projects.contains(project) %}
                 <button type="button" class="toggle-chip" aria-pressed="{{ linked ? 'true' : 'false' }}"
                         data-action="live#action" data-live-action-param="toggleProject" data-live-project-id-param="{{ project.id }}"
-                        title="{{ linked ? 'Détacher de ' : 'Rattacher à ' }}{{ project.name }}">
+                        title="{{ (linked ? 'document.props.detach' : 'document.props.attach')|trans({name: project.name}) }}">
                     <span class="project-dot" aria-hidden="true"></span>{{ project.name }}
                 </button>
             {% else %}
-                <span class="row__sub">aucun projet</span>
+                <span class="row__sub">{{ 'document.no_project'|trans }}</span>
             {% endfor %}
         </dd>
 
-        <dt>Liée à</dt>
+        <dt>{{ 'memory.editor.linked_to'|trans }}</dt>
         <dd class="props__stack">
             {% for link in this.links %}
                 <span class="link-chip">
                     {% if link.type == 'code_file' %}
                         <a class="mono" href="{{ path('file_show', {slug: link.project_slug, path: link.path}) }}" title="{{ link.path }}">{{ link.path|split('/')|last }}</a>
-                        <span class="row__sub">code · {{ link.project_name }}</span>
+                        <span class="row__sub">{{ 'nav.code'|trans }} · {{ link.project_name }}</span>
                     {% elseif link.type == 'document' %}
                         <a href="{{ path('document_show', {id: link.id}) }}">{{ link.label }}</a>
-                        <span class="row__sub">document</span>
+                        <span class="row__sub">{{ 'activity.kind.document'|trans }}</span>
                     {% else %}
                         <a href="{{ path('rule_show', {slug: link.project_slug, code: link.code}) }}"><span class="mono">{{ link.code }}</span> {{ link.label }}</a>
-                        <span class="row__sub">règle</span>
+                        <span class="row__sub">{{ 'activity.kind.rule'|trans }}</span>
                     {% endif %}
-                    <button type="button" class="icon-button" aria-label="Délier {{ link.label }}"
+                    <button type="button" class="icon-button" aria-label="{{ 'document.props.unlink'|trans({path: link.label}) }}"
                             data-action="live#action" data-live-action-param="unlink" data-live-edge-id-param="{{ link.edge_id }}">×</button>
                 </span>
             {% endfor %}
 
             <span class="link-search">
                 <input class="input input--compact" type="search" data-model="debounce(150)|linkQuery" value="{{ linkQuery }}"
-                       placeholder="Lier un fichier, un document ou une règle" aria-label="Chercher un fichier, un document ou une règle à lier" autocomplete="off" spellcheck="false">
+                       placeholder="{{ 'memory.editor.link'|trans }}" aria-label="{{ 'memory.editor.link_label'|trans }}" autocomplete="off" spellcheck="false">
                 {% if this.linkables is not empty %}
                     <span class="link-search__results" role="list">
                         {% for item in this.linkables %}
                             <button type="button" role="listitem" class="link-search__item"
                                     data-action="live#action" data-live-action-param="link" data-live-node-id-param="{{ item.id }}">
                                 <span>{% if item.type == 'code_file' %}<span class="mono">{{ item.path }}</span>{% elseif item.type == 'business_rule' %}<span class="mono">{{ item.code }}</span> {{ item.label }}{% else %}{{ item.label }}{% endif %}</span>
-                                <span class="row__sub">{{ item.type == 'code_file' ? 'code · ' ~ item.project_name : (item.type == 'document' ? 'document' : 'règle · ' ~ item.project_name) }}</span>
+                                <span class="row__sub">{{ item.type == 'code_file' ? 'nav.code'|trans ~ ' · ' ~ item.project_name : (item.type == 'document' ? 'activity.kind.document'|trans : 'activity.kind.rule'|trans ~ ' · ' ~ item.project_name) }}</span>
                             </button>
                         {% endfor %}
                     </span>
                 {% elseif linkQuery|trim is not empty %}
-                    <span class="row__sub">Rien ne correspond{{ memory.projects is empty ? ' (rattacher un projet pour lier son code et ses règles)' }}.</span>
+                    <span class="row__sub">{{ (memory.projects is empty ? 'memory.editor.no_match_project' : 'memory.editor.no_match')|trans }}</span>
                 {% endif %}
             </span>
         </dd>
 
-        <dt>Source</dt><dd>{{ {manual: 'saisie manuelle', demo: 'démo', learn: 'extraite par LLM', aidd: 'banque AIDD', mcp: 'agent (MCP)', connector: 'connecteur', chat: 'assistant du projet'}[meta.source] ?? meta.source }}{% if meta.learned_from is defined %} · {{ meta.learned_from.kind }} « {{ meta.learned_from.label }} »{% endif %}</dd>
-        {% if meta.evidence is defined %}<dt>Preuve</dt><dd><q>{{ meta.evidence }}</q></dd>{% endif %}
-        <dt>Créée le</dt><dd>{{ memory.createdAt|date('d/m/Y à H:i') }}</dd>
-        <dt>Modifiée le</dt><dd>{{ memory.updatedAt|date('d/m/Y à H:i') }}</dd>
-        {% if meta.demo ?? false %}<dt>Origine</dt><dd><span class="tag tag--demo">Démo</span></dd>{% endif %}
+        <dt>{{ 'memory.index.source'|trans }}</dt><dd>{{ meta.source in ['manual', 'demo', 'learn', 'aidd', 'mcp', 'connector', 'chat'] ? ('memory.source.' ~ meta.source)|trans : meta.source }}{% if meta.learned_from is defined %} · {{ meta.learned_from.kind }} « {{ meta.learned_from.label }} »{% endif %}</dd>
+        {% if meta.evidence is defined %}<dt>{{ 'proposal.evidence'|trans }}</dt><dd><q>{{ meta.evidence }}</q></dd>{% endif %}
+        <dt>{{ 'memory.editor.created'|trans }}</dt><dd>{{ memory.createdAt|format_datetime('medium', 'short') }}</dd>
+        <dt>{{ 'memory.editor.updated'|trans }}</dt><dd>{{ memory.updatedAt|format_datetime('medium', 'short') }}</dd>
+        {% if meta.demo ?? false %}<dt>{{ 'document.props.origin'|trans }}</dt><dd><span class="tag tag--demo">{{ 'common.demo'|trans }}</span></dd>{% endif %}
     </dl>
 
     <section class="block" aria-labelledby="history-title">
-        <div class="block__head"><h2 id="history-title">Historique</h2><span class="block__count">{{ this.history|length }}</span></div>
+        <div class="block__head"><h2 id="history-title">{{ 'memory.editor.history'|trans }}</h2><span class="block__count">{{ this.history|length }}</span></div>
         <ol class="history">
             {% for event in this.history %}
                 <li class="history__item">
@@ -99,7 +99,7 @@
                         {{ event.text }}
                         {% if event.previous is defined %}<del class="row__sub">{{ event.previous }}</del>{% endif %}
                     </span>
-                    <span class="row__sub num">{{ event.at|date('d/m/Y H:i') }}</span>
+                    <span class="row__sub num">{{ event.at|format_datetime('short', 'short') }}</span>
                 </li>
             {% endfor %}
         </ol>

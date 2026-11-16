@@ -18,6 +18,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Translation\TranslatableMessage;
 
 /**
  * Key and models of the whole instance, set from the interface instead of the environment.
@@ -84,7 +85,7 @@ final class LlmSettingsController extends AbstractController
             if ($reindex) {
                 $this->bus->dispatch(new ReindexNodes());
             }
-            $this->addFlash('success', $reindex ? 'Réglages enregistrés. Le contenu est réindexé en arrière-plan avec le modèle d\'embeddings.' : 'Réglages des modèles enregistrés.');
+            $this->addFlash('success', new TranslatableMessage($reindex ? 'flash.llm.saved_reindex' : 'flash.llm.saved'));
 
             return $this->redirectToRoute('llm_settings');
         }

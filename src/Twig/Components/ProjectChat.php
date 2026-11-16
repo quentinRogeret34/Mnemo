@@ -4,9 +4,11 @@ namespace App\Twig\Components;
 
 use App\Chat\ProjectAssistant;
 use App\Entity\Project;
+use App\Llm\LlmUnavailable;
 use App\Security\ProjectScope;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\UX\LiveComponent\Attribute\AsLiveComponent;
 use Symfony\UX\LiveComponent\Attribute\LiveAction;
 use Symfony\UX\LiveComponent\Attribute\LiveProp;
@@ -35,6 +37,7 @@ final class ProjectChat
         private readonly ProjectAssistant $assistant,
         private readonly ProjectScope $projectScope,
         private readonly RequestStack $requestStack,
+        private readonly TranslatorInterface $translator,
     ) {
     }
 
@@ -50,7 +53,7 @@ final class ProjectChat
     }
 
     /**
-     * @return list<array{role: string, content: string, actions?: list<array{label: string, url: string}>}>
+     * @return list<array{role: string, content: string, actions?: list<array{label: string, parameters: array<string, int|string>, url: string}>}>
      */
     public function getMessages(): array
     {
@@ -69,13 +72,13 @@ final class ProjectChat
         try {
             $reply = $this->assistant->reply($this->project, $messages, $message);
         } catch (\Throwable $exception) {
-            $this->error = 'L\'assistant n\'a pas pu répondre : '.$exception->getMessage();
+            $this->error = $exception instanceof LlmUnavailable ? $exception->translatable()->trans($this->translator) : $exception->getMessage();
 
             return;
         }
 
         $messages[] = ['role' => 'user', 'content' => $message];
-        $messages[] = ['role' => 'assistant', 'content' => '' === $reply['answer'] ? 'Pas de réponse.' : $reply['answer'], 'actions' => $reply['actions']];
+        $messages[] = ['role' => 'assistant', 'content' => $reply['answer'], 'actions' => $reply['actions']];
         $this->requestStack->getSession()->set($this->key(), \array_slice($messages, -self::MAX_MESSAGES));
         $this->message = '';
     }

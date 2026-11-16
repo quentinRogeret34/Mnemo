@@ -1,21 +1,21 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Modèles de langage{% endblock %}
+{% block title %}{{ 'nav.llm'|trans }}{% endblock %}
 
-{% block crumbs %}<span class="crumbs__current">Modèles de langage</span>{% endblock %}
+{% block crumbs %}<span class="crumbs__current">{{ 'nav.llm'|trans }}</span>{% endblock %}
 
 {% block body %}
     <div class="view-head">
-        <h1><twig:ux:icon name="lucide:brain" />Modèles de langage</h1>
+        <h1><twig:ux:icon name="lucide:brain" />{{ 'nav.llm'|trans }}</h1>
     </div>
-    <p class="page__lede">Clé OpenRouter et modèles de toute l'instance : extraction des mémoires, vérification, assistant, bot de revue, recherche par le sens. Un projet peut nommer ses propres modèles dans ses réglages ; la clé reste celle-ci.</p>
+    <p class="page__lede">{{ 'llm.lede'|trans }}</p>
 
     <dl class="props props--flat">
-        <dt>Clé OpenRouter</dt>
+        <dt>{{ 'form.llm.api_key'|trans }}</dt>
         <dd>
-            {% if llm.keySource == 'interface' %}<span class="status status--validated">enregistrée ici</span>
-            {% elseif llm.keySource == 'environment' %}<span class="status status--validated">lue dans l'environnement</span> <span class="row__sub">(<span class="mono">OPENROUTER_API_KEY</span>)</span>
-            {% else %}<span class="status">absente</span> <span class="row__sub">sans clé, rien de ce qui demande un LLM ne tourne</span>{% endif %}
+            {% if llm.keySource == 'interface' %}<span class="status status--validated">{{ 'llm.key_interface'|trans }}</span>
+            {% elseif llm.keySource == 'environment' %}<span class="status status--validated">{{ 'llm.key_environment'|trans }}</span> <span class="row__sub">(<span class="mono">OPENROUTER_API_KEY</span>)</span>
+            {% else %}<span class="status">{{ 'connector.key_missing'|trans }}</span> <span class="row__sub">{{ 'llm.key_missing_help'|trans }}</span>{% endif %}
         </dd>
         <dt>Chat</dt><dd><span class="mono">{{ llm.chatModel }}</span></dd>
         <dt>Embeddings</dt><dd><span class="mono">{{ llm.embeddingModel }}</span></dd>
@@ -23,19 +23,19 @@
 
     {{ form_start(form, {attr: {class: 'form-stack', novalidate: 'novalidate'}}) }}
         <fieldset>
-            <legend>Clé</legend>
+            <legend>{{ 'llm.key'|trans }}</legend>
             {{ form_errors(form) }}
             {{ form_row(form.apiKey) }}
             {% if llm.keySource == 'interface' %}{{ form_row(form.removeKey) }}{% else %}{% do form.removeKey.setRendered %}{% endif %}
         </fieldset>
         <fieldset>
-            <legend>Modèles</legend>
+            <legend>{{ 'llm.models'|trans }}</legend>
             {{ form_row(form.chatModel) }}
             {{ form_row(form.embeddingModel) }}
             {{ form_row(form.favoriteModels) }}
             <div class="upload__actions">
-                <button class="button button--primary" type="submit">Enregistrer</button>
-                <span>Chaque enregistrement essaie la clé et les deux modèles par un appel court.</span>
+                <button class="button button--primary" type="submit">{{ 'common.save'|trans }}</button>
+                <span>{{ 'llm.save_help'|trans }}</span>
             </div>
         </fieldset>
     {{ form_end(form) }}
