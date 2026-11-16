@@ -40,7 +40,7 @@ L'idée complète, l'état des lieux et les décisions sont dans
 
 - PHP >= 8.4 (image `dunglas/frankenphp`, PHP 8.5), Symfony 8.1
 - Doctrine ORM 3 + migrations, Postgres 18 + pgvector
-- Symfony AI 0.15 : plateforme OpenRouter, store Postgres, `symfony/mcp-bundle`
+- Symfony AI 1.0.0-BETA1 : plateforme OpenRouter, store Postgres, `symfony/mcp-bundle`
 - Twig, AssetMapper, Stimulus, UX Live Component / Twig Component / Dropzone
 - Docker : `compose.yaml` (services `php` sur le port 8080, `database` sur 5432)
 

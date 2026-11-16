@@ -58,14 +58,14 @@ final class ProjectAssistant
             toolbox: new ObjectParametersToolbox(new FaultTolerantToolbox(new Toolbox([$tools]))),
             maxToolCalls: self::MAX_TOOL_CALLS,
         );
-        $messages = new MessageBag();
+        $messages = [];
         foreach (\array_slice($history, -self::HISTORY) as $turn) {
-            $messages->add('user' === $turn['role'] ? Message::ofUser($turn['content']) : Message::ofAssistant($turn['content']));
+            $messages[] = 'user' === $turn['role'] ? Message::ofUser($turn['content']) : Message::ofAssistant($turn['content']);
         }
-        $messages->add(Message::ofUser($message));
+        $messages[] = Message::ofUser($message);
 
-        $answer = $agent->call($messages, ['temperature' => 0])->getContent();
+        $answer = $agent->call(new MessageBag(...$messages), ['temperature' => 0])->asText();
 
-        return ['answer' => \is_string($answer) ? trim($answer) : '', 'actions' => $tools->actions()];
+        return ['answer' => trim($answer), 'actions' => $tools->actions()];
     }
 }

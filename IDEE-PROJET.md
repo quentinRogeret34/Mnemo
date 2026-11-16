@@ -244,7 +244,7 @@ mémoires et les liens validés, pas seulement sur le code.
   `GET /search`, `GET /nodes/{id}`, `GET /files/{path}/context`,
   `POST /edges` / `DELETE /edges/{id}` (lier / délier), `GET /wiki`,
   `GET /wiki/{page}`, `POST /ask` (réponse en streaming).
-- **Serveur MCP** (`symfony/mcp-bundle` 0.15, en place) : `list_projects`,
+- **Serveur MCP** (`symfony/mcp-bundle` 1.0.0-BETA1, en place) : `list_projects`,
   `search` (mots-clés pour l'instant), `file_context`, `get_document`,
   `add_memory` (dédup exacte, événements `ADD` / `NONE` comme mem0),
   `import_document`, `learn` (extraction de mémoire, voir §11), `memory_block`.
@@ -435,7 +435,7 @@ Socle :
 - Symfony 8.1, PHP 8.5 (image `dunglas/frankenphp:1-php8.5`), Docker.
   Commandes dans le conteneur : `docker compose exec -T php bin/console ...`.
 - Postgres 18 + pgvector. Doctrine ORM 3, 3 migrations.
-- `symfony/ai-bundle` 0.15, store `postgres.default` (pas encore alimenté),
+- `symfony/ai-bundle` 1.0.0-BETA1, store `postgres.default` (pas encore alimenté),
   plateforme OpenRouter configurée, clé absente.
 - Symfony UX (Twig / Live Components, Stimulus, AssetMapper, Dropzone), Form,
   Validator, SecurityBundle (sans règle d'accès), `symfony/mcp-bundle`.
@@ -503,7 +503,7 @@ Données de dev : projet `claude-strava-coach` (218 fichiers, 2222 symboles,
 - mem0 : https://github.com/mem0ai/mem0 (prompts dans `mem0/configs/prompts.py`,
   pipeline dans `mem0/memory/main.py`)
 - graphify : https://github.com/Graphify-Labs/graphify
-- Symfony AI : https://github.com/symfony/ai (tag `v0.15.0`)
+- Symfony AI : https://github.com/symfony/ai (tag `v1.0.0-BETA1`)
 - Plugin mem0 Claude Code (exemple d'adaptateur client) :
   `~/.claude/plugins/cache/mem0-plugins/mem0/0.2.15/hooks.json`
 - MCP : SDK PHP https://github.com/modelcontextprotocol/php-sdk,

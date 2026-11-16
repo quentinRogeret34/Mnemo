@@ -14,4 +14,4 @@ ai:
                 dsn: '%env(AI_STORE_DSN)%'
                 username: '%env(AI_STORE_USER)%'
                 password: '%env(AI_STORE_PASSWORD)%'
-                distance: cosine
+                metric: cosine
