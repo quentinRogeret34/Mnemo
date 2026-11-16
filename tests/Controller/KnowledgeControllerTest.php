@@ -11,8 +11,10 @@ use App\Enum\EdgeOrigin;
 use App\Enum\NodeType;
 use App\Ingest\GraphifyImporter;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use Symfony\Component\Console\Tester\CommandTester;
 use Symfony\Component\Filesystem\Filesystem;
 
 final class KnowledgeControllerTest extends WebTestCase
@@ -96,13 +98,29 @@ final class KnowledgeControllerTest extends WebTestCase
         $result = $demoData->load($this->project);
         self::assertSame(3, $result['documents']);
         self::assertSame(7, $result['rules']);
-        self::assertSame(6, $result['memories']);
+        self::assertSame(8, $result['memories']);
+        self::assertSame(2, $result['proposals']);
 
         $this->givenRuleImplementedBy('src/main.ts');
-        self::assertSame(16, $demoData->clear($this->project));
+        self::assertSame(20, $demoData->clear($this->project));
 
         $remaining = $this->entityManager->getRepository(Node::class)->findBy(['type' => [NodeType::BusinessRule, NodeType::Document]], ['type' => 'ASC']);
         self::assertSame(['RG-042', 'Conditions générales'], array_map(static fn (Node $node): string => NodeType::BusinessRule === $node->getType() ? $node->getExternalId() : $node->getLabel(), $remaining));
+    }
+
+    public function testTheDemoCommandCreatesAShopWhoseRulesAreLinkedToItsCode(): void
+    {
+        $tester = new CommandTester((new Application(self::$kernel))->find('app:demo'));
+
+        $tester->execute([]);
+
+        $tester->assertCommandIsSuccessful();
+        self::assertStringContainsString('3 documents, 7 rules, 8 memories, 2 proposals to review, 13 rule-to-code links', preg_replace('/\s+/', ' ', $tester->getDisplay()));
+        $crawler = $this->client->request('GET', '/projects/acme-shop/rules/RG-001');
+        self::assertSelectorTextContains('.page__title', 'Discount cap');
+        self::assertCount(2, $crawler->filter('section[aria-labelledby="impl-title"] .row'));
+        $this->client->request('GET', '/proposals?project=acme-shop');
+        self::assertSelectorCount(2, '.proposal');
     }
 
     private function givenRuleImplementedBy(string $path): void

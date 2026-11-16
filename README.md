@@ -8,358 +8,160 @@
  \__, |_|  \__,_| .__/|_| |_|\___|
  |___/          |_|
 
-      [code]----implemented_by----[regle RG-001]
+      [code]----implemented_by----[rule RG-001]
         |                               |
      about                           defines
         |                               |
-    [memoire]----linked_to----[document metier]
+    [memory]----linked_to----[business document]
 ```
 
-Graphe de connaissance projet, auto-hébergé en Symfony. Il relie le code, les
-documents métier, les règles métier et les mémoires d'agents dans un seul graphe,
-avec la provenance de chaque lien, et le restitue :
+**A self-hosted project knowledge graph for humans and AI agents, built with Symfony AI and the PHP MCP SDK.**
 
-- aux humains, via un front Twig (`http://localhost:8080`) ;
-- à n'importe quel agent IA (Claude Code, Cursor, Codex...), via un serveur MCP et
-  une petite API HTTP.
+Coding agents forget everything between sessions, and they never read the spec that explains why the code is the way it is. graphe links a project's **code**, its **business documents**, the **business rules** extracted from them and the **memories** agents and humans keep (decisions, conventions, learnings) in one graph, where every edge says where it comes from and how sure it is. It gives that graph back:
 
-L'idée complète, l'état des lieux et les décisions sont dans
-[`IDEE-PROJET.md`](IDEE-PROJET.md).
+- to humans, in a web interface (English and French);
+- to any AI agent (Claude Code, Cursor, Codex...), through an MCP server and a small HTTP API;
+- to the team, through a GitHub review bot that comments pull requests with the rules and decisions they touch.
 
-## Principes
+Nothing an LLM proposes enters the graph without a human applying it.
 
-- **Chaque arête est justifiée** : confiance (`EXTRACTED`, `INFERRED`, `VERIFIED`),
-  source (`ast`, `git`, `api`, `llm`, `human`) et preuve.
-- **Déterministe d'abord, LLM ensuite** : AST et imports ne coûtent rien ; le LLM ne
-  sert que pour l'extraction de mémoires, la vérification et les zones d'ombre.
-- **Humain dans la boucle** : tout ce qu'un LLM propose passe par la file
-  `/proposals`. Une mémoire n'est jamais supprimée automatiquement, elle est archivée.
-- **Générique** : aucun couplage à un client IA particulier.
+## Quickstart
 
-## Stack
-
-- PHP >= 8.4 (image `dunglas/frankenphp`, PHP 8.5), Symfony 8.1
-- Doctrine ORM 3 + migrations, Postgres 18 + pgvector
-- Symfony AI 1.0.0-BETA1 : plateforme OpenRouter, store Postgres, `symfony/mcp-bundle`
-- Twig, AssetMapper, Stimulus, UX Live Component / Twig Component / Dropzone
-- Docker : `compose.yaml` (services `php` sur le port 8080, `database` sur 5432)
-
-## Installation
+You need Docker with Compose. Ports 8080 and 5432 must be free.
 
 ```bash
+git clone https://github.com/quentinRogeret34/RAG.git graphe && cd graphe
 docker compose up -d --build
 docker compose exec -T php composer install
 docker compose exec -T php bin/console doctrine:migrations:migrate --no-interaction
+docker compose exec -T php bin/console app:demo
 ```
 
-Clé LLM dans `.env.local` (git-ignoré), jamais dans `.env` :
+Open <http://localhost:8080>. The last command loads **Acme Shop**, a fictional Symfony shop: the code graph of 16 files, three business documents (discounts, order approval, returns), seven business rules linked to the code that implements them, eight memories and two proposals waiting for review.
+
+Browsing, the code graph, the memory graph, search by keywords and the MCP server need no key. The assistant, memory extraction, verification and search by meaning need an LLM: put an [OpenRouter](https://openrouter.ai) key in **Language models** (`/settings/llm`), or in `.env.local`:
 
 ```dotenv
-OPENROUTER_API_KEY=...
-
-LLM_PLATFORM=openrouter
-LLM_MODEL=mistralai/mistral-small-2603
-EMBEDDING_PLATFORM=openrouter
-EMBEDDING_MODEL=mistralai/mistral-embed-2312
+OPENROUTER_API_KEY=sk-or-...
 ```
-
-Vérifier la configuration (chat, sortie JSON structurée, embeddings) :
 
 ```bash
-docker compose exec -T php bin/console app:llm:check
+docker compose exec -T php bin/console app:llm:check    # one real call to the chat and embedding models
+docker compose exec -T php bin/console app:index        # embeddings for search by meaning
 ```
 
-Les commandes ci-dessous s'écrivent `bin/console ...` ; dans Docker, préfixer par
-`docker compose exec -T php`.
+`app:demo --clear` removes the demo content. The interface follows the browser's language; **Appearance** switches between English and French.
 
-## Connexion OAuth
+## A five-minute tour
 
-Désactivée par défaut (`APP_ACCESS_ROLE=PUBLIC_ACCESS`, aucun fournisseur). Pour l'activer :
+1. **Projects → Acme Shop → Business rules → RG-001 Discount cap.** The rule, its source document, the two files implementing it with the confidence of each link, and the memories about it. *Blind spots → Analyse* asks the LLM what the statement leaves the developer to guess.
+2. **Code → `DiscountCalculator.php`.** Its symbols, dependencies and neighbourhood graph, plus every rule, document and memory attached to the file: what an agent gets when it opens it.
+3. **Memory graph.** Each memory orbits the subject it is about. A memory linked to nothing orbits its project.
+4. **To review.** A learning extracted from a pull request review, and two memories saying the same thing. Apply, edit or reject: this queue is the only way in for LLM output.
+5. **Assistant** (needs a key). Ask *"What happens to an order of €600?"*, then *"Add a rule: a promo code cannot be used on gift cards."* It reads the graph with tools, cites RG-004, and the rule it writes waits for validation.
+6. **Gardening.** What drifted: rules never analysed, memories never verified, documents linked to nothing.
 
-1. Créer une application OAuth chez le fournisseur (GitHub : Settings → Developer settings → OAuth Apps) avec
-   l'adresse de retour `https://<domaine>/oauth/github/check` (`gitlab` ou `google` pour les autres ; en local
-   `http://localhost:8080/oauth/github/check`).
-2. Poser dans `.env.local` (ou `.env.prod.local` / Dokploy sur le serveur) :
+## Connect an agent
 
-```dotenv
-APP_ACCESS_ROLE=ROLE_USER
-OAUTH_GITHUB_CLIENT_ID=...
-OAUTH_GITHUB_CLIENT_SECRET=...
-# Emails vérifiés créés super admin à leur première connexion ; les autres attendent une activation dans /admin/users
-APP_ADMIN_EMAILS=moi@exemple.com
+The MCP server is at `http://localhost:8080/mcp` (streamable HTTP), or over STDIO with `bin/console mcp:server`. With Claude Code:
+
+```bash
+claude mcp add --transport http graphe http://localhost:8080/mcp
 ```
 
-3. Recharger : `/login` propose « Continuer avec GitHub ». Le compte `admin` à mot de passe
-   (`APP_ADMIN_PASSWORD_HASH`) reste disponible en secours.
+Then ask it *"Using graphe, what should I know before changing DiscountCalculator.php in acme-shop?"*. Each call shows on the **Dashboard**.
 
-La même application GitHub sert aux connecteurs de dépôt : sur la page d'un connecteur
-« GitHub (code et historique) », « Connecter avec GitHub » demande l'accès aux dépôts (scope `repo`, le seul
-qu'une OAuth App offre pour les dépôts privés) et enregistre le jeton chiffré en base avec une clé dérivée de
-`APP_SECRET`. Il remplace alors les en-têtes saisis, pour l'API comme pour le clone, et n'est jamais envoyé
-ailleurs qu'à github.com. Changer `APP_SECRET` oblige à reconnecter le compte.
+| Tool | What it does |
+|---|---|
+| `list_projects` | Projects, counters and the capabilities detected in their code |
+| `search` | Keyword search, hybrid with embeddings when indexed: memories, documents, rules, code |
+| `file_context` | The rules, documents, memories, dependencies and recent history of a file |
+| `get_document` | A business document and its links |
+| `memory_block` | The project memory as Markdown, for a session start |
+| `learn` | Sends a conversation, diff, file or review; the LLM turns it into proposals to review |
+| `add_memory` | Stores a memory directly, linked to files and rules |
+| `import_document` | Imports a Markdown document |
 
-Les serveurs MCP qui demandent OAuth (Notion, Jira / Confluence, Linear sans clé...) n'ont besoin d'aucune
-application à créer : sur la page d'un connecteur HTTP, « Connecter par OAuth » suit la spécification MCP
-(métadonnées de la ressource puis du serveur d'autorisation, enregistrement dynamique du client, PKCE,
-paramètre `resource`) et revient sur `/connectors/authorize/check`. Les jetons sont gardés chiffrés sur le
-connecteur, renouvelés avant expiration (y compris par le worker), remplacent l'en-tête `Authorization` saisi
-et ne sont envoyés qu'à l'URL autorisée : la changer oblige à reconnecter.
+The repository also ships a Claude Code plugin (`claude-plugin/`) that injects the project memory at session start, the context of each file read, and sends the session transcript to `learn` at the end. Its setup is in the in-app **Wiki**.
 
-## Bot de revue (GitHub App)
+## What Symfony AI and the PHP MCP SDK unlocked
 
-Le bot commente chaque pull request d'un dépôt branché avec ce que le graphe sait des fichiers modifiés, et pose
-un check `graphe/rules`. Il agit sous l'identité d'une GitHub App, distincte de l'application OAuth ci-dessus.
+The whole loop runs in one Symfony app, with no Python service on the side:
 
-1. Créer l'application (GitHub : Settings → Developer settings → GitHub Apps → New GitHub App) :
-   - Webhook URL `https://<domaine>/webhooks/github`, avec un secret (`openssl rand -hex 32`) ;
-   - permissions du dépôt : Pull requests (lecture et écriture), Checks (lecture et écriture), Contents (lecture),
-     Metadata (lecture) ;
-   - événements : Pull request, Push.
-2. Générer une clé privée et poser dans `.env.local` (ou Dokploy) :
+- **MCP server in eight attributes.** `symfony/mcp-bundle` exposes `App\Mcp\ReadTools` and `App\Mcp\WriteTools` as MCP tools with `#[McpTool]`, typed parameters and tool annotations (read-only, destructive). The same tools serve every agent, over HTTP or STDIO, behind Symfony Security and API keys.
+- **MCP client for the outside world.** Connectors use the `mcp/sdk` client (HTTP and STDIO transports) to pull content from other MCP servers (DeepWiki, Context7, mem0, Notion, Jira, Linear...) into documents or memories, including the MCP OAuth flow (protected resource metadata, dynamic client registration, PKCE).
+- **An agent that reads before it answers.** The project assistant is a `symfony/ai-agent` `Agent` with a `Toolbox` of `#[AsTool]` methods (`search`, `list_rules`, `get_rule`, `add_rule`, `add_memory`), scoped to one project.
+- **Structured output for extraction.** Learning extraction, memory verification, duplicate detection, blind spots and the review bot call the platform with a JSON schema and get structured objects back, through the OpenRouter bridge, so any model can be swapped from the settings page.
+- **Embeddings on the same platform.** Memories, rules and documents are embedded with the platform and stored in pgvector; search merges keyword and vector ranks.
+- **Symfony around it:** Messenger and Scheduler run syncs, re-indexing and reviews in a worker; Lock guards concurrent project creation; Live Components drive the chat and the editors; UX Translator shares the catalogues with Stimulus.
 
-```dotenv
-GITHUB_APP_ID=123456
-# Le PEM, ou son base64 sur une ligne : base64 -i app.private-key.pem
-GITHUB_APP_PRIVATE_KEY=...
-GITHUB_APP_WEBHOOK_SECRET=...
-# Nom de l'application dans son URL (github.com/apps/<slug>), pour le lien « installer »
-GITHUB_APP_SLUG=graphe-projet
-```
+Before, this needed an MCP server in another language, a separate agent framework and glue between them. Here a Symfony developer reads one codebase.
 
-3. Installer l'application sur les dépôts voulus, puis sur la page de leur connecteur
-   « GitHub (code et historique) » : « Activer la revue des PR » (argument `review: true`).
-
-Ce que font les événements, traités par le worker :
-
-- push sur la branche par défaut : synchronisation du connecteur (déclencheur « webhook » dans l'activité). La
-  synchronisation planifiée reste utile pour rattraper un événement manqué.
-- pull request ouverte, mise à jour ou modifiée (hors brouillon) : un commentaire unique, réécrit à chaque push,
-  liste les règles métier touchées et leurs zones d'ombre, les mémoires liées aux fichiers, l'historique récent, et
-  ce que le diff contredit d'après le LLM (chaque remarque cite sa mémoire ou sa règle ; `review_llm: false` pour
-  s'en passer). Une pull request dont le graphe ne sait rien ne reçoit pas de commentaire.
-- chaque remarque du LLM qui vise une ligne ajoutée est aussi posée sur cette ligne, dans une review « Comment » qui
-  ne bloque jamais la fusion. À chaque push, les remarques en ligne précédentes du bot sont effacées, sauf celles
-  auxquelles quelqu'un a répondu.
-- le check `graphe/rules` avertit quand une règle validée est touchée sans fichier de test dans le diff ni mention
-  de son code (RG-042) dans le titre, la description ou un commit ; `review_check: "fail"` le fait échouer.
-
-Le commentaire est visible de tous ceux qui lisent la pull request : seules les mémoires partagées avec le projet
-y figurent, jamais les mémoires privées ou de groupe. Sur un dépôt public, activer la revue rend ces mémoires
-publiques. `bin/console app:review <slug> <numéro> --dry-run` affiche le commentaire sans rien publier.
-
-## Workflow
+## How it works
 
 ```
-  1. projet        app:project:create, ou créé par le plugin à la première session
+  1. project      created by the plugin at the first session, or app:project:create
         |
-  2. ingestion     app:ingest:code      (graphe AST graphify)
-        |          app:ingest:context   (banque AIDD, CLAUDE.md, AGENTS.md...)
-        |          front /documents     (md, pdf, docx)
-        |          app:connector:sync   (connecteurs MCP : DeepWiki, Context7, mem0...)
-        |          connecteur GitHub / GitLab (clone + graphify + docs + historique, dans le worker)
+  2. ingest       code graph (graphify), business documents, agent conventions,
+        |         GitHub / GitLab history, other MCP servers
         |
-  3. apprentissage app:learn / outil MCP learn / POST /api/learn
+  3. learn        conversations, diffs, reviews -> LLM -> proposals
         |
-  4. validation    /proposals           (appliquer ou rejeter)
+  4. review       /proposals: apply, edit or reject
         |
-  5. entretien     app:garden, app:verify, app:rule:shadow
+  5. tend         gardening, verification against the graph, blind spots of rules
         |
-  6. restitution   app:export:memory-block, serveur MCP, /api/context
+  6. give back    MCP tools, /api hooks, memory block in CLAUDE.md / AGENTS.md, PR review bot
 ```
 
-### 1. Déclarer un projet
+- **Every edge is justified:** confidence (`EXTRACTED`, `INFERRED`, `VERIFIED`), origin (`ast`, `git`, `api`, `llm`, `human`) and evidence.
+- **Deterministic first:** the AST and the git history cost nothing; the LLM is only used for extraction, verification, blind spots and review.
+- **Human in the loop:** what an LLM proposes goes through `/proposals`. A memory is never deleted automatically, it is archived.
+- **Data, not instructions:** whatever the graph returns to an agent is marked as data.
 
-Un projet = un dépôt git. Le chemin sert à retrouver le projet depuis le dossier
-de travail d'un agent.
+## Commands
 
-```bash
-bin/console app:project:create <slug> "<Nom>" <chemin-du-depot>
-```
+Prefix with `docker compose exec -T php` when running in Docker.
 
-Avec le plugin Claude Code, la commande est facultative : un projet inconnu est
-créé à la première session. Il est reconnu par le dépôt distant `origin`
-(`hôte/propriétaire/dépôt`), sinon par le nom du dossier ; `GRAPHE_PROJECT`
-impose un slug. Le projet rejoint les groupes du propriétaire de la clé ; une
-clé limitée à certains projets ne crée rien.
-
-### 2. Ingérer
-
-```bash
-# Graphe du code (sans LLM), depuis graphify
-graphify extract --code-only
-bin/console app:ingest:code <slug> graphify-out/graph.json
-
-# Banque de mémoire AIDD et conventions d'agents (sans LLM, ré-import sans effet)
-bin/console app:ingest:context <slug> <chemin-du-depot>
-
-# Connecteurs MCP configurés dans /connectors
-bin/console app:connector:sync [id]
-```
-
-Sur un serveur, le connecteur « GitHub / GitLab (code et historique) » fait les deux
-premières étapes tout seul : avec `"code_graph": true` dans ses arguments, le
-worker clone le dépôt (clone superficiel dans `var/repos/`, branche par défaut ou
-`"branch"`), lance `graphify extract --code-only`, importe le graphe, les
-conventions d'agents, les `README*.md` et `docs/**/*.md`, puis l'historique. Tant
-que le commit de tête n'a pas changé, l'étape code est sautée. Le jeton du
-connecteur sert aussi au clone ; il n'est écrit ni dans l'URL ni dans le clone.
-
-Les documents métier se déposent dans le front (`/documents`), avec dossiers et
-rattachement à plusieurs projets. Pour explorer sans données réelles :
-`bin/console app:demo <slug>` (`--clear` pour retirer).
-
-### 3. Extraire des mémoires
-
-Le LLM extrait les apprentissages durables d'une source, les note sur 4 axes
-(durabilité, réutilisation, adéquation, risque), écarte ce qui est sous 4 et compare
-le reste aux mémoires proches (`new`, `covered`, `updates`, `supersedes`, `retracts`).
-Rien n'est écrit directement : tout devient une proposition.
-
-```bash
-bin/console app:learn <slug> <conversation|file|diff|review> <label> --file=<chemin>
-git diff main...feature | bin/console app:learn <slug> diff "main...feature"
-```
-
-### 4. Valider
-
-Ouvrir `/proposals` : appliquer (texte modifiable) ou rejeter chaque proposition.
-
-### 5. Entretenir
-
-```bash
-# Rapport de dérive (ne modifie rien). --llm : propose doublons et contradictions
-bin/console app:garden <slug> [--llm]
-
-# Vérifie les mémoires contre le graphe ; les réfutées sont proposées au retrait
-bin/console app:verify <slug> [--limit=20]
-
-# Zones d'ombre des règles métier (une question à poser au métier par trou)
-bin/console app:rule:shadow <slug> [RG-001]
-```
-
-Équivalents dans le front : `/projects/<slug>/garden`, bouton "Vérifier" sur une
-mémoire, bouton "Zones d'ombre" sur une règle.
-
-### 6. Restituer aux agents
-
-Bloc mémoire (conventions, décisions, règles validées) écrit entre marqueurs dans
-les fichiers de contexte ; seul le texte entre marqueurs est réécrit :
-
-```bash
-bin/console app:export:memory-block <slug> --write=../repo/CLAUDE.md --write=../repo/AGENTS.md
-```
-
-## Commandes
-
-| Commande | Rôle | LLM |
+| Command | What it does | LLM |
 |---|---|---|
-| `app:project:create <slug> <nom> <chemin>` | Déclarer un projet | non |
-| `app:ingest:code <slug> <graph.json>` | Importer le graphe graphify | non |
-| `app:ingest:context <slug> <chemin>` | Importer banque AIDD et conventions d'agents | non |
-| `app:connector:sync [id]` | Synchroniser un ou tous les connecteurs (MCP, GitHub, GitLab) | non |
-| `app:demo <slug> [--clear]` | Charger / retirer des données de démo | non |
-| `app:learn <slug> <kind> <label> [--file=]` | Extraire des mémoires en propositions | oui |
-| `app:garden <slug> [--llm]` | Rapport de dérive, doublons et contradictions | option |
-| `app:verify <slug> [--limit=20]` | Vérifier les mémoires contre le graphe | oui |
-| `app:rule:shadow <slug> [code]` | Zones d'ombre des règles | oui |
-| `app:review <slug> <numéro> [--dry-run]` | Revue d'une pull request par le bot (commentaire et check) | option |
-| `app:export:memory-block <slug> [--write=]` | Afficher ou écrire le bloc mémoire | non |
-| `app:llm:check` | Tester chat et embeddings | oui |
-| `mcp:server` | Serveur MCP en STDIO | - |
+| `app:demo [slug] [--clear]` | Load or remove the demo (the Acme Shop project by default) | no |
+| `app:project:create <slug> <name> <path>` | Declare a project | no |
+| `app:ingest:code <slug> <graph.json>` | Import a graphify code graph | no |
+| `app:ingest:context <slug> <path>` | Import an AIDD memory bank and agent conventions | no |
+| `app:connector:sync [id]` | Sync one or all connectors (MCP, GitHub, GitLab) | no |
+| `app:learn <slug> <kind> <label> [--file=]` | Extract learnings into proposals | yes |
+| `app:garden <slug> [--llm]` | Drift report; with `--llm`, duplicates and contradictions | option |
+| `app:verify <slug>` | Verify memories against the graph | yes |
+| `app:rule:shadow <slug> [code]` | Blind spots of business rules | yes |
+| `app:review <slug> <number> [--dry-run]` | Review a pull request as the bot | option |
+| `app:export:memory-block <slug> [--write=]` | Print or write the memory block | no |
+| `app:index` | Embed memories, rules and documents | yes |
+| `app:llm:check` | Check the chat and embedding models | yes |
 
-## Brancher un agent
+## Going further
 
-### Serveur MCP
+The in-app **Wiki** explains every screen and the production deployment (`compose.prod.yaml`, FrankenPHP with automatic HTTPS). In short:
 
-- HTTP : `http://localhost:8080/mcp`
-- STDIO : `docker compose exec -T php bin/console mcp:server`
+- **Sign-in.** Open by default (`APP_ACCESS_ROLE=PUBLIC_ACCESS`). With `APP_ACCESS_ROLE=ROLE_USER`, users sign in with GitHub, GitLab or Google (`OAUTH_*` variables, callback `/oauth/<provider>/check`), accounts wait for a super admin (`APP_ADMIN_EMAILS`), groups scope projects, and agents send `Authorization: Bearer <key>` with a key created in **API keys**.
+- **GitHub and GitLab connectors.** With `"code_graph": true`, the worker clones the repository, builds its code graph with graphify, imports its README, docs and agent conventions, then commits, pull requests and issues, linked to the files and rules they touch. **Connectors → GitHub repositories** connects several repositories at once through GitHub OAuth.
+- **Review bot.** A GitHub App (`GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY`, `GITHUB_APP_WEBHOOK_SECRET`, `GITHUB_APP_SLUG`, webhook `/webhooks/github`) comments each pull request with the business rules it touches, their blind spots, the linked memories and what the diff contradicts, posts remarks on the lines concerned, and sets a `graphe/rules` check. Only memories shared with the project appear in it.
+- **Agent skills.** A project keeps skills, commands and subagents that the plugin writes into `.claude/` on every connected machine.
 
-| Outil | Rôle |
-|---|---|
-| `list_projects` | Projets, compteurs et capacités détectées |
-| `search` | Recherche par mots-clés : mémoires, documents, règles, code |
-| `file_context` | Règles, documents, mémoires et dépendances d'un fichier |
-| `get_document` | Lire un document métier et ses liens |
-| `memory_block` | Bloc mémoire Markdown du projet |
-| `learn` | Envoyer une source à l'extraction (propositions à valider) |
-| `add_memory` | Écrire une mémoire directement, liée au code et aux règles |
-| `import_document` | Importer un document Markdown |
+## Stack
 
-### API HTTP (hooks clients)
+PHP 8.4+ (FrankenPHP, PHP 8.5 in the image), Symfony 8.1, Symfony AI 1.0.0-BETA1 (platform with the OpenRouter bridge, agent, MCP bundle) and `mcp/sdk`, Doctrine ORM 3 with migrations, PostgreSQL 18 with pgvector, Messenger and Scheduler, Twig, AssetMapper, Stimulus, UX Live Component, UX Translator.
 
-Le projet est trouvé par le dossier de travail (`cwd`) de l'agent.
-
-| Endpoint | Rôle |
-|---|---|
-| `GET /api/context?cwd=...` | Bloc mémoire du projet, à injecter au démarrage de session |
-| `GET /api/file-context?cwd=...&path=...` | Contexte d'un fichier, à injecter à chaque lecture |
-| `POST /api/learn` (`cwd`, `kind`, `label`, `text`) | Envoyer un transcript ou un diff à l'extraction |
-| `GET /api/agent-assets?cwd=...` | Skills, commandes et sous-agents du projet, en fichiers à écrire dans `.claude/` |
-
-Exemple d'adaptateur : hooks Claude Code `SessionStart` (contexte), `PostToolUse`
-sur `Read` (contexte du fichier), `SessionEnd` / `PreCompact` (transcript vers `learn`).
-
-### Skills, commandes et sous-agents du projet
-
-La page « Skills des agents » d'un projet garde des skills, des commandes (`/nom`) et des sous-agents. Au début
-de chaque session, le plugin les écrit dans le dépôt de l'agent connecté :
-`.claude/skills/<nom>/SKILL.md`, `.claude/commands/<nom>.md`, `.claude/agents/<nom>.md`. Un fichier supprimé sur
-le serveur est retiré du poste ; un fichier local du même nom, que le serveur n'a pas écrit, n'est jamais touché
-(le plugin tient la liste de ce qu'il gère dans `.claude/graphe-assets.json`). Le serveur ne peut faire écrire que
-ces trois chemins, jamais un réglage ni un hook. `GRAPHE_SYNC=0` coupe la synchronisation. Ces fichiers n'ont pas
-à être commités : les ajouter au `.gitignore` du dépôt si besoin.
-
-Qui peut modifier ces fichiers sur le serveur donne des instructions aux agents connectés au projet.
-
-## Clé et modèles de langage
-
-« Modèles de langage » (`/settings/llm`) règle la clé OpenRouter et les modèles de chat et d'embeddings de toute
-l'instance, sans toucher au `.env`. La clé est chiffrée en base avec une clé dérivée de `APP_SECRET` et n'est plus
-jamais affichée ; ce qui est saisi là l'emporte sur `OPENROUTER_API_KEY`, `LLM_MODEL` et `EMBEDDING_MODEL`, qui
-restent les valeurs par défaut. La page est réservée au super admin dès que le serveur demande une connexion.
-
-Un projet peut nommer ses propres modèles dans ses réglages ; la clé reste celle de l'instance. Chaque
-enregistrement essaie la clé et les modèles par un appel court, et refuse ce qu'OpenRouter refuse.
-
-Le modèle d'embeddings se choisit parmi ceux que le pont OpenRouter de Symfony AI connaît (liste proposée dans le
-champ). En changer réindexe le contenu en arrière-plan, par le worker. Un contenu garde un vecteur par modèle
-utile : celui de l'instance, et celui de chacun de ses projets qui en nomme un autre. La recherche dans un projet
-utilise le modèle du projet, la recherche sur tous les projets celui de l'instance.
-
-## Assistant du projet
-
-« Assistant », dans le menu d'un projet, est un chat qui répond à partir du graphe (règles, mémoires, documents,
-code) en citant ses sources, et qui écrit quand on le lui demande : une règle métier, créée « à valider » et
-validée ensuite sur sa page, ou une mémoire du projet. Il demande un LLM configuré qui sait appeler des outils.
-La conversation vit dans la session du navigateur : elle n'est ni partagée ni conservée après la déconnexion.
-
-## Front
-
-| URL | Contenu |
-|---|---|
-| `/` | Projets |
-| `/documents` | Documents métier, dossiers, dépôt de fichiers |
-| `/memories` | Mémoires : création, filtres, historique, liens |
-| `/proposals` | File de validation des propositions LLM |
-| `/projects/<slug>/rules` | Règles métier, sources, code lié, zones d'ombre |
-| `/projects/<slug>/code` | Recherche de code, fiche fichier, vue graphe |
-| `/projects/<slug>/garden` | Jardinage |
-| `/connectors` | Connecteurs MCP |
-
-## Tests
+## Development
 
 ```bash
-docker compose exec -T php bin/phpunit
+docker compose exec -T php bin/phpunit                  # the LLM is mocked (tests/LlmTestTrait.php)
+docker compose exec -T php vendor/bin/phpstan analyse   # level 6
+docker compose exec -T php vendor/bin/php-cs-fixer fix  # @Symfony
 ```
 
-Base de test `app_test`. Le LLM est simulé (`tests/LlmTestTrait.php`).
+## Limits
 
-## Limites actuelles
-
-- **Aucune authentification** : front, `/api` et `/mcp` sont ouverts. Garder le
-  port sur `127.0.0.1` et ne pas exposer l'application.
-- Recherche par mots-clés uniquement (pas encore d'indexation vectorielle).
-- Texte des PDF et docx non extrait.
-- Pas encore d'ingestion git, ni de Scheduler pour les connecteurs.
-- Les connecteurs STDIO (`MCP_CONNECTORS_ALLOW_STDIO=1`) exécutent une commande dans
-  le conteneur : à n'activer que si tous les utilisateurs du front sont de confiance.
+- PDF and Word documents are stored and shown, but their text is not extracted yet: rules come from Markdown.
+- STDIO connectors (`MCP_CONNECTORS_ALLOW_STDIO=1`) run a command in the container: only for trusted users.
+- With sign-in open (the default), anyone reaching port 8080 can read and write: keep it on `127.0.0.1` or turn on `ROLE_USER`.

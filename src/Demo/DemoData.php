@@ -3,59 +3,64 @@
 namespace App\Demo;
 
 use App\Document\DocumentStorage;
-use App\Memory\MemoryStore;
 use App\Entity\Edge;
 use App\Entity\Node;
 use App\Entity\Project;
+use App\Entity\Proposal;
 use App\Enum\Confidence;
 use App\Enum\EdgeOrigin;
 use App\Enum\MemoryType;
 use App\Enum\NodeType;
+use App\Enum\ProposalKind;
+use App\Ingest\GraphifyImporter;
+use App\Memory\MemoryStore;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 /**
- * Fictional business documents and rules, flagged with metadata "demo" so they can be removed in one go.
+ * Fictional business documents, rules, memories and proposals of an online shop, flagged with "demo" so they can be
+ * removed in one go. The matching code graph is only imported into a project the demo creates.
  */
 final class DemoData
 {
+    public const PROJECT = 'acme-shop';
+
     private const DOCUMENTS = [
-        'catalogue' => 'specification-catalogue-cotes.md',
-        'communaute' => 'charte-communaute.md',
-        'generation' => 'generation-parcours.md',
+        'discounts' => 'discount-policy.md',
+        'approval' => 'order-approval.md',
+        'returns' => 'returns-and-refunds.md',
     ];
 
     /**
      * code => [title, statement, status, source document, confidence of the source link, implementing files with confidence].
      */
     private const RULES = [
-        'RG-001' => ['Seuils de détection d\'une côte', 'Une portion de trace est une côte candidate si sa pente moyenne est d\'au moins 4 %, son dénivelé d\'au moins 40 m et sa longueur d\'au moins 300 m.', 'validated', 'catalogue', Confidence::Verified, [
-            'apps/lab/api/src/domain/catalog.ts' => Confidence::Verified,
-            'apps/lab/api/src/domain/hills.ts' => Confidence::Inferred,
+        'RG-001' => ['Discount cap', 'The total discount on an order never exceeds 10 % of the order subtotal, whatever the combination of promo code and loyalty bonus.', 'validated', 'discounts', Confidence::Verified, [
+            'src/Pricing/DiscountPolicy.php' => Confidence::Verified,
+            'src/Pricing/DiscountCalculator.php' => Confidence::Verified,
         ]],
-        'RG-002' => ['Fusion des traces d\'une même montée', 'Deux traces sont fusionnées en une seule côte si leurs départs et arrivées sont à moins de 50 m et que leur dénivelé diffère de moins de 10 %.', 'validated', 'catalogue', Confidence::Verified, [
-            'apps/lab/api/src/domain/catalog.ts' => Confidence::Verified,
-            'apps/gpx-lab/lib/catalogue.mjs' => Confidence::Inferred,
+        'RG-002' => ['One promo code per order', 'An order carries one promo code at most; entering a second code replaces the first one.', 'validated', 'discounts', Confidence::Verified, [
+            'src/Pricing/DiscountCalculator.php' => Confidence::Verified,
+            'src/Pricing/PromoCode.php' => Confidence::Inferred,
         ]],
-        'RG-003' => ['Masquage après trois signalements', 'Un parcours ou un commentaire signalé par 3 utilisateurs distincts est masqué jusqu\'à décision de modération.', 'to_review', 'communaute', Confidence::Inferred, [
-            'apps/lab/api/src/routes/moderation.ts' => Confidence::Inferred,
-            'apps/lab/web/src/components/community/ReportDialog.svelte' => Confidence::Inferred,
+        'RG-003' => ['Gold loyalty bonus', 'Gold customers get an extra 2 % on every order, added to the promo code and capped with it.', 'to_review', 'discounts', Confidence::Inferred, [
+            'src/Customer/LoyaltyTier.php' => Confidence::Inferred,
+            'src/Pricing/DiscountCalculator.php' => Confidence::Inferred,
         ]],
-        'RG-004' => ['Suppression réservée à l\'auteur', 'Seul l\'auteur d\'un parcours, ou un modérateur, peut le modifier ou le supprimer.', 'validated', 'communaute', Confidence::Verified, [
-            'apps/lab/api/src/routes/community.ts' => Confidence::Verified,
-            'apps/lab/api/src/domain/community.ts' => Confidence::Inferred,
+        'RG-004' => ['Approval above €500', 'An order over €500, taxes included, waits for the approval of a manager of the customer\'s company; an order of exactly €500 does not.', 'validated', 'approval', Confidence::Verified, [
+            'src/Order/OrderApproval.php' => Confidence::Verified,
+            'src/Order/OrderController.php' => Confidence::Inferred,
         ]],
-        'RG-005' => ['Une note par utilisateur et par parcours', 'Une note va de 1 à 5 ; un utilisateur ne note qu\'une fois un parcours et une nouvelle note remplace l\'ancienne.', 'to_review', 'communaute', Confidence::Inferred, [
-            'apps/lab/web/src/components/community/RatingPicker.svelte' => Confidence::Inferred,
-            'apps/lab/api/src/domain/community.ts' => Confidence::Inferred,
+        'RG-005' => ['Approval expires after 48 hours', 'An approval request expires after 48 hours; the order is then cancelled, nothing is charged and the customer is told by email.', 'to_review', 'approval', Confidence::Inferred, [
+            'src/Order/ApprovalExpiryHandler.php' => Confidence::Verified,
+            'src/Notification/ApprovalMailer.php' => Confidence::Inferred,
         ]],
-        'RG-006' => ['Une génération en cours par utilisateur', 'Une demande de génération est refusée tant qu\'une génération du même utilisateur est en cours.', 'to_review', 'generation', Confidence::Inferred, [
-            'apps/lab/api/src/routes/generation.ts' => Confidence::Inferred,
-            'apps/lab/api/src/workers/generation-worker.ts' => Confidence::Inferred,
+        'RG-006' => ['30-day return window', 'An item can be returned within 30 days of delivery, except final sale items.', 'validated', 'returns', Confidence::Verified, [
+            'src/Return/ReturnPolicy.php' => Confidence::Verified,
         ]],
-        'RG-007' => ['Expiration de session à 30 jours', 'Une session expire après 30 jours sans activité ; publier, noter ou commenter demande alors de se reconnecter.', 'validated', 'communaute', Confidence::Verified, [
-            'apps/lab/api/src/middleware/auth.ts' => Confidence::Verified,
-            'apps/lab/web/src/lib/session.svelte.ts' => Confidence::Inferred,
+        'RG-007' => ['Refund at the paid price', 'A returned item is refunded within 14 days of reception, on the original payment method, at the price the customer actually paid.', 'to_review', 'returns', Confidence::Inferred, [
+            'src/Return/RefundService.php' => Confidence::Verified,
+            'src/Payment/PaymentGateway.php' => Confidence::Inferred,
         ]],
     ];
 
@@ -63,25 +68,39 @@ final class DemoData
      * [text, type, linked code paths, linked document keys, linked rule codes].
      */
     private const MEMORIES = [
-        ['Les seuils de détection des côtes sont centralisés dans catalog.ts pour être ajustés sans redéployer le moteur.', MemoryType::Decision, ['apps/lab/api/src/domain/catalog.ts'], ['catalogue'], ['RG-001']],
-        ['Fusionner deux traces avant de lisser l\'altitude crée des doublons dans le catalogue : toujours lisser d\'abord.', MemoryType::Learning, ['apps/lab/api/src/domain/catalog.ts', 'apps/gpx-lab/lib/catalogue.mjs'], [], ['RG-002']],
-        ['Les composants communautaires Svelte passent tous par api.ts pour appeler le serveur, jamais par fetch directement.', MemoryType::Convention, ['apps/lab/web/src/lib/api.ts', 'apps/lab/web/src/components/community/Comments.svelte'], [], []],
-        ['Une session expirée renvoie 401 depuis le middleware auth.ts ; le front redirige alors vers la connexion.', MemoryType::Fact, ['apps/lab/api/src/middleware/auth.ts', 'apps/lab/web/src/lib/session.svelte.ts'], ['communaute'], ['RG-007']],
-        ['Le refus d\'une seconde génération en cours est couvert par charge.test.ts ; le relancer après toute modification du worker.', MemoryType::Learning, ['apps/lab/api/test/charge.test.ts', 'apps/lab/api/src/workers/generation-worker.ts'], ['generation'], ['RG-006']],
-        ['Les messages d\'erreur montrés aux utilisateurs sont en français, sans jargon technique.', MemoryType::Preference, [], ['communaute'], []],
+        ['The discount cap lives in DiscountPolicy::MAX_RATE so that marketing can change it without touching the calculator.', MemoryType::Decision, ['src/Pricing/DiscountPolicy.php'], ['discounts'], ['RG-001']],
+        ['Applying the loyalty bonus after the cap let gold customers reach 12 %: DiscountCalculator always caps last.', MemoryType::Learning, ['src/Pricing/DiscountCalculator.php', 'src/Customer/LoyaltyTier.php'], [], ['RG-001', 'RG-003']],
+        ['Every money amount is an integer number of cents wrapped in the Money value object, never a float.', MemoryType::Convention, ['src/Pricing/Money.php', 'src/Return/RefundService.php'], [], []],
+        ['Approval requests expire through a delayed Messenger message handled by ApprovalExpiryHandler, not through a cron job.', MemoryType::Fact, ['src/Order/ApprovalExpiryHandler.php', 'src/Order/OrderApproval.php'], ['approval'], ['RG-005']],
+        ['OrderApprovalTest covers the €500 edge case (exactly €500 needs no approval): run it after any change to OrderApproval.', MemoryType::Learning, ['tests/Order/OrderApprovalTest.php', 'src/Order/OrderApproval.php'], [], ['RG-004']],
+        ['Error messages shown to customers stay short and never mention internal codes.', MemoryType::Preference, [], ['returns'], []],
+        ['Refunds go back to the original payment method only: store credit was ruled out for accounting reasons.', MemoryType::Decision, ['src/Return/RefundService.php'], ['returns'], ['RG-007']],
+        ['Prices are stored in cents to avoid float rounding errors.', MemoryType::Fact, ['src/Pricing/Money.php'], [], []],
     ];
 
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly DocumentStorage $documentStorage,
         private readonly MemoryStore $memoryStore,
+        private readonly GraphifyImporter $graphifyImporter,
         #[Autowire('%kernel.project_dir%/fixtures/demo')]
         private readonly string $fixturesDir,
     ) {
     }
 
+    public function createProject(): Project
+    {
+        $project = new Project(self::PROJECT, 'Acme Shop', '');
+        $project->setRepository('github.com/acme/shop');
+        $this->entityManager->persist($project);
+        $this->entityManager->flush();
+        $this->graphifyImporter->import($project, $this->fixturesDir.'/graph.json');
+
+        return $project;
+    }
+
     /**
-     * @return array{documents: int, rules: int, memories: int, code_links: int, missing_files: list<string>}
+     * @return array{documents: int, rules: int, memories: int, proposals: int, code_links: int, missing_files: list<string>}
      */
     public function load(Project $project): array
     {
@@ -135,9 +154,39 @@ final class DemoData
                 $this->memoryStore->link($memories[$index], $target);
             }
         }
+
+        $proposals = [
+            new Proposal($project, ProposalKind::Learning, [
+                'lesson' => 'A partially returned order is refunded at the price paid per item: the order discount is spread across its lines first.',
+                'evidence' => 'We refund the paid price, so the discount has to be spread across the lines before computing a partial refund.',
+                'type' => MemoryType::Learning->value,
+                'score' => 8.3,
+                'axes' => ['durability' => 9, 'reuse' => 8, 'project_fit' => 9, 'risk' => 7],
+                'files' => ['src/Return/RefundService.php'],
+                'rules' => ['RG-007'],
+                'adr' => [],
+                'reconciliation' => 'new',
+                'target_id' => null,
+                'target_text' => null,
+                'reason' => '',
+                'source' => ['kind' => 'review', 'label' => 'PR #42 · Partial refunds'],
+                'demo' => true,
+            ]),
+            new Proposal($project, ProposalKind::Duplicate, [
+                'a_id' => $memories[2]->getId(),
+                'a_text' => $memories[2]->getLabel(),
+                'b_id' => $memories[7]->getId(),
+                'b_text' => $memories[7]->getLabel(),
+                'reason' => 'Both say that money amounts are stored as integer cents; the first one also names the Money value object.',
+                'demo' => true,
+            ]),
+        ];
+        foreach ($proposals as $proposal) {
+            $this->entityManager->persist($proposal);
+        }
         $this->entityManager->flush();
 
-        return ['documents' => \count($documents), 'rules' => \count(self::RULES), 'memories' => \count($memories), 'code_links' => $codeLinks, 'missing_files' => array_values(array_unique($missingFiles))];
+        return ['documents' => \count($documents), 'rules' => \count(self::RULES), 'memories' => \count($memories), 'proposals' => \count($proposals), 'code_links' => $codeLinks, 'missing_files' => array_values(array_unique($missingFiles))];
     }
 
     public function clear(Project $project): int
@@ -157,6 +206,12 @@ final class DemoData
             NodeType::Document === $node->getType() ? $this->documentStorage->delete($node) : $this->entityManager->remove($node);
             ++$removed;
         }
+        foreach ($this->entityManager->getRepository(Proposal::class)->findBy(['project' => $project]) as $proposal) {
+            if ($proposal->getPayload()['demo'] ?? false) {
+                $this->entityManager->remove($proposal);
+                ++$removed;
+            }
+        }
 
         $this->entityManager->flush();
 
@@ -165,6 +220,6 @@ final class DemoData
 
     private function link(Node $source, Node $target, string $relation, Confidence $confidence): Edge
     {
-        return new Edge($source, $target, $relation, $confidence, Confidence::Verified === $confidence ? EdgeOrigin::Human : EdgeOrigin::Llm, 'démo');
+        return new Edge($source, $target, $relation, $confidence, Confidence::Verified === $confidence ? EdgeOrigin::Human : EdgeOrigin::Llm, 'demo');
     }
 }
