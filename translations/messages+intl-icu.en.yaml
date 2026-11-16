@@ -52,7 +52,7 @@ agent:
     new_long: 'New skill, command or subagent'
     updated: Updated
 app:
-    name: 'Project graph'
+    name: Mnemo
 appearance:
     accent: 'Accent colour'
     accent_help: 'The colours of the charts and of the memory graph do not change.'
@@ -179,7 +179,7 @@ connector:
                 - '“code_graph: true” clones the repository on the server (default branch, or “branch”), builds its graph with graphify without an LLM and imports README, docs/ and agent conventions. The token must read the contents.'
                 - 'First pass: the 200 latest commits, 100 pull requests and 100 issues. The next ones only read the delta.'
                 - '“learn_reviews: true” sends the reviews of merged pull requests to the LLM; the learnings arrive in To review.'
-                - '“review: true” has the bot comment on each pull request (GitHub App installed on the repository): business rules touched, linked decisions, what the diff contradicts. “review_llm: false” drops the LLM reading of the diff, “review_check: "fail"” fails the graphe/rules check instead of warning.'
+                - '“review: true” has the bot comment on each pull request (GitHub App installed on the repository): business rules touched, linked decisions, what the diff contradicts. “review_llm: false” drops the LLM reading of the diff, “review_check: "fail"” fails the mnemo/rules check instead of warning.'
         github:
             auth: 'Personal access token'
             description: 'Issues of a repository, imported as a document.'
@@ -825,6 +825,7 @@ nav:
     projects: Projects
     rules: 'Business rules'
     settings: Settings
+    source: 'Source code on GitHub'
     switch_project: 'Switch project'
     to_review: 'To review'
     users: Users

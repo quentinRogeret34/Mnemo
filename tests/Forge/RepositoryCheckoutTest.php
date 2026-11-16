@@ -17,7 +17,7 @@ final class RepositoryCheckoutTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->directory = sys_get_temp_dir().'/graphe-checkout-'.bin2hex(random_bytes(4));
+        $this->directory = sys_get_temp_dir().'/mnemo-checkout-'.bin2hex(random_bytes(4));
         (new Filesystem())->dumpFile($this->directory.'/origin/README.md', '# Shop');
         $this->git('init', '--quiet', '--initial-branch=main');
         $this->commit('first');

@@ -109,7 +109,7 @@ final class OAuthClient
      */
     private function get(string $url, string $token): array
     {
-        return $this->httpClient->request('GET', $url, ['headers' => ['Authorization' => 'Bearer '.$token, 'Accept' => 'application/json', 'User-Agent' => 'graphe-projet']])->toArray();
+        return $this->httpClient->request('GET', $url, ['headers' => ['Authorization' => 'Bearer '.$token, 'Accept' => 'application/json', 'User-Agent' => 'mnemo']])->toArray();
     }
 
     /**

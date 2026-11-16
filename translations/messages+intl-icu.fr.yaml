@@ -52,7 +52,7 @@ agent:
     new_long: 'Nouveau skill, commande ou sous-agent'
     updated: Modifié
 app:
-    name: 'Graphe projet'
+    name: Mnemo
 appearance:
     accent: "Couleur d'accent"
     accent_help: 'Les couleurs des graphiques et du graphe des mémoires ne changent pas.'
@@ -179,7 +179,7 @@ connector:
                 - "« code_graph: true » clone le dépôt sur le serveur (branche par défaut, ou « branch »), calcule son graphe avec graphify sans LLM et importe README, docs/ et conventions d'agents. Le jeton doit pouvoir lire le contenu."
                 - 'Premier passage : 200 commits, 100 pull requests et 100 issues les plus récents. Les suivants ne lisent que le delta.'
                 - '« learn_reviews: true » envoie les revues des pull requests fusionnées au LLM ; les apprentissages arrivent dans À valider.'
-                - '« review: true » fait commenter chaque pull request par le bot (application GitHub installée sur le dépôt) : règles métier touchées, décisions liées, ce que le diff contredit. « review_llm: false » retire la lecture du diff par le LLM, « review_check: "fail" » fait échouer le check graphe/rules au lieu d''avertir.'
+                - '« review: true » fait commenter chaque pull request par le bot (application GitHub installée sur le dépôt) : règles métier touchées, décisions liées, ce que le diff contredit. « review_llm: false » retire la lecture du diff par le LLM, « review_check: "fail" » fait échouer le check mnemo/rules au lieu d''avertir.'
         github:
             auth: 'Personal access token'
             description: "Issues d'un dépôt, importées en document."
@@ -825,6 +825,7 @@ nav:
     projects: Projets
     rules: 'Règles métier'
     settings: Réglages
+    source: 'Code source sur GitHub'
     switch_project: 'Changer de projet'
     to_review: 'À valider'
     users: Utilisateurs

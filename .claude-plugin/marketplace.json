@@ -1,8 +1,8 @@
 {
-  "name": "graphe",
+  "name": "mnemo",
   "owner": { "name": "Quentin Rogeret" },
-  "description": "Plugin Claude Code du graphe de connaissance projet",
+  "description": "Plugin Claude Code de Mnemo, la mémoire du projet",
   "plugins": [
-    { "name": "graphe", "source": "./claude-plugin", "description": "Serveur MCP du graphe, contexte du projet en début de session, contexte des fichiers lus, capture des apprentissages" }
+    { "name": "mnemo", "source": "./claude-plugin", "description": "Serveur MCP de Mnemo, contexte du projet en début de session, contexte des fichiers lus, capture des apprentissages" }
   ]
 }

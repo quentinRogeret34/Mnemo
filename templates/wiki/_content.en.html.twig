@@ -85,7 +85,7 @@
         </nav>
         <article class="wiki__body prose">
             <h1 class="page__title">Wiki</h1>
-            <p>Project graph links code, business documents, business rules and agent memories in a single graph, and gives it back to humans (this site) and to AI agents (MCP server). This page explains what each screen is for.</p>
+            <p>Mnemo links code, business documents, business rules and agent memories in a single graph, and gives it back to humans (this site) and to AI agents (MCP server). This page explains what each screen is for.</p>
             <p>The usual path: declare a project, ingest its code and documents, let the agents send learnings, review the proposals, then keep it tidy with gardening.</p>
 
             {% for page in pages %}
@@ -114,19 +114,19 @@
                 <p>In the project's <code>.claude/settings.json</code>, committed:</p>
                 <pre><code>{
   "extraKnownMarketplaces": {
-    "graphe": { "source": { "source": "github", "repo": "quentinRogeret34/RAG" } }
+    "mnemo": { "source": { "source": "github", "repo": "quentinRogeret34/Mnemo" } }
   },
-  "enabledPlugins": { "graphe@graphe": true },
+  "enabledPlugins": { "mnemo@mnemo": true },
   "env": {
-    "GRAPHE_URL": "{{ app.request.schemeAndHttpHost }}"
+    "MNEMO_URL": "{{ app.request.schemeAndHttpHost }}"
   }
 }</code></pre>
                 <p>In <code>.claude/settings.local.json</code>, not committed, the key created in <a href="{{ path('api_key_index') }}">API keys</a>:</p>
-                <pre><code>{ "env": { "GRAPHE_API_KEY": "gk_..." } }</code></pre>
+                <pre><code>{ "env": { "MNEMO_API_KEY": "gk_..." } }</code></pre>
                 <ul>
                     <li>The project is recognised by the <code>origin</code> remote, otherwise by the working directory. Unknown, it is created at the first session and joins the groups of the key's owner; a key limited to some projects creates nothing.</li>
-                    <li><code>GRAPHE_PROJECT</code>, optional, forces the project slug instead of deriving it from the repository.</li>
-                    <li><code>GRAPHE_DISABLED=1</code> turns the hooks off, <code>GRAPHE_CAPTURE=0</code> only turns off sending the transcripts.</li>
+                    <li><code>MNEMO_PROJECT</code>, optional, forces the project slug instead of deriving it from the repository.</li>
+                    <li><code>MNEMO_DISABLED=1</code> turns the hooks off, <code>MNEMO_CAPTURE=0</code> only turns off sending the transcripts.</li>
                     <li>The machine needs <code>python3</code>. From a local clone, the marketplace source can be <code>{ "source": "directory", "path": "/path/to/the/repository" }</code>.</li>
                 </ul>
             </section>
@@ -143,7 +143,7 @@
                 </ul>
 
                 <h3>2. Configure</h3>
-                <pre><code>git clone git@github.com:quentinRogeret34/RAG.git graphe &amp;&amp; cd graphe
+                <pre><code>git clone git@github.com:quentinRogeret34/Mnemo.git mnemo &amp;&amp; cd mnemo
 cp .env.prod.dist .env.prod.local
 openssl rand -hex 32    # APP_SECRET
 openssl rand -hex 24    # POSTGRES_PASSWORD</code></pre>
@@ -160,7 +160,7 @@ docker compose -f docker/compose.prod.yaml --env-file .env.prod.local exec php b
 
                 <h3>4. Connect the projects</h3>
                 <ul>
-                    <li>Nothing to declare: each project is created at the first session of a machine, from its remote repository. To choose the slug and the name, declare it first: <code>bin/console app:project:create &lt;slug&gt; "&lt;Name&gt;" &lt;path&gt;</code>, and set <code>GRAPHE_PROJECT</code> on the machines.</li>
+                    <li>Nothing to declare: each project is created at the first session of a machine, from its remote repository. To choose the slug and the name, declare it first: <code>bin/console app:project:create &lt;slug&gt; "&lt;Name&gt;" &lt;path&gt;</code>, and set <code>MNEMO_PROJECT</code> on the machines.</li>
                     <li>Create one key per machine in API keys, then install the <a href="#plugin">plugin</a> in each repository.</li>
                     <li>The code graph is built on the server: create a “GitHub (code and history)” or GitLab connector on the project, it clones the repository and runs graphify at each sync. Otherwise, build it on a machine (<code>graphify extract --code-only</code>), copy <code>graph.json</code> to the server and run <code>bin/console app:ingest:code &lt;slug&gt; /tmp/graph.json</code>.</li>
                     <li>Add a scheduled GitHub or GitLab connector for the history: the worker syncs it on its own.</li>
@@ -171,7 +171,7 @@ docker compose -f docker/compose.prod.yaml --env-file .env.prod.local exec php b
 docker compose -f docker/compose.prod.yaml --env-file .env.prod.local up -d --build
 docker compose -f docker/compose.prod.yaml --env-file .env.prod.local exec php bin/console doctrine:migrations:migrate --no-interaction
 
-docker compose -f docker/compose.prod.yaml --env-file .env.prod.local exec -T database pg_dump -U app app | gzip &gt; graphe-$(date +%F).sql.gz</code></pre>
+docker compose -f docker/compose.prod.yaml --env-file .env.prod.local exec -T database pg_dump -U app app | gzip &gt; mnemo-$(date +%F).sql.gz</code></pre>
                 <p>To back up: this dump (graph, memories, vectors) and the <code>storage</code> volume (files of the uploaded documents). The <code>caddy_data</code> volume keeps the certificates.</p>
             </section>
         </article>

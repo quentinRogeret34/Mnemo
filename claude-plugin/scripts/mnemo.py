@@ -1,4 +1,4 @@
-"""Branche Claude Code sur le graphe de connaissance projet.
+"""Branche Claude Code sur Mnemo, la mémoire du projet.
 
   session-start  SessionStart : ligne de statut, consigne d'enregistrer les mémoires via `add_memory` sans attendre
                  qu'on le demande, puis mémoire du projet (conventions, décisions, règles validées)
@@ -6,17 +6,17 @@
   capture        SessionEnd, PreCompact : envoie la partie nouvelle du transcript à `learn`, en arrière-plan
   capture-run    le travail de capture lui-même, lancé détaché par `capture`
 
-Le projet est celui que nomme GRAPHE_PROJECT (son slug dans le graphe). Sans cette variable, c'est celui du dépôt
+Le projet est celui que nomme MNEMO_PROJECT (son slug dans le graphe). Sans cette variable, c'est celui du dépôt
 distant `origin`, sinon celui dont le chemin contient le dossier courant (même machine que le serveur seulement).
 Un projet inconnu est créé par le serveur au début de la session, nommé d'après le slug, le dépôt ou le dossier.
 Serveur absent ou erreur : le hook ne dit rien et sort en 0, il ne gêne jamais la session.
 
 Variables, à poser dans le bloc "env" de .claude/settings.json du projet (la clé dans settings.local.json) :
-  GRAPHE_URL       adresse du serveur, défaut http://localhost:8080
-  GRAPHE_PROJECT   slug du projet dans le graphe, pour ne pas le déduire du dépôt
-  GRAPHE_API_KEY   clé d'API, quand le serveur en demande une
-  GRAPHE_DISABLED  1 coupe tout
-  GRAPHE_CAPTURE   0 coupe l'envoi des transcripts
+  MNEMO_URL       adresse du serveur, défaut http://localhost:8080
+  MNEMO_PROJECT   slug du projet dans le graphe, pour ne pas le déduire du dépôt
+  MNEMO_API_KEY   clé d'API, quand le serveur en demande une
+  MNEMO_DISABLED  1 coupe tout
+  MNEMO_CAPTURE   0 coupe l'envoi des transcripts
 Bibliothèque standard seulement.
 """
 
@@ -51,13 +51,13 @@ REMOTE = re.compile(r"^(?:[a-z][a-z0-9+.-]*://)?(?:[^@/]+@)?(?P<host>[a-z0-9][a-
 
 
 def base_url() -> str:
-    return (os.environ.get("GRAPHE_URL") or "http://localhost:8080").rstrip("/")
+    return (os.environ.get("MNEMO_URL") or "http://localhost:8080").rstrip("/")
 
 
 def scope(data: dict) -> dict:
     """Ce qui désigne le projet au serveur : le dossier de travail, le dépôt distant, et le slug s'il est configuré."""
     cwd = cwd_of(data)
-    project, repository = os.environ.get("GRAPHE_PROJECT"), repository_of(cwd)
+    project, repository = os.environ.get("MNEMO_PROJECT"), repository_of(cwd)
     return {"cwd": cwd} | ({"repository": repository} if repository else {}) | ({"project": project} if project else {})
 
 
@@ -65,8 +65,8 @@ def request(path: str, params: dict | None = None, payload: dict | None = None, 
     url = base_url() + path + ("?" + urllib.parse.urlencode(params) if params else "")
     data = None if payload is None else json.dumps(payload).encode("utf-8")
     headers = {"Accept": "application/json", "Content-Type": "application/json"}
-    if os.environ.get("GRAPHE_API_KEY"):
-        headers["Authorization"] = "Bearer " + os.environ["GRAPHE_API_KEY"]
+    if os.environ.get("MNEMO_API_KEY"):
+        headers["Authorization"] = "Bearer " + os.environ["MNEMO_API_KEY"]
     req = urllib.request.Request(url, data=data, headers=headers)
     try:
         with urllib.request.urlopen(req, timeout=timeout) as response:
@@ -115,10 +115,10 @@ def session_start(data: dict) -> None:
     project = body.get("project")
     if status != 200 or not isinstance(project, str) or not project:
         return
-    line = f"Graphe Active | project={project} | branch={branch_of(cwd)} | memories={body.get('memories', 0)}"
+    line = f"Mnemo Active | project={project} | branch={branch_of(cwd)} | memories={body.get('memories', 0)}"
     if body.get("created"):
         line += " | projet créé"
-    emit("SessionStart", f"""## Graphe Active
+    emit("SessionStart", f"""## Mnemo Active
 
 `{line}`
 
@@ -128,7 +128,7 @@ IMPORTANT : dans ta PREMIÈRE réponse, affiche cette ligne de statut telle quel
 {line}
 ```
 
-N'attends pas que l'utilisateur le demande : après chaque tâche, décision ou échange qui apprend quelque chose de durable sur ce projet, enregistre-le toi-même avec l'outil MCP `add_memory` du serveur graphe, au fil de l'eau et pas seulement en fin de session.
+N'attends pas que l'utilisateur le demande : après chaque tâche, décision ou échange qui apprend quelque chose de durable sur ce projet, enregistre-le toi-même avec l'outil MCP `add_memory` du serveur mnemo, au fil de l'eau et pas seulement en fin de session.
 - Toujours `projects: ["{project}"]` et `agent: "claude-code"` ; `files` : chemins relatifs au dépôt concernés.
 - `type` : `decision`, `convention`, `task_learning` (bug corrigé, piège, solution), `preference` (de l'utilisateur) ou `fact`.
 - Une mémoire = un fait autonome en une ou deux phrases, compréhensible sans la conversation. Jamais de secret.
@@ -150,7 +150,7 @@ def file_read(data: dict) -> None:
 
 def capture(data: dict) -> None:
     """Rend la main tout de suite : l'extraction prend plusieurs secondes et ne doit pas retarder Claude."""
-    if os.environ.get("GRAPHE_CAPTURE") == "0":
+    if os.environ.get("MNEMO_CAPTURE") == "0":
         return
     options: dict = {"stdin": subprocess.PIPE, "stdout": subprocess.DEVNULL, "stderr": subprocess.DEVNULL}
     if os.name == "nt":
@@ -163,7 +163,7 @@ def capture(data: dict) -> None:
 
 
 def state_dir() -> Path:
-    d = Path(os.environ.get("CLAUDE_PLUGIN_DATA") or Path.home() / ".cache" / "graphe-plugin") / "state"
+    d = Path(os.environ.get("CLAUDE_PLUGIN_DATA") or Path.home() / ".cache" / "mnemo-plugin") / "state"
     d.mkdir(parents=True, exist_ok=True)
     return d
 
@@ -225,7 +225,7 @@ COMMANDS = {"session-start": session_start, "file-read": file_read, "capture": c
 
 
 def main() -> int:
-    if len(sys.argv) < 2 or sys.argv[1] not in COMMANDS or os.environ.get("GRAPHE_DISABLED") == "1":
+    if len(sys.argv) < 2 or sys.argv[1] not in COMMANDS or os.environ.get("MNEMO_DISABLED") == "1":
         return 0
     try:
         data = json.loads(sys.stdin.buffer.read() or b"{}")

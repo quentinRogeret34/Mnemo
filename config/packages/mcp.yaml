@@ -1,6 +1,9 @@
 mcp:
     servers:
         default:
+            name: mnemo
+            description: 'Mnemo, the memory of a project for humans and AI agents: code, business documents, business rules and typed memories in one graph.'
+            website_url: 'https://github.com/quentinRogeret34/Mnemo'
             # Only the tools of this application, not those of third-party bundles.
             registry: 'App\Mcp\'
 

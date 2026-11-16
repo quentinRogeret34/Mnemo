@@ -16,7 +16,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  */
 final class McpAuthorization
 {
-    private const CLIENT_NAME = 'Graphe projet';
+    private const CLIENT_NAME = 'Mnemo';
 
     public function __construct(
         private readonly HttpClientInterface $httpClient,
@@ -133,7 +133,7 @@ final class McpAuthorization
     {
         $response = $this->httpClient->request('POST', $endpoint, [
             'headers' => ['Accept' => 'application/json, text/event-stream'],
-            'json' => ['jsonrpc' => '2.0', 'id' => 1, 'method' => 'initialize', 'params' => ['protocolVersion' => '2025-06-18', 'capabilities' => new \stdClass(), 'clientInfo' => ['name' => 'graphe-projet', 'version' => '0.1.0']]],
+            'json' => ['jsonrpc' => '2.0', 'id' => 1, 'method' => 'initialize', 'params' => ['protocolVersion' => '2025-06-18', 'capabilities' => new \stdClass(), 'clientInfo' => ['name' => 'mnemo', 'version' => '0.1.0']]],
         ]);
         $status = $response->getStatusCode();
         $header = implode(', ', $response->getHeaders(false)['www-authenticate'] ?? []);

@@ -32,7 +32,7 @@ final class McpClientFactory
     public function connect(Connector $connector): Client
     {
         $client = Client::builder()
-            ->setClientInfo('graphe-projet', '0.1.0')
+            ->setClientInfo('mnemo', '0.1.0')
             ->setInitTimeout(15)
             ->setRequestTimeout(60)
             ->setMaxRetries(0)

@@ -1,5 +1,5 @@
 {
-  "description": "Graphe de connaissance projet : mémoire du projet en début de session, contexte des fichiers lus, capture des apprentissages en fin de session",
+  "description": "Mnemo, la mémoire du projet : mémoire du projet en début de session, contexte des fichiers lus, capture des apprentissages en fin de session",
   "hooks": {
     "SessionStart": [
       {
@@ -9,7 +9,7 @@
             "type": "command",
             "command": "python3",
             "args": [
-              "${CLAUDE_PLUGIN_ROOT}/scripts/graphe.py",
+              "${CLAUDE_PLUGIN_ROOT}/scripts/mnemo.py",
               "session-start"
             ],
             "timeout": 5
@@ -25,7 +25,7 @@
             "type": "command",
             "command": "python3",
             "args": [
-              "${CLAUDE_PLUGIN_ROOT}/scripts/graphe.py",
+              "${CLAUDE_PLUGIN_ROOT}/scripts/mnemo.py",
               "file-read"
             ],
             "timeout": 5
@@ -40,7 +40,7 @@
             "type": "command",
             "command": "python3",
             "args": [
-              "${CLAUDE_PLUGIN_ROOT}/scripts/graphe.py",
+              "${CLAUDE_PLUGIN_ROOT}/scripts/mnemo.py",
               "capture"
             ],
             "timeout": 10
@@ -55,7 +55,7 @@
             "type": "command",
             "command": "python3",
             "args": [
-              "${CLAUDE_PLUGIN_ROOT}/scripts/graphe.py",
+              "${CLAUDE_PLUGIN_ROOT}/scripts/mnemo.py",
               "capture"
             ],
             "timeout": 10

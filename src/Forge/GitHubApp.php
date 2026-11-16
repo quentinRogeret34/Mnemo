@@ -14,7 +14,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 final class GitHubApp
 {
     private const API = 'https://api.github.com/';
-    private const HEADERS = ['Accept' => 'application/vnd.github+json', 'User-Agent' => 'graphe-projet', 'X-GitHub-Api-Version' => '2022-11-28'];
+    private const HEADERS = ['Accept' => 'application/vnd.github+json', 'User-Agent' => 'mnemo', 'X-GitHub-Api-Version' => '2022-11-28'];
 
     public function __construct(
         private readonly HttpClientInterface $httpClient,

@@ -85,7 +85,7 @@
         </nav>
         <article class="wiki__body prose">
             <h1 class="page__title">Wiki</h1>
-            <p>Graphe projet relie le code, les documents métier, les règles métier et les mémoires d'agents dans un seul graphe, et le restitue aux humains (ce site) et aux agents IA (serveur MCP). Cette page explique à quoi sert chaque écran.</p>
+            <p>Mnemo relie le code, les documents métier, les règles métier et les mémoires d'agents dans un seul graphe, et le restitue aux humains (ce site) et aux agents IA (serveur MCP). Cette page explique à quoi sert chaque écran.</p>
             <p>Le parcours habituel : déclarer un projet, ingérer son code et ses documents, laisser les agents envoyer des apprentissages, valider les propositions, puis entretenir avec le jardinage.</p>
 
             {% for page in pages %}
@@ -114,19 +114,19 @@
                 <p>Dans <code>.claude/settings.json</code> du projet, commité :</p>
                 <pre><code>{
   "extraKnownMarketplaces": {
-    "graphe": { "source": { "source": "github", "repo": "quentinRogeret34/RAG" } }
+    "mnemo": { "source": { "source": "github", "repo": "quentinRogeret34/Mnemo" } }
   },
-  "enabledPlugins": { "graphe@graphe": true },
+  "enabledPlugins": { "mnemo@mnemo": true },
   "env": {
-    "GRAPHE_URL": "{{ app.request.schemeAndHttpHost }}"
+    "MNEMO_URL": "{{ app.request.schemeAndHttpHost }}"
   }
 }</code></pre>
                 <p>Dans <code>.claude/settings.local.json</code>, non commité, la clé créée dans <a href="{{ path('api_key_index') }}">Clés d'API</a> :</p>
-                <pre><code>{ "env": { "GRAPHE_API_KEY": "gk_..." } }</code></pre>
+                <pre><code>{ "env": { "MNEMO_API_KEY": "gk_..." } }</code></pre>
                 <ul>
                     <li>Le projet est reconnu par le dépôt distant <code>origin</code>, sinon par le dossier de travail. Inconnu, il est créé à la première session et rejoint les groupes du propriétaire de la clé ; une clé limitée à certains projets ne crée rien.</li>
-                    <li><code>GRAPHE_PROJECT</code>, facultatif, impose le slug du projet au lieu de le déduire du dépôt.</li>
-                    <li><code>GRAPHE_DISABLED=1</code> coupe les hooks, <code>GRAPHE_CAPTURE=0</code> coupe seulement l'envoi des transcripts.</li>
+                    <li><code>MNEMO_PROJECT</code>, facultatif, impose le slug du projet au lieu de le déduire du dépôt.</li>
+                    <li><code>MNEMO_DISABLED=1</code> coupe les hooks, <code>MNEMO_CAPTURE=0</code> coupe seulement l'envoi des transcripts.</li>
                     <li>Le poste a besoin de <code>python3</code>. Depuis un clone local, la source du marketplace peut être <code>{ "source": "directory", "path": "/chemin/du/depot" }</code>.</li>
                 </ul>
             </section>
@@ -143,7 +143,7 @@
                 </ul>
 
                 <h3>2. Configurer</h3>
-                <pre><code>git clone git@github.com:quentinRogeret34/RAG.git graphe &amp;&amp; cd graphe
+                <pre><code>git clone git@github.com:quentinRogeret34/Mnemo.git mnemo &amp;&amp; cd mnemo
 cp .env.prod.dist .env.prod.local
 openssl rand -hex 32    # APP_SECRET
 openssl rand -hex 24    # POSTGRES_PASSWORD</code></pre>
@@ -160,7 +160,7 @@ docker compose -f docker/compose.prod.yaml --env-file .env.prod.local exec php b
 
                 <h3>4. Brancher les projets</h3>
                 <ul>
-                    <li>Rien à déclarer : chaque projet est créé à la première session d'un poste, d'après son dépôt distant. Pour choisir le slug et le nom, le déclarer avant : <code>bin/console app:project:create &lt;slug&gt; "&lt;Nom&gt;" &lt;chemin&gt;</code>, et poser <code>GRAPHE_PROJECT</code> sur les postes.</li>
+                    <li>Rien à déclarer : chaque projet est créé à la première session d'un poste, d'après son dépôt distant. Pour choisir le slug et le nom, le déclarer avant : <code>bin/console app:project:create &lt;slug&gt; "&lt;Nom&gt;" &lt;chemin&gt;</code>, et poser <code>MNEMO_PROJECT</code> sur les postes.</li>
                     <li>Créer une clé par poste dans Clés d'API, puis installer le <a href="#plugin">plugin</a> dans chaque dépôt.</li>
                     <li>Le graphe du code se calcule sur le serveur : créer un connecteur « GitHub (code et historique) » ou GitLab sur le projet, il clone le dépôt et lance graphify à chaque synchronisation. À défaut, le calculer sur un poste (<code>graphify extract --code-only</code>), copier <code>graph.json</code> sur le serveur et lancer <code>bin/console app:ingest:code &lt;slug&gt; /tmp/graph.json</code>.</li>
                     <li>Ajouter un connecteur GitHub ou GitLab planifié pour l'historique : le worker le synchronise seul.</li>
@@ -171,7 +171,7 @@ docker compose -f docker/compose.prod.yaml --env-file .env.prod.local exec php b
 docker compose -f docker/compose.prod.yaml --env-file .env.prod.local up -d --build
 docker compose -f docker/compose.prod.yaml --env-file .env.prod.local exec php bin/console doctrine:migrations:migrate --no-interaction
 
-docker compose -f docker/compose.prod.yaml --env-file .env.prod.local exec -T database pg_dump -U app app | gzip &gt; graphe-$(date +%F).sql.gz</code></pre>
+docker compose -f docker/compose.prod.yaml --env-file .env.prod.local exec -T database pg_dump -U app app | gzip &gt; mnemo-$(date +%F).sql.gz</code></pre>
                 <p>À sauvegarder : ce dump (graphe, mémoires, vecteurs) et le volume <code>storage</code> (fichiers des documents déposés). Le volume <code>caddy_data</code> garde les certificats.</p>
             </section>
         </article>

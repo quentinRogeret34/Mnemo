@@ -26,7 +26,7 @@ final class GitHubAppTest extends TestCase
             });
         });
         // One line, as a host that takes no line break would store it.
-        $app = new GitHubApp($http, new ArrayAdapter(), '42', base64_encode($pem), 'webhook-secret', 'graphe-projet');
+        $app = new GitHubApp($http, new ArrayAdapter(), '42', base64_encode($pem), 'webhook-secret', 'mnemo');
 
         $app->client('acme/shop')->request('GET', 'repos/acme/shop')->toArray();
         $app->client('Acme/Shop')->request('GET', 'repos/acme/shop')->toArray();
@@ -41,7 +41,7 @@ final class GitHubAppTest extends TestCase
         $decode = static fn (string $part): string => (string) base64_decode(strtr($part, '-_', '+/'), true);
         self::assertSame(1, openssl_verify($header.'.'.$claims, $decode($signature), openssl_pkey_get_details($key)['key'], \OPENSSL_ALGO_SHA256));
         self::assertSame('42', json_decode($decode($claims), true)['iss']);
-        self::assertSame('https://github.com/apps/graphe-projet/installations/new', $app->installUrl());
+        self::assertSame('https://github.com/apps/mnemo/installations/new', $app->installUrl());
     }
 
     public function testAWebhookIsOnlyTrustedWithTheSignatureOfTheSecret(): void

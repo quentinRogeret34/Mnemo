@@ -115,13 +115,13 @@ final class PullRequestReviewerTest extends KernelTestCase
         $this->scriptLlm(fn (): array => ['remarks' => [
             ['source' => 'M'.$this->convention->getId(), 'path' => 'src/domain/catalog.ts', 'line' => 1, 'remark' => 'Le plafond passe à 20 % sans prévenir.', 'severity' => 'major'],
         ]]);
-        $answered = "<!-- graphe-review-line -->\n**Majeur** : Le plafond passe à 20 % sans prévenir.\n\nSource : [mémoire #".$this->convention->getId().'](http://localhost:8080/memories/'.$this->convention->getId().')';
+        $answered = "<!-- mnemo-review-line -->\n**Majeur** : Le plafond passe à 20 % sans prévenir.\n\nSource : [mémoire #".$this->convention->getId().'](http://localhost:8080/memories/'.$this->convention->getId().')';
 
         $this->reviewer(reviewComments: [
-            ['id' => 21, 'path' => 'src/domain/catalog.ts', 'body' => "<!-- graphe-review-line -->\nancienne remarque", 'user' => ['type' => 'Bot']],
+            ['id' => 21, 'path' => 'src/domain/catalog.ts', 'body' => "<!-- mnemo-review-line -->\nancienne remarque", 'user' => ['type' => 'Bot']],
             ['id' => 22, 'path' => 'src/domain/catalog.ts', 'body' => $answered, 'user' => ['type' => 'Bot']],
             ['id' => 23, 'path' => 'src/domain/catalog.ts', 'body' => 'Voulu, voir le ticket.', 'user' => ['type' => 'User'], 'in_reply_to_id' => 22],
-            ['id' => 24, 'path' => 'src/domain/catalog.ts', 'body' => '<!-- graphe-review-line --> écrit par un humain', 'user' => ['type' => 'User']],
+            ['id' => 24, 'path' => 'src/domain/catalog.ts', 'body' => '<!-- mnemo-review-line --> écrit par un humain', 'user' => ['type' => 'User']],
         ])->review($this->connector, 12);
 
         self::assertSame([['POST', '/repos/acme/shop/issues/12/comments'], ['POST', '/repos/acme/shop/check-runs'], ['DELETE', '/repos/acme/shop/pulls/comments/21']], array_map(static fn (array $write): array => \array_slice($write, 0, 2), $this->writes));
@@ -133,8 +133,8 @@ final class PullRequestReviewerTest extends KernelTestCase
         $this->connector->setArguments(['review_llm' => false, 'review_check' => 'fail'] + $this->connector->getArguments());
 
         $this->reviewer(comments: [
-            ['id' => 5, 'body' => '<!-- graphe-review --> written by someone else', 'user' => ['type' => 'User']],
-            ['id' => 8, 'body' => "<!-- graphe-review -->\nold", 'user' => ['type' => 'Bot']],
+            ['id' => 5, 'body' => '<!-- mnemo-review --> written by someone else', 'user' => ['type' => 'User']],
+            ['id' => 8, 'body' => "<!-- mnemo-review -->\nold", 'user' => ['type' => 'Bot']],
         ])->review($this->connector, 12);
 
         self::assertSame(['PATCH', '/repos/acme/shop/issues/comments/8'], \array_slice($this->writes[0], 0, 2));

@@ -25,7 +25,7 @@ final class GitHubAccount
         $rows = [];
         for ($page = 1; $page <= self::MAX_PAGES; ++$page) {
             $batch = $this->httpClient->request('GET', 'https://api.github.com/user/repos', [
-                'headers' => ['Authorization' => 'Bearer '.$token, 'Accept' => 'application/vnd.github+json', 'User-Agent' => 'graphe-projet'],
+                'headers' => ['Authorization' => 'Bearer '.$token, 'Accept' => 'application/vnd.github+json', 'User-Agent' => 'mnemo'],
                 'query' => ['per_page' => self::PAGE, 'page' => $page, 'sort' => 'pushed', 'affiliation' => 'owner,collaborator,organization_member'],
                 'timeout' => 30,
             ])->toArray();

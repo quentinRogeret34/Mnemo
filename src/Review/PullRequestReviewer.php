@@ -12,13 +12,13 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 /**
  * Reviews a pull request as the GitHub App: one comment, rewritten at every push, tells the reviewer which business
  * rules the diff touches, what the project decided about these files and what the diff contradicts; a check
- * "graphe/rules" warns or fails when a validated rule is touched with neither a test nor a mention.
+ * "mnemo/rules" warns or fails when a validated rule is touched with neither a test nor a mention.
  */
 final class PullRequestReviewer
 {
-    public const CHECK = 'graphe/rules';
-    private const MARKER = '<!-- graphe-review -->';
-    private const LINE_MARKER = '<!-- graphe-review-line -->';
+    public const CHECK = 'mnemo/rules';
+    private const MARKER = '<!-- mnemo-review -->';
+    private const LINE_MARKER = '<!-- mnemo-review-line -->';
     private const PAGE = 100;
     private const MAX_PAGES = 3;
     private const MAX_MEMORIES = 15;
@@ -125,7 +125,7 @@ final class PullRequestReviewer
         $memoryLink = fn (int $id): string => \sprintf('[mémoire #%d](%s)', $id, $this->url('memory_show', ['id' => $id]));
         $unguardedCodes = array_column($unguarded, 'code');
 
-        $lines = [self::MARKER, '## Graphe projet · contexte de la revue', ''];
+        $lines = [self::MARKER, '## Mnemo · contexte de la revue', ''];
         if ([] === $rules && [] === $memories && [] === $remarks) {
             $lines[] = 'Rien de connu dans le graphe sur les fichiers de cette pull request : ni règle métier, ni décision, ni convention.';
         } else {
@@ -241,7 +241,7 @@ final class PullRequestReviewer
         $http->request('POST', $base.'/pulls/'.$number.'/reviews', ['json' => [
             'commit_id' => $sha,
             'event' => 'COMMENT',
-            'body' => \sprintf('Graphe projet : %d remarque(s) sur les lignes du diff, d\'après la mémoire du projet.', \count($comments)),
+            'body' => \sprintf('Mnemo : %d remarque(s) sur les lignes du diff, d\'après la mémoire du projet.', \count($comments)),
             'comments' => $comments,
         ]])->toArray();
     }

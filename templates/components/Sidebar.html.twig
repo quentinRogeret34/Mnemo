@@ -1,7 +1,7 @@
 {% set route = app.request.attributes.get('_route') %}
 {% set scope = project ? {project: project.slug} : {} %}
 <aside{{ attributes.defaults({class: 'sidebar'}) }}>
-    <a class="workspace" href="{{ path('dashboard') }}"><span class="workspace__mark" aria-hidden="true">G</span>{{ 'app.name'|trans }}</a>
+    <a class="workspace" href="{{ path('dashboard') }}"><span class="workspace__mark" aria-hidden="true">M</span>{{ 'app.name'|trans }}</a>
 
     {% set projects = this.projects %}
     <div class="menu menu--switcher" data-controller="menu">
@@ -147,6 +147,10 @@
                 <span class="nav-item__label">{{ 'nav.users'|trans }}</span>
             </a>
         {% endif %}
+        <a class="nav-item" href="https://github.com/quentinRogeret34/Mnemo" target="_blank" rel="noopener">
+            <twig:ux:icon name="simple-icons:github" class="icon nav-item__icon" />
+            <span class="nav-item__label">{{ 'nav.source'|trans }}</span>
+        </a>
         {% if is_granted('IS_AUTHENTICATED') %}
             <a class="nav-item" href="{{ path('logout') }}">
                 <twig:ux:icon name="lucide:log-out" class="icon nav-item__icon" />

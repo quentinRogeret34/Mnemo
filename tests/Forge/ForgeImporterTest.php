@@ -112,7 +112,7 @@ final class ForgeImporterTest extends WebTestCase
 
     public function testCodeGraphImportsTheCloneOncePerHeadCommit(): void
     {
-        $root = sys_get_temp_dir().'/graphe-clone-'.bin2hex(random_bytes(4));
+        $root = sys_get_temp_dir().'/mnemo-clone-'.bin2hex(random_bytes(4));
         $filesystem = new Filesystem();
         $filesystem->dumpFile($root.'/README.md', "# Shop\n\nLa boutique.");
         $filesystem->dumpFile($root.'/docs/guide.md', "# Guide\n\nInstaller puis lancer.");
