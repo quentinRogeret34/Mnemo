@@ -127,36 +127,29 @@
             <twig:ux:icon name="lucide:book-open" class="icon nav-item__icon" />
             <span class="nav-item__label">{{ 'nav.wiki'|trans }}</span>
         </a>
-        <a class="nav-item" href="{{ path('api_key_index') }}" {% if route == 'api_key_index' %}aria-current="page"{% endif %}>
-            <twig:ux:icon name="lucide:key-round" class="icon nav-item__icon" />
-            <span class="nav-item__label">{{ 'nav.api_keys'|trans }}</span>
-        </a>
-        {% if not app.user or is_granted('ROLE_SUPER_ADMIN') %}
-            <a class="nav-item" href="{{ path('llm_settings') }}" {% if route == 'llm_settings' %}aria-current="page"{% endif %}>
-                <twig:ux:icon name="lucide:brain" class="icon nav-item__icon" />
-                <span class="nav-item__label">{{ 'nav.llm'|trans }}</span>
-            </a>
-        {% endif %}
-        <a class="nav-item" href="{{ path('appearance') }}" {% if route == 'appearance' %}aria-current="page"{% endif %}>
-            <twig:ux:icon name="lucide:palette" class="icon nav-item__icon" />
-            <span class="nav-item__label">{{ 'nav.appearance'|trans }}</span>
-        </a>
-        {% if is_granted('ROLE_SUPER_ADMIN') %}
-            <a class="nav-item" href="{{ path('admin_users') }}" {% if route == 'admin_users' %}aria-current="page"{% endif %}>
-                <twig:ux:icon name="lucide:users" class="icon nav-item__icon" />
-                <span class="nav-item__label">{{ 'nav.users'|trans }}</span>
-            </a>
-        {% endif %}
-        <a class="nav-item" href="https://github.com/quentinRogeret34/Mnemo" target="_blank" rel="noopener">
-            <twig:ux:icon name="simple-icons:github" class="icon nav-item__icon" />
-            <span class="nav-item__label">{{ 'nav.source'|trans }}</span>
-        </a>
-        {% if is_granted('IS_AUTHENTICATED') %}
-            <a class="nav-item" href="{{ path('logout') }}">
-                <twig:ux:icon name="lucide:log-out" class="icon nav-item__icon" />
-                <span class="nav-item__label">{{ 'nav.logout'|trans }}</span>
-            </a>
-        {% endif %}
+        {% set settings_routes = ['api_key_index', 'llm_settings', 'appearance', 'admin_users'] %}
+        <div class="menu" data-controller="menu">
+            <button class="nav-item menu__nav{{ route in settings_routes ? ' is-current' }}" type="button" aria-expanded="false" commandfor="settings-menu" command="toggle-popover" data-menu-target="trigger">
+                <twig:ux:icon name="lucide:settings" class="icon nav-item__icon" />
+                <span class="nav-item__label">{{ 'nav.settings'|trans }}</span>
+                <twig:ux:icon name="lucide:chevron-up" class="icon menu__chevron" />
+            </button>
+            <div class="menu__panel" id="settings-menu" popover data-menu-target="panel" data-action="beforetoggle->menu#place toggle->menu#sync">
+                <a class="menu__item" href="{{ path('api_key_index') }}" {% if route == 'api_key_index' %}aria-current="page"{% endif %}><twig:ux:icon name="lucide:key-round" />{{ 'nav.api_keys'|trans }}</a>
+                {% if not app.user or is_granted('ROLE_SUPER_ADMIN') %}
+                    <a class="menu__item" href="{{ path('llm_settings') }}" {% if route == 'llm_settings' %}aria-current="page"{% endif %}><twig:ux:icon name="lucide:brain" />{{ 'nav.llm'|trans }}</a>
+                {% endif %}
+                <a class="menu__item" href="{{ path('appearance') }}" {% if route == 'appearance' %}aria-current="page"{% endif %}><twig:ux:icon name="lucide:palette" />{{ 'nav.appearance'|trans }}</a>
+                {% if is_granted('ROLE_SUPER_ADMIN') %}
+                    <a class="menu__item" href="{{ path('admin_users') }}" {% if route == 'admin_users' %}aria-current="page"{% endif %}><twig:ux:icon name="lucide:users" />{{ 'nav.users'|trans }}</a>
+                {% endif %}
+                <hr class="menu__rule">
+                <a class="menu__item" href="https://github.com/quentinRogeret34/Mnemo" target="_blank" rel="noopener"><twig:ux:icon name="simple-icons:github" />{{ 'nav.source'|trans }}</a>
+                {% if is_granted('IS_AUTHENTICATED') %}
+                    <a class="menu__item" href="{{ path('logout') }}"><twig:ux:icon name="lucide:log-out" />{{ 'nav.logout'|trans }}</a>
+                {% endif %}
+            </div>
+        </div>
         <p class="sidebar__hint"><kbd class="kbd">⌘K</kbd> {{ 'nav.hint_commands'|trans }}{% if project %} · <kbd class="kbd">/</kbd> {{ 'nav.hint_code'|trans }}{% endif %}</p>
     </nav>
 </aside>
