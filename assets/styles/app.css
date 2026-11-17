@@ -334,7 +334,7 @@ dialog::backdrop { overflow: hidden; overscroll-behavior: contain; }
 .row:hover { background: var(--color-hover); }
 .row:active { background: var(--color-selected); }
 .row__title { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-3xs) var(--space-xs); min-width: 0; color: var(--color-ink); font-weight: 500; }
-.row__title > span { overflow-wrap: anywhere; min-width: 0; }
+.row__title > span, .row__title > a { overflow-wrap: anywhere; min-width: 0; }
 .row__sub { color: var(--color-muted); font-size: var(--text-sm); font-weight: 400; overflow-wrap: anywhere; }
 .row__meta { display: flex; align-items: center; gap: var(--space-sm); color: var(--color-muted); font-size: var(--text-sm); white-space: nowrap; }
 
