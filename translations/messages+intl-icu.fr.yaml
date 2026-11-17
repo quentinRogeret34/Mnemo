@@ -129,14 +129,16 @@ connector:
         choose_project: 'Choisir un projet'
         connect: 'Connecter avec GitHub'
         existing: 'Projets existants'
-        lede: 'Chaque dépôt coché devient un connecteur « GitHub (code et historique) » : le serveur le clone, calcule son graphe de code et importe son historique dans le projet choisi.'
+        lede: 'Chaque dépôt choisi devient un connecteur « GitHub (code et historique) » : le serveur le clone, calcule son graphe de code et importe son historique dans le projet choisi.'
         new_per_repository: 'Un nouveau projet par dépôt'
-        new_per_repository_help: "« Un nouveau projet par dépôt » crée un projet nommé d'après chaque dépôt coché, ou reprend celui qui a déjà ce dépôt."
+        new_per_repository_help: "« Un nouveau projet par dépôt » crée un projet nommé d'après chaque dépôt choisi, ou reprend celui qui a déjà ce dépôt."
         none: 'Aucun dépôt visible avec ce compte.'
         private: privé
         public: public
+        repositories: Dépôts
         scope: 'Accès en lecture aux dépôts, privés compris (scope « repo »).'
-        submit: 'Brancher les dépôts cochés'
+        search: 'Chercher un dépôt'
+        submit: 'Brancher les dépôts choisis'
         title: 'Dépôts GitHub'
     key_missing: absente
     key_set: configurée
@@ -665,6 +667,8 @@ js:
         use: 'Utiliser {model}'
     palette:
         results: '{count, plural, =0 {Aucun résultat} one {# résultat} other {# résultats}}'
+    select:
+        no_results: 'Aucune option ne correspond.'
 keys:
     all: Tous
     copy: Copier

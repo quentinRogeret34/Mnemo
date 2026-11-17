@@ -381,13 +381,12 @@ final class ConnectorControllerTest extends WebTestCase
         $this->client->request('GET', '/oauth/github/check/repositories?code=abc&state='.$query['state']);
         $crawler = $this->client->followRedirect();
         self::assertSame([['https://api.github.com/user/repos?per_page=100&page=1&sort=pushed&affiliation=owner%2Ccollaborator%2Corganization_member', 'Authorization: Bearer gho_secret']], $listed);
-        self::assertSame(['acme/shop', 'acme/blog', 'acme/old'], $crawler->filter('input[name="repositories[]"]')->each(static fn ($input): string => $input->attr('value')));
-        self::assertNotNull($crawler->filter('input[value="acme/old"]')->attr('disabled'));
+        self::assertSame(['acme/shop', 'acme/blog', 'acme/old'], $crawler->filter('select[name="repositories[]"] option[value!=""]')->each(static fn ($option): string => $option->attr('value')));
+        self::assertNotNull($crawler->filter('option[value="acme/old"]')->attr('disabled'));
 
-        $form = $crawler->selectButton('Brancher les dépôts cochés')->form();
+        $form = $crawler->selectButton('Brancher les dépôts choisis')->form();
         $form['project']->select((string) $this->entityManager->getRepository(Project::class)->findOneBy(['slug' => 'demo'])->getId());
-        $form['repositories'][0]->tick();
-        $form['repositories'][1]->tick();
+        $form['repositories']->select(['acme/shop', 'acme/blog']);
         $this->client->submit($form);
         self::assertResponseRedirects('/connectors');
         $sent = array_map(static fn ($envelope): object => $envelope->getMessage(), self::getContainer()->get('messenger.transport.async')->getSent());
@@ -444,7 +443,7 @@ final class ConnectorControllerTest extends WebTestCase
         self::assertSame(['', 'new', (string) $demo->getId()], $crawler->filter('#github-project option')->each(static fn ($option): string => $option->attr('value')));
         self::assertSame('Demo project', $crawler->filter('#github-project option[selected]')->text());
 
-        $form = $crawler->selectButton('Brancher les dépôts cochés')->form();
+        $form = $crawler->selectButton('Brancher les dépôts choisis')->form();
         foreach ([$other, $archived] as $refused) {
             $this->client->request('POST', $form->getUri(), ['_token' => $form['_token']->getValue(), 'project' => $refused->getId(), 'repositories' => ['acme/shop']]);
             self::assertResponseRedirects('/connectors/github?project=demo');
@@ -452,7 +451,7 @@ final class ConnectorControllerTest extends WebTestCase
         }
         self::assertSame(0, $this->entityManager->getRepository(Connector::class)->count([]));
 
-        $form['repositories'][0]->tick();
+        $form['repositories']->select(['acme/shop']);
         $this->client->submit($form);
         self::assertResponseRedirects('/projects/demo/settings');
         $crawler = $this->client->followRedirect();
@@ -480,10 +479,9 @@ final class ConnectorControllerTest extends WebTestCase
         $crawler = $this->client->followRedirect();
         self::assertSame('Un nouveau projet par dépôt', $crawler->filter('select[name="project"] option[value="new"]')->text());
 
-        $form = $crawler->selectButton('Brancher les dépôts cochés')->form();
+        $form = $crawler->selectButton('Brancher les dépôts choisis')->form();
         $form['project']->select('new');
-        $form['repositories'][0]->tick();
-        $form['repositories'][1]->tick();
+        $form['repositories']->select(['Acme/Shop', 'acme/demo']);
         $this->client->submit($form);
         self::assertResponseRedirects('/connectors');
 

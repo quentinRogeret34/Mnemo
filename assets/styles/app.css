@@ -1092,9 +1092,9 @@ button.menu__item { width: 100%; border: 0; background: none; font-family: inher
 }
 
 /* Model picker (Tom Select) */
-.ts-wrapper.input, .form-stack .ts-wrapper { min-height: 0; padding: 0; border: 0; background: none; box-shadow: none; }
+.ts-wrapper.input, .ts-wrapper.select, .form-stack .ts-wrapper { min-height: 0; padding: 0; border: 0; background: none; box-shadow: none; }
 .inline-form .ts-wrapper { flex: 1 1 16rem; max-width: 26rem; }
-.form-stack .ts-wrapper { width: 100%; }
+.form-stack .ts-wrapper, .key-form .ts-wrapper { width: 100%; }
 .ts-wrapper .ts-control {
     display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3xs) var(--space-2xs);
     min-height: 2rem; padding: var(--space-3xs) 2rem var(--space-3xs) var(--space-sm);
@@ -1117,6 +1117,8 @@ button.menu__item { width: 100%; border: 0; background: none; font-family: inher
 }
 .ts-wrapper.plugin-remove_button .item .remove { border: 0; padding: 0 var(--space-3xs); color: var(--color-muted); }
 .ts-wrapper.plugin-remove_button .item .remove:hover { background: none; color: var(--color-danger); }
+.ts-wrapper.single .ts-control:not(.rtl)::after { border-color: var(--color-muted) transparent transparent; }
+.ts-wrapper.single.dropdown-active .ts-control:not(.rtl)::after { border-color: transparent transparent var(--color-muted); }
 .ts-wrapper.plugin-clear_button .clear-button { right: 0.6rem; color: var(--color-muted); }
 .ts-dropdown {
     z-index: 30; margin-top: var(--space-2xs); padding: var(--space-2xs);

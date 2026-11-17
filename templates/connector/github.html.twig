@@ -35,7 +35,7 @@
         <form class="key-form" method="post" action="{{ path('github_repositories_connect', back) }}">
             <input type="hidden" name="_token" value="{{ token }}">
             <label for="github-project">{{ 'memory.index.project'|trans }}</label>
-            <select class="select" id="github-project" name="project" required>
+            <select class="select" id="github-project" name="project" required data-controller="select-picker">
                 <option value="">{{ 'connector.github.choose_project'|trans }}</option>
                 {% if may_create %}<option value="new" {{ not selected and projects is empty ? 'selected' }}>{{ 'connector.github.new_per_repository'|trans }}</option>{% endif %}
                 {% if projects is not empty %}
@@ -45,20 +45,18 @@
                 {% endif %}
             </select>
             {% if may_create %}<p class="row__sub">{{ 'connector.github.new_per_repository_help'|trans }}</p>{% endif %}
-            <ul class="list">
-                {% for repository in repositories %}
-                    {% set already = repository.full_name|lower in connected %}
-                    <li class="row">
-                        <label class="key-form__check">
-                            <input type="checkbox" name="repositories[]" value="{{ repository.full_name }}" {{ already ? 'disabled' }}>
-                            <span class="mono">{{ repository.full_name }}</span>
-                        </label>
-                        <span class="row__sub">{{ (repository.private ? 'connector.github.private' : 'connector.github.public')|trans }}{{ already ? ' · ' ~ 'connector.github.already'|trans }}{{ repository.description ? ' · ' ~ repository.description }}</span>
-                    </li>
-                {% else %}
-                    <li class="block__empty">{{ 'connector.github.none'|trans }}</li>
-                {% endfor %}
-            </ul>
+            <label for="github-repositories">{{ 'connector.github.repositories'|trans }}</label>
+            {% if repositories is empty %}
+                <p class="block__empty">{{ 'connector.github.none'|trans }}</p>
+            {% else %}
+                <select class="select" id="github-repositories" name="repositories[]" multiple required data-controller="select-picker">
+                    <option value="">{{ 'connector.github.search'|trans }}</option>
+                    {% for repository in repositories %}
+                        {% set already = repository.full_name|lower in connected %}
+                        <option value="{{ repository.full_name }}" data-meta="{{ (repository.private ? 'connector.github.private' : 'connector.github.public')|trans }}{{ already ? ' · ' ~ 'connector.github.already'|trans }}{{ repository.description ? ' · ' ~ repository.description }}" {{ already ? 'disabled' }}>{{ repository.full_name }}</option>
+                    {% endfor %}
+                </select>
+            {% endif %}
             <button class="button button--primary" type="submit"><twig:ux:icon name="lucide:plug" />{{ 'connector.github.submit'|trans }}</button>
         </form>
     {% endif %}

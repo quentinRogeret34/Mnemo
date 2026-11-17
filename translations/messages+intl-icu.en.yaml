@@ -129,14 +129,16 @@ connector:
         choose_project: 'Choose a project'
         connect: 'Connect with GitHub'
         existing: 'Existing projects'
-        lede: 'Each checked repository becomes a “GitHub (code and history)” connector: the server clones it, builds its code graph and imports its history into the chosen project.'
+        lede: 'Each chosen repository becomes a “GitHub (code and history)” connector: the server clones it, builds its code graph and imports its history into the chosen project.'
         new_per_repository: 'One new project per repository'
-        new_per_repository_help: '“One new project per repository” creates a project named after each checked repository, or reuses the one that already has it.'
+        new_per_repository_help: '“One new project per repository” creates a project named after each chosen repository, or reuses the one that already has it.'
         none: 'No repository visible with this account.'
         private: private
         public: public
+        repositories: Repositories
         scope: 'Read access to the repositories, private ones included (“repo” scope).'
-        submit: 'Connect the checked repositories'
+        search: 'Search a repository'
+        submit: 'Connect the chosen repositories'
         title: 'GitHub repositories'
     key_missing: missing
     key_set: set
@@ -665,6 +667,8 @@ js:
         use: 'Use {model}'
     palette:
         results: '{count, plural, =0 {No result} one {# result} other {# results}}'
+    select:
+        no_results: 'No option matches.'
 keys:
     all: All
     copy: Copy
