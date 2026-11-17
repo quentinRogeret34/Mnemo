@@ -38,7 +38,7 @@
             <twig:ux:icon name="lucide:layout-dashboard" class="icon nav-item__icon" />
             <span class="nav-item__label">{{ 'nav.dashboard'|trans }}</span>
         </a>
-        <a class="nav-item" href="{{ path('activity', scope) }}" {% if route == 'activity' %}aria-current="page"{% endif %}>
+        <a class="nav-item" href="{{ path('activity', scope) }}" {% if route in ['activity', 'activity_feed'] %}aria-current="page"{% endif %}>
             <twig:ux:icon name="lucide:activity" class="icon nav-item__icon" />
             <span class="nav-item__label">{{ 'nav.activity'|trans }}</span>
         </a>

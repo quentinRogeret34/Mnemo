@@ -1,18 +1,25 @@
 activity:
+    all_types: 'All types'
     by_type: 'Entries by type'
     connector: Connector
     created: Created
     empty: 'Nothing entered the graph over the period'
     empty_text: 'Commits and tickets come with the connectors, documents and memories as soon as they are added.'
+    entries: '{count, plural, =0 {No entry} one {# entry} other {# entries}}'
     feed: Feed
+    feed_title: 'Activity feed'
+    filter_type: 'Filter by type'
     kind:
         commit: commit
         document: document
         memory: memory
         rule: rule
     lede: 'What entered the graph: the work fetched by the connectors, the documents dropped and the memories added.'
+    no_match: 'No entry matches.'
     no_run: 'No sync. A connector runs by hand, or on its own if it is scheduled and the {worker} service runs.'
     runs: Syncs
+    search: 'Search the feed'
+    see_more: 'See more ({count, plural, one {# entry} other {# entries}})'
     state: State
     trigger: Trigger
     trigger_manual: manual

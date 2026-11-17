@@ -14,7 +14,6 @@
     {% set scope = project ? {project: project.slug} : {} %}
     {% set period_labels = {'1d': 'period.24h', '7d': 'period.7d', '30d': 'period.30d'} %}
     {% set type_labels = {commit: 'activity.type.commit', ticket: 'activity.type.ticket', document: 'nav.documents', memory: 'nav.memories', business_rule: 'nav.rules'} %}
-    {% set kinds = {commit: 'activity.kind.commit', document: 'activity.kind.document', memory: 'activity.kind.memory', business_rule: 'activity.kind.rule'} %}
     <div class="view-head">
         <h1><twig:ux:icon name="lucide:activity" />{{ 'nav.activity'|trans }}</h1>
         <span class="view-head__meta">{{ project ? project.name : 'nav.all_projects'|trans }}</span>
@@ -40,26 +39,16 @@
     <div class="panels">
         <section class="panel" aria-labelledby="feed-title">
             <div class="panel__head"><h2 id="feed-title">{{ 'activity.feed'|trans }}</h2></div>
-            {% for day, items in feed.items %}
-                <h3 class="block__sub">{{ day|format_date('short') }} <span class="block__count">{{ items|length }}</span></h3>
-                <ul class="list">
-                    {% for item in items %}
-                        {% set href = item.type == 'memory' ? path('memory_show', {id: item.id})
-                            : (item.type == 'document' ? path('document_show', {id: item.id})
-                            : (item.type == 'business_rule' and item.project_slug ? path('rule_show', {slug: item.project_slug, code: item.ref}) : item.url)) %}
-                        <li class="row row--commit">
-                            <span class="code-chip">{{ item.type == 'ticket' ? item.ref : (item.type == 'commit' ? item.ref|slice(0, 7) : kinds[item.type]|trans) }}</span>
-                            <span class="row__title">{% if href %}<a href="{{ href }}" {% if item.type in ['commit', 'ticket'] %}rel="noopener noreferrer" target="_blank"{% endif %}><span class="memory-text">{{ item.label }}</span></a>{% else %}<span class="memory-text">{{ item.label }}</span>{% endif %}</span>
-                            <span class="row__meta"><span>{{ item.author }}</span><span class="num">{{ item.created_at|format_time('short') }}</span></span>
-                        </li>
-                    {% endfor %}
-                </ul>
-            {% else %}
+            {% if feed.days is empty %}
                 <twig:EmptyState :title="'activity.empty'|trans" :text="'activity.empty_text'|trans">
                     <twig:block name="icon"><twig:ux:icon name="lucide:activity" /></twig:block>
                 </twig:EmptyState>
-            {% endfor %}
-            {{ include('_pager.html.twig', {page: feed}) }}
+            {% else %}
+                {{ include('activity/_feed.html.twig', {days: feed.days}) }}
+                {% if feed.total > 10 %}
+                    <div class="pager"><a class="button" href="{{ path('activity_feed', scope|merge({period: period})) }}">{{ 'activity.see_more'|trans({count: feed.total}) }}</a></div>
+                {% endif %}
+            {% endif %}
         </section>
 
         <section class="panel" aria-labelledby="runs-title">

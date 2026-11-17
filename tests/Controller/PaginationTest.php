@@ -51,15 +51,34 @@ final class PaginationTest extends WebTestCase
         self::assertCount(0, $this->client->request('GET', '/memories?q=num%C3%A9ro+07')->filter('.pager'));
     }
 
-    public function testTheActivityFeedIsSplitInPages(): void
+    public function testTheActivityPageShowsTheTenLatestEntriesAndLinksToTheWholeFeed(): void
     {
-        $crawler = $this->client->request('GET', '/activity?project=demo');
+        $crawler = $this->client->request('GET', '/activity?project=demo&period=30d');
         self::assertResponseIsSuccessful();
+        self::assertCount(10, $crawler->filter('section[aria-labelledby="feed-title"] .row'));
+        self::assertStringContainsString('Convention numéro 55.', $crawler->filter('section[aria-labelledby="feed-title"] .row')->first()->text());
+
+        $crawler = $this->client->click($crawler->filter('section[aria-labelledby="feed-title"] a[href*="/activity/feed"]')->link());
+        self::assertResponseIsSuccessful();
+        self::assertStringContainsString('project=demo', $this->client->getRequest()->getUri());
+        self::assertStringContainsString('period=30d', $this->client->getRequest()->getUri());
         self::assertCount(50, $crawler->filter('section[aria-labelledby="feed-title"] .row'));
 
-        $crawler = $this->client->click($crawler->filter('section[aria-labelledby="feed-title"] .pager a[rel="next"]')->link());
+        $crawler = $this->client->click($crawler->filter('.pager a[rel="next"]')->link());
         self::assertCount(5, $crawler->filter('section[aria-labelledby="feed-title"] .row'));
         self::assertStringContainsString('project=demo', $this->client->getRequest()->getUri());
+    }
+
+    public function testTheWholeFeedIsFilteredByTypeAndText(): void
+    {
+        $crawler = $this->client->request('GET', '/activity/feed?project=demo&type=memory&q=num%C3%A9ro+07');
+        self::assertResponseIsSuccessful();
+        self::assertCount(1, $crawler->filter('section[aria-labelledby="feed-title"] .row'));
+        self::assertCount(0, $crawler->filter('.pager'));
+
+        $crawler = $this->client->request('GET', '/activity/feed?project=demo&type=commit');
+        self::assertCount(0, $crawler->filter('section[aria-labelledby="feed-title"] .row'));
+        self::assertCount(1, $crawler->filter('.block__empty'));
     }
 
     public function testTheLatestMcpCallsAreSplitInPages(): void

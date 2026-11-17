@@ -1,18 +1,25 @@
 activity:
+    all_types: 'Tous les types'
     by_type: 'Entrées par type'
     connector: Connecteur
     created: Créés
     empty: "Rien n'est entré dans le graphe sur la période"
     empty_text: "Les commits et tickets arrivent avec les connecteurs, les documents et les mémoires dès qu'ils sont ajoutés."
+    entries: '{count, plural, =0 {Aucune entrée} one {# entrée} other {# entrées}}'
     feed: Fil
+    feed_title: "Fil d'activité"
+    filter_type: 'Filtrer par type'
     kind:
         commit: commit
         document: document
         memory: mémoire
         rule: règle
     lede: 'Ce qui est entré dans le graphe : le travail récupéré par les connecteurs, les documents déposés et les mémoires ajoutées.'
+    no_match: 'Aucune entrée ne correspond.'
     no_run: "Aucune synchronisation. Un connecteur se lance à la main, ou seul s'il est planifié et que le service {worker} tourne."
     runs: Synchronisations
+    search: 'Rechercher dans le fil'
+    see_more: 'Voir plus ({count, plural, one {# entrée} other {# entrées}})'
     state: État
     trigger: Déclencheur
     trigger_manual: manuel

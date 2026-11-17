@@ -1,0 +1,50 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ 'activity.feed_title'|trans }}{{ project ? ' · ' ~ project.name }}{% endblock %}
+
+{% block crumbs %}
+    {% if project %}
+        <a href="{{ path('project_show', {slug: project.slug}) }}">{{ project.name }}</a>
+        <span class="crumbs__sep" aria-hidden="true">/</span>
+    {% endif %}
+    <a href="{{ path('activity', project ? {project: project.slug} : {}) }}">{{ 'nav.activity'|trans }}</a>
+    <span class="crumbs__sep" aria-hidden="true">/</span>
+    <span class="crumbs__current">{{ 'activity.feed'|trans }}</span>
+{% endblock %}
+
+{% block body %}
+    {% set period_labels = {'1d': 'period.24h', '7d': 'period.7d', '30d': 'period.30d', all: 'period.all'} %}
+    {% set type_labels = {commit: 'activity.type.commit', ticket: 'activity.type.ticket', document: 'nav.documents', memory: 'nav.memories', business_rule: 'nav.rules'} %}
+    {% set filtered = type or q or period != 'all' %}
+    <div class="view-head">
+        <h1><twig:ux:icon name="lucide:activity" />{{ 'activity.feed_title'|trans }}</h1>
+        <span class="view-head__meta">{{ 'activity.entries'|trans({count: feed.total}) }}</span>
+    </div>
+
+    <form class="filters" method="get" action="{{ path('activity_feed') }}" role="search" data-controller="autosubmit">
+        <input class="input filters__search" type="search" name="q" value="{{ q }}" placeholder="{{ 'activity.search'|trans }}" aria-label="{{ 'activity.search'|trans }}">
+        <select class="select" name="project" aria-label="{{ 'memory.index.project'|trans }}" data-action="autosubmit#submit">
+            <option value="">{{ 'nav.all_projects'|trans }}</option>
+            {% for item in projects %}<option value="{{ item.slug }}" {{ project and project.id == item.id ? 'selected' }}>{{ item.name }}</option>{% endfor %}
+        </select>
+        <select class="select" name="type" aria-label="{{ 'activity.filter_type'|trans }}" data-action="autosubmit#submit">
+            <option value="">{{ 'activity.all_types'|trans }}</option>
+            {% for item in types %}<option value="{{ item }}" {{ type == item ? 'selected' }}>{{ type_labels[item]|trans }}</option>{% endfor %}
+        </select>
+        <select class="select" name="period" aria-label="{{ 'period.label'|trans }}" data-action="autosubmit#submit">
+            {% for item in periods %}<option value="{{ item }}" {{ period == item ? 'selected' }}>{{ period_labels[item]|trans }}</option>{% endfor %}
+        </select>
+        <button class="button" type="submit">{{ 'common.filter'|trans }}</button>
+        {% if filtered %}<a class="button button--ghost" href="{{ path('activity_feed', project ? {project: project.slug} : {}) }}">{{ 'common.reset'|trans }}</a>{% endif %}
+    </form>
+
+    <section class="panel" aria-labelledby="feed-title">
+        <h2 id="feed-title" class="visually-hidden">{{ 'activity.feed'|trans }}</h2>
+        {% if feed.items is empty %}
+            <p class="block__empty">{{ (filtered ? 'activity.no_match' : 'activity.empty')|trans }}</p>
+        {% else %}
+            {{ include('activity/_feed.html.twig', {days: feed.items}) }}
+        {% endif %}
+        {{ include('_pager.html.twig', {page: feed}) }}
+    </section>
+{% endblock %}

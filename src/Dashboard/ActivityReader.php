@@ -12,7 +12,7 @@ use Doctrine\DBAL\Types\Types;
  */
 final class ActivityReader
 {
-    private const TYPES = "('commit', 'ticket', 'document', 'memory', 'business_rule')";
+    public const TYPES = ['commit', 'ticket', 'document', 'memory', 'business_rule'];
 
     public function __construct(
         private readonly Connection $connection,
@@ -23,17 +23,22 @@ final class ActivityReader
     /**
      * Newest first, grouped by the day the node entered the graph.
      *
-     * @return array<string, list<array{id: int, type: string, label: string, ref: string, kind: ?string, author: ?string, url: ?string, project_slug: ?string, created_at: string}>>
+     * @param ?string $type   one of TYPES, or every type
+     * @param ?string $search words the label contains
+     *
+     * @return array{days: array<string, list<array{id: int, type: string, label: string, ref: string, kind: ?string, author: ?string, url: ?string, project_slug: ?string, created_at: string}>>, total: int}
      */
-    public function feed(?Project $project, \DateTimeImmutable $from, int $limit = 300, int $offset = 0): array
+    public function feed(?Project $project, \DateTimeImmutable $from, int $limit, int $offset = 0, ?string $type = null, ?string $search = null): array
     {
-        $types = self::TYPES;
+        $types = self::sqlTypes();
         $rows = $this->connection->fetchAllAssociative(
             <<<SQL
                 SELECT n.id, n.type, n.label, n.external_id AS ref, n.metadata->>'kind' AS kind, n.metadata->>'author' AS author,
-                       n.metadata->>'url' AS url, p.slug AS project_slug, n.created_at
+                       n.metadata->>'url' AS url, p.slug AS project_slug, n.created_at, COUNT(*) OVER () AS total
                 FROM node n LEFT JOIN project p ON p.id = n.project_id
                 WHERE n.type IN {$types} AND n.created_at >= :from AND (n.type <> 'memory' OR {$this->memoryAccess->sql('n')})
+                  AND (CAST(:type AS text) IS NULL OR n.type = :type)
+                  AND (CAST(:search AS text) IS NULL OR n.label ILIKE :search)
                   AND (
                       CAST(:project AS int) IS NULL OR n.project_id = :project
                       OR EXISTS (SELECT 1 FROM node_project np WHERE np.node_id = n.id AND np.project_id = :project)
@@ -41,16 +46,22 @@ final class ActivityReader
                 ORDER BY n.created_at DESC, n.id DESC
                 LIMIT $limit OFFSET $offset
                 SQL,
-            ['project' => $project?->getId(), 'from' => $from],
+            [
+                'project' => $project?->getId(),
+                'from' => $from,
+                'type' => $type,
+                'search' => null === $search || '' === trim($search) ? null : '%'.addcslashes(trim($search), '%_\\').'%',
+            ],
             ['from' => Types::DATETIME_IMMUTABLE],
         );
 
         $days = [];
         foreach ($rows as $row) {
+            unset($row['total']);
             $days[substr($row['created_at'], 0, 10)][] = ['id' => (int) $row['id']] + $row;
         }
 
-        return $days;
+        return ['days' => $days, 'total' => (int) ($rows[0]['total'] ?? 0)];
     }
 
     /**
@@ -58,7 +69,7 @@ final class ActivityReader
      */
     public function counts(?Project $project, \DateTimeImmutable $from): array
     {
-        $types = self::TYPES;
+        $types = self::sqlTypes();
 
         return array_map(
             static fn (array $row): array => ['label' => $row['label'], 'value' => (int) $row['value']],
@@ -96,5 +107,10 @@ final class ActivityReader
                 ['project' => $project?->getId()],
             ),
         );
+    }
+
+    private static function sqlTypes(): string
+    {
+        return "('".implode("', '", self::TYPES)."')";
     }
 }
