@@ -394,6 +394,7 @@ enum:
     connector_mode:
         github: 'GitHub → code, commits, PR, issues'
         gitlab: 'GitLab → code, commits, MR, issues'
+        notion: 'Notion → une page, un document'
         resources: 'Ressources → documents'
         tool_document: 'Outil → un document'
         tool_memories: 'Outil → mémoires'
@@ -547,7 +548,7 @@ form:
     connector:
         arguments: "Arguments de l'outil (JSON)"
         credentials: "En-têtes HTTP ou variables d'environnement"
-        credentials_help: 'Une ligne par valeur, « Nom: valeur ». Écrire « env:NOM » (ex. « Bearer env:GITHUB_MCP_TOKEN ») pour lire un secret dans .env.local au lieu de le stocker en base. Seules les variables listées dans MCP_CONNECTORS_ENV sont lisibles.'
+        credentials_help: "Une ligne par valeur, « Nom: valeur ». Une valeur collée en clair, comme « Bearer ntn_... », est chiffrée en base et n'est plus affichée : laisser « •••••• » la garde. « env:NOM » lit plutôt un secret de l'environnement, si la variable est listée dans MCP_CONNECTORS_ENV."
         endpoint: 'URL ou commande'
         endpoint_help: 'HTTP : https://mcp.example.com/mcp. STDIO : commande lancée dans le conteneur, ex. php mon-serveur.php.'
         folder: 'Dossier des documents'

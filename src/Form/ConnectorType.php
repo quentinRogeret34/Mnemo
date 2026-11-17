@@ -2,6 +2,7 @@
 
 namespace App\Form;
 
+use App\Connector\CredentialResolver;
 use App\Entity\Connector;
 use App\Entity\Folder;
 use App\Entity\Project;
@@ -55,7 +56,7 @@ final class ConnectorType extends AbstractType
             ->add('folder', EntityType::class, ['label' => 'form.connector.folder', 'class' => Folder::class, 'choice_label' => 'name', 'choice_translation_domain' => false, 'required' => false, 'placeholder' => 'form.connector.folder_root']);
 
         $builder->get('credentials')->addModelTransformer(new CallbackTransformer(
-            static fn (?array $values): string => implode("\n", array_map(static fn (string $name, string $value): string => $name.': '.$value, array_keys($values ?? []), $values ?? [])),
+            static fn (?array $values): string => implode("\n", array_map(static fn (string $name, string $value): string => $name.': '.CredentialResolver::display($value), array_keys($values ?? []), $values ?? [])),
             static function (?string $text): array {
                 $values = [];
                 foreach (preg_split('/\R/', (string) $text) as $line) {

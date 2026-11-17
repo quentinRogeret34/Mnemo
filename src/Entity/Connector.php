@@ -130,7 +130,7 @@ class Connector
 
             return;
         }
-        if (ConnectorMode::Resources !== $this->mode && null === $this->tool) {
+        if (!\in_array($this->mode, [ConnectorMode::Resources, ConnectorMode::Notion], true) && null === $this->tool) {
             $context->buildViolation('connector.tool.missing')->atPath('tool')->addViolation();
         }
     }

@@ -8,6 +8,7 @@ use App\Entity\ConnectorRun;
 use App\Enum\ConnectorMode;
 use App\Forge\ForgeImporter;
 use App\Memory\MemoryStore;
+use App\Notion\NotionClient;
 use Doctrine\ORM\EntityManagerInterface;
 use Mcp\Client;
 use Mcp\Schema\Content\BlobResourceContents;
@@ -43,6 +44,7 @@ final class ConnectorRunner
         private readonly EntityManagerInterface $entityManager,
         private readonly ForgeImporter $forgeImporter,
         private readonly LockFactory $lockFactory,
+        private readonly NotionClient $notion,
     ) {
     }
 
@@ -53,6 +55,16 @@ final class ConnectorRunner
     {
         if ($connector->getMode()->isForge()) {
             return ['server' => $this->forgeImporter->describe($connector), 'tools' => [], 'resources' => []];
+        }
+        if (ConnectorMode::Notion === $connector->getMode()) {
+            return [
+                'server' => $this->notion->describe($connector),
+                'tools' => [],
+                'resources' => array_map(
+                    static fn (array $page): array => ['uri' => $page['url'], 'name' => $page['title'], 'mime_type' => 'page'],
+                    iterator_to_array($this->notion->pages($connector, limit: 20), false),
+                ),
+            ];
         }
 
         $client = $this->clientFactory->connect($connector);
@@ -91,6 +103,8 @@ final class ConnectorRunner
         try {
             if ($connector->getMode()->isForge()) {
                 $this->forgeImporter->import($connector, $report);
+            } elseif (ConnectorMode::Notion === $connector->getMode()) {
+                $this->importNotion($connector, $report);
             } else {
                 $client = $this->clientFactory->connect($connector);
                 try {
@@ -164,6 +178,28 @@ final class ConnectorRunner
         // The answer of a tool often starts with a heading of its own; the connector name is the document title.
         $body = json_validate($text) ? "```json\n".$text."\n```" : $text;
         $this->upsertDocument($connector, 'tool:'.$connector->getTool(), $title, 'md', '# '.$title."\n\n".$body, $report);
+    }
+
+    /**
+     * A page is one document. Only the pages edited since the previous run are read again.
+     *
+     * @param array{created: int, updated: int, unchanged: int, skipped: list<string>, error: ?string} $report
+     */
+    private function importNotion(Connector $connector, array &$report): void
+    {
+        $cursor = $connector->getCursor();
+        $latest = $cursor['pages'] ?? null;
+        foreach ($this->notion->pages($connector, $cursor['pages'] ?? null) as $page) {
+            try {
+                $body = $this->notion->markdown($connector, $page['id']);
+            } catch (\RuntimeException $exception) {
+                $report['skipped'][] = \sprintf('%s (%s)', $page['title'], $exception->getMessage());
+                continue;
+            }
+            $this->upsertDocument($connector, 'notion:'.$page['id'], $page['title'], 'md', '# '.$page['title']."\n\n".$body, $report);
+            $latest = max($latest ?? '', $page['edited']);
+        }
+        $connector->setCursor(['pages' => $latest] + $cursor);
     }
 
     /**

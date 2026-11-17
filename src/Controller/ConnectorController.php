@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Connector\ConnectorPresets;
 use App\Connector\ConnectorRunner;
+use App\Connector\CredentialResolver;
 use App\Connector\McpAuthorization;
 use App\Connector\McpClientFactory;
 use App\Entity\Connector;
@@ -48,6 +49,7 @@ final class ConnectorController extends AbstractController
         private readonly RepositoryCheckout $checkout,
         private readonly OAuthClient $oauthClient,
         private readonly SecretBox $secretBox,
+        private readonly CredentialResolver $credentials,
         private readonly GitHubApp $gitHubApp,
         private readonly PullRequestReviewer $reviewer,
         private readonly ModelCheck $modelCheck,
@@ -78,6 +80,7 @@ final class ConnectorController extends AbstractController
                 $this->presets->apply($preset, $connector);
             }
         }
+        $previousCredentials = $connector->getCredentials();
         $form = $this->createForm(ConnectorType::class, $connector);
         $form->handleRequest($request);
 
@@ -85,6 +88,7 @@ final class ConnectorController extends AbstractController
             $form->get('transport')->addError(new FormError($this->translator->trans('connector.stdio_disabled')));
         }
         if ($form->isSubmitted() && $form->isValid()) {
+            $connector->setCredentials($this->credentials->seal($connector->getCredentials(), $previousCredentials));
             $this->entityManager->persist($connector);
             $this->entityManager->flush();
 
@@ -160,7 +164,7 @@ final class ConnectorController extends AbstractController
     public function authorize(Connector $connector, Request $request): Response
     {
         $this->checkToken($connector, $request);
-        if (ConnectorTransport::Http !== $connector->getTransport() || $connector->getMode()->isForge()) {
+        if (ConnectorTransport::Http !== $connector->getTransport() || $connector->getMode()->isApi()) {
             throw $this->createNotFoundException('Only an HTTP MCP connector is authorized by OAuth.');
         }
         $state = bin2hex(random_bytes(16));
@@ -232,8 +236,8 @@ final class ConnectorController extends AbstractController
     public function sync(Connector $connector, Request $request): Response
     {
         $this->checkToken($connector, $request);
-        // Cloning a repository and building its graph takes minutes: the worker does it.
-        if ($connector->getMode()->isForge() && true === ($connector->getArguments()['code_graph'] ?? false)) {
+        // Cloning a repository and building its graph takes minutes, as reading a Notion workspace at three requests a second: the worker does it.
+        if (ConnectorMode::Notion === $connector->getMode() || ($connector->getMode()->isForge() && true === ($connector->getArguments()['code_graph'] ?? false))) {
             $this->bus->dispatch(new SyncConnector($connector->getId(), ConnectorRun::MANUAL));
             $this->addFlash('success', new TranslatableMessage('flash.connector.sync_started'));
 

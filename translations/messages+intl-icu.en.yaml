@@ -394,6 +394,7 @@ enum:
     connector_mode:
         github: 'GitHub → code, commits, PRs, issues'
         gitlab: 'GitLab → code, commits, MRs, issues'
+        notion: 'Notion → one document per page'
         resources: 'Resources → documents'
         tool_document: 'Tool → one document'
         tool_memories: 'Tool → memories'
@@ -547,7 +548,7 @@ form:
     connector:
         arguments: 'Tool arguments (JSON)'
         credentials: 'HTTP headers or environment variables'
-        credentials_help: 'One line per value, “Name: value”. Write “env:NAME” (e.g. “Bearer env:GITHUB_MCP_TOKEN”) to read a secret from .env.local instead of storing it in the database. Only the variables listed in MCP_CONNECTORS_ENV can be read.'
+        credentials_help: 'One line per value, “Name: value”. A value pasted in clear, such as “Bearer ntn_...”, is stored encrypted and never shown again: leaving “••••••” keeps it. “env:NAME” reads a secret from the environment instead, if the variable is listed in MCP_CONNECTORS_ENV.'
         endpoint: 'URL or command'
         endpoint_help: 'HTTP: https://mcp.example.com/mcp. STDIO: command run in the container, e.g. php my-server.php.'
         folder: 'Folder of the documents'

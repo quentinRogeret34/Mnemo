@@ -88,6 +88,32 @@ final class ConnectorControllerTest extends WebTestCase
         self::assertSelectorTextContains('.content .row', '2 créés');
     }
 
+    public function testATokenPastedInTheFormIsStoredEncryptedAndNeverShownAgain(): void
+    {
+        $crawler = $this->client->request('GET', '/connectors/new?preset=notion');
+        $this->client->submit($crawler->selectButton('Enregistrer')->form([
+            'connector[credentials]' => "Authorization: Bearer ntn_pasted\nX-Trace: env:NOT_A_SECRET",
+        ]));
+        self::assertResponseRedirects();
+
+        $connector = $this->entityManager->getRepository(Connector::class)->findOneBy(['name' => 'Notion']);
+        $stored = $connector->getCredentials();
+        self::assertStringStartsWith('secret:', $stored['Authorization']);
+        self::assertStringNotContainsString('ntn_pasted', $stored['Authorization']);
+        self::assertSame('env:NOT_A_SECRET', $stored['X-Trace']);
+        self::assertStringNotContainsString('ntn_pasted', $this->client->followRedirect()->html());
+
+        $crawler = $this->client->request('GET', '/connectors/'.$connector->getId().'/edit');
+        self::assertSame("Authorization: ••••••\nX-Trace: env:NOT_A_SECRET", $crawler->filter('#connector_credentials')->text(normalizeWhitespace: false));
+        $this->client->submit($crawler->selectButton('Enregistrer')->form(['connector[name]' => 'Notion équipe']));
+        self::assertResponseRedirects();
+
+        $this->entityManager->clear();
+        $connector = $this->entityManager->getRepository(Connector::class)->findOneBy(['name' => 'Notion équipe']);
+        self::assertSame($stored['Authorization'], $connector->getCredentials()['Authorization']);
+        self::assertSame('Bearer ntn_pasted', self::getContainer()->get(CredentialResolver::class)->resolve(['Authorization' => $connector->getCredentials()['Authorization']])['Authorization']);
+    }
+
     public function testACodeGraphSyncIsLeftToTheWorker(): void
     {
         $connector = new Connector();

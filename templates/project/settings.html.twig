@@ -55,7 +55,7 @@
                 {% for connector in connectors %}
                     <li>
                         <{{ scoped ? 'div' : 'a' }} class="row" {% if not scoped %}href="{{ path('connector_show', {id: connector.id}) }}"{% endif %}>
-                            <span class="code-chip">{{ connector.mode.forge ? connector.mode.value|upper : connector.transport.value|upper }}</span>
+                            <span class="code-chip">{{ connector.mode.api ? connector.mode.value|upper : connector.transport.value|upper }}</span>
                             <span class="row__title"><span>{{ connector.name }}</span><span class="row__sub">{{ connector.mode|trans }}</span></span>
                             <span class="row__meta">{{ include('connector/_status.html.twig') }}</span>
                         </{{ scoped ? 'div' : 'a' }}>

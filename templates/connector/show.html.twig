@@ -75,7 +75,7 @@
             {% endif %}
             {% if connector.mcpAuthorization %}
                 <form method="post" action="{{ path('connector_authorize_revoke', {id: connector.id}) }}"><input type="hidden" name="_token" value="{{ token }}"><button class="button" type="submit" data-confirm="{{ 'connector.show.revoke_confirm'|trans }}" data-confirm-label="{{ 'form.upload.remove'|trans }}"><twig:ux:icon name="lucide:unplug" />{{ 'connector.show.revoke'|trans }}</button></form>
-            {% elseif connector.transport.value == 'http' and not connector.mode.forge %}
+            {% elseif connector.transport.value == 'http' and not connector.mode.api %}
                 <form method="post" action="{{ path('connector_authorize', {id: connector.id}) }}"><input type="hidden" name="_token" value="{{ token }}"><button class="button" type="submit"><twig:ux:icon name="lucide:key-round" />{{ 'connector.show.authorize'|trans }}</button></form>
             {% endif %}
         </div>
