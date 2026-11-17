@@ -1078,7 +1078,7 @@ button.menu__item { width: 100%; border: 0; background: none; font-family: inher
 .project-delete .dialog__actions { justify-self: stretch; margin-top: var(--space-sm); }
 
 /* Appearance settings */
-.appearance { max-width: 40rem; margin-top: 0; }
+.appearance { margin-top: 0; }
 .appearance fieldset:last-child { padding-bottom: 0; border-bottom: 0; }
 .form-stack fieldset > .choices { display: flex; flex-wrap: wrap; gap: var(--space-xs) var(--space-lg); }
 .swatch { width: 0.875rem; height: 0.875rem; flex: none; border-radius: 50%; background: var(--color-accent); }
