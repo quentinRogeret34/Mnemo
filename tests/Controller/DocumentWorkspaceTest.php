@@ -54,14 +54,15 @@ final class DocumentWorkspaceTest extends WebTestCase
 
         $markdown = tempnam(sys_get_temp_dir(), 'doc').'.md';
         file_put_contents($markdown, "# Remises\n\nTexte.\n");
-        $form = $crawler->selectButton('Ajouter')->form();
+        $form = $crawler->filter('#upload form')->form();
         $form['document_upload[files]'][0]->upload($markdown);
         $this->client->submit($form);
         $crawler = $this->client->followRedirect();
 
-        self::assertSame('Remises', $crawler->filter('.explorer__content .row__title > span')->last()->text());
-        self::assertSame(['Tous les dossiers', 'Spécifications', 'Facturation 1'], $crawler->filter('.tree__item')->each(static fn ($item): string => trim(preg_replace('/\s+/', ' ', $item->text()))));
-        self::assertSame('--depth: 2', $crawler->filter('.tree__item')->last()->attr('style'));
+        self::assertSame('Remises', $crawler->filter('.doc-cell__main > span:first-child')->last()->text());
+        self::assertSame(['Spécifications', 'Facturation 1'], $crawler->filter('.filetree summary')->each(static fn ($item): string => trim(preg_replace('/\s+/', ' ', $item->text()))));
+        self::assertSame('Remises', $crawler->filter('.filetree details details .filetree__file .filetree__label')->text());
+        self::assertSame('page', $crawler->filter('.filetree details details summary a')->attr('aria-current'));
 
         $document = $this->entityManager->getRepository(Node::class)->findOneBy(['type' => NodeType::Document]);
         self::assertSame('Facturation', $document->getFolder()->getName());

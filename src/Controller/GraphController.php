@@ -19,6 +19,8 @@ use Symfony\Component\Routing\Attribute\Route;
 
 final class GraphController extends AbstractController
 {
+    private const PROJECT_SORTS = ['name', 'memories', 'updated'];
+
     public function __construct(
         private readonly GraphReader $graphReader,
         private readonly KnowledgeReader $knowledgeReader,
@@ -31,20 +33,32 @@ final class GraphController extends AbstractController
     }
 
     #[Route('/', name: 'project_index', methods: ['GET'])]
-    public function listProjects(#[MapQueryParameter] bool $archived = false): Response
+    public function listProjects(#[MapQueryParameter] bool $archived = false, #[MapQueryParameter] string $q = '', #[MapQueryParameter] string $sort = 'name'): Response
     {
         $summaries = array_filter($this->graphReader->projectSummaries(), fn (array $summary): bool => $this->projectScope->allows($this->entityManager->getReference(Project::class, $summary['id'])));
         $shown = array_values(array_filter($summaries, static fn (array $summary): bool => $archived === (null !== $summary['archived_at'])));
+        $sort = \in_array($sort, self::PROJECT_SORTS, true) ? $sort : 'name';
+        $q = trim($q);
+        $projects = array_map(
+            fn (array $summary): array => $summary + ['knowledge' => $this->knowledgeReader->counts($this->entityManager->getReference(Project::class, $summary['id'])), 'pending' => $this->knowledgeReader->pendingProposals($this->entityManager->getReference(Project::class, $summary['id']))],
+            array_values(array_filter($shown, static fn (array $summary): bool => '' === $q || false !== mb_stripos($summary['name'].' '.$summary['slug'], $q))),
+        );
+        usort($projects, static fn (array $a, array $b): int => match ($sort) {
+            'memories' => $b['knowledge']['memories'] <=> $a['knowledge']['memories'],
+            'updated' => ($b['updated_at'] ?? '') <=> ($a['updated_at'] ?? ''),
+            default => 0,
+        } ?: strcasecmp($a['name'], $b['name']));
 
         return $this->render('project/index.html.twig', [
             'may_create' => $this->projectResolver->mayCreate(),
             'github_oauth' => isset($this->oauthClient->enabled()['github']),
             'archived' => $archived,
             'archived_count' => $archived ? \count($shown) : \count($summaries) - \count($shown),
-            'projects' => array_map(
-                fn (array $summary): array => $summary + ['knowledge' => $this->knowledgeReader->counts($this->entityManager->getReference(Project::class, $summary['id'])), 'pending' => $this->knowledgeReader->pendingProposals($this->entityManager->getReference(Project::class, $summary['id']))],
-                $shown,
-            ),
+            'q' => $q,
+            'sort' => $sort,
+            'sorts' => self::PROJECT_SORTS,
+            'total' => \count($shown),
+            'projects' => $projects,
         ]);
     }
 

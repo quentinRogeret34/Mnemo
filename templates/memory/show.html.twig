@@ -10,75 +10,107 @@
 
 {% block body %}
     {% set status = memory.metadata.status ?? 'active' %}
-    <article class="page">
-        {% if status != 'active' %}
-            <p class="archived-banner" role="status">
-                <strong>{{ (status == 'superseded' ? 'memory.show.superseded' : 'memory.show.retired')|trans }}</strong>
-                {% for item in supersession.replaced_by %}{{ 'memory.show.by'|trans }} <a href="{{ path('memory_show', {id: item.id}) }}">{{ item.text }}</a>{{ not loop.last ? ', ' }}{% endfor %}
-                <span class="row__sub">{{ 'memory.show.archived_text'|trans }}</span>
-            </p>
-        {% endif %}
+    {% set meta = memory.metadata %}
+    <div class="memory-layout">
+        <article class="memory-main">
+            {% if status != 'active' %}
+                <p class="archived-banner" role="status">
+                    <strong>{{ (status == 'superseded' ? 'memory.show.superseded' : 'memory.show.retired')|trans }}</strong>
+                    {% for item in supersession.replaced_by %}{{ 'memory.show.by'|trans }} <a href="{{ path('memory_show', {id: item.id}) }}">{{ item.text }}</a>{{ not loop.last ? ', ' }}{% endfor %}
+                    <span class="row__sub">{{ 'memory.show.archived_text'|trans }}</span>
+                </p>
+            {% endif %}
 
-        <twig:MemoryEditor :memory="memory" />
+            <twig:MemoryEditor :memory="memory" />
 
-        {% if supersession.replaces is not empty %}
-            <section class="block" aria-labelledby="replaces-title">
-                <div class="block__head"><h2 id="replaces-title">{{ 'memory.show.replaces'|trans }}</h2><span class="block__count">{{ supersession.replaces|length }}</span></div>
-                <ul class="list">
-                    {% for item in supersession.replaces %}
-                        <li><a class="row row--memory row--archived" href="{{ path('memory_show', {id: item.id}) }}"><span class="row__title"><span class="memory-text">{{ item.text }}</span></span></a></li>
-                    {% endfor %}
-                </ul>
-            </section>
-        {% endif %}
+            {% if supersession.replaces is not empty %}
+                <section class="memory-section" aria-labelledby="replaces-title">
+                    <h2 id="replaces-title" class="memory-section__title">{{ ux_icon('lucide:replace') }}{{ 'memory.show.replaces'|trans }} <span class="block__count">{{ supersession.replaces|length }}</span></h2>
+                    <ul class="link-cards">
+                        {% for item in supersession.replaces %}
+                            <li class="link-card link-card--archived">
+                                <span class="event__icon" aria-hidden="true">{{ ux_icon('lucide:archive') }}</span>
+                                <a class="link-card__title memory-text" href="{{ path('memory_show', {id: item.id}) }}">{{ item.text }}</a>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </section>
+            {% endif %}
+        </article>
 
-        {% set visibility = memory.metadata.visibility ?? 'project' %}
-        {% set current = visibility == 'group' ? 'group:' ~ (memory.metadata.group_id ?? '') : visibility %}
-        <section class="block" aria-labelledby="visibility-title">
-            <div class="block__head">
-                <h2 id="visibility-title">{{ 'form.memory.visibility'|trans }}</h2>
-                <span class="tag">{{ visibility == 'private' ? 'enum.memory_visibility.private'|trans : (visibility == 'group' ? 'memory.visibility.group'|trans({name: group ? group.name : 'memory.show.group_deleted'|trans}) : 'enum.memory_visibility.project'|trans) }}</span>
-            </div>
-            <form class="inline-form" method="post" action="{{ path('memory_visibility', {id: memory.id}) }}">
-                <input type="hidden" name="_token" value="{{ csrf_token('visibility-memory-' ~ memory.id) }}">
-                <label class="visually-hidden" for="visibility">{{ 'memory.show.who_sees'|trans }}</label>
-                <select class="select" id="visibility" name="visibility">
-                    {% for label, value in visibilities %}<option value="{{ value }}" {{ value == current ? 'selected' }}>{{ label }}</option>{% endfor %}
-                </select>
-                <button class="button" type="submit">{{ 'common.change'|trans }}</button>
-                <span class="row__sub">{{ 'memory.show.visibility_help'|trans }}</span>
-            </form>
-        </section>
-
-        {% set verification = memory.metadata.verification ?? null %}
-        <section class="block" aria-labelledby="verification-title">
-            <div class="block__head">
-                <h2 id="verification-title">{{ 'memory.verification'|trans }}</h2>
-                {% if verification %}{{ include('memory/_verdict.html.twig', {verdict: verification.verdict}) }}{% endif %}
-            </div>
-            {% if verification %}
-                {% if verification.text != memory.label %}<p class="row__sub">{{ 'memory.show.text_changed'|trans }}</p>{% endif %}
-                <p class="verification__reason">{{ verification.reason }}</p>
-                {% if verification.sources is not empty %}
-                    <p class="row__sub">{{ 'memory.show.sources'|trans }} {% for source in verification.sources %}{{ source.label }}{{ not loop.last ? ', ' }}{% endfor %}</p>
+        <aside class="doc-aside memory-aside">
+            {% set verification = meta.verification ?? null %}
+            <section class="doc-card" aria-labelledby="verification-title">
+                <div class="doc-card__head">
+                    <h2 class="doc-aside__title" id="verification-title">{{ ux_icon('lucide:shield-check') }}{{ 'memory.verification'|trans }}</h2>
+                    {% if verification %}
+                        <span class="pill pill--{{ {verified: 'success', refuted: 'danger', conflict: 'danger'}[verification.verdict] ?? 'neutral' }}">{{ ('verdict.' ~ verification.verdict)|trans }}</span>
+                    {% else %}
+                        <span class="pill">{{ 'verdict.never'|trans }}</span>
+                    {% endif %}
+                </div>
+                {% if verification %}
+                    {% if verification.text != memory.label %}<p class="row__sub">{{ 'memory.show.text_changed'|trans }}</p>{% endif %}
+                    <p class="verification__reason">{{ verification.reason }}</p>
+                    <dl class="kv">
+                        {% if verification.sources is not empty %}
+                            <div class="kv__group"><div class="kv__row"><dt>{{ 'memory.show.sources_label'|trans }}</dt><dd>{% for source in verification.sources %}{{ source.label }}{{ not loop.last ? ', ' }}{% endfor %}</dd></div></div>
+                        {% endif %}
+                        <div class="kv__group">
+                            <div class="kv__row"><dt>{{ 'memory.show.checked_against'|trans }}</dt><dd>{{ ({graph: 'memory.show.tier_graph', knowledge: 'memory.show.tier_knowledge', none: 'memory.show.tier_none'}[verification.tier] ?? verification.tier)|trans }}</dd></div>
+                            <div class="kv__row"><dt>{{ 'memory.show.checked_at'|trans }}</dt><dd class="num">{{ verification.at|format_datetime('short', 'short') }}</dd></div>
+                        </div>
+                    </dl>
+                {% else %}
+                    <p class="row__sub">{{ 'memory.show.never_verified'|trans }}</p>
                 {% endif %}
-                <p class="row__sub">{{ ({graph: 'memory.show.tier_graph', knowledge: 'memory.show.tier_knowledge', none: 'memory.show.tier_none'}[verification.tier] ?? verification.tier)|trans }} · {{ verification.at|format_datetime('short', 'short') }}</p>
-            {% else %}
-                <p class="block__empty">{{ 'memory.show.never_verified'|trans }}</p>
-            {% endif %}
-            {% if status == 'active' %}
-                <form class="inline-form" method="post" action="{{ path('memory_verify', {id: memory.id}) }}">
-                    <input type="hidden" name="_token" value="{{ csrf_token('verify-memory-' ~ memory.id) }}">
-                    <button class="button" type="submit">{{ 'memory.show.verify'|trans }}</button>
-                    <span class="row__sub">{{ 'memory.show.verify_help'|trans }}</span>
-                </form>
-            {% endif %}
-        </section>
+                {% if status == 'active' %}
+                    <form method="post" action="{{ path('memory_verify', {id: memory.id}) }}">
+                        <input type="hidden" name="_token" value="{{ csrf_token('verify-memory-' ~ memory.id) }}">
+                        <button class="button doc-card__action" type="submit" title="{{ 'memory.show.verify_help'|trans }}">{{ ux_icon('lucide:shield-check') }}{{ 'memory.show.verify'|trans }}</button>
+                    </form>
+                {% endif %}
+            </section>
 
-        <form class="danger-zone" method="post" action="{{ path('memory_delete', {id: memory.id}) }}">
-            <input type="hidden" name="_token" value="{{ csrf_token('delete-memory-' ~ memory.id) }}">
-            <button class="button button--danger" type="submit" data-confirm="{{ 'memory.show.delete_confirm'|trans }}" data-confirm-label="{{ 'common.delete'|trans }}"><twig:ux:icon name="lucide:trash-2" />{{ 'memory.show.delete'|trans }}</button>
-            <span class="row__sub">{{ 'memory.show.delete_help'|trans }}</span>
-        </form>
-    </article>
+            {% set visibility = meta.visibility ?? 'project' %}
+            {% set current = visibility == 'group' ? 'group:' ~ (meta.group_id ?? '') : visibility %}
+            <section class="doc-card" aria-labelledby="visibility-title">
+                <div class="doc-card__head">
+                    <h2 class="doc-aside__title" id="visibility-title">{{ ux_icon('lucide:eye') }}{{ 'form.memory.visibility'|trans }}</h2>
+                    <span class="pill pill--accent">{{ visibility == 'private' ? 'enum.memory_visibility.private'|trans : (visibility == 'group' ? 'memory.visibility.group'|trans({name: group ? group.name : 'memory.show.group_deleted'|trans}) : 'enum.memory_visibility.project'|trans) }}</span>
+                </div>
+                <form class="doc-card__form" method="post" action="{{ path('memory_visibility', {id: memory.id}) }}">
+                    <input type="hidden" name="_token" value="{{ csrf_token('visibility-memory-' ~ memory.id) }}">
+                    <label class="visually-hidden" for="visibility">{{ 'memory.show.who_sees'|trans }}</label>
+                    <select class="select" id="visibility" name="visibility">
+                        {% for label, value in visibilities %}<option value="{{ value }}" {{ value == current ? 'selected' }}>{{ label }}</option>{% endfor %}
+                    </select>
+                    <button class="button" type="submit">{{ 'common.change'|trans }}</button>
+                </form>
+                <p class="row__sub">{{ 'memory.show.visibility_help'|trans }}</p>
+            </section>
+
+            <section class="doc-card" aria-labelledby="props-title">
+                <h2 class="doc-aside__title" id="props-title">{{ ux_icon('lucide:info') }}{{ 'document.properties'|trans }}</h2>
+                <dl class="kv">
+                    <div class="kv__group">
+                        <div class="kv__row"><dt>{{ 'memory.index.source'|trans }}</dt><dd>{{ meta.source in ['manual', 'demo', 'learn', 'aidd', 'mcp', 'connector', 'chat'] ? ('memory.source.' ~ meta.source)|trans : meta.source }}{% if (meta.demo ?? false) and meta.source != 'demo' %} <span class="tag tag--demo">{{ 'common.demo'|trans }}</span>{% endif %}</dd></div>
+                        {% if meta.learned_from is defined %}<div class="kv__row"><dt>{{ 'memory.show.learned_from'|trans }}</dt><dd>{{ meta.learned_from.kind }} « {{ meta.learned_from.label }} »</dd></div>{% endif %}
+                    </div>
+                    {% if meta.evidence is defined %}
+                        <div class="kv__group"><div class="kv__row kv__row--stack"><dt>{{ 'proposal.evidence'|trans }}</dt><dd><q>{{ meta.evidence }}</q></dd></div></div>
+                    {% endif %}
+                    <div class="kv__group">
+                        <div class="kv__row"><dt>{{ 'memory.editor.created'|trans }}</dt><dd class="num">{{ memory.createdAt|format_datetime('medium', 'short') }}</dd></div>
+                        <div class="kv__row"><dt>{{ 'memory.editor.updated'|trans }}</dt><dd class="num">{{ memory.updatedAt|format_datetime('medium', 'short') }}</dd></div>
+                    </div>
+                </dl>
+            </section>
+
+            <form class="memory-aside__delete" method="post" action="{{ path('memory_delete', {id: memory.id}) }}">
+                <input type="hidden" name="_token" value="{{ csrf_token('delete-memory-' ~ memory.id) }}">
+                <button class="button button--ghost button--danger-text" type="submit" title="{{ 'memory.show.delete_help'|trans }}" data-confirm="{{ 'memory.show.delete_confirm'|trans }}" data-confirm-label="{{ 'common.delete'|trans }}"><twig:ux:icon name="lucide:trash-2" />{{ 'memory.show.delete'|trans }}</button>
+            </form>
+        </aside>
+    </div>
 {% endblock %}

@@ -13,6 +13,7 @@
 {% block body %}
     {% set filters = {project: project ? project.slug : null} %}
     {% set reconciliations = {new: 'memory.new', updates: 'proposal.updates', supersedes: 'memory.show.replaces', retracts: 'proposal.retracts'} %}
+    {% set tones = {new: 'success', updates: 'warning', supersedes: 'warning', retracts: 'danger'} %}
     {% set sources = {conversation: 'proposal.source.conversation', file: 'proposal.source.file', diff: 'proposal.source.diff', review: 'proposal.source.review'} %}
     <div class="view-head">
         <h1><twig:ux:icon name="lucide:check" />{{ 'nav.to_review'|trans }}</h1>
@@ -36,45 +37,56 @@
             {% for proposal in proposals.items %}
                 {% set p = proposal.payload %}
                 {% set query = {project: project ? project.slug : null, kind: kind ? kind.value : null}|filter(v => v is not null) %}
+                {% set learning = proposal.kind.value == 'learning' %}
+                {% set tone = learning ? (tones[p.reconciliation] ?? 'neutral') : (proposal.kind.value == 'duplicate' ? 'warning' : 'danger') %}
                 <li class="proposal" id="proposal-{{ proposal.id }}">
                     <div class="proposal__head">
-                        <span class="code-chip">{{ proposal.kind|trans }}</span>
-                        {% if proposal.kind.value == 'learning' %}
-                            <span class="tag">{{ (reconciliations[p.reconciliation] ?? p.reconciliation)|trans }}</span>
-                            {{ include('memory/_type.html.twig', {type: p.type}) }}
-                            <span class="row__sub num" title="{{ 'proposal.axes'|trans({durability: p.axes.durability, reuse: p.axes.reuse, fit: p.axes.project_fit, risk: p.axes.risk}) }}">{{ 'proposal.score'|trans({score: p.score}) }}</span>
-                        {% endif %}
-                        {% if proposal.project %}<span class="row__projects">{{ proposal.project.name }}</span>{% endif %}
-                        <span class="row__sub num">{{ proposal.createdAt|format_datetime('short', 'short') }}</span>
+                        <span class="proposal__dot proposal__dot--{{ learning ? p.type : proposal.kind.value }}" aria-hidden="true"></span>
+                        <div class="proposal__title">
+                            <strong>{{ proposal.kind|trans }}</strong>
+                            <span class="row__sub">{{ proposal.project ? proposal.project.name : 'nav.all_projects'|trans }}{% if learning %} · {{ (sources[p.source.kind] ?? p.source.kind)|trans }}{% endif %}</span>
+                        </div>
+                        <span class="pill pill--{{ tone }}">{{ learning ? (reconciliations[p.reconciliation] ?? p.reconciliation)|trans : proposal.kind|trans }}</span>
                     </div>
 
                     <form method="post" action="{{ path('proposal_apply', {id: proposal.id}|merge(query)) }}" class="proposal__body">
                         <input type="hidden" name="_token" value="{{ csrf_token('proposal-' ~ proposal.id) }}">
 
-                        {% if proposal.kind.value == 'learning' %}
+                        {% if learning %}
                             {% if p.reconciliation == 'retracts' %}
                                 <p class="proposal__text">{{ 'proposal.retract'|trans }} <a href="{{ path('memory_show', {id: p.target_id}) }}">{{ p.target_text }}</a></p>
                             {% else %}
                                 <label class="visually-hidden" for="lesson-{{ proposal.id }}">{{ 'proposal.lesson'|trans }}</label>
-                                <textarea id="lesson-{{ proposal.id }}" name="lesson" class="proposal__lesson" rows="2" maxlength="1000">{{ p.lesson }}</textarea>
+                                <textarea id="lesson-{{ proposal.id }}" name="lesson" class="proposal__lesson" rows="3" maxlength="1000">{{ p.lesson }}</textarea>
                                 {% if p.target_id %}
                                     <p class="row__sub">{{ (p.reconciliation == 'updates' ? 'proposal.replaces_text' : 'proposal.archives')|trans }} <a href="{{ path('memory_show', {id: p.target_id}) }}">{{ p.target_text }}</a></p>
                                 {% endif %}
                             {% endif %}
+                            <dl class="kv">
+                                <div class="kv__group">
+                                    <div class="kv__row"><dt>{{ 'proposal.type'|trans }}</dt><dd>{{ include('memory/_type.html.twig', {type: p.type}) }}</dd></div>
+                                    <div class="kv__row"><dt>{{ 'memory.index.source'|trans }}</dt><dd>{{ p.source.label }}</dd></div>
+                                </div>
+                                <div class="kv__group">
+                                    <div class="kv__row" title="{{ 'proposal.axes'|trans({durability: p.axes.durability, reuse: p.axes.reuse, fit: p.axes.project_fit, risk: p.axes.risk}) }}"><dt>{{ 'proposal.score_label'|trans }}</dt><dd class="num">{{ p.score }}/10</dd></div>
+                                </div>
+                                <div class="kv__group">
+                                    <div class="kv__row"><dt>{{ 'proposal.proposed'|trans }}</dt><dd class="num">{{ proposal.createdAt|format_datetime('short', 'short') }}</dd></div>
+                                </div>
+                            </dl>
                             <details class="proposal__more">
                                 <summary>{{ 'proposal.evidence_source'|trans }}</summary>
-                            <dl class="props props--flat">
-                                <dt>{{ 'proposal.evidence'|trans }}</dt><dd><q>{{ p.evidence }}</q></dd>
-                                <dt>{{ 'memory.index.source'|trans }}</dt><dd>{{ (sources[p.source.kind] ?? p.source.kind)|trans }} · {{ p.source.label }}</dd>
-                                {% if p.reason %}<dt>{{ 'proposal.why'|trans }}</dt><dd>{{ p.reason }}</dd>{% endif %}
-                                {% if p.files is not empty or p.rules is not empty %}
-                                    <dt>{{ 'proposal.links'|trans }}</dt>
-                                    <dd>{% for file in p.files %}<span class="tag mono">{{ file }}</span>{% endfor %}{% for rule in p.rules %}<span class="tag mono">{{ rule }}</span>{% endfor %}</dd>
-                                {% endif %}
-                                {% if p.adr is not empty %}
-                                    <dt>{{ 'enum.memory_type.decision'|trans }}</dt><dd>{{ p.adr.decision ?? '' }}</dd>
-                                {% endif %}
-                            </dl>
+                                <dl class="props props--flat">
+                                    <dt>{{ 'proposal.evidence'|trans }}</dt><dd><q>{{ p.evidence }}</q></dd>
+                                    {% if p.reason %}<dt>{{ 'proposal.why'|trans }}</dt><dd>{{ p.reason }}</dd>{% endif %}
+                                    {% if p.files is not empty or p.rules is not empty %}
+                                        <dt>{{ 'proposal.links'|trans }}</dt>
+                                        <dd>{% for file in p.files %}<span class="tag mono">{{ file }}</span>{% endfor %}{% for rule in p.rules %}<span class="tag mono">{{ rule }}</span>{% endfor %}</dd>
+                                    {% endif %}
+                                    {% if p.adr is not empty %}
+                                        <dt>{{ 'enum.memory_type.decision'|trans }}</dt><dd>{{ p.adr.decision ?? '' }}</dd>
+                                    {% endif %}
+                                </dl>
                             </details>
                         {% elseif proposal.kind.value in ['duplicate', 'contradiction'] %}
                             <fieldset class="proposal__pair">
@@ -87,13 +99,30 @@
                                     </label>
                                 {% endfor %}
                             </fieldset>
-                            <p class="row__sub">{{ p.reason }}</p>
+                            <dl class="kv">
+                                <div class="kv__group">
+                                    <div class="kv__row"><dt>{{ 'proposal.why'|trans }}</dt><dd>{{ p.reason }}</dd></div>
+                                </div>
+                                <div class="kv__group">
+                                    <div class="kv__row"><dt>{{ 'proposal.proposed'|trans }}</dt><dd class="num">{{ proposal.createdAt|format_datetime('short', 'short') }}</dd></div>
+                                </div>
+                            </dl>
                         {% else %}
                             <p class="proposal__text"><a href="{{ path('memory_show', {id: p.memory_id}) }}">{{ p.memory_text }}</a></p>
-                            <p class="row__sub">{{ 'proposal.verdict'|trans({verdict: p.verdict, reason: p.reason}) }}</p>
-                            {% if p.sources is not empty %}
-                                <p class="row__sub">{{ 'memory.show.sources'|trans }} {% for source in p.sources %}{{ source.label }}{{ not loop.last ? ', ' }}{% endfor %}</p>
-                            {% endif %}
+                            <dl class="kv">
+                                <div class="kv__group">
+                                    <div class="kv__row"><dt>{{ 'proposal.verdict_label'|trans }}</dt><dd>{{ p.verdict }}</dd></div>
+                                    <div class="kv__row"><dt>{{ 'proposal.why'|trans }}</dt><dd>{{ p.reason }}</dd></div>
+                                </div>
+                                {% if p.sources is not empty %}
+                                    <div class="kv__group">
+                                        <div class="kv__row"><dt>{{ 'memory.show.sources'|trans }}</dt><dd>{% for source in p.sources %}{{ source.label }}{{ not loop.last ? ', ' }}{% endfor %}</dd></div>
+                                    </div>
+                                {% endif %}
+                                <div class="kv__group">
+                                    <div class="kv__row"><dt>{{ 'proposal.proposed'|trans }}</dt><dd class="num">{{ proposal.createdAt|format_datetime('short', 'short') }}</dd></div>
+                                </div>
+                            </dl>
                         {% endif %}
 
                         <div class="proposal__actions">

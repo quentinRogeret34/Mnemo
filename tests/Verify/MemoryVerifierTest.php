@@ -107,13 +107,13 @@ final class MemoryVerifierTest extends WebTestCase
         $this->scriptLlm(fn (): array => ['verdict' => 'verified', 'source_ids' => [$this->rule->getId()], 'reason' => 'La règle RG-042 le dit.']);
 
         $crawler = $this->client->request('GET', '/memories/'.$memory->getId());
-        self::assertSelectorTextContains('section[aria-labelledby="verification-title"] .block__empty', 'Jamais vérifiée');
+        self::assertSelectorTextContains('section[aria-labelledby="verification-title"] .pill', 'Jamais vérifiée');
         $this->client->submit($crawler->selectButton('Vérifier')->form());
         $this->client->followRedirect();
 
         self::assertSelectorTextContains('.flash', 'vérifiée');
         self::assertSelectorTextContains('.verification__reason', 'La règle RG-042 le dit.');
-        self::assertSelectorTextContains('.verdict', 'Vérifiée');
+        self::assertSelectorTextContains('section[aria-labelledby="verification-title"] .pill--success', 'Vérifiée');
     }
 
     private function givenMemory(string $text): Node

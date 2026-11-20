@@ -1,8 +1,9 @@
 import { Controller } from '@hotwired/stimulus';
 
 const SVG = 'http://www.w3.org/2000/svg';
-const HEIGHT = 220;
-const PAD = { top: 12, right: 12, bottom: 26, left: 40 };
+const HEIGHT = 240;
+const PAD = { top: 12, right: 8, bottom: 26, left: 40 };
+const MAX_BARS = 62;
 
 function node(name, attributes = {}, text = null) {
     const element = document.createElementNS(SVG, name);
@@ -23,10 +24,16 @@ function niceMax(value) {
     return [1, 2, 4, 5, 10].map((step) => step * magnitude).find((step) => step >= value);
 }
 
-// One series over time: 2px line, 10% wash, crosshair and tooltip on hover.
+function bar(x, y, width, height) {
+    const radius = Math.min(3, width / 2, height);
+
+    return `M${x},${y + height}V${y + radius}Q${x},${y} ${x + radius},${y}H${x + width - radius}Q${x + width},${y} ${x + width},${y + radius}V${y + height}Z`;
+}
+
+// Grouped bars over time, one colour per series. Long ranges are summed into buckets so a bar stays wider than a hairline.
 export default class extends Controller {
     static targets = ['plot', 'tooltip'];
-    static values = { points: Array, hourly: Boolean, unit: String };
+    static values = { series: Array, hourly: Boolean };
 
     connect() {
         this.observer = new ResizeObserver(() => this.draw());
@@ -37,8 +44,24 @@ export default class extends Controller {
         this.observer.disconnect();
     }
 
-    label(point, long = false) {
-        const date = new Date(point.at);
+    buckets() {
+        const length = this.seriesValue[0]?.points.length ?? 0;
+        const size = length > MAX_BARS ? Math.max(7, Math.ceil(length / MAX_BARS)) : 1;
+        const buckets = [];
+        for (let start = 0; start < length; start += size) {
+            const end = Math.min(start + size, length) - 1;
+            buckets.push({
+                from: this.seriesValue[0].points[start].at,
+                to: this.seriesValue[0].points[end].at,
+                values: this.seriesValue.map((series) => series.points.slice(start, end + 1).reduce((sum, point) => sum + point.value, 0)),
+            });
+        }
+
+        return buckets;
+    }
+
+    format(at, long = false) {
+        const date = new Date(at);
         if (this.hourlyValue) {
             return date.toLocaleString(document.documentElement.lang, long ? { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' } : { hour: '2-digit', minute: '2-digit' });
         }
@@ -46,18 +69,26 @@ export default class extends Controller {
         return date.toLocaleDateString(document.documentElement.lang, long ? { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' } : { day: '2-digit', month: 'short' });
     }
 
+    label(bucket, long = false) {
+        return bucket.from === bucket.to ? this.format(bucket.from, long) : `${this.format(bucket.from)} – ${this.format(bucket.to)}`;
+    }
+
     draw() {
-        const points = this.pointsValue;
         const width = this.plotTarget.clientWidth;
         this.plotTarget.replaceChildren();
-        if (width === 0 || points.length === 0) {
+        this.bucketList = this.buckets();
+        const buckets = this.bucketList;
+        if (width === 0 || buckets.length === 0) {
             return;
         }
 
-        const max = niceMax(Math.max(...points.map((point) => point.value)));
+        const max = niceMax(Math.max(...buckets.flatMap((bucket) => bucket.values)));
         const innerWidth = width - PAD.left - PAD.right;
         const innerHeight = HEIGHT - PAD.top - PAD.bottom;
-        const x = (index) => PAD.left + (points.length === 1 ? innerWidth / 2 : (index / (points.length - 1)) * innerWidth);
+        const step = innerWidth / buckets.length;
+        const count = this.seriesValue.length;
+        const barWidth = Math.max(1, Math.min(14, (step * 0.72 - (count - 1) * 2) / count));
+        const groupWidth = barWidth * count + (count - 1) * 2;
         const y = (value) => PAD.top + innerHeight - (value / max) * innerHeight;
         const svg = node('svg', { viewBox: `0 0 ${width} ${HEIGHT}`, width, height: HEIGHT, role: 'img', 'aria-label': this.element.getAttribute('aria-label') ?? '' });
 
@@ -69,56 +100,62 @@ export default class extends Controller {
             );
         }
 
-        const every = Math.max(1, Math.ceil(points.length / Math.max(2, Math.floor(innerWidth / 80))));
-        points.forEach((point, index) => {
-            if (index % every === 0 && (points.length - 1 - index >= every / 2 || index === points.length - 1)) {
-                svg.append(node('text', { class: 'chart__tick', x: x(index), y: HEIGHT - 6, 'text-anchor': index === 0 ? 'start' : 'middle' }, this.label(point)));
+        this.band = node('rect', { class: 'chart__band', y: PAD.top - 6, width: step, height: innerHeight + 6 + PAD.bottom - 2, rx: 6, visibility: 'hidden' });
+        svg.append(this.band);
+
+        const every = Math.max(1, Math.ceil(buckets.length / Math.max(2, Math.floor(innerWidth / 72))));
+        buckets.forEach((bucket, index) => {
+            const left = PAD.left + index * step + (step - groupWidth) / 2;
+            bucket.values.forEach((value, series) => {
+                if (value > 0) {
+                    svg.append(node('path', { class: `chart__bar chart__bar--${series}`, d: bar(left + series * (barWidth + 2), y(value), barWidth, y(0) - y(value)) }));
+                }
+            });
+            if (index % every === 0 && (buckets.length - 1 - index >= every / 2 || index === buckets.length - 1)) {
+                svg.append(node('text', { class: 'chart__tick', x: PAD.left + index * step + step / 2, y: HEIGHT - 6, 'text-anchor': 'middle' }, this.format(bucket.from)));
             }
         });
 
-        const path = points.map((point, index) => `${index === 0 ? 'M' : 'L'}${x(index)},${y(point.value)}`).join('');
-        svg.append(
-            node('path', { class: 'chart__area', d: `${path}L${x(points.length - 1)},${y(0)}L${x(0)},${y(0)}Z` }),
-            node('path', { class: 'chart__line', d: path }),
-        );
-
-        this.crosshair = node('line', { class: 'chart__crosshair', y1: PAD.top, y2: PAD.top + innerHeight, visibility: 'hidden' });
-        this.dot = node('circle', { class: 'chart__dot', r: 4, visibility: 'hidden' });
-        svg.append(this.crosshair, this.dot);
         this.plotTarget.append(svg);
-        this.scale = { x, y, innerWidth };
+        this.scale = { step, innerWidth };
     }
 
     move(event) {
-        const points = this.pointsValue;
-        if (!this.scale || points.length === 0) {
+        const buckets = this.bucketList;
+        if (!this.scale || !buckets?.length) {
             return;
         }
         const bounds = this.plotTarget.getBoundingClientRect();
-        const ratio = (event.clientX - bounds.left - PAD.left) / this.scale.innerWidth;
-        const index = Math.max(0, Math.min(points.length - 1, Math.round(ratio * (points.length - 1))));
-        const cx = this.scale.x(index);
-        const cy = this.scale.y(points[index].value);
+        const index = Math.max(0, Math.min(buckets.length - 1, Math.floor((event.clientX - bounds.left - PAD.left) / this.scale.step)));
+        const bucket = buckets[index];
+        const left = PAD.left + index * this.scale.step;
+        this.band.setAttribute('x', left);
+        this.band.setAttribute('visibility', 'visible');
 
-        this.crosshair.setAttribute('x1', cx);
-        this.crosshair.setAttribute('x2', cx);
-        this.crosshair.setAttribute('visibility', 'visible');
-        this.dot.setAttribute('cx', cx);
-        this.dot.setAttribute('cy', cy);
-        this.dot.setAttribute('visibility', 'visible');
-
+        const number = new Intl.NumberFormat(document.documentElement.lang);
         this.tooltipTarget.replaceChildren(
-            Object.assign(document.createElement('strong'), { textContent: `${new Intl.NumberFormat(document.documentElement.lang).format(points[index].value)} ${this.unitValue}` }),
-            Object.assign(document.createElement('span'), { textContent: this.label(points[index], true) }),
+            Object.assign(document.createElement('strong'), { textContent: this.label(bucket, true) }),
+            ...this.seriesValue.map((series, position) => {
+                const row = document.createElement('span');
+                row.className = 'chart__row';
+                row.append(
+                    Object.assign(document.createElement('span'), { className: `chart__swatch chart__swatch--${position}` }),
+                    Object.assign(document.createElement('span'), { textContent: series.label }),
+                    Object.assign(document.createElement('b'), { textContent: number.format(bucket.values[position]) }),
+                );
+
+                return row;
+            }),
         );
         this.tooltipTarget.hidden = false;
-        const left = Math.min(Math.max(cx, this.tooltipTarget.offsetWidth / 2), bounds.width - this.tooltipTarget.offsetWidth / 2);
-        this.tooltipTarget.style.transform = `translate(calc(${left}px - 50%), ${Math.max(0, cy - this.tooltipTarget.offsetHeight - 12)}px)`;
+        const centre = left + this.scale.step / 2;
+        const width = this.tooltipTarget.offsetWidth;
+        const x = centre + 12 + width <= bounds.width ? centre + 12 : centre - 12 - width;
+        this.tooltipTarget.style.transform = `translate(${Math.max(0, x)}px, ${PAD.top}px)`;
     }
 
     leave() {
         this.tooltipTarget.hidden = true;
-        this.crosshair?.setAttribute('visibility', 'hidden');
-        this.dot?.setAttribute('visibility', 'hidden');
+        this.band?.setAttribute('visibility', 'hidden');
     }
 }

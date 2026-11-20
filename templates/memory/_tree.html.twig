@@ -1,0 +1,54 @@
+{# tree: KnowledgeReader::memories(), grouped here by type or by source #}
+{% set type_icons = {decision: 'lucide:gavel', convention: 'lucide:ruler', task_learning: 'lucide:graduation-cap', preference: 'lucide:sliders-horizontal', fact: 'lucide:info'} %}
+{% set type_labels = enum('App\\Enum\\MemoryType') %}
+{% set scope = {project: project ? project.slug : null, archived: archived ? 1 : null}|filter(v => v is not null) %}
+{% set keys = tree|map(memory => group == 'type' ? (memory.type ?? 'fact') : (memory.source ?? '')) %}
+{% set groups = group == 'type' ? types|map(item => item.value)|filter(value => value in keys) : keys|reduce((unique, key) => key in unique ? unique : unique|merge([key]), [])|sort %}
+{% set selected = group == 'type' ? (type ? type.value : null) : source %}
+
+<nav class="filetree memtree-nav" aria-label="{{ 'memory.tree.label'|trans }}" data-controller="filetree">
+    <div class="filetree__bar">
+        <a class="filetree__root{{ selected is null ? ' is-current' }}" href="{{ path('memory_index', scope|merge({group: group})) }}">{{ ux_icon('lucide:lightbulb') }}{{ 'nav.memories'|trans }}</a>
+        <span class="filetree__count">{{ tree|length }}</span>
+    </div>
+    <nav class="segmented-links" aria-label="{{ 'memory.tree.group_by'|trans }}">
+        <a href="{{ path('memory_index', scope|merge({group: 'type'})) }}" {% if group == 'type' %}aria-current="page"{% endif %}>{{ 'memory.tree.by_type'|trans }}</a>
+        <a href="{{ path('memory_index', scope|merge({group: 'source'})) }}" {% if group == 'source' %}aria-current="page"{% endif %}>{{ 'memory.tree.by_source'|trans }}</a>
+    </nav>
+    <label class="filetree__search">
+        {{ ux_icon('lucide:search') }}
+        <input class="input" type="search" placeholder="{{ 'document.filter_tree'|trans }}" aria-label="{{ 'memory.tree.filter'|trans }}" data-action="filetree#filter" data-filetree-target="query">
+    </label>
+    <ul class="filetree__list" data-filetree-target="list">
+        {% for key in groups %}
+            {% set items = tree|filter(memory => (group == 'type' ? (memory.type ?? 'fact') : (memory.source ?? '')) == key) %}
+            {% set label = group == 'type' ? (type_labels.tryFrom(key) ? type_labels.tryFrom(key)|trans : key) : (key ?: 'memory.tree.no_source'|trans) %}
+            {% set filter = group == 'type' ? {type: key} : {source: key} %}
+            <li class="filetree__item">
+                <details class="filetree__folder" {% if selected == key or groups|length <= 3 %}open{% endif %}>
+                    <summary class="filetree__row{{ selected == key ? ' is-current' }}">
+                        {{ ux_icon('lucide:chevron-right', {class: 'icon filetree__chevron'}) }}
+                        {{ ux_icon(group == 'type' ? (type_icons[key] ?? 'lucide:info') : 'lucide:plug', {class: 'icon memtree-nav__icon memtree-nav__icon--' ~ (group == 'type' ? key : 'source')}) }}
+                        {% if key == '' %}
+                            <span class="filetree__label">{{ label }}</span>
+                        {% else %}
+                            <a class="filetree__label" href="{{ path('memory_index', scope|merge(filter)|merge({group: group})) }}" {% if selected == key %}aria-current="page"{% endif %}>{{ label }}</a>
+                        {% endif %}
+                        <span class="filetree__count">{{ items|length }}</span>
+                    </summary>
+                    <ul class="filetree__children">
+                        {% for memory in items %}
+                            <li class="filetree__item">
+                                <a class="filetree__row filetree__file" href="{{ path('memory_show', {id: memory.id}) }}" title="{{ memory.text }}">
+                                    <span class="proposal__dot proposal__dot--{{ memory.type ?? 'fact' }}" aria-hidden="true"></span>
+                                    <span class="filetree__label">{{ memory.text }}</span>
+                                </a>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </details>
+            </li>
+        {% endfor %}
+    </ul>
+    <p class="filetree__empty" data-filetree-target="empty" {% if groups is not empty %}hidden{% endif %}>{{ 'memory.tree.empty'|trans }}</p>
+</nav>

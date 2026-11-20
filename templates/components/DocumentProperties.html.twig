@@ -1,4 +1,3 @@
-{% set meta = document.metadata %}
 {% set origins = {human: 'document.props.human'|trans, llm: 'LLM', ast: 'AST', git: 'git', api: 'API'} %}
 <div{{ attributes.defaults({class: 'props-editor'}) }} data-loading="addClass(is-loading)">
     <dl class="props">
@@ -65,9 +64,5 @@
             {% for rule in this.rules %}<a class="code-chip" href="{{ path('rule_show', {slug: rule.project_slug, code: rule.code}) }}">{{ rule.code }}</a>{% else %}<span class="row__sub">{{ 'document.props.none'|trans }}</span>{% endfor %}
         </dd>
 
-        <dt>{{ 'document.props.file'|trans }}</dt><dd class="mono">{{ document.path }}</dd>
-        <dt>{{ 'document.props.size'|trans }}</dt><dd>{{ 'document.props.kb'|trans({size: (meta.size / 1024)|round(meta.size < 10240 ? 1 : 0)}) }}</dd>
-        <dt>{{ 'document.props.added'|trans }}</dt><dd>{{ document.createdAt|format_datetime('medium', 'short') }}</dd>
-        {% if meta.demo ?? false %}<dt>{{ 'document.props.origin'|trans }}</dt><dd><span class="tag tag--demo">{{ 'common.demo'|trans }}</span></dd>{% endif %}
     </dl>
 </div>

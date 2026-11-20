@@ -1,8 +1,17 @@
 activity:
+    action:
+        business_rule: 'Business rule added'
+        change_request: 'Pull request'
+        commit: Commit
+        document: 'Document imported'
+        issue: Issue
+        memory: 'Memory added'
     all_types: 'All types'
+    by: by
     by_type: 'Entries by type'
     connector: Connector
     created: Created
+    details: Details
     empty: 'Nothing entered the graph over the period'
     empty_text: 'Commits and tickets come with the connectors, documents and memories as soon as they are added.'
     entries: '{count, plural, =0 {No entry} one {# entry} other {# entries}}'
@@ -17,6 +26,7 @@ activity:
     lede: 'What entered the graph: the work fetched by the connectors, the documents dropped and the memories added.'
     no_match: 'No entry matches.'
     no_run: 'No sync. A connector runs by hand, or on its own if it is scheduled and the {worker} service runs.'
+    run_counts: '{created} created · {updated} updated'
     runs: Syncs
     search: 'Search the feed'
     see_more: 'See more ({count, plural, one {# entry} other {# entries}})'
@@ -287,10 +297,14 @@ connector:
     unchecked_tool: 'Tool name not checked: test the connection after saving.'
 dashboard:
     active: '{count} active'
+    activity_chart: 'Requests and recalled memories'
+    attention: 'Needs attention'
+    attention_empty: 'Nothing to handle: no pending proposal, no failing connector.'
     average: '{value} on average'
     chart_daily: '{title} per day'
     chart_hourly: '{title} per hour'
     client: Client
+    connector_failed: 'Last sync failed'
     created: 'Memories created'
     day: Day
     duration: Duration
@@ -301,6 +315,9 @@ dashboard:
     key_figures: 'Key figures'
     keyword: Keywords
     lookups: '{count, plural, one {# lookup} other {# lookups}}'
+    more_proposals: '{count, plural, one {# more proposal} other {# more proposals}}'
+    ok: OK
+    open: Open
     out_of: '{value} out of {total}'
     pending: '{count, plural, one {proposal pending} other {proposals pending}}'
     period:
@@ -315,14 +332,21 @@ dashboard:
     recent: 'Latest MCP requests'
     recent_empty: 'No request recorded. Connect an agent to {endpoint}: each tool call shows here.'
     refresh: Refresh
+    refuted: '{count, plural, one {# refuted memory} other {# refuted memories}}'
+    refuted_text: 'Verification against the graph contradicts them: fix or retract.'
     requests: 'MCP requests'
+    review: Review
     search_empty: 'No search over the period.'
     search_mode: 'Search mode'
     search_mode_note: 'keywords only, or keywords and meaning'
     search_types: 'Search types'
     search_types_note: 'what the agents ask search for'
+    see_feed: 'See the feed'
     see_memories: 'See the memories'
+    status: Status
     stored: 'Stored memories'
+    timeline: 'Recent activity'
+    timeline_empty: 'Nothing has entered the graph yet.'
     tool: Tool
     tools: 'MCP tools called'
     tools_empty: 'No MCP call over the period.'
@@ -331,29 +355,39 @@ dashboard:
     unit_memories: memories
     unit_requests: requests
     values: 'See the values'
+    vs_previous: 'vs previous period'
 document:
+    add_files: 'Add files'
     all_folders: 'All folders'
     at_root: '{count} at the root'
     code_count: '{count} code'
+    col:
+        added: Added
+        name: Document
     count_project: '{count} attached to {name}'
     create_folder: 'Create the folder'
     defined_rules: 'Business rules defined'
     docs_count: '{count} docs'
     download: Download
     empty_folder: 'Empty folder. Drop files or create a subfolder.'
+    filter_tree: 'Filter'
+    folder_at_root: 'The folder is created at the root.'
+    folder_in: 'The folder is created in "{name}".'
     folders: Folders
     hint_folder: '.md, .pdf, .docx · 32 MB max · added to “{name}”'
     hint_project: '.md, .pdf, .docx · 32 MB max · attached to {name}'
     hint_root: '.md, .pdf, .docx · 32 MB max · added to the root'
     load_demo: 'Load the demo'
+    new_folder: 'New folder'
     no_preview: 'No preview yet for Word files. The text will be extracted with the ingestion of documents.'
     no_project: 'no project'
     no_rule: 'No rule attached to this document.'
+    on_this_page: 'On this page'
     open_pdf: 'Open the PDF'
     project_empty: 'No document attached to this project'
     project_empty_text: 'Drop files above, or attach an existing document from its page.'
+    properties: Properties
     props:
-        added: 'Added on'
         attach: 'Attach to {name}'
         attach_first: 'Attach the document to a project first to link its code.'
         detach: 'Detach from {name}'
@@ -368,9 +402,9 @@ document:
         none: none
         origin: Origin
         rules: 'Rules defined'
-        size: Size
         unlink: 'Unlink {path}'
     rules_count: '{count, plural, one {# rule} other {# rules}}'
+    tree_no_match: 'No folder or document matches.'
     upload:
         label: 'Add documents'
 enum:
@@ -656,7 +690,8 @@ js:
     copied: Copied
     galaxy:
         count: '{memories, plural, one {# memory} other {# memories}} · {subjects, plural, one {# subject} other {# subjects}}'
-        hint: 'Hover a point to read the memory or the subject; click to open its page.'
+        memories: '{count, plural, one {# memory} other {# memories}}'
+        subjects: '{count, plural, one {# subject} other {# subjects}}'
     model:
         all: 'All models'
         clear: 'Back to the default model'
@@ -727,6 +762,11 @@ memory:
     editor:
         adr: 'Decision record'
         created: 'Created on'
+        event:
+            add: Created
+            retracted: Retracted
+            superseded: Superseded
+            update: Edited
         history: History
         length: 'The memory must hold between 1 and 1000 characters.'
         link: 'Link a file, a document or a rule'
@@ -738,20 +778,35 @@ memory:
         unknown_type: 'Unknown memory type.'
         updated: 'Updated on'
     graph:
+        collapse: 'Fold every subject'
         document: Document
         empty: 'No active memory to show.'
+        expand: 'Unfold every subject'
         file: 'Code file'
-        hint: 'Hover a point to read the memory or the subject; click to open its page.'
+        fit: 'Fit to view'
+        hint: 'Click a category or a subject to unfold or fold it, a memory to open its page.'
+        kinds:
+            business_rule: 'Business rules'
+            code_file: 'Code files'
+            document: Documents
+            none: 'No link'
+            project: Projects
         label: 'Graph of the memories and their subjects'
-        lede: 'Each memory is a satellite of the subject it talks about: a code file, a business rule or a document. The bigger a subject, the more memories orbit it. A memory linked to nothing orbits its project.'
+        lede: 'The tree starts from the project, splits by kind of subject (files, rules, documents), then by subject; under each subject are stacked the memories about it. A memory linked to nothing sits under its project.'
         limit: 'The 300 most recent active memories are shown. The full list, with filters, is in {link}.'
         memory: Memory
+        open: 'Open its page'
         project: Project
+        root: 'Memory of'
         rule: 'Business rule'
         table: 'the memory table'
+        toolbar: 'Graph navigation'
+        zoom_in: 'Zoom in'
+        zoom_out: 'Zoom out'
     graph_short: Graph
     index:
         active: Active
+        active_filters: 'Active filters'
         add: 'Add the memory'
         all_sources: 'All sources'
         all_types: 'All types'
@@ -774,14 +829,18 @@ memory:
     show:
         archived_text: 'Archived: no longer shows in search nor to the agents.'
         by: by
+        checked_against: 'Against'
+        checked_at: 'On'
         delete: 'Delete the memory'
         delete_confirm: 'Delete this memory and its links?'
         delete_help: 'Also deletes its links. Cannot be undone.'
         group_deleted: deleted
+        learned_from: 'Learned from'
         never_verified: 'Never verified against the graph.'
         replaces: Replaces
         retired: Retired
         sources: 'Sources:'
+        sources_label: Sources
         superseded: Superseded
         text_changed: 'The text has changed since: verify it again.'
         tier_graph: 'Code graph, no LLM'
@@ -804,6 +863,14 @@ memory:
         private: private
         retired: retired
         superseded: superseded
+    tree:
+        by_source: 'By source'
+        by_type: 'By type'
+        empty: 'No memory.'
+        filter: 'Filter the memories'
+        group_by: 'Group by'
+        label: 'Memories by group'
+        no_source: 'No source'
     verification: Verification
     visibility:
         group: 'Group {name}'
@@ -819,10 +886,12 @@ nav:
     appearance: Appearance
     assistant: Assistant
     code: Code
+    collapse: 'Collapse the menu'
     connectors: Connectors
     count_to_review: '{count} to review'
     dashboard: Dashboard
     documents: Documents
+    expand: 'Expand the menu'
     filter_projects: 'Filter projects'
     garden: Gardening
     hint_code: code
@@ -893,15 +962,36 @@ project:
         cli_lede: 'Extract the graph of a repository with graphify, then import it:'
         cli_name: Name
         cli_repository: repository
-        code_files: 'Code files'
-        edges: '{count, plural, one {# edge} other {# edges}}'
+        col:
+            action: Actions
+            code: Code
+            content: Content
+            name: Project
+            rules: 'Validated rules'
+            status: Status
+        documents: '{count, plural, one {# document} other {# documents}}'
         empty_archived: 'No archived project'
         empty_archived_text: 'An archived project stays readable, but the agents no longer read it and its connectors no longer sync.'
         empty_text: 'A project brings together the code of a repository, its documents, its business rules and its memories.'
         files: '{count, plural, one {# file} other {# files}}'
         filter_state: 'Filter by state'
+        memories: '{count, plural, one {# memory} other {# memories}}'
+        no_match: 'No project matches "{query}".'
+        no_rule: 'No rule'
+        rules: '{count, plural, one {# rule} other {# rules}}'
+        search: 'Search a project'
         see_active: 'See the active projects'
+        sort:
+            memories: 'Most memories'
+            name: Name
+            updated: 'Recently updated'
+        sort_by: 'Sort by'
+        status:
+            archived: Archived
+            empty: Empty
+            ready: 'Up to date'
         symbols: '{count, plural, one {# symbol} other {# symbols}}'
+        validated: '{validated} of {total} rules validated'
     new: 'New project'
     new_lede: 'A project groups the documents, rules, memories and code of a repository.'
     open_form: 'Open the form'
@@ -937,19 +1027,21 @@ proposal:
     page: page
     pending: '{count} pending'
     pending_project: '{count} pending for {name}'
+    proposed: Proposed
     reject: Reject
     replaces_text: 'Replaces the text of:'
     retract: 'Retract:'
     retract_memory: 'Retract the memory'
     retracts: Retracts
-    score: 'score {score}/10'
+    score_label: Score
     source:
         conversation: conversation
         diff: diff
         file: file
         review: review
+    type: Type
     updates: Updates
-    verdict: 'Verdict {verdict}: {reason}'
+    verdict_label: Verdict
     why: Why
 rule:
     index:

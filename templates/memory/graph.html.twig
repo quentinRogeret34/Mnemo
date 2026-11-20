@@ -19,7 +19,15 @@
     </div>
     <p class="page__lede">{{ 'memory.graph.lede'|trans }}</p>
 
-    <section class="panel galaxy" data-controller="galaxy" data-galaxy-url-value="{{ path('memory_graph_data', project ? {project: project.slug} : {}) }}" data-action="theme:change@window->galaxy#render" aria-label="{{ 'memory.graph.label'|trans }}">
+    {% set labels = {
+        root: project ? project.name : 'nav.all_projects'|trans,
+        overline: 'memory.graph.root'|trans,
+        open: 'memory.graph.open'|trans,
+        kinds: {code_file: 'memory.graph.kinds.code_file'|trans, business_rule: 'memory.graph.kinds.business_rule'|trans, document: 'memory.graph.kinds.document'|trans, project: 'memory.graph.kinds.project'|trans, none: 'memory.graph.kinds.none'|trans},
+        hubs: {code_file: 'memory.graph.file'|trans, business_rule: 'memory.graph.rule'|trans, document: 'memory.graph.document'|trans, project: 'memory.graph.project'|trans, none: 'memory.graph.kinds.none'|trans},
+        types: {decision: 'enum.memory_type.decision'|trans, convention: 'enum.memory_type.convention'|trans, task_learning: 'enum.memory_type.task_learning'|trans, preference: 'enum.memory_type.preference'|trans, fact: 'enum.memory_type.fact'|trans},
+    } %}
+    <section class="panel memtree" data-controller="galaxy" data-galaxy-url-value="{{ path('memory_graph_data', project ? {project: project.slug} : {}) }}" data-galaxy-labels-value="{{ labels|json_encode }}" data-action="theme:change@window->galaxy#render" aria-label="{{ 'memory.graph.label'|trans }}">
         <div class="panel__head">
             <ul class="legend">
                 <li><span class="legend__mark legend__mark--memory"></span>{{ 'memory.graph.memory'|trans }}</li>
@@ -30,11 +38,20 @@
             </ul>
             <span class="row__sub num" data-galaxy-target="count"></span>
         </div>
-        <div class="galaxy__canvas">
-            <div data-galaxy-target="canvas"></div>
-            <p class="galaxy__empty" data-galaxy-target="empty" hidden>{{ 'memory.graph.empty'|trans }}</p>
+        <div class="memtree__canvas">
+            <div class="memtree__grid" data-galaxy-target="canvas"></div>
+            <p class="memtree__empty" data-galaxy-target="empty" hidden>{{ 'memory.graph.empty'|trans }}</p>
+            <div class="memtree__bar" role="toolbar" aria-label="{{ 'memory.graph.toolbar'|trans }}">
+                <button class="memtree__tool" type="button" data-action="galaxy#zoomIn" title="{{ 'memory.graph.zoom_in'|trans }}" aria-label="{{ 'memory.graph.zoom_in'|trans }}">{{ ux_icon('lucide:plus') }}</button>
+                <span class="memtree__zoom num" data-galaxy-target="zoom" aria-live="polite">100 %</span>
+                <button class="memtree__tool" type="button" data-action="galaxy#zoomOut" title="{{ 'memory.graph.zoom_out'|trans }}" aria-label="{{ 'memory.graph.zoom_out'|trans }}">{{ ux_icon('lucide:minus') }}</button>
+                <span class="memtree__sep" aria-hidden="true"></span>
+                <button class="memtree__tool" type="button" data-action="galaxy#fit" title="{{ 'memory.graph.fit'|trans }}" aria-label="{{ 'memory.graph.fit'|trans }}">{{ ux_icon('lucide:scan') }}</button>
+                <button class="memtree__tool" type="button" data-action="galaxy#expand" title="{{ 'memory.graph.expand'|trans }}" aria-label="{{ 'memory.graph.expand'|trans }}">{{ ux_icon('lucide:unfold-vertical') }}</button>
+                <button class="memtree__tool" type="button" data-action="galaxy#collapse" title="{{ 'memory.graph.collapse'|trans }}" aria-label="{{ 'memory.graph.collapse'|trans }}">{{ ux_icon('lucide:fold-vertical') }}</button>
+            </div>
         </div>
-        <p class="galaxy__detail" data-galaxy-target="detail" aria-live="polite">{{ 'memory.graph.hint'|trans }}</p>
+        <p class="memtree__detail" data-galaxy-target="detail" aria-live="polite">{{ 'memory.graph.hint'|trans }}</p>
     </section>
     <p class="row__sub">{{ 'memory.graph.limit'|trans({link: '<a class="link" href="' ~ path('memory_index', project ? {project: project.slug} : {})|e('html_attr') ~ '">' ~ 'memory.graph.table'|trans|e ~ '</a>'})|raw }}</p>
 {% endblock %}

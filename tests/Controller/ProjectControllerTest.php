@@ -195,7 +195,7 @@ final class ProjectControllerTest extends WebTestCase
         $crawler = $this->client->followRedirect();
         self::assertSelectorTextContains('.flash', 'Projet « Other project » archivé.');
 
-        self::assertSame(['Demo projectdemo'], $crawler->filter('.content .project-card .row__title')->each(static fn ($title): string => $title->text()));
+        self::assertSame(['Demo projectdemo'], $crawler->filter('.content .project-row__title')->each(static fn ($title): string => $title->text()));
         self::assertSame(['Tous les projets', 'Demo project'], $crawler->filter('#project-menu a.menu__item')->each(static fn ($item): string => $item->text()));
         self::assertSame(['Actifs', 'Archivés'], $crawler->filter('.tabs a')->each(static fn ($tab): string => $tab->text()));
         $this->client->request('GET', '/api/context?project=other');
@@ -209,14 +209,14 @@ final class ProjectControllerTest extends WebTestCase
         self::assertSelectorNotExists('form[action="/projects/other/archive"]');
 
         $crawler = $this->client->request('GET', '/?archived=1');
-        self::assertSame(['Other projectother'], $crawler->filter('.content .project-card .row__title')->each(static fn ($title): string => $title->text()));
+        self::assertSame(['Other projectother'], $crawler->filter('.content .project-row__title')->each(static fn ($title): string => $title->text()));
         self::assertSame('Archivés', $crawler->filter('.tabs a[aria-current="page"]')->text());
         $this->client->submit($crawler->selectButton('Restaurer')->form());
         self::assertResponseRedirects('/projects/other/settings');
         $this->client->followRedirect();
         self::assertSelectorNotExists('.archived-banner');
         $crawler = $this->client->request('GET', '/');
-        self::assertCount(2, $crawler->filter('.content .project-card'));
+        self::assertCount(2, $crawler->filter('.content .project-row'));
         self::assertCount(0, $crawler->filter('.tabs'));
 
         $this->client->request('POST', '/projects/other/archive', ['_token' => 'forged']);

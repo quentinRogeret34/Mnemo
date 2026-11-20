@@ -56,9 +56,9 @@ final class ScheduledSyncTest extends WebTestCase
 
         $crawler = $this->client->request('GET', '/activity?project=demo&period=1d');
         self::assertResponseIsSuccessful();
-        self::assertSame(['Documents', '2'], [$crawler->filter('.tile__label')->text(), $crawler->filter('.tile__value')->text()]);
-        self::assertCount(2, $crawler->filter('section[aria-labelledby="feed-title"] .row'));
-        self::assertSame('planifié', $crawler->filter('section[aria-labelledby="runs-title"] tbody tr td')->eq(2)->text());
+        self::assertSame(['Documents', '2'], [$crawler->filter('.kpi__label')->text(), $crawler->filter('.kpi__value')->text()]);
+        self::assertCount(2, $crawler->filter('section[aria-labelledby="feed-title"] .event'));
+        self::assertSame('planifié', $crawler->filter('section[aria-labelledby="runs-title"] .run__trigger')->text());
     }
 
     public function testTheConnectorsOfAnArchivedProjectAreLeftAlone(): void

@@ -251,6 +251,22 @@ final class KnowledgeReader
     }
 
     /**
+     * Every document with its folder, for the file tree.
+     *
+     * @return list<array{id: int, title: string, format: string, folder_id: ?int}>
+     */
+    public function documentTree(): array
+    {
+        return array_map(
+            static fn (array $row): array => ['id' => (int) $row['id'], 'folder_id' => null === $row['folder_id'] ? null : (int) $row['folder_id']] + $row,
+            $this->connection->fetchAllAssociative(
+                "SELECT d.id, d.label AS title, d.metadata->>'format' AS format, d.folder_id FROM node d WHERE d.type = :document ORDER BY lower(d.label), d.id",
+                ['document' => NodeType::Document->value],
+            ),
+        );
+    }
+
+    /**
      * Every folder in tree order (parents before children, siblings by name).
      *
      * @return list<array{id: int, name: string, parent_id: ?int, depth: int, documents: int}>

@@ -67,6 +67,7 @@ final class DocumentController extends AbstractController
             'current' => $current,
             'ancestors' => $ancestors,
             'folders' => $this->knowledgeReader->folderTree(),
+            'files' => $this->knowledgeReader->documentTree(),
             'documents' => Page::ofRows($this->knowledgeReader->documents(folderId: $folder, limit: self::PAGE_SIZE, offset: Page::offset($page, self::PAGE_SIZE)), $page, self::PAGE_SIZE),
             'upload' => $upload,
             'folder_form' => $folderForm,
@@ -94,8 +95,16 @@ final class DocumentController extends AbstractController
     {
         $document = $this->findDocument($id);
 
+        $ancestors = [];
+        for ($ancestor = $document->getFolder(); null !== $ancestor; $ancestor = $ancestor->getParent()) {
+            array_unshift($ancestors, $ancestor);
+        }
+
         return $this->render('document/show.html.twig', [
             'document' => $document,
+            'ancestors' => $ancestors,
+            'folders' => $this->knowledgeReader->folderTree(),
+            'files' => $this->knowledgeReader->documentTree(),
             'markdown' => 'md' === $document->getMetadata()['format'] ? $this->documentStorage->markdownBody($document) : null,
             'rules' => $this->knowledgeReader->rulesDefinedBy($document),
             'memories' => $this->knowledgeReader->memoriesAbout($document->getId()),

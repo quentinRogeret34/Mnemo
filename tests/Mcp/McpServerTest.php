@@ -101,10 +101,10 @@ final class McpServerTest extends WebTestCase
 
         $crawler = $this->client->request('GET', '/dashboard?project=demo&period=24h');
         self::assertResponseIsSuccessful();
-        self::assertSame(['1', '2', '3', '0'], $crawler->filter('.tile__value')->each(static fn ($value): string => $value->text()));
+        self::assertSame(['1', '2', '3', '0'], $crawler->filter('.kpi__value')->each(static fn ($value): string => $value->text()));
         self::assertSame(['Documents 1 50,0 %', 'Mémoires 1 50,0 %'], $crawler->filter('section[aria-labelledby="breakdown-search"] .bars__row')->each(static fn ($row): string => $row->text()));
         self::assertCount(3, $crawler->filter('section[aria-labelledby="recent-title"] tbody tr'));
-        self::assertSame(3, array_sum(array_column(json_decode($crawler->filter('[data-chart-points-value]')->first()->attr('data-chart-points-value'), true), 'value')));
+        self::assertSame(3, array_sum(array_column(json_decode($crawler->filter('[data-chart-series-value]')->first()->attr('data-chart-series-value'), true)[0]['points'], 'value')));
     }
 
     public function testAKeyLimitedToAProjectCannotReachTheOthers(): void

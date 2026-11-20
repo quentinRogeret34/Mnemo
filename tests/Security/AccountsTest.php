@@ -115,7 +115,7 @@ final class AccountsTest extends WebTestCase
         $this->entityManager->clear();
         $this->client->loginUser($this->entityManager->find(User::class, $bob->getId()));
         $crawler = $this->client->request('GET', '/');
-        self::assertSame(['Demo projectdemo'], $crawler->filter('.content .project-card .row__title')->each(static fn ($title): string => $title->text()));
+        self::assertSame(['Demo projectdemo'], $crawler->filter('.content .project-row__title')->each(static fn ($title): string => $title->text()));
         $this->client->request('GET', '/projects/other');
         self::assertResponseStatusCodeSame(404);
         $this->client->request('GET', '/memories');

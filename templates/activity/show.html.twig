@@ -28,53 +28,61 @@
         </nav>
     </div>
 
+    {% set type_icons = {commit: 'lucide:git-commit-horizontal', ticket: 'lucide:git-pull-request', document: 'lucide:file-text', memory: 'lucide:lightbulb', business_rule: 'lucide:scale'} %}
     {% if counts is not empty %}
-        <section class="tiles" aria-label="{{ 'activity.by_type'|trans }}">
+        <section class="kpis" aria-label="{{ 'activity.by_type'|trans }}">
             {% for count in counts %}
-                <div class="tile"><span class="tile__label">{{ (type_labels[count.label] ?? count.label)|trans }}</span><span class="tile__value">{{ count.value|format_number }}</span></div>
+                <div class="kpi">
+                    <span class="kpi__label">{{ ux_icon(type_icons[count.label] ?? 'lucide:circle') }}{{ (type_labels[count.label] ?? count.label)|trans }}</span>
+                    <span class="kpi__value">{{ count.value|format_number }}</span>
+                </div>
             {% endfor %}
         </section>
     {% endif %}
 
-    <div class="panels">
-        <section class="panel" aria-labelledby="feed-title">
-            <div class="panel__head"><h2 id="feed-title">{{ 'activity.feed'|trans }}</h2></div>
-            {% if feed.days is empty %}
-                <twig:EmptyState :title="'activity.empty'|trans" :text="'activity.empty_text'|trans">
-                    <twig:block name="icon"><twig:ux:icon name="lucide:activity" /></twig:block>
-                </twig:EmptyState>
-            {% else %}
-                {{ include('activity/_feed.html.twig', {days: feed.days}) }}
-                {% if feed.total > 10 %}
-                    <div class="pager"><a class="button" href="{{ path('activity_feed', scope|merge({period: period})) }}">{{ 'activity.see_more'|trans({count: feed.total}) }}</a></div>
-                {% endif %}
-            {% endif %}
-        </section>
+    <section class="activity-block" aria-labelledby="runs-title">
+        <div class="activity-block__head">
+            <h2 id="runs-title">{{ 'activity.runs'|trans }}</h2>
+            <a class="button" href="{{ path('connector_index') }}">{{ 'project.settings.connectors'|trans }}</a>
+        </div>
+        {% if runs.items is empty %}
+            <p class="block__empty">{{ 'activity.no_run'|trans({worker: '<span class="mono">worker</span>'})|raw }}</p>
+        {% else %}
+            <ul class="runs">
+                {% for run in runs.items %}
+                    {% set failed = run.report.error ?? null %}
+                    <li class="run{{ failed ? ' run--failed' }}">
+                        <div class="run__main">
+                            <p class="run__title">
+                                <strong>{{ run.connector }}</strong>
+                                {% if failed %}<span class="pill pill--danger" title="{{ failed }}">{{ 'common.failed'|trans }}</span>{% else %}<span class="pill pill--success">{{ 'dashboard.ok'|trans }}</span>{% endif %}
+                            </p>
+                            <p class="run__meta">
+                                <span class="run__trigger">{{ ({schedule: 'activity.trigger_schedule', webhook: 'activity.trigger_webhook'}[run.trigger] ?? 'activity.trigger_manual')|trans }}</span>
+                                <span>{{ 'activity.run_counts'|trans({created: run.report.created ?? 0, updated: run.report.updated ?? 0}) }}</span>
+                                <span class="num">{{ run.started_at|format_datetime('medium', 'short') }}</span>
+                            </p>
+                            {% if failed %}<p class="run__error">{{ failed }}</p>{% endif %}
+                        </div>
+                        <a class="button" href="{{ path('connector_show', {id: run.connector_id}) }}">{{ 'activity.details'|trans }}{{ ux_icon('lucide:chevron-right') }}</a>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+        {{ include('_pager.html.twig', {page: runs, name: 'runs'}) }}
+    </section>
 
-        <section class="panel" aria-labelledby="runs-title">
-            <div class="panel__head"><h2 id="runs-title">{{ 'activity.runs'|trans }}</h2><a class="button" href="{{ path('connector_index') }}">{{ 'project.settings.connectors'|trans }}</a></div>
-            {% if runs.items is empty %}
-                <p class="block__empty">{{ 'activity.no_run'|trans({worker: '<span class="mono">worker</span>'})|raw }}</p>
-            {% else %}
-                <div class="table-wrap">
-                    <table class="data-table">
-                        <thead><tr><th>{{ 'activity.when'|trans }}</th><th>{{ 'activity.connector'|trans }}</th><th>{{ 'activity.trigger'|trans }}</th><th class="num">{{ 'activity.created'|trans }}</th><th class="num">{{ 'activity.updated'|trans }}</th><th>{{ 'activity.state'|trans }}</th></tr></thead>
-                        <tbody>
-                            {% for run in runs.items %}
-                                <tr>
-                                    <td class="num">{{ run.started_at|format_datetime('short', 'short') }}</td>
-                                    <td><a href="{{ path('connector_show', {id: run.connector_id}) }}">{{ run.connector }}</a></td>
-                                    <td>{{ ({schedule: 'activity.trigger_schedule', webhook: 'activity.trigger_webhook'}[run.trigger] ?? 'activity.trigger_manual')|trans }}</td>
-                                    <td class="num">{{ run.report.created ?? 0 }}</td>
-                                    <td class="num">{{ run.report.updated ?? 0 }}</td>
-                                    <td>{% if run.report.error ?? null %}<span class="verdict verdict--refuted" title="{{ run.report.error }}">{{ 'common.failed'|trans }}</span>{% else %}<span class="verdict verdict--verified">ok</span>{% endif %}</td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
+    <section class="activity-block" aria-labelledby="feed-title">
+        <div class="activity-block__head"><h2 id="feed-title">{{ 'activity.feed'|trans }}</h2></div>
+        {% if feed.days is empty %}
+            <twig:EmptyState :title="'activity.empty'|trans" :text="'activity.empty_text'|trans">
+                <twig:block name="icon"><twig:ux:icon name="lucide:activity" /></twig:block>
+            </twig:EmptyState>
+        {% else %}
+            {{ include('activity/_feed.html.twig', {days: feed.days}) }}
+            {% if feed.total > 10 %}
+                <div class="pager"><a class="button" href="{{ path('activity_feed', scope|merge({period: period})) }}">{{ 'activity.see_more'|trans({count: feed.total}) }}</a></div>
             {% endif %}
-            {{ include('_pager.html.twig', {page: runs, name: 'runs'}) }}
-        </section>
-    </div>
+        {% endif %}
+    </section>
 {% endblock %}

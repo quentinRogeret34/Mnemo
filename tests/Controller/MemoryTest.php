@@ -73,6 +73,12 @@ final class MemoryTest extends WebTestCase
         self::assertSame(['Les remises passent par catalog.ts.'], $crawler->filter('.content .row--memory .memory-text')->each(static fn ($text): string => $text->text()));
         self::assertCount(0, $this->client->request('GET', '/memories?verdict=verified')->filter('.content .row--memory'));
 
+        $summaries = static fn ($crawler): array => $crawler->filter('.memtree-nav summary')->each(static fn ($row): string => trim(preg_replace('/\s+/', ' ', $row->text())));
+        self::assertSame(['Convention 1', 'Fait 1'], $summaries($this->client->request('GET', '/memories?project=demo')));
+        $crawler = $this->client->request('GET', '/memories?project=demo&group=source&source=mcp');
+        self::assertSame(['manual 1', 'mcp 1'], $summaries($crawler));
+        self::assertSame('page', $crawler->filter('.memtree-nav summary a[href*="source=mcp"]')->attr('aria-current'));
+
         $this->client->request('GET', '/memories/graph?project=demo');
         self::assertResponseIsSuccessful();
         $this->client->request('GET', '/memories/graph/data?project=demo');

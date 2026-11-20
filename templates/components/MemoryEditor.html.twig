@@ -1,6 +1,26 @@
-{% set meta = memory.metadata %}
-<div{{ attributes.defaults({class: 'props-editor'}) }} data-loading="addClass(is-loading)">
-    <div class="page__icon">{{ include('memory/_type.html.twig', {type: memory.metadata.type}) }}</div>
+<div{{ attributes.defaults({class: 'props-editor memory-editor'}) }} data-loading="addClass(is-loading)">
+    <div class="memory-editor__meta">
+        <label class="type-select">
+            <span class="visually-hidden">{{ 'form.memory.type'|trans }}</span>
+            <span class="proposal__dot proposal__dot--{{ type }}" aria-hidden="true"></span>
+            <select id="memory-type" data-model="type">
+                {% for item in this.types %}<option value="{{ item.value }}" {% if type == item.value %}selected{% endif %}>{{ item|trans }}</option>{% endfor %}
+            </select>
+            {{ ux_icon('lucide:chevron-down', {class: 'icon type-select__chevron'}) }}
+        </label>
+        <span class="memory-editor__projects" role="group" aria-label="{{ 'nav.projects'|trans }}">
+            {% for project in this.projects %}
+                {% set linked = memory.projects.contains(project) %}
+                <button type="button" class="toggle-chip" aria-pressed="{{ linked ? 'true' : 'false' }}"
+                        data-action="live#action" data-live-action-param="toggleProject" data-live-project-id-param="{{ project.id }}"
+                        title="{{ (linked ? 'document.props.detach' : 'document.props.attach')|trans({name: project.name}) }}">
+                    <span class="project-dot" aria-hidden="true"></span>{{ project.name }}
+                </button>
+            {% else %}
+                <span class="row__sub">{{ 'document.no_project'|trans }}</span>
+            {% endfor %}
+        </span>
+    </div>
 
     <label class="visually-hidden" for="memory-text">{{ 'proposal.lesson'|trans }}</label>
     <textarea id="memory-text" class="memory-editor__text" data-model="text" rows="2" maxlength="1000">{{ text }}</textarea>
@@ -13,93 +33,76 @@
     {% endif %}
 
     {% if type == 'decision' %}
-        <section class="adr" aria-labelledby="adr-title">
-            <h2 id="adr-title" class="block__sub">{{ 'memory.editor.adr'|trans }}</h2>
-            {% for field, label in this.adrFields %}
-                <label class="adr__label" for="adr-{{ field }}">{{ label|trans }}</label>
-                <textarea id="adr-{{ field }}" class="adr__text" data-model="adr[{{ field }}]" rows="2" maxlength="4000">{{ adr[field] ?? '' }}</textarea>
-            {% endfor %}
+        <section class="memory-section" aria-labelledby="adr-title">
+            <h2 id="adr-title" class="memory-section__title">{{ ux_icon('lucide:gavel') }}{{ 'memory.editor.adr'|trans }}</h2>
+            <div class="adr-grid">
+                {% for field, label in this.adrFields %}
+                    <div class="adr-grid__field">
+                        <label class="adr__label" for="adr-{{ field }}">{{ label|trans }}</label>
+                        <textarea id="adr-{{ field }}" class="adr__text" data-model="adr[{{ field }}]" rows="3" maxlength="4000">{{ adr[field] ?? '' }}</textarea>
+                    </div>
+                {% endfor %}
+            </div>
         </section>
     {% endif %}
 
-    <dl class="props">
-        <dt><label for="memory-type">{{ 'form.memory.type'|trans }}</label></dt>
-        <dd>
-            <select id="memory-type" class="select" data-model="type">
-                {% for item in this.types %}<option value="{{ item.value }}" {% if type == item.value %}selected{% endif %}>{{ item|trans }}</option>{% endfor %}
-            </select>
-        </dd>
-
-        <dt>{{ 'nav.projects'|trans }}</dt>
-        <dd>
-            {% for project in this.projects %}
-                {% set linked = memory.projects.contains(project) %}
-                <button type="button" class="toggle-chip" aria-pressed="{{ linked ? 'true' : 'false' }}"
-                        data-action="live#action" data-live-action-param="toggleProject" data-live-project-id-param="{{ project.id }}"
-                        title="{{ (linked ? 'document.props.detach' : 'document.props.attach')|trans({name: project.name}) }}">
-                    <span class="project-dot" aria-hidden="true"></span>{{ project.name }}
-                </button>
-            {% else %}
-                <span class="row__sub">{{ 'document.no_project'|trans }}</span>
-            {% endfor %}
-        </dd>
-
-        <dt>{{ 'memory.editor.linked_to'|trans }}</dt>
-        <dd class="props__stack">
-            {% for link in this.links %}
-                <span class="link-chip">
-                    {% if link.type == 'code_file' %}
-                        <a class="mono" href="{{ path('file_show', {slug: link.project_slug, path: link.path}) }}" title="{{ link.path }}">{{ link.path|split('/')|last }}</a>
-                        <span class="row__sub">{{ 'nav.code'|trans }} · {{ link.project_name }}</span>
-                    {% elseif link.type == 'document' %}
-                        <a href="{{ path('document_show', {id: link.id}) }}">{{ link.label }}</a>
-                        <span class="row__sub">{{ 'activity.kind.document'|trans }}</span>
-                    {% else %}
-                        <a href="{{ path('rule_show', {slug: link.project_slug, code: link.code}) }}"><span class="mono">{{ link.code }}</span> {{ link.label }}</a>
-                        <span class="row__sub">{{ 'activity.kind.rule'|trans }}</span>
-                    {% endif %}
-                    <button type="button" class="icon-button" aria-label="{{ 'document.props.unlink'|trans({path: link.label}) }}"
-                            data-action="live#action" data-live-action-param="unlink" data-live-edge-id-param="{{ link.edge_id }}">×</button>
+    {% set link_icons = {code_file: 'lucide:file-code', document: 'lucide:file-text', business_rule: 'lucide:scale'} %}
+    <section class="memory-section" aria-labelledby="links-title">
+        <h2 id="links-title" class="memory-section__title">{{ ux_icon('lucide:link') }}{{ 'memory.editor.linked_to'|trans }} <span class="block__count">{{ this.links|length }}</span></h2>
+        {% if this.links is not empty %}
+            <ul class="link-cards">
+                {% for link in this.links %}
+                    <li class="link-card">
+                        <span class="event__icon event__icon--{{ link.type == 'code_file' ? 'ticket' : link.type }}" aria-hidden="true">{{ ux_icon(link_icons[link.type] ?? 'lucide:link') }}</span>
+                        {% if link.type == 'code_file' %}
+                            <a class="link-card__title mono" href="{{ path('file_show', {slug: link.project_slug, path: link.path}) }}" title="{{ link.path }}">{{ link.path|split('/')|last }}</a>
+                            <span class="link-card__sub">{{ 'nav.code'|trans }} · {{ link.project_name }}</span>
+                        {% elseif link.type == 'document' %}
+                            <a class="link-card__title" href="{{ path('document_show', {id: link.id}) }}">{{ link.label }}</a>
+                            <span class="link-card__sub">{{ 'activity.kind.document'|trans }}</span>
+                        {% else %}
+                            <a class="link-card__title" href="{{ path('rule_show', {slug: link.project_slug, code: link.code}) }}"><span class="mono">{{ link.code }}</span> {{ link.label }}</a>
+                            <span class="link-card__sub">{{ 'activity.kind.rule'|trans }} · {{ link.project_name }}</span>
+                        {% endif %}
+                        <button type="button" class="icon-button link-card__remove" aria-label="{{ 'document.props.unlink'|trans({path: link.label}) }}"
+                                data-action="live#action" data-live-action-param="unlink" data-live-edge-id-param="{{ link.edge_id }}">×</button>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+        <span class="link-search">
+            <input class="input" type="search" data-model="debounce(150)|linkQuery" value="{{ linkQuery }}"
+                   placeholder="{{ 'memory.editor.link'|trans }}" aria-label="{{ 'memory.editor.link_label'|trans }}" autocomplete="off" spellcheck="false">
+            {% if this.linkables is not empty %}
+                <span class="link-search__results" role="list">
+                    {% for item in this.linkables %}
+                        <button type="button" role="listitem" class="link-search__item"
+                                data-action="live#action" data-live-action-param="link" data-live-node-id-param="{{ item.id }}">
+                            <span>{% if item.type == 'code_file' %}<span class="mono">{{ item.path }}</span>{% elseif item.type == 'business_rule' %}<span class="mono">{{ item.code }}</span> {{ item.label }}{% else %}{{ item.label }}{% endif %}</span>
+                            <span class="row__sub">{{ item.type == 'code_file' ? 'nav.code'|trans ~ ' · ' ~ item.project_name : (item.type == 'document' ? 'activity.kind.document'|trans : 'activity.kind.rule'|trans ~ ' · ' ~ item.project_name) }}</span>
+                        </button>
+                    {% endfor %}
                 </span>
-            {% endfor %}
+            {% elseif linkQuery|trim is not empty %}
+                <span class="row__sub">{{ (memory.projects is empty ? 'memory.editor.no_match_project' : 'memory.editor.no_match')|trans }}</span>
+            {% endif %}
+        </span>
+    </section>
 
-            <span class="link-search">
-                <input class="input input--compact" type="search" data-model="debounce(150)|linkQuery" value="{{ linkQuery }}"
-                       placeholder="{{ 'memory.editor.link'|trans }}" aria-label="{{ 'memory.editor.link_label'|trans }}" autocomplete="off" spellcheck="false">
-                {% if this.linkables is not empty %}
-                    <span class="link-search__results" role="list">
-                        {% for item in this.linkables %}
-                            <button type="button" role="listitem" class="link-search__item"
-                                    data-action="live#action" data-live-action-param="link" data-live-node-id-param="{{ item.id }}">
-                                <span>{% if item.type == 'code_file' %}<span class="mono">{{ item.path }}</span>{% elseif item.type == 'business_rule' %}<span class="mono">{{ item.code }}</span> {{ item.label }}{% else %}{{ item.label }}{% endif %}</span>
-                                <span class="row__sub">{{ item.type == 'code_file' ? 'nav.code'|trans ~ ' · ' ~ item.project_name : (item.type == 'document' ? 'activity.kind.document'|trans : 'activity.kind.rule'|trans ~ ' · ' ~ item.project_name) }}</span>
-                            </button>
-                        {% endfor %}
-                    </span>
-                {% elseif linkQuery|trim is not empty %}
-                    <span class="row__sub">{{ (memory.projects is empty ? 'memory.editor.no_match_project' : 'memory.editor.no_match')|trans }}</span>
-                {% endif %}
-            </span>
-        </dd>
-
-        <dt>{{ 'memory.index.source'|trans }}</dt><dd>{{ meta.source in ['manual', 'demo', 'learn', 'aidd', 'mcp', 'connector', 'chat'] ? ('memory.source.' ~ meta.source)|trans : meta.source }}{% if meta.learned_from is defined %} · {{ meta.learned_from.kind }} « {{ meta.learned_from.label }} »{% endif %}</dd>
-        {% if meta.evidence is defined %}<dt>{{ 'proposal.evidence'|trans }}</dt><dd><q>{{ meta.evidence }}</q></dd>{% endif %}
-        <dt>{{ 'memory.editor.created'|trans }}</dt><dd>{{ memory.createdAt|format_datetime('medium', 'short') }}</dd>
-        <dt>{{ 'memory.editor.updated'|trans }}</dt><dd>{{ memory.updatedAt|format_datetime('medium', 'short') }}</dd>
-        {% if meta.demo ?? false %}<dt>{{ 'document.props.origin'|trans }}</dt><dd><span class="tag tag--demo">{{ 'common.demo'|trans }}</span></dd>{% endif %}
-    </dl>
-
-    <section class="block" aria-labelledby="history-title">
-        <div class="block__head"><h2 id="history-title">{{ 'memory.editor.history'|trans }}</h2><span class="block__count">{{ this.history|length }}</span></div>
-        <ol class="history">
+    {% set event_icons = {ADD: 'lucide:circle-plus', UPDATE: 'lucide:pencil', SUPERSEDED: 'lucide:replace', RETRACTED: 'lucide:archive'} %}
+    <section class="memory-section" aria-labelledby="history-title">
+        <h2 id="history-title" class="memory-section__title">{{ ux_icon('lucide:history') }}{{ 'memory.editor.history'|trans }} <span class="block__count">{{ this.history|length }}</span></h2>
+        <ol class="events">
             {% for event in this.history %}
-                <li class="history__item">
-                    <span class="code-chip">{{ event.event }}</span>
-                    <span class="history__text">
-                        {{ event.text }}
-                        {% if event.previous is defined %}<del class="row__sub">{{ event.previous }}</del>{% endif %}
-                    </span>
-                    <span class="row__sub num">{{ event.at|format_datetime('short', 'short') }}</span>
+                <li class="event">
+                    <span class="event__icon event__icon--history-{{ event.event|lower }}" aria-hidden="true">{{ ux_icon(event_icons[event.event] ?? 'lucide:circle') }}</span>
+                    <div class="event__main">
+                        <p class="event__head"><strong>{{ (event.event|lower in ['add', 'update', 'superseded', 'retracted'] ? 'memory.editor.event.' ~ event.event|lower : event.event)|trans }}</strong></p>
+                        <p class="event__text event__text--full">{{ event.text }}</p>
+                        {% if event.previous is defined %}<p class="event__text event__text--full"><del>{{ event.previous }}</del></p>{% endif %}
+                        {% if event.replacement is defined %}<p class="event__text event__text--full">{{ 'memory.show.by'|trans }} {{ event.replacement }}</p>{% endif %}
+                    </div>
+                    <time class="event__time num" datetime="{{ event.at }}">{{ event.at|format_datetime('medium', 'short') }}</time>
                 </li>
             {% endfor %}
         </ol>

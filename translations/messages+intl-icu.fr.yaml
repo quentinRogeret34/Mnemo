@@ -1,8 +1,17 @@
 activity:
+    action:
+        business_rule: 'Règle métier ajoutée'
+        change_request: 'Pull request'
+        commit: Commit
+        document: 'Document importé'
+        issue: Issue
+        memory: 'Mémoire ajoutée'
     all_types: 'Tous les types'
+    by: par
     by_type: 'Entrées par type'
     connector: Connecteur
     created: Créés
+    details: Détails
     empty: "Rien n'est entré dans le graphe sur la période"
     empty_text: "Les commits et tickets arrivent avec les connecteurs, les documents et les mémoires dès qu'ils sont ajoutés."
     entries: '{count, plural, =0 {Aucune entrée} one {# entrée} other {# entrées}}'
@@ -17,6 +26,7 @@ activity:
     lede: 'Ce qui est entré dans le graphe : le travail récupéré par les connecteurs, les documents déposés et les mémoires ajoutées.'
     no_match: 'Aucune entrée ne correspond.'
     no_run: "Aucune synchronisation. Un connecteur se lance à la main, ou seul s'il est planifié et que le service {worker} tourne."
+    run_counts: '{created, plural, one {# créé} other {# créés}} · {updated, plural, one {# modifié} other {# modifiés}}'
     runs: Synchronisations
     search: 'Rechercher dans le fil'
     see_more: 'Voir plus ({count, plural, one {# entrée} other {# entrées}})'
@@ -287,10 +297,14 @@ connector:
     unchecked_tool: "Nom de l'outil non vérifié : tester la connexion après l'enregistrement."
 dashboard:
     active: '{count} actives'
+    activity_chart: 'Requêtes et mémoires rappelées'
+    attention: 'À traiter'
+    attention_empty: 'Rien à traiter : aucune proposition en attente, aucun connecteur en échec.'
     average: '{value} en moyenne'
     chart_daily: '{title} par jour'
     chart_hourly: '{title} par heure'
     client: Client
+    connector_failed: 'Dernière synchronisation en échec'
     created: 'Mémoires créées'
     day: Jour
     duration: Durée
@@ -301,6 +315,9 @@ dashboard:
     key_figures: 'Chiffres clés'
     keyword: Mots-clés
     lookups: '{count, plural, one {# lecture} other {# lectures}}'
+    more_proposals: '{count, plural, one {# autre proposition} other {# autres propositions}}'
+    ok: OK
+    open: Ouvrir
     out_of: '{value} sur {total}'
     pending: '{count, plural, one {proposition en attente} other {propositions en attente}}'
     period:
@@ -315,14 +332,21 @@ dashboard:
     recent: 'Dernières requêtes MCP'
     recent_empty: "Aucune requête enregistrée. Brancher un agent sur {endpoint} : chaque appel d'outil apparaît ici."
     refresh: Actualiser
+    refuted: '{count, plural, one {# mémoire réfutée} other {# mémoires réfutées}}'
+    refuted_text: 'La vérification contre le graphe les contredit : à corriger ou retirer.'
     requests: 'Requêtes MCP'
+    review: Examiner
     search_empty: 'Aucune recherche sur la période.'
     search_mode: 'Mode de recherche'
     search_mode_note: 'mots-clés seuls, ou mots-clés et sens'
     search_types: 'Types de recherche'
     search_types_note: 'ce que les agents demandent à search'
+    see_feed: 'Voir le fil'
     see_memories: 'Voir les mémoires'
+    status: Statut
     stored: 'Mémoires stockées'
+    timeline: 'Activité récente'
+    timeline_empty: "Rien n'est encore entré dans le graphe."
     tool: Outil
     tools: 'Outils MCP appelés'
     tools_empty: 'Aucun appel MCP sur la période.'
@@ -331,29 +355,39 @@ dashboard:
     unit_memories: mémoires
     unit_requests: requêtes
     values: 'Voir les valeurs'
+    vs_previous: 'vs période préc.'
 document:
+    add_files: 'Ajouter des fichiers'
     all_folders: 'Tous les dossiers'
     at_root: '{count} à la racine'
     code_count: '{count} code'
+    col:
+        added: Ajouté
+        name: Document
     count_project: '{count} rattachés à {name}'
     create_folder: 'Créer le dossier'
     defined_rules: 'Règles métier définies'
     docs_count: '{count} doc.'
     download: Télécharger
     empty_folder: 'Dossier vide. Déposer des fichiers ou créer un sous-dossier.'
+    filter_tree: 'Filtrer'
+    folder_at_root: 'Le dossier sera créé à la racine.'
+    folder_in: 'Le dossier sera créé dans « {name} ».'
     folders: Dossiers
     hint_folder: '.md, .pdf, .docx · 32 Mo max · ajoutés dans « {name} »'
     hint_project: '.md, .pdf, .docx · 32 Mo max · rattachés à {name}'
     hint_root: '.md, .pdf, .docx · 32 Mo max · ajoutés dans la racine'
     load_demo: 'Charger la démo'
+    new_folder: 'Nouveau dossier'
     no_preview: "Pas encore d'aperçu pour les fichiers Word. Le texte sera extrait avec l'ingestion des documents."
     no_project: 'aucun projet'
     no_rule: 'Aucune règle rattachée à ce document.'
+    on_this_page: 'Sur cette page'
     open_pdf: 'Ouvrir le PDF'
     project_empty: 'Aucun document rattaché à ce projet'
     project_empty_text: 'Déposer des fichiers ci-dessus, ou rattacher un document existant depuis sa page.'
+    properties: Propriétés
     props:
-        added: 'Ajouté le'
         attach: 'Rattacher à {name}'
         attach_first: "Rattacher d'abord le document à un projet pour lier son code."
         detach: 'Détacher de {name}'
@@ -368,9 +402,9 @@ document:
         none: aucune
         origin: Origine
         rules: 'Règles définies'
-        size: Taille
         unlink: 'Délier {path}'
     rules_count: '{count, plural, one {# règle} other {# règles}}'
+    tree_no_match: 'Aucun dossier ni document ne correspond.'
     upload:
         label: 'Ajouter des documents'
 enum:
@@ -656,7 +690,8 @@ js:
     copied: Copiée
     galaxy:
         count: '{memories, plural, one {# mémoire} other {# mémoires}} · {subjects, plural, one {# sujet} other {# sujets}}'
-        hint: 'Survoler un point pour lire la mémoire ou le sujet ; cliquer pour ouvrir sa fiche.'
+        memories: '{count, plural, one {# mémoire} other {# mémoires}}'
+        subjects: '{count, plural, one {# sujet} other {# sujets}}'
     model:
         all: 'Tous les modèles'
         clear: 'Revenir au modèle par défaut'
@@ -727,6 +762,11 @@ memory:
     editor:
         adr: 'Fiche de décision'
         created: 'Créée le'
+        event:
+            add: Créée
+            retracted: Retirée
+            superseded: Remplacée
+            update: Modifiée
         history: Historique
         length: 'La mémoire doit contenir entre 1 et 1000 caractères.'
         link: 'Lier un fichier, un document ou une règle'
@@ -738,20 +778,35 @@ memory:
         unknown_type: 'Type de mémoire inconnu.'
         updated: 'Modifiée le'
     graph:
+        collapse: 'Replier tous les sujets'
         document: Document
         empty: 'Aucune mémoire active à afficher.'
+        expand: 'Déplier tous les sujets'
         file: 'Fichier de code'
-        hint: 'Survoler un point pour lire la mémoire ou le sujet ; cliquer pour ouvrir sa fiche.'
+        fit: 'Recadrer'
+        hint: "Cliquer sur une catégorie ou un sujet pour le déplier ou le replier, sur une mémoire pour ouvrir sa fiche."
+        kinds:
+            business_rule: 'Règles métier'
+            code_file: 'Fichiers de code'
+            document: Documents
+            none: 'Sans lien'
+            project: Projets
         label: 'Graphe des mémoires et de leurs sujets'
-        lede: 'Chaque mémoire est un satellite du sujet dont elle parle : un fichier de code, une règle métier ou un document. Plus un sujet est gros, plus de mémoires gravitent autour. Une mémoire liée à rien tourne autour de son projet.'
+        lede: "L'arbre part du projet, se divise par catégorie de sujet (fichiers, règles, documents), puis par sujet ; sous chaque sujet s'empilent les mémoires qui en parlent. Une mémoire liée à rien se range sous son projet."
         limit: 'Les 300 mémoires actives les plus récentes sont affichées. La liste complète, avec filtres, est dans {link}.'
         memory: Mémoire
+        open: 'Ouvrir la fiche'
         project: Projet
+        root: 'Mémoire de'
         rule: 'Règle métier'
         table: 'le tableau des mémoires'
+        toolbar: 'Navigation dans le graphe'
+        zoom_in: 'Zoomer'
+        zoom_out: 'Dézoomer'
     graph_short: Graphe
     index:
         active: Actives
+        active_filters: 'Filtres actifs'
         add: 'Ajouter la mémoire'
         all_sources: 'Toutes les sources'
         all_types: 'Tous les types'
@@ -774,14 +829,18 @@ memory:
     show:
         archived_text: "Archivée : n'apparaît plus dans la recherche ni chez les agents."
         by: par
+        checked_against: 'Contre'
+        checked_at: 'Le'
         delete: 'Supprimer la mémoire'
         delete_confirm: 'Supprimer cette mémoire et ses liens ?'
         delete_help: 'Supprime aussi ses liens. Irréversible.'
         group_deleted: supprimé
+        learned_from: 'Apprise de'
         never_verified: 'Jamais vérifiée contre le graphe.'
         replaces: Remplace
         retired: Retirée
         sources: 'Sources :'
+        sources_label: Sources
         superseded: Remplacée
         text_changed: 'Le texte a changé depuis : à revérifier.'
         tier_graph: 'Graphe du code, sans LLM'
@@ -804,6 +863,14 @@ memory:
         private: privée
         retired: retirée
         superseded: remplacée
+    tree:
+        by_source: 'Par source'
+        by_type: 'Par type'
+        empty: 'Aucune mémoire.'
+        filter: 'Filtrer les mémoires'
+        group_by: 'Regrouper par'
+        label: 'Mémoires par groupe'
+        no_source: 'Sans source'
     verification: Vérification
     visibility:
         group: 'Groupe {name}'
@@ -819,10 +886,12 @@ nav:
     appearance: Apparence
     assistant: Assistant
     code: Code
+    collapse: 'Réduire le menu'
     connectors: Connexions
     count_to_review: '{count} à valider'
     dashboard: 'Tableau de bord'
     documents: Documents
+    expand: 'Déplier le menu'
     filter_projects: 'Filtrer les projets'
     garden: Jardinage
     hint_code: code
@@ -893,15 +962,36 @@ project:
         cli_lede: "Extraire le graphe d'un dépôt avec graphify, puis l'importer :"
         cli_name: Nom
         cli_repository: dépôt
-        code_files: 'Fichiers de code'
-        edges: '{count, plural, one {# arête} other {# arêtes}}'
+        col:
+            action: Actions
+            code: Code
+            content: Contenu
+            name: Projet
+            rules: 'Règles validées'
+            status: Statut
+        documents: '{count, plural, one {# document} other {# documents}}'
         empty_archived: 'Aucun projet archivé'
         empty_archived_text: 'Un projet archivé reste lisible, mais les agents ne le lisent plus et ses connecteurs ne se synchronisent plus.'
         empty_text: "Un projet réunit le code d'un dépôt, ses documents, ses règles métier et ses mémoires."
         files: '{count, plural, one {# fichier} other {# fichiers}}'
         filter_state: 'Filtrer par état'
+        memories: '{count, plural, one {# mémoire} other {# mémoires}}'
+        no_match: 'Aucun projet ne correspond à « {query} ».'
+        no_rule: 'Aucune règle'
+        rules: '{count, plural, one {# règle} other {# règles}}'
+        search: 'Rechercher un projet'
         see_active: 'Voir les projets actifs'
+        sort:
+            memories: 'Plus de mémoires'
+            name: Nom
+            updated: 'Mis à jour récemment'
+        sort_by: 'Trier par'
+        status:
+            archived: Archivé
+            empty: Vide
+            ready: 'À jour'
         symbols: '{count, plural, one {# symbole} other {# symboles}}'
+        validated: '{validated} sur {total} règles validées'
     new: 'Nouveau projet'
     new_lede: "Un projet regroupe les documents, les règles, les mémoires et le code d'un dépôt."
     open_form: 'Ouvrir le formulaire'
@@ -937,19 +1027,21 @@ proposal:
     page: fiche
     pending: '{count} en attente'
     pending_project: '{count} en attente pour {name}'
+    proposed: Proposée
     reject: Rejeter
     replaces_text: 'Remplace le texte de :'
     retract: 'Retirer :'
     retract_memory: 'Retirer la mémoire'
     retracts: Retire
-    score: 'score {score}/10'
+    score_label: Score
     source:
         conversation: conversation
         diff: diff
         file: fichier
         review: revue
+    type: Type
     updates: 'Met à jour'
-    verdict: 'Verdict {verdict} : {reason}'
+    verdict_label: Verdict
     why: Pourquoi
 rule:
     index:

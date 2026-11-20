@@ -31,121 +31,233 @@
         <a class="button" href="{{ path('dashboard', scope|merge({period: period})) }}"><twig:ux:icon name="lucide:refresh-cw" />{{ 'dashboard.refresh'|trans }}</a>
     </div>
 
-    <section class="tiles" aria-label="{{ 'dashboard.key_figures'|trans }}">
-        <div class="tile">
-            <span class="tile__label">{{ 'dashboard.stored'|trans }}</span>
-            <span class="tile__value">{{ summary.memories|format_number }}</span>
-            <span class="tile__sub">+{{ summary.memories_added }} {{ period_text }}</span>
-        </div>
-        <div class="tile">
-            <span class="tile__label" title="{{ 'dashboard.recalled_title'|trans }}">{{ 'dashboard.recalled'|trans }}</span>
-            <span class="tile__value">{{ summary.recalled|format_number }}</span>
-            <span class="tile__sub">{{ 'dashboard.lookups'|trans({count: summary.lookups}) }}{% if summary.lookups > 0 %}, {{ 'dashboard.average'|trans({value: (summary.recalled / summary.lookups)|format_number({fraction_digit: 1})}) }}{% endif %}</span>
-        </div>
-        <div class="tile">
-            <span class="tile__label">{{ 'dashboard.requests'|trans }}</span>
-            <span class="tile__value">{{ summary.requests|format_number }}</span>
-            <span class="tile__sub">{{ 'dashboard.failed'|trans({count: summary.failed}) }} {{ period_text }}</span>
-        </div>
-        <a class="tile tile--link" href="{{ path('proposal_index', scope) }}">
-            <span class="tile__label">{{ 'nav.to_review'|trans }}</span>
-            <span class="tile__value">{{ summary.pending|format_number }}</span>
-            <span class="tile__sub">{{ 'dashboard.pending'|trans({count: summary.pending}) }}</span>
-        </a>
-    </section>
+{% set delta_label = previous ? 'dashboard.vs_previous'|trans : period_text %}
+    {% set stored_base = summary.memories - summary.memories_added %}
+    {% set kinds_order = ['learning', 'duplicate', 'contradiction', 'refuted'] %}
+    {% set pending_total = pending_kinds|reduce((sum, row) => sum + row.value, 0) %}
+    {% set attention_count = summary.pending + failing_connectors|length + (refuted > 0 ? 1 : 0) %}
 
-    <div class="panels">
-        {% for chart in [
-            {id: 'requests', title: 'dashboard.requests'|trans, total: summary.requests, points: requests, unit: 'dashboard.unit_requests'|trans, link: null},
-            {id: 'memories', title: 'dashboard.created'|trans, total: summary.memories_added, points: memories, unit: 'dashboard.unit_memories'|trans, link: path('memory_index', scope)},
-        ] %}
-            <section class="panel" aria-labelledby="chart-{{ chart.id }}">
-                <div class="panel__head">
-                    <div>
-                        <h2 id="chart-{{ chart.id }}">{{ chart.title }}</h2>
-                        <p class="panel__figure">{{ chart.total|format_number }}</p>
-                    </div>
-                    {% if chart.link %}<a class="button" href="{{ chart.link }}">{{ 'dashboard.see_memories'|trans }}</a>{% endif %}
-                </div>
-                <div class="chart" data-controller="chart" data-chart-points-value="{{ chart.points|json_encode }}" data-chart-hourly-value="{{ hourly ? 'true' : 'false' }}" data-chart-unit-value="{{ chart.unit }}"
-                     data-action="pointermove->chart#move pointerleave->chart#leave" aria-label="{{ (hourly ? 'dashboard.chart_hourly' : 'dashboard.chart_daily')|trans({title: chart.title}) }}, {{ period_text }}">
-                    <div class="chart__plot" data-chart-target="plot"></div>
-                    <div class="chart__tooltip" data-chart-target="tooltip" hidden></div>
-                </div>
-                <details class="chart-data">
-                    <summary>{{ 'dashboard.values'|trans }}</summary>
-                    <div class="table-wrap">
-                        <table class="data-table">
-                            <thead><tr><th>{{ (hourly ? 'dashboard.hour' : 'dashboard.day')|trans }}</th><th class="num">{{ chart.title }}</th></tr></thead>
-                            <tbody>
-                                {% for point in chart.points|reverse %}
-                                    <tr><td class="num">{{ hourly ? point.at|format_datetime('short', 'short') : point.at|format_date('short') }}</td><td class="num">{{ point.value }}</td></tr>
+    <div class="dash">
+        <div class="dash__main">
+            <section class="kpis" aria-label="{{ 'dashboard.key_figures'|trans }}">
+                {% for kpi in [
+                    {label: 'dashboard.stored'|trans, icon: 'lucide:brain', value: summary.memories, current: summary.memories_added, base: stored_base, series: memories, sub: '+' ~ summary.memories_added ~ ' ' ~ period_text, title: null},
+                    {label: 'dashboard.recalled'|trans, icon: 'lucide:rotate-ccw', value: summary.recalled, current: summary.recalled, base: previous ? previous.recalled : null, series: recalls, sub: 'dashboard.lookups'|trans({count: summary.lookups}), title: 'dashboard.recalled_title'|trans},
+                    {label: 'dashboard.requests'|trans, icon: 'lucide:activity', value: summary.requests, current: summary.requests, base: previous ? previous.requests : null, series: requests, sub: 'dashboard.failed'|trans({count: summary.failed}), title: null},
+                ] %}
+                    {% set spark = kpi.series|slice(-14) %}
+                    {% set spark_top = spark|reduce((max, point) => max(max, point.value), 0) %}
+                    <div class="kpi">
+                        <span class="kpi__label" {% if kpi.title %}title="{{ kpi.title }}"{% endif %}>{{ ux_icon(kpi.icon) }}{{ kpi.label }}</span>
+                        <span class="kpi__value">{{ kpi.value|format_number }}</span>
+                        <div class="kpi__foot">
+                            <span class="kpi__delta">
+                                {% if kpi.base is not null and kpi.base > 0 %}
+                                    {% set change = loop.first ? kpi.current / kpi.base * 100 : (kpi.current - kpi.base) / kpi.base * 100 %}
+                                    <span class="delta delta--{{ change >= 0 ? 'up' : 'down' }}">{{ change >= 0 ? '+' }}{{ change|format_number({fraction_digit: 1}) }} %</span>
+                                    <span>{{ loop.first ? period_text : delta_label }}</span>
+                                {% else %}
+                                    <span>{{ kpi.sub }}</span>
+                                {% endif %}
+                            </span>
+                            <span class="spark" aria-hidden="true">
+                                {% for point in spark %}
+                                    <span class="spark__bar{{ loop.last ? ' spark__bar--last' }}" style="height: {{ spark_top > 0 ? max(8, (point.value / spark_top * 100)|round) : 8 }}%"></span>
                                 {% endfor %}
-                            </tbody>
-                        </table>
+                            </span>
+                        </div>
                     </div>
-                </details>
+                {% endfor %}
+                <a class="kpi kpi--link" href="{{ path('proposal_index', scope) }}">
+                    <span class="kpi__label">{{ ux_icon('lucide:inbox') }}{{ 'nav.to_review'|trans }}</span>
+                    <span class="kpi__value">{{ summary.pending|format_number }}</span>
+                    <div class="kpi__foot kpi__foot--stack">
+                        <span class="segments" aria-hidden="true">
+                            {% for kind in kinds_order %}
+                                {% set row = pending_kinds|filter(row => row.label == kind)|first %}
+                                {% if row %}<span class="segments__part segments__part--{{ kind }}" style="flex-grow: {{ row.value }}"></span>{% endif %}
+                            {% endfor %}
+                            {% if pending_total == 0 %}<span class="segments__part" style="flex-grow: 1"></span>{% endif %}
+                        </span>
+                        <span class="kpi__delta"><span>{{ 'dashboard.pending'|trans({count: summary.pending}) }}</span></span>
+                    </div>
+                </a>
             </section>
-        {% endfor %}
 
-        {% for breakdown in [
-            {id: 'types', title: 'dashboard.types'|trans, note: 'dashboard.active'|trans({count: summary.memories}), rows: memory_types, labels: type_labels, empty: 'dashboard.types_empty'|trans},
-            {id: 'tools', title: 'dashboard.tools'|trans, note: period_text, rows: tools, labels: {}, empty: 'dashboard.tools_empty'|trans},
-            {id: 'search', title: 'dashboard.search_types'|trans, note: 'dashboard.search_types_note'|trans, rows: search_types, labels: search_labels, empty: 'dashboard.search_empty'|trans},
-            {id: 'modes', title: 'dashboard.search_mode'|trans, note: 'dashboard.search_mode_note'|trans, rows: search_modes, labels: {keyword: 'dashboard.keyword', hybrid: 'dashboard.hybrid'}, empty: 'dashboard.search_empty'|trans},
-        ] %}
-            {% set total = breakdown.rows|reduce((sum, row) => sum + row.value, 0) %}
-            {% set top = breakdown.rows|reduce((max, row) => max(max, row.value), 0) %}
-            <section class="panel" aria-labelledby="breakdown-{{ breakdown.id }}">
-                <div class="panel__head">
-                    <h2 id="breakdown-{{ breakdown.id }}">{{ breakdown.title }}</h2>
-                    <span class="row__sub">{{ breakdown.note }}</span>
-                </div>
-                {% if breakdown.rows is empty %}
-                    <p class="block__empty">{{ breakdown.empty }}</p>
+            <div class="panels panels--dash">
+                {% for chart in [
+                    {id: 'activity', title: 'dashboard.activity_chart'|trans, total: summary.requests, series: [{label: 'dashboard.requests'|trans, points: requests}, {label: 'dashboard.recalled'|trans, points: recalls}], link: null, wide: true},
+                    {id: 'memories', title: 'dashboard.created'|trans, total: summary.memories_added, series: [{label: 'dashboard.created'|trans, points: memories}], link: path('memory_index', scope), wide: true},
+                ] %}
+                    <section class="panel{{ chart.wide ? ' panel--span' }}" aria-labelledby="chart-{{ chart.id }}">
+                        <div class="panel__head">
+                            <div>
+                                <h2 id="chart-{{ chart.id }}">{{ chart.title }}</h2>
+                                <p class="panel__figure">{{ chart.total|format_number }}</p>
+                            </div>
+                            {% if chart.series|length > 1 %}
+                                <ul class="legend">
+                                    {% for series in chart.series %}<li><span class="chart__swatch chart__swatch--{{ loop.index0 }}"></span>{{ series.label }}</li>{% endfor %}
+                                </ul>
+                            {% endif %}
+                            {% if chart.link %}<a class="button" href="{{ chart.link }}">{{ 'dashboard.see_memories'|trans }}</a>{% endif %}
+                        </div>
+                        <div class="chart" data-controller="chart" data-chart-series-value="{{ chart.series|json_encode }}" data-chart-hourly-value="{{ hourly ? 'true' : 'false' }}"
+                             data-action="pointermove->chart#move pointerleave->chart#leave" aria-label="{{ (hourly ? 'dashboard.chart_hourly' : 'dashboard.chart_daily')|trans({title: chart.title}) }}, {{ period_text }}">
+                            <div class="chart__plot" data-chart-target="plot"></div>
+                            <div class="chart__tooltip" data-chart-target="tooltip" hidden></div>
+                        </div>
+                        <details class="chart-data">
+                            <summary>{{ 'dashboard.values'|trans }}</summary>
+                            <div class="table-wrap">
+                                <table class="data-table">
+                                    <thead><tr><th>{{ (hourly ? 'dashboard.hour' : 'dashboard.day')|trans }}</th>{% for series in chart.series %}<th class="num">{{ series.label }}</th>{% endfor %}</tr></thead>
+                                    <tbody>
+                                        {% for index, point in chart.series[0].points|reverse(true) %}
+                                            <tr><td class="num">{{ hourly ? point.at|format_datetime('short', 'short') : point.at|format_date('short') }}</td>{% for series in chart.series %}<td class="num">{{ series.points[index].value }}</td>{% endfor %}</tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </details>
+                    </section>
+                {% endfor %}
+
+                {% for breakdown in [
+                    {id: 'types', title: 'dashboard.types'|trans, note: 'dashboard.active'|trans({count: summary.memories}), rows: memory_types, labels: type_labels, empty: 'dashboard.types_empty'|trans},
+                    {id: 'tools', title: 'dashboard.tools'|trans, note: period_text, rows: tools, labels: {}, empty: 'dashboard.tools_empty'|trans},
+                    {id: 'search', title: 'dashboard.search_types'|trans, note: 'dashboard.search_types_note'|trans, rows: search_types, labels: search_labels, empty: 'dashboard.search_empty'|trans, span: true},
+                    {id: 'modes', title: 'dashboard.search_mode'|trans, note: 'dashboard.search_mode_note'|trans, rows: search_modes, labels: {keyword: 'dashboard.keyword', hybrid: 'dashboard.hybrid'}, empty: 'dashboard.search_empty'|trans},
+                ] %}
+                    {% set total = breakdown.rows|reduce((sum, row) => sum + row.value, 0) %}
+                    {% set top = breakdown.rows|reduce((max, row) => max(max, row.value), 0) %}
+                    <section class="panel{{ breakdown.span ?? false ? ' panel--span' }}" aria-labelledby="breakdown-{{ breakdown.id }}">
+                        <div class="panel__head">
+                            <div>
+                                <h2 id="breakdown-{{ breakdown.id }}">{{ breakdown.title }}</h2>
+                                <span class="row__sub">{{ breakdown.note }}</span>
+                            </div>
+                        </div>
+                        {% if breakdown.rows is empty %}
+                            <p class="block__empty">{{ breakdown.empty }}</p>
+                        {% else %}
+                            <ul class="bars">
+                                {% for row in breakdown.rows %}
+                                    <li class="bars__row" title="{{ 'dashboard.out_of'|trans({value: row.value, total: total}) }}">
+                                        <span class="bars__label{{ breakdown.labels is empty ? ' mono' }}">{{ breakdown.labels[row.label] is defined ? breakdown.labels[row.label]|trans : row.label }}</span>
+                                        <span class="bars__value num">{{ row.value|format_number }} <span class="row__sub">{{ (row.value / total * 100)|format_number({fraction_digit: 1}) }} %</span></span>
+                                        <span class="bars__track"><span class="bars__fill{{ loop.first ? ' bars__fill--top' }}" style="width: {{ (row.value / top * 100)|round(1) }}%"></span></span>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </section>
+                {% endfor %}
+
+                <section class="panel panel--wide" aria-labelledby="recent-title">
+                    <div class="panel__head">
+                        <h2 id="recent-title">{{ 'dashboard.recent'|trans }}</h2>
+                        <span class="row__sub">{{ 'dashboard.in_total'|trans({count: recent.total}) }}</span>
+                    </div>
+                    {% if recent.items is empty %}
+                        <p class="block__empty">{{ 'dashboard.recent_empty'|trans({endpoint: '<span class="mono">/mcp</span>'})|raw }}</p>
+                    {% else %}
+                        <div class="table-wrap table-wrap--framed">
+                            <table class="data-table">
+                                <thead><tr><th>{{ 'activity.when'|trans }}</th><th>{{ 'dashboard.tool'|trans }}</th><th>{{ 'memory.index.project'|trans }}</th><th>{{ 'dashboard.query'|trans }}</th><th class="num">{{ 'palette.results'|trans }}</th><th class="num">{{ 'nav.memories'|trans }}</th><th class="num">{{ 'dashboard.duration'|trans }}</th><th>{{ 'dashboard.client'|trans }}</th><th>{{ 'dashboard.status'|trans }}</th></tr></thead>
+                                <tbody>
+                                    {% for call in recent.items %}
+                                        <tr>
+                                            <td class="num">{{ call.created_at|format_datetime('short', 'short') }}</td>
+                                            <td><span class="code-chip">{{ call.tool }}</span></td>
+                                            <td>{{ call.project ?? '-' }}</td>
+                                            <td class="data-table__clip">{{ call.query ?? '-' }}</td>
+                                            <td class="num">{{ call.results }}</td>
+                                            <td class="num">{{ call.memories }}</td>
+                                            <td class="num">{{ call.duration_ms }} ms</td>
+                                            <td>{{ call.client ?? '-' }}</td>
+                                            <td>{% if call.failed %}<span class="pill pill--danger">{{ 'common.failed'|trans }}</span>{% else %}<span class="pill pill--success">{{ 'dashboard.ok'|trans }}</span>{% endif %}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% endif %}
+                    {{ include('_pager.html.twig', {page: recent}) }}
+                </section>
+            </div>
+        </div>
+
+        <aside class="dash__aside">
+            <section class="side-block" aria-labelledby="attention-title">
+                <h2 class="side-block__title" id="attention-title">{{ 'dashboard.attention'|trans }} <span class="block__count">{{ attention_count }}</span></h2>
+                {% if attention_count == 0 %}
+                    <p class="block__empty">{{ 'dashboard.attention_empty'|trans }}</p>
                 {% else %}
-                    <ul class="bars">
-                        {% for row in breakdown.rows %}
-                            <li class="bars__row" title="{{ 'dashboard.out_of'|trans({value: row.value, total: total}) }}">
-                                <span class="bars__label{{ breakdown.labels is empty ? ' mono' }}">{{ breakdown.labels[row.label] is defined ? breakdown.labels[row.label]|trans : row.label }}</span>
-                                <span class="bars__track"><span class="bars__fill" style="width: {{ (row.value / top * 100)|round(1) }}%"></span></span>
-                                <span class="bars__value num">{{ row.value }} <span class="row__sub">{{ (row.value / total * 100)|format_number({fraction_digit: 1}) }} %</span></span>
+                    <ul class="attention">
+                        {% for proposal in latest_proposals %}
+                            <li class="attention__item">
+                                <span class="attention__icon attention__icon--{{ proposal.kind }}">{{ ux_icon('lucide:inbox') }}</span>
+                                <div class="attention__body">
+                                    <strong>{{ ('enum.proposal_kind.' ~ proposal.kind)|trans }}</strong>
+                                    {% if proposal.text %}<p class="attention__text">{{ proposal.text }}</p>{% endif %}
+                                    <span class="row__sub num">{{ proposal.created_at|format_datetime('short', 'short') }}</span>
+                                </div>
+                                <a class="attention__link" href="{{ path('proposal_index', scope) ~ '#proposal-' ~ proposal.id }}">{{ 'dashboard.review'|trans }}{{ ux_icon('lucide:arrow-up-right') }}</a>
                             </li>
                         {% endfor %}
+                        {% if summary.pending > latest_proposals|length %}
+                            <li><a class="side-block__more" href="{{ path('proposal_index', scope) }}">{{ 'dashboard.more_proposals'|trans({count: summary.pending - latest_proposals|length}) }}</a></li>
+                        {% endif %}
+                        {% for connector in failing_connectors %}
+                            <li class="attention__item">
+                                <span class="attention__icon attention__icon--danger">{{ ux_icon('lucide:plug-zap') }}</span>
+                                <div class="attention__body">
+                                    <strong>{{ connector.name }}</strong>
+                                    <p class="attention__text" title="{{ connector.error }}">{{ connector.error }}</p>
+                                    <span class="row__sub num">{{ 'dashboard.connector_failed'|trans }} · {{ connector.last_run_at|format_datetime('short', 'short') }}</span>
+                                </div>
+                                <a class="attention__link" href="{{ path('connector_show', {id: connector.id}) }}">{{ 'dashboard.open'|trans }}{{ ux_icon('lucide:arrow-up-right') }}</a>
+                            </li>
+                        {% endfor %}
+                        {% if refuted > 0 %}
+                            <li class="attention__item">
+                                <span class="attention__icon attention__icon--danger">{{ ux_icon('lucide:shield-alert') }}</span>
+                                <div class="attention__body">
+                                    <strong>{{ 'dashboard.refuted'|trans({count: refuted}) }}</strong>
+                                    <p class="attention__text">{{ 'dashboard.refuted_text'|trans }}</p>
+                                </div>
+                                <a class="attention__link" href="{{ path('memory_index', scope|merge({verdict: 'refuted'})) }}">{{ 'dashboard.see_memories'|trans }}{{ ux_icon('lucide:arrow-up-right') }}</a>
+                            </li>
+                        {% endif %}
                     </ul>
                 {% endif %}
             </section>
-        {% endfor %}
 
-        <section class="panel panel--wide" aria-labelledby="recent-title">
-            <div class="panel__head">
-                <h2 id="recent-title">{{ 'dashboard.recent'|trans }}</h2>
-                <span class="row__sub">{{ 'dashboard.in_total'|trans({count: recent.total}) }}</span>
-            </div>
-            {% if recent.items is empty %}
-                <p class="block__empty">{{ 'dashboard.recent_empty'|trans({endpoint: '<span class="mono">/mcp</span>'})|raw }}</p>
-            {% else %}
-                <div class="table-wrap">
-                    <table class="data-table">
-                        <thead><tr><th>{{ 'activity.when'|trans }}</th><th>{{ 'dashboard.tool'|trans }}</th><th>{{ 'memory.index.project'|trans }}</th><th>{{ 'dashboard.query'|trans }}</th><th class="num">{{ 'palette.results'|trans }}</th><th class="num">{{ 'nav.memories'|trans }}</th><th class="num">{{ 'dashboard.duration'|trans }}</th><th>{{ 'dashboard.client'|trans }}</th></tr></thead>
-                        <tbody>
-                            {% for call in recent.items %}
-                                <tr>
-                                    <td class="num">{{ call.created_at|format_datetime('short', 'short') }}</td>
-                                    <td><span class="code-chip">{{ call.tool }}</span>{% if call.failed %} <span class="verdict verdict--refuted">{{ 'common.failed'|trans }}</span>{% endif %}</td>
-                                    <td>{{ call.project ?? '-' }}</td>
-                                    <td class="data-table__clip">{{ call.query ?? '-' }}</td>
-                                    <td class="num">{{ call.results }}</td>
-                                    <td class="num">{{ call.memories }}</td>
-                                    <td class="num">{{ call.duration_ms }} ms</td>
-                                    <td>{{ call.client ?? '-' }}</td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            {% endif %}
-            {{ include('_pager.html.twig', {page: recent}) }}
-        </section>
+            <section class="side-block" aria-labelledby="timeline-title">
+                <h2 class="side-block__title" id="timeline-title">{{ 'dashboard.timeline'|trans }}</h2>
+                {% set entries = timeline.days|reduce((all, items) => all|merge(items), []) %}
+                {% if entries is empty %}
+                    <p class="block__empty">{{ 'dashboard.timeline_empty'|trans }}</p>
+                {% else %}
+                    {% set kinds = {commit: 'activity.kind.commit', document: 'activity.kind.document', memory: 'activity.kind.memory', business_rule: 'activity.kind.rule'} %}
+                    <ol class="timeline">
+                        {% for item in entries %}
+                            {% set href = item.type == 'memory' ? path('memory_show', {id: item.id})
+                                : (item.type == 'document' ? path('document_show', {id: item.id})
+                                : (item.type == 'business_rule' and item.project_slug ? path('rule_show', {slug: item.project_slug, code: item.ref}) : item.url)) %}
+                            <li class="timeline__item">
+                                <span class="timeline__mark timeline__mark--{{ item.type }}" aria-hidden="true"></span>
+                                <div class="timeline__body">
+                                    {% if href %}<a class="timeline__title" href="{{ href }}" {% if item.type in ['commit', 'ticket'] %}rel="noopener noreferrer" target="_blank"{% endif %}>{{ item.label }}</a>{% else %}<span class="timeline__title">{{ item.label }}</span>{% endif %}
+                                    <span class="row__sub">{{ item.type == 'ticket' ? item.ref : (item.type == 'commit' ? item.ref|slice(0, 7) : kinds[item.type]|trans) }}{% if item.author %} · {{ item.author }}{% endif %} · <span class="num">{{ item.created_at|format_datetime('short', 'short') }}</span></span>
+                                </div>
+                            </li>
+                        {% endfor %}
+                    </ol>
+                {% endif %}
+                <a class="side-block__more" href="{{ path('activity_feed', scope) }}">{{ 'dashboard.see_feed'|trans }}{{ ux_icon('lucide:arrow-up-right') }}</a>
+            </section>
+        </aside>
     </div>
 {% endblock %}

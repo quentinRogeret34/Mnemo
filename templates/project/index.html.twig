@@ -9,17 +9,32 @@
 {% block body %}
     <div class="view-head">
         <h1><twig:ux:icon name="lucide:layout-grid" />{{ 'nav.projects'|trans }}</h1>
-        <span class="view-head__meta">{{ projects|length }}</span>
+        <span class="view-head__meta">{{ total }}</span>
     </div>
 
-    {% if archived or archived_count > 0 %}
-        <nav class="tabs" aria-label="{{ 'project.index.filter_state'|trans }}">
-            <a href="{{ path('project_index') }}" {% if not archived %}aria-current="page"{% endif %}>{{ 'project.index.active'|trans }}</a>
-            <a href="{{ path('project_index', {archived: 1}) }}" {% if archived %}aria-current="page"{% endif %}>{{ 'project.index.archived'|trans }}</a>
-        </nav>
-    {% endif %}
+    <form class="list-toolbar" method="get" action="{{ path('project_index') }}" role="search" data-controller="autosubmit">
+        {% if archived or archived_count > 0 %}
+            <nav class="tabs" aria-label="{{ 'project.index.filter_state'|trans }}">
+                <a href="{{ path('project_index', {q: q ?: null, sort: sort != 'name' ? sort : null}|filter(v => v is not null)) }}" {% if not archived %}aria-current="page"{% endif %}>{{ 'project.index.active'|trans }}</a>
+                <a href="{{ path('project_index', {archived: 1, q: q ?: null, sort: sort != 'name' ? sort : null}|filter(v => v is not null)) }}" {% if archived %}aria-current="page"{% endif %}><twig:ux:icon name="lucide:archive" />{{ 'project.index.archived'|trans }}</a>
+            </nav>
+        {% endif %}
+        {% if archived %}<input type="hidden" name="archived" value="1">{% endif %}
+        <label class="list-toolbar__sort">
+            <span>{{ 'project.index.sort_by'|trans }}</span>
+            <select class="select" name="sort" data-action="autosubmit#submit">
+                {% for item in sorts %}<option value="{{ item }}" {{ sort == item ? 'selected' }}>{{ ('project.index.sort.' ~ item)|trans }}</option>{% endfor %}
+            </select>
+        </label>
+        <div class="list-toolbar__search">
+            <input class="input" type="search" name="q" value="{{ q }}" placeholder="{{ 'project.index.search'|trans }}" aria-label="{{ 'project.index.search'|trans }}">
+            <button class="list-toolbar__go" type="submit" aria-label="{{ 'project.index.search'|trans }}">{{ ux_icon('lucide:search') }}</button>
+        </div>
+    </form>
 
-    {% if projects is empty and archived %}
+    {% if projects is empty and q %}
+        <p class="block__empty">{{ 'project.index.no_match'|trans({query: q}) }}</p>
+    {% elseif projects is empty and archived %}
         <twig:EmptyState :title="'project.index.empty_archived'|trans" :text="'project.index.empty_archived_text'|trans">
             <twig:block name="icon"><twig:ux:icon name="lucide:archive" /></twig:block>
             <twig:block name="actions"><a class="button" href="{{ path('project_index') }}">{{ 'project.index.see_active'|trans }}</a></twig:block>
@@ -40,61 +55,95 @@ bin/console app:ingest:code &lt;slug&gt; var/graphify/&lt;slug&gt;/graphify-out/
             </details>
         </twig:EmptyState>
     {% else %}
-        <ul class="project-list">
-            {% for project in projects %}
-                {% set k = project.knowledge %}
-                <li class="project-card">
-                    <details class="project-card__details">
-                        <summary class="row project-card__summary">
-                            <twig:ux:icon name="lucide:chevron-right" class="icon project-card__chevron" />
-                            <span class="row__title"><span>{{ project.name }}</span><span class="row__sub">{{ project.slug }}</span></span>
-                            <span class="row__meta">
-                                <span class="num">{{ 'project.index.files'|trans({count: project.files}) }}</span>
-                                <span class="num">{{ 'project.index.symbols'|trans({count: project.symbols}) }}</span>
-                                <span class="num">{{ 'project.index.edges'|trans({count: project.edges}) }}</span>
-                                <span class="mono">{{ project.ref ? project.ref|slice(0, 7) : '-' }}</span>
-                            </span>
-                        </summary>
-                        <div class="project-card__body">
-                            <p class="row__sub mono">{{ project.repository_path }}</p>
-                            <div class="project-card__stats">
-                                <a class="stat" href="{{ path('project_show', {slug: project.slug}) }}"><span class="stat__value">{{ k.documents }}</span><span class="stat__label">{{ 'nav.documents'|trans }}</span></a>
-                                <a class="stat" href="{{ path('rule_index', {slug: project.slug}) }}"><span class="stat__value">{{ k.rules }}</span><span class="stat__label">{{ 'nav.rules'|trans }}{% if k.rules_to_review > 0 %} · {{ 'nav.count_to_review'|trans({count: k.rules_to_review}) }}{% endif %}</span></a>
-                                <a class="stat" href="{{ path('memory_index', {project: project.slug}) }}"><span class="stat__value">{{ k.memories }}</span><span class="stat__label">{{ 'nav.memories'|trans }}</span></a>
-                                <a class="stat" href="{{ path('project_code', {slug: project.slug}) }}"><span class="stat__value">{{ k.files|format_number }}</span><span class="stat__label">{{ 'project.index.code_files'|trans }}</span></a>
-                                <a class="stat" href="{{ path('proposal_index', {project: project.slug}) }}"><span class="stat__value">{{ project.pending }}</span><span class="stat__label">{{ 'nav.to_review'|trans }}</span></a>
-                            </div>
-                        </div>
-                    </details>
-                    <a class="button project-card__open" href="{{ path('project_show', {slug: project.slug}) }}">{{ 'common.open'|trans }}</a>
-                    <div class="menu menu--end" data-controller="menu">
-                        <button class="button menu__kebab" type="button" aria-label="{{ 'project.index.actions_for'|trans({name: project.name}) }}" aria-expanded="false" commandfor="project-actions-{{ project.id }}" command="toggle-popover" data-menu-target="trigger">
-                            <twig:ux:icon name="lucide:ellipsis" />
-                        </button>
-                        <div class="menu__panel" id="project-actions-{{ project.id }}" popover data-menu-target="panel" data-action="beforetoggle->menu#place toggle->menu#sync">
-                            <a class="menu__item" href="{{ path('dashboard', {project: project.slug}) }}">{{ 'nav.dashboard'|trans }}</a>
-                            <a class="menu__item" href="{{ path('project_show', {slug: project.slug}) }}">{{ 'nav.documents'|trans }}</a>
-                            <a class="menu__item" href="{{ path('rule_index', {slug: project.slug}) }}">{{ 'nav.rules'|trans }}</a>
-                            <a class="menu__item" href="{{ path('memory_index', {project: project.slug}) }}">{{ 'nav.memories'|trans }}</a>
-                            <a class="menu__item" href="{{ path('memory_graph', {project: project.slug}) }}">{{ 'nav.memory_graph'|trans }}</a>
-                            <a class="menu__item" href="{{ path('project_code', {slug: project.slug}) }}">{{ 'nav.code'|trans }}</a>
-                            <a class="menu__item" href="{{ path('garden_show', {slug: project.slug}) }}">{{ 'nav.garden'|trans }}</a>
-                            <a class="menu__item" href="{{ path('proposal_index', {project: project.slug}) }}">{{ 'nav.to_review'|trans }}{% if project.pending > 0 %} ({{ project.pending }}){% endif %}</a>
-                            <hr class="menu__rule">
-                            <a class="menu__item" href="{{ path('project_settings', {slug: project.slug}) }}"><twig:ux:icon name="lucide:settings" />{{ 'nav.settings'|trans }}</a>
-                            <form method="post" action="{{ path(archived ? 'project_restore' : 'project_archive', {slug: project.slug}) }}">
-                                <input type="hidden" name="_token" value="{{ csrf_token('project-' ~ project.id) }}">
+        <div class="table-wrap table-wrap--framed project-table">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>{{ 'project.index.col.name'|trans }}</th>
+                        <th>{{ 'project.index.col.status'|trans }}</th>
+                        <th>{{ 'project.index.col.content'|trans }}</th>
+                        <th>{{ 'project.index.col.code'|trans }}</th>
+                        <th>{{ 'project.index.col.rules'|trans }}</th>
+                        <th class="project-table__action"><span class="visually-hidden">{{ 'project.index.col.action'|trans }}</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for project in projects %}
+                        {% set k = project.knowledge %}
+                        {% set validated = k.rules - k.rules_to_review %}
+                        <tr class="project-row">
+                            <td>
+                                <a class="project-row__name" href="{{ path('project_show', {slug: project.slug}) }}">
+                                    <span class="project-avatar" style="--hue: {{ (project.id * 137) % 360 }}" aria-hidden="true">{{ project.name|slice(0, 2)|upper }}</span>
+                                    <span class="project-row__title"><span>{{ project.name }}</span><span class="row__sub">{{ project.slug }}</span></span>
+                                </a>
+                            </td>
+                            <td>
                                 {% if archived %}
-                                    <button class="menu__item" type="submit"><twig:ux:icon name="lucide:archive-restore" />{{ 'project.restore'|trans }}</button>
+                                    <span class="pill">{{ 'project.index.status.archived'|trans }}</span>
+                                {% elseif project.pending > 0 %}
+                                    <a class="pill pill--warning" href="{{ path('proposal_index', {project: project.slug}) }}">{{ 'nav.count_to_review'|trans({count: project.pending}) }}</a>
+                                {% elseif project.files == 0 and k.documents == 0 and k.memories == 0 %}
+                                    <span class="pill">{{ 'project.index.status.empty'|trans }}</span>
                                 {% else %}
-                                    <button class="menu__item" type="submit" data-confirm="{{ 'project.archive_confirm'|trans({name: project.name}) }}" data-confirm-label="{{ 'project.archive'|trans }}"><twig:ux:icon name="lucide:archive" />{{ 'project.archive'|trans }}</button>
+                                    <span class="pill pill--success">{{ 'project.index.status.ready'|trans }}</span>
                                 {% endif %}
-                            </form>
-                            <a class="menu__item menu__item--danger" href="{{ path('project_settings', {slug: project.slug}) }}#danger"><twig:ux:icon name="lucide:trash-2" />{{ 'common.delete'|trans }}</a>
-                        </div>
-                    </div>
-                </li>
-            {% endfor %}
-        </ul>
+                            </td>
+                            <td>
+                                <span class="project-row__stack">
+                                    <a href="{{ path('memory_index', {project: project.slug}) }}">{{ 'project.index.memories'|trans({count: k.memories}) }}</a>
+                                    <span class="row__sub">{{ 'project.index.documents'|trans({count: k.documents}) }} · {{ 'project.index.rules'|trans({count: k.rules}) }}</span>
+                                </span>
+                            </td>
+                            <td>
+                                <span class="project-row__stack">
+                                    <a href="{{ path('project_code', {slug: project.slug}) }}">{{ 'project.index.files'|trans({count: project.files}) }}</a>
+                                    <span class="row__sub">{{ 'project.index.symbols'|trans({count: project.symbols}) }}{% if project.ref %} · <span class="mono">{{ project.ref|slice(0, 7) }}</span>{% endif %}</span>
+                                </span>
+                            </td>
+                            <td>
+                                {% if k.rules == 0 %}
+                                    <span class="row__sub">{{ 'project.index.no_rule'|trans }}</span>
+                                {% else %}
+                                    {% set percent = (validated / k.rules * 100)|round %}
+                                    <a class="progress{{ percent == 100 ? ' progress--done' }}" href="{{ path('rule_index', {slug: project.slug}) }}" title="{{ 'project.index.validated'|trans({validated: validated, total: k.rules}) }}">
+                                        <span class="progress__track"><span class="progress__fill" style="width: {{ max(percent, 2) }}%"></span></span>
+                                        {% if percent == 100 %}<span class="progress__done">{{ ux_icon('lucide:check') }}</span>{% else %}<span class="progress__value num">{{ percent }} %</span>{% endif %}
+                                    </a>
+                                {% endif %}
+                            </td>
+                            <td class="project-table__action">
+                                <div class="menu menu--end" data-controller="menu">
+                                    <button class="button button--ghost menu__kebab" type="button" aria-label="{{ 'project.index.actions_for'|trans({name: project.name}) }}" aria-expanded="false" commandfor="project-actions-{{ project.id }}" command="toggle-popover" data-menu-target="trigger">
+                                        <twig:ux:icon name="lucide:ellipsis" />
+                                    </button>
+                                    <div class="menu__panel" id="project-actions-{{ project.id }}" popover data-menu-target="panel" data-action="beforetoggle->menu#place toggle->menu#sync">
+                                        <a class="menu__item" href="{{ path('dashboard', {project: project.slug}) }}">{{ 'nav.dashboard'|trans }}</a>
+                                        <a class="menu__item" href="{{ path('project_show', {slug: project.slug}) }}">{{ 'nav.documents'|trans }}</a>
+                                        <a class="menu__item" href="{{ path('rule_index', {slug: project.slug}) }}">{{ 'nav.rules'|trans }}</a>
+                                        <a class="menu__item" href="{{ path('memory_index', {project: project.slug}) }}">{{ 'nav.memories'|trans }}</a>
+                                        <a class="menu__item" href="{{ path('memory_graph', {project: project.slug}) }}">{{ 'nav.memory_graph'|trans }}</a>
+                                        <a class="menu__item" href="{{ path('project_code', {slug: project.slug}) }}">{{ 'nav.code'|trans }}</a>
+                                        <a class="menu__item" href="{{ path('garden_show', {slug: project.slug}) }}">{{ 'nav.garden'|trans }}</a>
+                                        <a class="menu__item" href="{{ path('proposal_index', {project: project.slug}) }}">{{ 'nav.to_review'|trans }}{% if project.pending > 0 %} ({{ project.pending }}){% endif %}</a>
+                                        <hr class="menu__rule">
+                                        <a class="menu__item" href="{{ path('project_settings', {slug: project.slug}) }}"><twig:ux:icon name="lucide:settings" />{{ 'nav.settings'|trans }}</a>
+                                        <form method="post" action="{{ path(archived ? 'project_restore' : 'project_archive', {slug: project.slug}) }}">
+                                            <input type="hidden" name="_token" value="{{ csrf_token('project-' ~ project.id) }}">
+                                            {% if archived %}
+                                                <button class="menu__item" type="submit"><twig:ux:icon name="lucide:archive-restore" />{{ 'project.restore'|trans }}</button>
+                                            {% else %}
+                                                <button class="menu__item" type="submit" data-confirm="{{ 'project.archive_confirm'|trans({name: project.name}) }}" data-confirm-label="{{ 'project.archive'|trans }}"><twig:ux:icon name="lucide:archive" />{{ 'project.archive'|trans }}</button>
+                                            {% endif %}
+                                        </form>
+                                        <a class="menu__item menu__item--danger" href="{{ path('project_settings', {slug: project.slug}) }}#danger"><twig:ux:icon name="lucide:trash-2" />{{ 'common.delete'|trans }}</a>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     {% endif %}
 {% endblock %}

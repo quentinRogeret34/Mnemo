@@ -30,6 +30,7 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 
 final class MemoryController extends AbstractController
 {
+    private const TREE_SIZE = 500;
     private const PAGE_SIZE = 50;
     private const VERDICTS = ['verified', 'refuted', 'conflict', 'unverified', 'none'];
 
@@ -55,6 +56,7 @@ final class MemoryController extends AbstractController
         #[MapQueryParameter] ?string $verdict = null,
         #[MapQueryParameter] ?string $source = null,
         #[MapQueryParameter] int $page = 1,
+        #[MapQueryParameter] string $group = 'type',
     ): Response {
         $page = max(1, $page);
         $projectEntity = $this->findProject($project);
@@ -88,6 +90,8 @@ final class MemoryController extends AbstractController
             'verdict' => $verdict,
             'source' => $source,
             'sources' => $this->knowledgeReader->memorySources(),
+            'group' => 'source' === $group ? 'source' : 'type',
+            'tree' => $this->knowledgeReader->memories($projectEntity, archived: $archived, limit: self::TREE_SIZE),
             'projects' => $this->projectScope->projects(),
             'memories' => Page::ofRows($this->knowledgeReader->memories($projectEntity, $memoryType?->value, $q, $archived, $verdict, $source, self::PAGE_SIZE, Page::offset($page, self::PAGE_SIZE)), $page, self::PAGE_SIZE),
             'form' => $form,

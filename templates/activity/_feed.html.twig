@@ -1,17 +1,26 @@
 {# days: entries grouped by day, from ActivityReader::feed() #}
-{% set kinds = {commit: 'activity.kind.commit', document: 'activity.kind.document', memory: 'activity.kind.memory', business_rule: 'activity.kind.rule'} %}
-{% for day, items in days %}
-    <h3 class="block__sub">{{ day|format_date('short') }} <span class="block__count">{{ items|length }}</span></h3>
-    <ul class="list">
+{% set icons = {commit: 'lucide:git-commit-horizontal', ticket: 'lucide:git-pull-request', document: 'lucide:file-text', memory: 'lucide:lightbulb', business_rule: 'lucide:scale'} %}
+<ol class="events">
+    {% for items in days %}
         {% for item in items %}
             {% set href = item.type == 'memory' ? path('memory_show', {id: item.id})
                 : (item.type == 'document' ? path('document_show', {id: item.id})
                 : (item.type == 'business_rule' and item.project_slug ? path('rule_show', {slug: item.project_slug, code: item.ref}) : item.url)) %}
-            <li class="row row--commit">
-                <span class="code-chip">{{ item.type == 'ticket' ? item.ref : (item.type == 'commit' ? item.ref|slice(0, 7) : kinds[item.type]|trans) }}</span>
-                <span class="row__title">{% if href %}<a href="{{ href }}" {% if item.type in ['commit', 'ticket'] %}rel="noopener noreferrer" target="_blank"{% endif %}><span class="memory-text">{{ item.label }}</span></a>{% else %}<span class="memory-text">{{ item.label }}</span>{% endif %}</span>
-                <span class="row__meta"><span>{{ item.author }}</span><span class="num">{{ item.created_at|format_time('short') }}</span></span>
+            {% set external = item.type in ['commit', 'ticket'] %}
+            <li class="event">
+                <span class="event__icon event__icon--{{ item.type }}" aria-hidden="true">{{ ux_icon(icons[item.type] ?? 'lucide:circle-plus') }}</span>
+                <div class="event__main">
+                    <p class="event__head">
+                        <strong>{{ ('activity.action.' ~ (item.type == 'ticket' ? (item.kind == 'change_request' ? 'change_request' : 'issue') : item.type))|trans }}</strong>
+                        {% if item.type == 'commit' %}<span class="code-chip">{{ item.ref|slice(0, 7) }}</span>{% elseif item.type in ['ticket', 'business_rule'] %}<span class="code-chip">{{ item.ref }}</span>{% endif %}
+                        {% if item.author %}<span class="event__by">{{ 'activity.by'|trans }} <strong>{{ item.author }}</strong></span>{% endif %}
+                    </p>
+                    <p class="event__text">
+                        {% if href %}<a href="{{ href }}" {% if external %}rel="noopener noreferrer" target="_blank"{% endif %}>{{ item.label }}</a>{% else %}{{ item.label }}{% endif %}
+                    </p>
+                </div>
+                <time class="event__time num" datetime="{{ item.created_at|date('c') }}">{{ item.created_at|format_datetime('medium', 'short') }}</time>
             </li>
         {% endfor %}
-    </ul>
-{% endfor %}
+    {% endfor %}
+</ol>

@@ -53,7 +53,7 @@ final class KnowledgeControllerTest extends WebTestCase
 
         $crawler = $this->client->click($crawler->filter('.content .row')->link());
         self::assertResponseIsSuccessful();
-        self::assertSelectorTextContains('.page__title', 'Règles de facturation');
+        self::assertSelectorTextContains('.doc__title', 'Règles de facturation');
         self::assertCount(1, $crawler->filter('.prose table'));
         self::assertCount(0, $crawler->filter('.prose script'));
         self::assertStringContainsString('&lt;script&gt;', $crawler->filter('.prose')->html());

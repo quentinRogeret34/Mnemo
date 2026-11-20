@@ -12,35 +12,50 @@
 
 {% block body %}
     <div class="explorer">
-        <nav class="tree" aria-label="{{ 'document.folders'|trans }}">
-            <a class="tree__item" href="{{ path('document_index') }}" {% if current is null %}aria-current="page"{% endif %}>
-                <twig:ux:icon name="lucide:folder" class="icon nav-item__icon" />
-                <span class="nav-item__label">{{ 'document.all_folders'|trans }}</span>
-            </a>
-            {% for folder in folders %}
-                <a class="tree__item" style="--depth: {{ folder.depth + 1 }}" href="{{ path('document_index', {folder: folder.id}) }}" {% if current and current.id == folder.id %}aria-current="page"{% endif %}>
-                    <twig:ux:icon name="lucide:folder" class="icon nav-item__icon" />
-                    <span class="nav-item__label">{{ folder.name }}</span>
-                    {% if folder.documents > 0 %}<span class="nav-item__count">{{ folder.documents }}</span>{% endif %}
-                </a>
-            {% endfor %}
-        </nav>
+        {{ include('document/_tree.html.twig', {open: ancestors|map(folder => folder.id), current_folder: current ? current.id : null, current_document: null}) }}
 
         <div class="explorer__content">
-            <div class="view-head">
-                <h1><twig:ux:icon name="lucide:folder-open" />{{ current ? current.name : 'nav.documents'|trans }}</h1>
-                <span class="view-head__meta">{{ current is null ? 'document.at_root'|trans({count: documents.total}) : documents.total }}</span>
+            {% set hint = current ? 'document.hint_folder'|trans({name: current.name}) : 'document.hint_root'|trans %}
+            <div class="view-head view-head--split">
+                <div class="view-head__title">
+                    <h1><twig:ux:icon name="lucide:folder-open" />{{ current ? current.name : 'nav.documents'|trans }}</h1>
+                    <span class="view-head__meta">{{ current is null ? 'document.at_root'|trans({count: documents.total}) : documents.total }}</span>
+                </div>
+                <div class="view-head__actions">
+                    <button class="button" type="button" commandfor="new-folder" command="show-modal"><twig:ux:icon name="lucide:folder-plus" />{{ 'document.new_folder'|trans }}</button>
+                    <button class="button button--primary" type="button" commandfor="upload" command="show-modal"><twig:ux:icon name="lucide:upload" />{{ 'document.add_files'|trans }}</button>
+                </div>
             </div>
+
+            <dialog class="dialog dialog--form" id="upload" closedby="any" aria-labelledby="upload-title" data-controller="dialog" {{ upload.vars.submitted ? 'open' }}>
+                <h2 class="dialog__title" id="upload-title">{{ 'document.add_files'|trans }}</h2>
+                <p class="dialog__text row__sub">{{ hint }}</p>
+                {{ include('document/_upload.html.twig', {upload: upload, hint: ''}) }}
+            </dialog>
+
+            <dialog class="dialog dialog--form" id="new-folder" closedby="any" aria-labelledby="new-folder-title" data-controller="dialog" {{ folder_form.vars.submitted ? 'open' }}>
+                <h2 class="dialog__title" id="new-folder-title">{{ 'document.new_folder'|trans }}</h2>
+                <p class="dialog__text row__sub">{{ current ? 'document.folder_in'|trans({name: current.name}) : 'document.folder_at_root'|trans }}</p>
+                {{ form_start(folder_form, {attr: {class: 'form-stack', novalidate: 'novalidate'}}) }}
+                    {{ form_label(folder_form.name, null, {label_attr: {class: 'visually-hidden'}}) }}
+                    {{ form_widget(folder_form.name, {attr: {class: 'input', autofocus: 'autofocus'}}) }}
+                    {% for error in folder_form.name.vars.errors %}<p class="form-errors">{{ error.message }}</p>{% endfor %}
+                    <div class="dialog__actions">
+                        <button class="button" type="button" commandfor="new-folder" command="close">{{ 'common.cancel'|trans }}</button>
+                        <button class="button button--primary" type="submit"><twig:ux:icon name="lucide:plus" />{{ 'document.create_folder'|trans }}</button>
+                    </div>
+                {{ form_end(folder_form) }}
+            </dialog>
 
             {% set children = folders|filter(folder => folder.parent_id == (current ? current.id : null)) %}
             {% if children is not empty %}
-                <ul class="list list--folders">
+                <ul class="folder-cards" aria-label="{{ 'document.folders'|trans }}">
                     {% for folder in children %}
                         <li>
-                            <a class="row" href="{{ path('document_index', {folder: folder.id}) }}">
-                                <twig:ux:icon name="lucide:folder" class="icon nav-item__icon" />
-                                <span class="row__title"><span>{{ folder.name }}</span></span>
-                                <span class="row__meta">{{ 'document.docs_count'|trans({count: folder.documents}) }}</span>
+                            <a class="folder-card" href="{{ path('document_index', {folder: folder.id}) }}">
+                                <span class="folder-card__icon" aria-hidden="true"><twig:ux:icon name="lucide:folder" /></span>
+                                <span class="folder-card__name">{{ folder.name }}</span>
+                                <span class="folder-card__count">{{ 'document.docs_count'|trans({count: folder.documents}) }}</span>
                             </a>
                         </li>
                     {% endfor %}
@@ -48,22 +63,43 @@
             {% endif %}
 
             {% if documents.items is not empty %}
-                {{ include('document/_rows.html.twig', {documents: documents.items, show_folder: false, show_projects: true}) }}
+                <div class="table-wrap table-wrap--framed doc-table">
+                    <table class="data-table">
+                        <thead>
+                            <tr><th>{{ 'document.col.name'|trans }}</th><th>{{ 'nav.projects'|trans }}</th><th>{{ 'nav.rules'|trans }}</th><th>{{ 'nav.code'|trans }}</th><th class="num">{{ 'document.col.added'|trans }}</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for document in documents.items %}
+                                <tr>
+                                    <td>
+                                        <a class="doc-cell" href="{{ path('document_show', {id: document.id}) }}">
+                                            <span class="format format--{{ document.format }}">{{ document.format }}</span>
+                                            <span class="doc-cell__main">
+                                                <span>{{ document.title }}</span>
+                                                <span class="doc-cell__meta">
+                                                    <span class="mono">{{ document.filename }}</span>
+                                                    <span>{{ 'document.props.kb'|trans({size: (document.size / 1024)|round(document.size < 10240 ? 1 : 0)}) }}</span>
+                                                    {% if document.demo %}<span class="tag tag--demo">{{ 'common.demo'|trans }}</span>{% endif %}
+                                                </span>
+                                            </span>
+                                        </a>
+                                    </td>
+                                    <td>{% if document.projects %}<span class="doc-cell__projects">{{ document.projects }}</span>{% else %}<span class="row__sub">{{ 'document.no_project'|trans }}</span>{% endif %}</td>
+                                    <td>{% if document.rules > 0 %}<span class="pill pill--accent">{{ 'document.rules_count'|trans({count: document.rules}) }}</span>{% else %}<span class="row__sub">0</span>{% endif %}</td>
+                                    <td>{% if document.code_links > 0 %}<span class="count-badge">{{ ux_icon('lucide:file-code') }}{{ document.code_links }}</span>{% else %}<span class="row__sub">0</span>{% endif %}</td>
+                                    <td class="num row__sub">{{ document.created_at|format_date('medium') }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
                 {{ include('_pager.html.twig', {page: documents}) }}
             {% elseif children is empty %}
-                <p class="block__empty">{{ 'document.empty_folder'|trans }}</p>
+                <twig:EmptyState :title="'document.empty_folder'|trans" :text="hint">
+                    <twig:block name="icon"><twig:ux:icon name="lucide:folder-open" /></twig:block>
+                    <twig:block name="actions"><button class="button button--primary" type="button" commandfor="upload" command="show-modal"><twig:ux:icon name="lucide:upload" />{{ 'document.add_files'|trans }}</button></twig:block>
+                </twig:EmptyState>
             {% endif %}
-
-            <div class="explorer__tools">
-                {{ include('document/_upload.html.twig', {upload: upload, hint: current ? 'document.hint_folder'|trans({name: current.name}) : 'document.hint_root'|trans}) }}
-
-                {{ form_start(folder_form, {attr: {class: 'inline-form', novalidate: 'novalidate'}}) }}
-                    {{ form_label(folder_form.name, null, {label_attr: {class: 'visually-hidden'}}) }}
-                    {{ form_widget(folder_form.name, {attr: {class: 'input'}}) }}
-                    <button class="button" type="submit"><twig:ux:icon name="lucide:plus" />{{ 'document.create_folder'|trans }}</button>
-                    {% for error in folder_form.name.vars.errors %}<p class="form-errors">{{ error.message }}</p>{% endfor %}
-                {{ form_end(folder_form) }}
-            </div>
         </div>
     </div>
 {% endblock %}

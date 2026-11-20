@@ -30,13 +30,17 @@ final class GraphControllerTest extends WebTestCase
         $crawler = $this->client->request('GET', '/');
 
         self::assertResponseIsSuccessful();
-        $row = $crawler->filter('.content .row');
+        $row = $crawler->filter('.content .project-row');
         self::assertCount(1, $row);
-        self::assertStringContainsString('Demo project', $row->text());
+        self::assertStringContainsString('Demo project', $row->filter('.project-row__title')->text());
         self::assertSame(
-            ['2 fichiers', '3 symboles', '6 arêtes', 'aaaaaaa'],
-            $row->filter('.row__meta > span')->each(static fn ($stat): string => $stat->text()),
+            ['2 fichiers', '3 symboles · aaaaaaa'],
+            $row->filter('td')->eq(3)->filter('.project-row__stack > *')->each(static fn ($stat): string => $stat->text()),
         );
+
+        self::assertCount(1, $this->client->request('GET', '/?q=demo&sort=memories')->filter('.content .project-row'));
+        $this->client->request('GET', '/?q=inconnu');
+        self::assertSelectorTextContains('.block__empty', 'Aucun projet ne correspond à « inconnu ».');
     }
 
     public function testEmptyWorkspaceOffersToCreateAProject(): void

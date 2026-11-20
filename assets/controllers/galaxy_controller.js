@@ -3,16 +3,46 @@ import { trans } from '../translator.js';
 import cytoscape from 'cytoscape';
 import { resolveColor } from '../color.js';
 
-const HUBS = { code_file: ['--color-hub-file', 'round-rectangle'], business_rule: ['--color-hub-rule', 'diamond'], document: ['--color-hub-document', 'triangle'], project: ['--color-hub-project', 'hexagon'], none: ['--color-faint', 'ellipse'] };
+const KINDS = ['code_file', 'business_rule', 'document', 'project', 'none'];
+const KIND_TOKENS = { code_file: '--color-hub-file', business_rule: '--color-hub-rule', document: '--color-hub-document', project: '--color-hub-project', none: '--color-faint' };
+const TYPE_TOKENS = { decision: '--color-accent', convention: '--color-hub-file', task_learning: '--color-success', preference: '--color-warning', fact: '--color-faint' };
+const CARD = { width: 236, height: 62 };
+const GAP = { column: 268, level: 128, stack: 92 };
+const OPEN_ALL = { hubs: 6, memories: 12 };
+const OPEN_KINDS = 8;
+const MIN_FIT_ZOOM = 0.55;
 
-// Memories orbit what they are about: hubs are sized by the number of memories attached to them.
+function clip(text, length, fromEnd = false) {
+    if (text.length <= length) {
+        return text;
+    }
+
+    return fromEnd ? `…${text.slice(-(length - 1))}` : `${text.slice(0, length - 1)}…`;
+}
+
+function icon(color) {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${color}"/><stop offset="1" stop-color="${color}" stop-opacity="0.45"/></linearGradient></defs><rect width="28" height="28" rx="8" fill="url(#g)"/></svg>`;
+
+    return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
+// The memory graph as a tree of cards: scope, kinds of subject, subjects, then the memories about each subject stacked below it.
+// A memory about several subjects is drawn under each of them. A graph too big to read at once opens folded, one level per click.
 export default class extends Controller {
-    static targets = ['canvas', 'empty', 'detail', 'count'];
-    static values = { url: String };
+    static targets = ['canvas', 'empty', 'detail', 'count', 'zoom'];
+    static values = { url: String, labels: Object };
 
     async connect() {
         const response = await fetch(this.urlValue, { headers: { Accept: 'application/json' } });
-        this.galaxy = await response.json();
+        const { nodes, edges } = await response.json();
+        const memories = new Map(nodes.filter((node) => node.kind === 'memory').map((node) => [node.id, node]));
+        this.hubs = nodes.filter((node) => node.kind !== 'memory').sort((a, b) => b.weight - a.weight || a.label.localeCompare(b.label));
+        this.children = new Map(this.hubs.map((hub) => [hub.id, []]));
+        edges.forEach((edge) => this.children.get(edge.target)?.push(memories.get(edge.source)));
+        this.kinds = KINDS.filter((kind) => this.hubs.some((hub) => hub.kind === kind));
+        const small = this.hubs.length <= OPEN_ALL.hubs && memories.size <= OPEN_ALL.memories;
+        this.open = new Set([...(this.hubs.length <= OPEN_KINDS ? this.kinds : []), ...(small ? this.hubs.map((hub) => hub.id) : [])]);
+        this.memoryCount = memories.size;
         this.render();
     }
 
@@ -21,77 +51,255 @@ export default class extends Controller {
     }
 
     render() {
-        if (!this.galaxy) {
+        if (!this.hubs) {
             return;
         }
-        const { nodes, edges } = this.galaxy;
         this.graph?.destroy();
-        this.emptyTarget.hidden = nodes.length > 0;
-        this.countTarget.textContent = trans('js.galaxy.count', { memories: nodes.filter((node) => node.kind === 'memory').length, subjects: nodes.filter((node) => node.kind !== 'memory').length });
-        if (nodes.length === 0) {
+        this.emptyTarget.hidden = this.hubs.length > 0;
+        this.countTarget.textContent = trans('js.galaxy.count', { memories: this.memoryCount, subjects: this.hubs.length });
+        if (this.hubs.length === 0) {
             return;
         }
 
-        const color = (token) => resolveColor(this.element, token);
-        const mono = getComputedStyle(this.element).getPropertyValue('--font-mono').trim();
-        const hubLabels = nodes.filter((node) => node.kind !== 'memory').length <= 40;
+        this.colors = Object.fromEntries(['--color-card', '--color-rule', '--color-rule-2', '--color-ink', '--color-accent', '--color-series', ...Object.values(KIND_TOKENS), ...Object.values(TYPE_TOKENS)].map((token) => [token, resolveColor(this.element, token)]));
+        const color = (token) => this.colors[token];
+        const font = getComputedStyle(this.element).getPropertyValue('--font-body').trim();
+
+        this.measure = document.createElement('canvas').getContext('2d');
+        this.measure.font = `11px ${font}`;
 
         this.graph = cytoscape({
             container: this.canvasTarget,
-            elements: [
-                ...nodes.map((node) => ({ data: { ...node, short: node.label.length > 42 ? `…${node.label.slice(-40)}` : node.label }, classes: node.kind === 'memory' ? 'memory' : `hub ${node.kind}` })),
-                ...edges.map((edge) => ({ data: { ...edge, id: `${edge.source}->${edge.target}` } })),
-            ],
+            elements: this.elements(),
             style: [
-                { selector: 'node.memory', style: { 'background-color': color('--color-series'), width: 9, height: 9, 'border-width': 2, 'border-color': color('--color-card') } },
                 {
-                    selector: 'node.hub',
+                    selector: 'node',
                     style: {
-                        width: 'mapData(weight, 1, 12, 18, 44)',
-                        height: 'mapData(weight, 1, 12, 18, 44)',
-                        label: hubLabels ? 'data(short)' : '',
-                        color: color('--color-ink-2'),
-                        'font-family': mono,
-                        'font-size': 9,
-                        'text-valign': 'bottom',
-                        'text-margin-y': 5,
-                        'text-outline-color': color('--color-card'),
-                        'text-outline-width': 2,
+                        shape: 'round-rectangle',
+                        width: CARD.width,
+                        height: CARD.height,
+                        'background-color': color('--color-card'),
+                        'border-width': 1,
+                        'border-color': color('--color-rule'),
+                        label: 'data(text)',
+                        color: color('--color-ink'),
+                        'font-family': font,
+                        'font-size': 11,
+                        'line-height': 1.4,
+                        'text-wrap': 'wrap',
+                        'text-max-width': CARD.width - 76,
+                        'text-valign': 'center',
+                        'text-halign': 'center',
+                        'text-justification': 'left',
+                        'text-margin-x': 'data(margin)',
+                        'background-image': 'data(icon)',
+                        'background-width': 28,
+                        'background-height': 28,
+                        'background-fit': 'none',
+                        'background-clip': 'none',
+                        'background-position-x': '14px',
+                        'background-position-y': '50%',
                     },
                 },
-                ...Object.entries(HUBS).map(([kind, [token, shape]]) => ({ selector: `node.${kind}`, style: { 'background-color': color(token), shape } })),
-                { selector: 'edge', style: { width: 1, 'line-color': color('--color-rule-2'), 'curve-style': 'straight' } },
-                { selector: 'node.dim', style: { opacity: 0.18 } },
-                { selector: 'edge.dim', style: { opacity: 0.1 } },
-                { selector: 'node.hub.focus', style: { label: 'data(short)', 'z-index': 20 } },
-                { selector: 'edge.focus', style: { 'line-color': color('--color-series'), width: 1.5 } },
+                { selector: 'node.folded', style: { 'border-style': 'dashed', 'border-color': color('--color-rule-2') } },
+                { selector: 'node.root', style: { 'border-width': 1.5, 'border-color': color('--color-ink') } },
+                { selector: 'node.hover', style: { 'border-color': color('--color-accent'), 'border-width': 1.5, 'border-style': 'solid' } },
+                {
+                    selector: 'edge',
+                    style: {
+                        width: 1.25,
+                        'line-color': color('--color-rule-2'),
+                        'curve-style': 'taxi',
+                        'taxi-direction': 'downward',
+                        'taxi-turn': '50%',
+                        'taxi-radius': 8,
+                        'target-arrow-shape': 'triangle',
+                        'target-arrow-color': color('--color-rule-2'),
+                        'arrow-scale': 0.7,
+                    },
+                },
+                { selector: 'edge.stack', style: { 'curve-style': 'straight' } },
             ],
-            layout: { name: 'cose', animate: false, nodeRepulsion: (node) => (node.hasClass('hub') ? 60000 : 5000), idealEdgeLength: () => 46, gravity: 0.6, numIter: 1500, padding: 28 },
-            minZoom: 0.2,
-            maxZoom: 2.5,
+            layout: { name: 'preset', padding: 48 },
+            minZoom: 0.15,
+            maxZoom: 2,
+            autoungrabify: true,
         });
 
-        if (this.graph.zoom() > 1) {
-            this.graph.zoom(1);
-            this.graph.center();
-        }
-
+        this.graph.on('viewport', () => this.viewport());
         this.graph.on('mouseover', 'node', (event) => {
-            const neighbourhood = event.target.closedNeighborhood();
-            this.graph.elements().not(neighbourhood).addClass('dim');
-            neighbourhood.addClass('focus');
-            this.canvasTarget.style.cursor = event.target.data('url') ? 'pointer' : 'default';
-            this.detailTarget.textContent = event.target.data('label');
+            event.target.addClass('hover');
+            this.canvasTarget.style.cursor = 'pointer';
+            this.describe(event.target);
         });
-        this.graph.on('mouseout', 'node', () => {
-            this.graph.elements().removeClass('dim focus');
+        this.graph.on('mouseout', 'node', (event) => {
+            event.target.removeClass('hover');
             this.canvasTarget.style.cursor = '';
-            this.detailTarget.textContent = trans('js.galaxy.hint');
         });
-        this.graph.on('tap', 'node', (event) => {
-            if (event.target.data('url')) {
-                window.location.assign(event.target.data('url'));
+        this.graph.on('tap', 'node', (event) => this.activate(event.target));
+        this.fit();
+    }
+
+    elements() {
+        const color = (token) => this.colors[token];
+        const labels = this.labelsValue;
+        const nodes = [];
+        const edges = [];
+        let column = 0;
+        const kindX = [];
+
+        this.kinds.forEach((kind) => {
+            const hubs = this.hubs.filter((hub) => hub.kind === kind);
+            const kindOpen = this.open.has(kind);
+            const hubX = [];
+            if (kindOpen) {
+                hubs.forEach((hub) => {
+                    const x = column++ * GAP.column;
+                    const hubOpen = this.open.has(hub.id);
+                    const memories = this.children.get(hub.id);
+                    hubX.push(x);
+                    nodes.push({
+                        group: 'nodes',
+                        data: { id: hub.id, role: 'hub', url: hub.url, full: hub.label, icon: icon(color(KIND_TOKENS[kind])), text: `${labels.hubs[kind]} · ${trans('js.galaxy.memories', { count: memories.length })}\n${clip(hub.label, 26, kind === 'code_file')}` },
+                        position: { x, y: GAP.level * 2 },
+                        classes: hubOpen ? '' : 'folded',
+                    });
+                    edges.push({ group: 'edges', data: { id: `${kind}->${hub.id}`, source: kind, target: hub.id } });
+                    if (hubOpen) {
+                        memories.forEach((memory, index) => {
+                            const id = `${hub.id}/${memory.id}`;
+                            nodes.push({
+                                group: 'nodes',
+                                data: { id, role: 'memory', url: memory.url, full: memory.label, icon: icon(color(TYPE_TOKENS[memory.type] ?? '--color-faint')), text: `${labels.types[memory.type] ?? memory.type}\n${clip(memory.label, 56)}` },
+                                position: { x, y: GAP.level * 3 + index * GAP.stack },
+                            });
+                            const previous = index === 0 ? hub.id : `${hub.id}/${memories[index - 1].id}`;
+                            edges.push({ group: 'edges', data: { id: `${previous}->${id}`, source: previous, target: id }, classes: 'stack' });
+                        });
+                    }
+                });
+            } else {
+                hubX.push(column++ * GAP.column);
             }
+            const x = (Math.min(...hubX) + Math.max(...hubX)) / 2;
+            kindX.push(x);
+            nodes.push({
+                group: 'nodes',
+                data: { id: kind, role: 'kind', icon: icon(color(KIND_TOKENS[kind])), full: labels.kinds[kind], text: `${trans('js.galaxy.subjects', { count: hubs.length })}\n${labels.kinds[kind]}` },
+                position: { x, y: GAP.level },
+                classes: kindOpen ? '' : 'folded',
+            });
+            edges.push({ group: 'edges', data: { id: `root->${kind}`, source: 'root', target: kind } });
         });
+
+        nodes.push({
+            group: 'nodes',
+            data: { id: 'root', role: 'root', full: labels.root, icon: icon(color('--color-accent')), text: `${labels.overline}\n${clip(labels.root, 30)}` },
+            position: { x: (Math.min(...kindX) + Math.max(...kindX)) / 2, y: 0 },
+            classes: 'root',
+        });
+
+        nodes.forEach((node) => {
+            node.data.margin = this.margin(node.data.text);
+        });
+
+        return [...nodes, ...edges];
+    }
+
+    // Cytoscape centres a label on its node: the offset puts the text block's left edge right after the icon.
+    margin(text) {
+        const max = CARD.width - 76;
+        const width = Math.min(max, Math.max(...text.split('\n').map((line) => this.measure.measureText(line).width)));
+
+        return -CARD.width / 2 + 54 + width / 2;
+    }
+
+    activate(node) {
+        const role = node.data('role');
+        if (role === 'memory') {
+            window.location.assign(node.data('url'));
+
+            return;
+        }
+        if (role === 'root') {
+            return;
+        }
+        const id = node.id();
+        if (this.open.has(id)) {
+            this.open.delete(id);
+        } else {
+            this.open.add(id);
+        }
+        this.rebuild(node.id());
+        this.describe(this.graph.getElementById(id));
+    }
+
+    rebuild(anchor) {
+        const before = this.graph.getElementById(anchor).renderedPosition();
+        this.graph.elements().remove();
+        this.graph.add(this.elements());
+        const after = this.graph.getElementById(anchor).renderedPosition();
+        this.graph.panBy({ x: before.x - after.x, y: before.y - after.y });
+    }
+
+    describe(node) {
+        const url = node.data('url');
+        const text = document.createTextNode(node.data('full'));
+        if (!url || node.data('role') === 'memory') {
+            this.detailTarget.replaceChildren(text);
+
+            return;
+        }
+        const link = Object.assign(document.createElement('a'), { href: url, className: 'link', textContent: this.labelsValue.open });
+        this.detailTarget.replaceChildren(text, ' · ', link);
+    }
+
+    viewport() {
+        const zoom = this.graph.zoom();
+        const pan = this.graph.pan();
+        let size = 18 * zoom;
+        while (size < 12) {
+            size *= 2;
+        }
+        this.canvasTarget.style.backgroundSize = `${size}px ${size}px`;
+        this.canvasTarget.style.backgroundPosition = `${pan.x}px ${pan.y}px`;
+        this.zoomTarget.textContent = `${Math.round(zoom * 100)} %`;
+    }
+
+    zoomBy(factor) {
+        const { width, height } = this.canvasTarget.getBoundingClientRect();
+        this.graph.zoom({ level: this.graph.zoom() * factor, renderedPosition: { x: width / 2, y: height / 2 } });
+    }
+
+    zoomIn() {
+        this.zoomBy(1.25);
+    }
+
+    zoomOut() {
+        this.zoomBy(0.8);
+    }
+
+    fit() {
+        this.graph.fit(undefined, 48);
+        const zoom = this.graph.zoom();
+        if (zoom > 1 || zoom < MIN_FIT_ZOOM) {
+            const level = zoom > 1 ? 1 : MIN_FIT_ZOOM;
+            this.graph.zoom(level);
+            this.graph.pan({ x: this.canvasTarget.clientWidth / 2 - this.graph.getElementById('root').position('x') * level, y: 48 + (CARD.height / 2) * level });
+        }
+        this.viewport();
+    }
+
+    expand() {
+        this.hubs.forEach((hub) => this.open.add(hub.id));
+        this.kinds.forEach((kind) => this.open.add(kind));
+        this.rebuild('root');
+        this.fit();
+    }
+
+    collapse() {
+        this.hubs.forEach((hub) => this.open.delete(hub.id));
+        this.rebuild('root');
+        this.fit();
     }
 }
