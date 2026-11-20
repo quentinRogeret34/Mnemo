@@ -93,6 +93,6 @@ final class PaginationTest extends WebTestCase
 
         $crawler = $this->client->click($crawler->filter('section[aria-labelledby="recent-title"] .pager a[rel="next"]')->link());
         self::assertCount(3, $crawler->filter('section[aria-labelledby="recent-title"] tbody tr'));
-        self::assertSame('23', $crawler->filter('section[aria-labelledby="recent-title"] tbody tr')->last()->filter('td')->eq(4)->text());
+        self::assertSame('23', $crawler->filter('section[aria-labelledby="recent-title"] tbody tr')->last()->filter('td')->eq(3)->text());
     }
 }

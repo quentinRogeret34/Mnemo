@@ -1028,6 +1028,9 @@ a.timeline__title:hover { color: var(--color-accent); }
 .data-table tbody tr { transition: background-color var(--dur-fast) var(--ease-out); }
 .data-table tbody tr:hover { background: var(--color-hover); }
 .data-table__clip { max-width: 22rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.data-table__nowrap { white-space: nowrap; }
+.data-table__fill { width: 100%; max-width: 0; min-width: 9rem; }
+.data-table__fill .data-table__clip { max-width: none; }
 .data-table__main { min-width: 18rem; }
 .data-table__main .memory-text { color: var(--color-ink); }
 .data-table__main a:hover { color: var(--color-accent); }

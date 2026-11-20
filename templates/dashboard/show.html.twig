@@ -164,18 +164,16 @@
                     {% else %}
                         <div class="table-wrap table-wrap--framed">
                             <table class="data-table">
-                                <thead><tr><th>{{ 'activity.when'|trans }}</th><th>{{ 'dashboard.tool'|trans }}</th><th>{{ 'memory.index.project'|trans }}</th><th>{{ 'dashboard.query'|trans }}</th><th class="num">{{ 'palette.results'|trans }}</th><th class="num">{{ 'nav.memories'|trans }}</th><th class="num">{{ 'dashboard.duration'|trans }}</th><th>{{ 'dashboard.client'|trans }}</th><th>{{ 'dashboard.status'|trans }}</th></tr></thead>
+                                <thead><tr><th>{{ 'activity.when'|trans }}</th><th>{{ 'dashboard.tool'|trans }}</th><th>{{ 'memory.index.project'|trans }}</th><th class="num">{{ 'palette.results'|trans }}</th><th class="num">{{ 'nav.memories'|trans }}</th><th class="num">{{ 'dashboard.duration'|trans }}</th><th>{{ 'dashboard.status'|trans }}</th></tr></thead>
                                 <tbody>
                                     {% for call in recent.items %}
                                         <tr>
-                                            <td class="num">{{ call.created_at|format_datetime('short', 'short') }}</td>
-                                            <td><span class="code-chip">{{ call.tool }}</span></td>
-                                            <td>{{ call.project ?? '-' }}</td>
-                                            <td class="data-table__clip">{{ call.query ?? '-' }}</td>
+                                            <td class="data-table__nowrap"><span class="num" title="{{ call.created_at|format_datetime('medium', 'short') }}">{{ call.created_at|format_datetime(pattern: 'dd/MM HH:mm') }}</span>{% if call.client %}<div class="row__sub">{{ call.client }}</div>{% endif %}</td>
+                                            <td class="data-table__fill"><span class="code-chip">{{ call.tool }}</span>{% if call.query %}<div class="row__sub data-table__clip" title="{{ call.query }}">{{ call.query }}</div>{% endif %}</td>
+                                            <td class="data-table__nowrap">{{ call.project ?? '-' }}</td>
                                             <td class="num">{{ call.results }}</td>
                                             <td class="num">{{ call.memories }}</td>
                                             <td class="num">{{ call.duration_ms }} ms</td>
-                                            <td>{{ call.client ?? '-' }}</td>
                                             <td>{% if call.failed %}<span class="pill pill--danger">{{ 'common.failed'|trans }}</span>{% else %}<span class="pill pill--success">{{ 'dashboard.ok'|trans }}</span>{% endif %}</td>
                                         </tr>
                                     {% endfor %}
