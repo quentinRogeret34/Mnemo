@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="docs/header.png" alt="Mnemo, the memory dashboard for people and companies" width="100%">
+
 # Mnemo
 
 **The memory of your project, for humans and AI agents.**
@@ -35,6 +37,22 @@ Every link says where it comes from and how sure it is. Nothing an LLM proposes 
 - **Connectors.** GitHub and GitLab (code graph, README, docs, commits, pull requests, issues) and any other MCP server (DeepWiki, Context7, Notion, Linear...), with the MCP OAuth flow.
 - **Gardening.** Drift reports, verification of memories against the graph, blind spots of business rules.
 - **A web interface** in English and French, with a memory graph, a code explorer, an activity feed and a dashboard of agent calls.
+
+## A look around
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/dashboard.png" alt="Dashboard with key figures, charts of agent calls and the work waiting for review"><br><sub><b>Dashboard</b>: what agents asked, memories created and recalled, what needs attention.</sub></td>
+    <td width="50%"><img src="docs/screenshots/memory-graph.png" alt="Memory graph as a tree of cards from the project to its subjects and memories"><br><sub><b>Memory graph</b>: from the project to code files, rules and documents, with the memories about each.</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/proposals.png" alt="Review queue with a learning and a duplicate to apply or reject"><br><sub><b>Review queue</b>: learnings, duplicates and contradictions wait for a human.</sub></td>
+    <td width="50%"><img src="docs/screenshots/document.png" alt="Business document with its file tree, table of contents and linked rules"><br><sub><b>Documents</b>: business specs with their rules, linked code and table of contents.</sub></td>
+  </tr>
+  <tr>
+    <td colspan="2"><img src="docs/screenshots/activity.png" alt="Activity feed of what entered the graph"><br><sub><b>Activity</b>: connector syncs and everything that entered the graph.</sub></td>
+  </tr>
+</table>
 
 ## Quickstart
 
