@@ -60,9 +60,12 @@ final class DocumentWorkspaceTest extends WebTestCase
         $crawler = $this->client->followRedirect();
 
         self::assertSame('Remises', $crawler->filter('.doc-cell__main > span:first-child')->last()->text());
-        self::assertSame(['Spécifications', 'Facturation 1'], $crawler->filter('.filetree summary')->each(static fn ($item): string => trim(preg_replace('/\s+/', ' ', $item->text()))));
+        self::assertSame(['Spécifications 1', 'Facturation 1'], $crawler->filter('.filetree summary')->each(static fn ($item): string => trim(preg_replace('/\s+/', ' ', $item->text()))));
         self::assertSame('Remises', $crawler->filter('.filetree details details .filetree__file .filetree__label')->text());
         self::assertSame('page', $crawler->filter('.filetree details details summary a')->attr('aria-current'));
+
+        $crawler = $this->client->request('GET', '/documents');
+        self::assertSame('1 doc.', $crawler->filter('.folder-card__count')->text());
 
         $document = $this->entityManager->getRepository(Node::class)->findOneBy(['type' => NodeType::Document]);
         self::assertSame('Facturation', $document->getFolder()->getName());

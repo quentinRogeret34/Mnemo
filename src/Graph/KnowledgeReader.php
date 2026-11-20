@@ -278,13 +278,13 @@ final class KnowledgeReader
             $this->connection->fetchAllAssociative(
                 <<<'SQL'
                     WITH RECURSIVE tree AS (
-                        SELECT id, name, parent_id, 0 AS depth, ARRAY[lower(name), id::text] AS sort_key FROM folder WHERE parent_id IS NULL
+                        SELECT id, name, parent_id, 0 AS depth, ARRAY[lower(name), id::text] AS sort_key, ARRAY[id] AS path FROM folder WHERE parent_id IS NULL
                         UNION ALL
-                        SELECT f.id, f.name, f.parent_id, t.depth + 1, t.sort_key || ARRAY[lower(f.name), f.id::text]
+                        SELECT f.id, f.name, f.parent_id, t.depth + 1, t.sort_key || ARRAY[lower(f.name), f.id::text], t.path || f.id
                         FROM folder f JOIN tree t ON f.parent_id = t.id
                     )
                     SELECT t.id, t.name, t.parent_id, t.depth,
-                           (SELECT COUNT(*) FROM node d WHERE d.folder_id = t.id AND d.type = :document) AS documents
+                           (SELECT COUNT(*) FROM node d JOIN tree s ON s.id = d.folder_id WHERE t.id = ANY(s.path) AND d.type = :document) AS documents
                     FROM tree t
                     ORDER BY t.sort_key
                     SQL,
