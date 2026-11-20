@@ -26,7 +26,7 @@ export default class extends Controller {
 
             const item = document.createElement('li');
             item.className = `doc-toc__item doc-toc__item--${heading.tagName.toLowerCase()}`;
-            const link = Object.assign(document.createElement('a'), { href: `#${id}`, textContent: heading.textContent.trim() });
+            const link = Object.assign(document.createElement('a'), { href: `#${id}`, textContent: heading.textContent.trim(), title: heading.textContent.trim() });
             item.append(link);
             this.listTarget.append(item);
             this.links.set(heading, link);

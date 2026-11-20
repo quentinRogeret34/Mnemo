@@ -1355,12 +1355,12 @@ a.pill:hover { filter: brightness(0.96); }
 .doc__body h2 { padding-top: var(--space-lg); border-top: var(--rule-width) solid var(--color-rule); }
 .doc__body pre { padding: var(--space-md); border: var(--rule-width) solid var(--color-rule); border-radius: var(--radius-md); background: var(--color-sidebar); font-size: var(--text-sm); line-height: 1.65; }
 
-.doc-aside { display: grid; gap: var(--space-md); align-content: start; min-width: 0; }
+.doc-aside { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-md); align-content: start; min-width: 0; }
 @media (min-width: 72rem) { .doc-aside { position: sticky; top: 3.5rem; max-height: calc(100vh - 5rem); overflow-y: auto; } }
 .doc-aside__title { margin-bottom: var(--space-sm); color: var(--color-ink); font-size: var(--text-md); font-weight: 600; }
 .doc-toc { padding-bottom: var(--space-md); border-bottom: var(--rule-width) solid var(--color-rule); }
 .doc-toc[hidden] { display: none; }
-.doc-toc__list { list-style: none; margin: 0; padding: 0; display: grid; gap: 1px; }
+.doc-toc__list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 1px; }
 .doc-toc__item a { display: block; padding: var(--space-2xs) var(--space-xs); overflow: hidden; border-radius: var(--radius-sm); color: var(--color-ink-2); font-size: var(--text-sm); text-overflow: ellipsis; white-space: nowrap; }
 .doc-toc__item--h1 a, .doc-toc__item--h2 a { color: var(--color-ink); font-weight: 500; }
 .doc-toc__item--h3 a { padding-left: var(--space-md); }
@@ -1465,7 +1465,7 @@ a.pill:hover { filter: brightness(0.96); }
 
 .memory-aside .doc-aside__title { display: flex; align-items: center; gap: var(--space-xs); margin-bottom: 0; }
 .memory-aside .doc-aside__title .icon { width: 1rem; height: 1rem; color: var(--color-muted); }
-.doc-card { display: grid; gap: var(--space-sm); }
+.doc-card { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-sm); min-width: 0; }
 .doc-card__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-xs); }
 .doc-card__form { display: flex; gap: var(--space-xs); }
 .doc-card__form .select { flex: 1; min-width: 0; }
