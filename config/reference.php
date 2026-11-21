@@ -2401,6 +2401,40 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *     },
  *     keys_patterns?: Param|string|list<scalar|Param|null>,
  * }
+ * @psalm-type AiObservabilityConfig = bool|array{
+ *     enabled?: bool|Param, // Default: true
+ *     capture_content?: bool|Param, // Records prompts, responses and tool arguments (gen_ai.input.messages, gen_ai.output.messages...). Opt-in, as they may hold personal data. // Default: false
+ *     tracer_provider?: scalar|Param|null, // Id of an OpenTelemetry TracerProviderInterface service to reuse. By default one is built from the OTEL_* environment variables. // Default: null
+ *     trace_url?: scalar|Param|null, // Url of a trace in the tracing backend, linked from the profiler. "{trace_id}" is replaced, e.g. "http://localhost:16686/trace/{trace_id}". // Default: null
+ *     user_id_resolver?: scalar|Param|null, // Id of a UserIdResolverInterface service giving the pseudonymous user.id. By default the identifier of the logged-in user, hashed with kernel.secret. // Default: null
+ * }
+ * @psalm-type AiSteeringConfig = bool|array{
+ *     enabled?: bool|Param, // Default: true
+ *     agents?: array<string, array{ // Default: []
+ *         model?: scalar|Param|null, // Default: null
+ *         system_prompt?: scalar|Param|null, // Default: null
+ *         prompt_version?: scalar|Param|null, // Default: null
+ *         options?: list<mixed>,
+ *     }>,
+ *     experiments?: array<string, array{ // Default: []
+ *         agent?: scalar|Param|null, // Name of the agent, as returned by AgentInterface::getName().
+ *         variants?: array<string, array{ // Default: []
+ *             weight?: int|Param, // Default: 1
+ *             model?: scalar|Param|null, // Default: null
+ *             system_prompt?: scalar|Param|null, // Default: null
+ *             prompt_version?: scalar|Param|null, // Default: null
+ *             options?: list<mixed>,
+ *         }>,
+ *     }>,
+ *     hub?: array{ // Reads the agent settings and experiments managed in the hub. Without a url, only the ones above apply.
+ *         url?: scalar|Param|null, // Base url of the hub, e.g. "%env(AI_HUB_URL)%". // Default: null
+ *         token?: scalar|Param|null, // Bearer token of the hub API (HUB_STEERING_TOKEN on the hub side). // Default: null
+ *         cache_ttl?: int|Param, // Seconds a configuration read from the hub is kept before asking again. // Default: 60
+ *         timeout?: float|Param, // Seconds to wait for the hub, the last configuration received is used beyond. // Default: 2.0
+ *         http_client?: scalar|Param|null, // Default: "http_client"
+ *         cache?: scalar|Param|null, // Default: "cache.app"
+ *     },
+ * }
  * @psalm-type ConfigType = array{
  *     imports?: ImportsConfig,
  *     parameters?: ParametersConfig,
@@ -2418,6 +2452,8 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *     mcp?: McpConfig,
  *     ux_icons?: UxIconsConfig,
  *     ux_translator?: UxTranslatorConfig,
+ *     ai_observability?: AiObservabilityConfig,
+ *     ai_steering?: AiSteeringConfig,
  *     "when@dev"?: array{
  *         imports?: ImportsConfig,
  *         parameters?: ParametersConfig,
@@ -2436,6 +2472,8 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         mcp?: McpConfig,
  *         ux_icons?: UxIconsConfig,
  *         ux_translator?: UxTranslatorConfig,
+ *         ai_observability?: AiObservabilityConfig,
+ *         ai_steering?: AiSteeringConfig,
  *     },
  *     "when@prod"?: array{
  *         imports?: ImportsConfig,
@@ -2454,6 +2492,8 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         mcp?: McpConfig,
  *         ux_icons?: UxIconsConfig,
  *         ux_translator?: UxTranslatorConfig,
+ *         ai_observability?: AiObservabilityConfig,
+ *         ai_steering?: AiSteeringConfig,
  *     },
  *     "when@test"?: array{
  *         imports?: ImportsConfig,
@@ -2472,6 +2512,8 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         mcp?: McpConfig,
  *         ux_icons?: UxIconsConfig,
  *         ux_translator?: UxTranslatorConfig,
+ *         ai_observability?: AiObservabilityConfig,
+ *         ai_steering?: AiSteeringConfig,
  *     },
  *     ...<string, ExtensionType|array{ // extra keys must follow the when@%env% pattern or match an extension alias
  *         imports?: ImportsConfig,

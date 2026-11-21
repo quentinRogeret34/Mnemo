@@ -77,6 +77,12 @@
             "bin/phpunit"
         ]
     },
+    "quentinrogeret34/ai-observability-bundle": {
+        "version": "dev-main"
+    },
+    "quentinrogeret34/ai-steering-bundle": {
+        "version": "dev-main"
+    },
     "symfony/ai-bundle": {
         "version": "0.15",
         "recipe": {

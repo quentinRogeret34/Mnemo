@@ -12,6 +12,8 @@
         "doctrine/orm": "^3.7",
         "league/commonmark": "*",
         "nyholm/psr7": "^1.8",
+        "quentinrogeret34/ai-observability-bundle": "dev-main",
+        "quentinrogeret34/ai-steering-bundle": "dev-main",
         "symfony/ai-agent": "^1.0",
         "symfony/ai-bundle": "^1.0",
         "symfony/ai-open-router-platform": "^1.0",
@@ -65,7 +67,8 @@
             "php-http/discovery": true,
             "symfony/flex": true,
             "symfony/runtime": true,
-            "phpstan/extension-installer": true
+            "phpstan/extension-installer": true,
+            "tbachert/spi": true
         },
         "bump-after-update": true,
         "sort-packages": true
@@ -113,5 +116,14 @@
             "allow-contrib": false,
             "require": "8.1.*"
         }
-    }
+    },
+    "repositories": [{
+        "name": "ai-steering-bundle",
+        "type": "vcs",
+        "url": "https://github.com/quentinRogeret34/ai-steering-bundle"
+    },{
+        "name": "ai-observability-bundle",
+        "type": "vcs",
+        "url": "https://github.com/quentinRogeret34/ai-observability-bundle"
+    }]
 }

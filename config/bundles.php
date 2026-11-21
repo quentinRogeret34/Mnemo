@@ -16,4 +16,6 @@ return [
     Symfony\AI\McpBundle\McpBundle::class => ['all' => true],
     Symfony\UX\Icons\UXIconsBundle::class => ['all' => true],
     Symfony\UX\Translator\UxTranslatorBundle::class => ['all' => true],
+    AiObservability\AiObservabilityBundle::class => ['all' => true],
+    AiSteering\AiSteeringBundle::class => ['all' => true],
 ];
