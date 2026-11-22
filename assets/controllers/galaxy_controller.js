@@ -44,9 +44,17 @@ export default class extends Controller {
         this.open = new Set([...(this.hubs.length <= OPEN_KINDS ? this.kinds : []), ...(small ? this.hubs.map((hub) => hub.id) : [])]);
         this.memoryCount = memories.size;
         this.render();
+        this.observer = new ResizeObserver(() => {
+            if (this.graph) {
+                this.graph.resize();
+                this.viewport();
+            }
+        });
+        this.observer.observe(this.canvasTarget);
     }
 
     disconnect() {
+        this.observer?.disconnect();
         this.graph?.destroy();
     }
 

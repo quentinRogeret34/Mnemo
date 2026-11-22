@@ -12,7 +12,16 @@
 
 {% block body %}
     <div class="explorer">
-        {{ include('document/_tree.html.twig', {open: ancestors|map(folder => folder.id), current_folder: current ? current.id : null, current_document: null}) }}
+        <div class="explorer__tree" data-controller="disclosure">
+            <button class="button explorer__tree-toggle" type="button" aria-expanded="false" data-disclosure-target="button" data-action="disclosure#toggle">
+                <twig:ux:icon name="lucide:folder-open" />
+                <span>{{ 'document.folders'|trans }}</span>
+                <twig:ux:icon name="lucide:chevron-down" class="icon explorer__tree-chevron" />
+            </button>
+            <div class="explorer__tree-panel" data-disclosure-target="panel">
+                {{ include('document/_tree.html.twig', {open: ancestors|map(folder => folder.id), current_folder: current ? current.id : null, current_document: null}) }}
+            </div>
+        </div>
 
         <div class="explorer__content">
             {% set hint = current ? 'document.hint_folder'|trans({name: current.name}) : 'document.hint_root'|trans %}
@@ -84,10 +93,10 @@
                                             </span>
                                         </a>
                                     </td>
-                                    <td>{% if document.projects %}<span class="doc-cell__projects">{{ document.projects }}</span>{% else %}<span class="row__sub">{{ 'document.no_project'|trans }}</span>{% endif %}</td>
-                                    <td>{% if document.rules > 0 %}<span class="pill pill--accent">{{ 'document.rules_count'|trans({count: document.rules}) }}</span>{% else %}<span class="row__sub">0</span>{% endif %}</td>
-                                    <td>{% if document.code_links > 0 %}<span class="count-badge">{{ ux_icon('lucide:file-code') }}{{ document.code_links }}</span>{% else %}<span class="row__sub">0</span>{% endif %}</td>
-                                    <td class="num row__sub">{{ document.created_at|format_date('medium') }}</td>
+                                    <td data-label="{{ 'nav.projects'|trans }}">{% if document.projects %}<span class="doc-cell__projects">{{ document.projects }}</span>{% else %}<span class="row__sub">{{ 'document.no_project'|trans }}</span>{% endif %}</td>
+                                    <td data-label="{{ 'nav.rules'|trans }}">{% if document.rules > 0 %}<span class="pill pill--accent">{{ 'document.rules_count'|trans({count: document.rules}) }}</span>{% else %}<span class="row__sub">0</span>{% endif %}</td>
+                                    <td data-label="{{ 'nav.code'|trans }}">{% if document.code_links > 0 %}<span class="count-badge">{{ ux_icon('lucide:file-code') }}{{ document.code_links }}</span>{% else %}<span class="row__sub">0</span>{% endif %}</td>
+                                    <td class="num row__sub" data-label="{{ 'document.col.added'|trans }}">{{ document.created_at|format_date('medium') }}</td>
                                 </tr>
                             {% endfor %}
                         </tbody>

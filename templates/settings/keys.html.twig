@@ -40,17 +40,17 @@
             <twig:block name="icon"><twig:ux:icon name="lucide:key-round" /></twig:block>
         </twig:EmptyState>
     {% else %}
-        <div class="table-wrap">
+        <div class="table-wrap keys-table">
             <table class="data-table">
                 <thead><tr><th>{{ 'form.project.name'|trans }}</th><th>{{ 'llm.key'|trans }}</th><th>{{ 'nav.projects'|trans }}</th><th class="num">{{ 'keys.created_at'|trans }}</th><th class="num">{{ 'keys.last_used'|trans }}</th><th></th></tr></thead>
                 <tbody>
                     {% for key in keys %}
                         <tr class="{{ key.revoked ? 'row--archived' }}">
-                            <td>{{ key.name }}</td>
-                            <td class="mono">{{ key.prefix }}…</td>
-                            <td>{{ key.projects is empty ? 'keys.all'|trans : key.projects|map(project => project.name)|join(', ') }}</td>
-                            <td class="num">{{ key.createdAt|format_date('short') }}</td>
-                            <td class="num">{{ key.lastUsedAt ? key.lastUsedAt|format_datetime('short', 'short') : '-' }}</td>
+                            <td data-label="{{ 'form.project.name'|trans }}">{{ key.name }}</td>
+                            <td class="mono" data-label="{{ 'llm.key'|trans }}">{{ key.prefix }}…</td>
+                            <td data-label="{{ 'nav.projects'|trans }}">{{ key.projects is empty ? 'keys.all'|trans : key.projects|map(project => project.name)|join(', ') }}</td>
+                            <td class="num" data-label="{{ 'keys.created_at'|trans }}">{{ key.createdAt|format_date('short') }}</td>
+                            <td class="num" data-label="{{ 'keys.last_used'|trans }}">{{ key.lastUsedAt ? key.lastUsedAt|format_datetime('short', 'short') : '-' }}</td>
                             <td class="num">
                                 {% if key.revoked %}
                                     <span class="tag">{{ 'keys.revoked'|trans }}</span>

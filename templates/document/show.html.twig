@@ -20,7 +20,16 @@
 
 {% block body %}
     <div class="doc-layout" data-controller="toc">
-        {{ include('document/_tree.html.twig', {open: ancestors|map(folder => folder.id), current_folder: null, current_document: document.id}) }}
+        <div class="explorer__tree" data-controller="disclosure">
+            <button class="button explorer__tree-toggle" type="button" aria-expanded="false" data-disclosure-target="button" data-action="disclosure#toggle">
+                <twig:ux:icon name="lucide:folder-open" />
+                <span>{{ 'document.folders'|trans }}</span>
+                <twig:ux:icon name="lucide:chevron-down" class="icon explorer__tree-chevron" />
+            </button>
+            <div class="explorer__tree-panel" data-disclosure-target="panel">
+                {{ include('document/_tree.html.twig', {open: ancestors|map(folder => folder.id), current_folder: null, current_document: document.id}) }}
+            </div>
+        </div>
 
         <article class="doc">
             <header class="doc__head">
@@ -68,9 +77,15 @@
         </article>
 
         <aside class="doc-aside">
-            <nav class="doc-toc" aria-labelledby="toc-title" data-toc-target="nav" hidden>
+            <nav class="doc-toc" aria-labelledby="toc-title" data-toc-target="nav" data-controller="disclosure" hidden>
+                <button class="button doc-toc__toggle" type="button" aria-expanded="false" data-disclosure-target="button" data-action="disclosure#toggle">
+                    <span>{{ 'document.on_this_page'|trans }}</span>
+                    <twig:ux:icon name="lucide:chevron-down" class="icon explorer__tree-chevron" />
+                </button>
                 <h2 class="doc-aside__title" id="toc-title">{{ 'document.on_this_page'|trans }}</h2>
-                <ol class="doc-toc__list" data-toc-target="list"></ol>
+                <div class="doc-toc__panel" data-disclosure-target="panel">
+                    <ol class="doc-toc__list" data-toc-target="list" data-action="click->disclosure#close"></ol>
+                </div>
             </nav>
             <section class="doc-card" aria-labelledby="props-title">
                 <h2 class="doc-aside__title" id="props-title">{{ 'document.properties'|trans }}</h2>

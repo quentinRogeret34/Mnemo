@@ -1,10 +1,13 @@
 {% set route = app.request.attributes.get('_route') %}
 {% set scope = project ? {project: project.slug} : {} %}
-<aside{{ attributes.defaults({class: 'sidebar'}) }} data-controller="sidebar" data-sidebar-collapse-label-value="{{ 'nav.collapse'|trans }}" data-sidebar-expand-label-value="{{ 'nav.expand'|trans }}">
+<aside{{ attributes.defaults({class: 'sidebar', id: 'app-sidebar'}) }} data-sidebar-target="panel">
     <div class="sidebar__top">
         <a class="workspace" href="{{ path('dashboard') }}"><span class="workspace__mark" aria-hidden="true">M</span><span class="workspace__name">{{ 'app.name'|trans }}</span></a>
         <button class="sidebar__toggle" type="button" aria-expanded="true" aria-label="{{ 'nav.collapse'|trans }}" title="{{ 'nav.collapse'|trans }}" data-sidebar-target="toggle" data-action="sidebar#toggle">
             {{ ux_icon('lucide:panel-left-close', {class: 'icon sidebar__toggle-close'}) }}{{ ux_icon('lucide:panel-left-open', {class: 'icon sidebar__toggle-open'}) }}
+        </button>
+        <button class="sidebar__close" type="button" aria-label="{{ 'nav.collapse'|trans }}" title="{{ 'nav.collapse'|trans }}" data-action="sidebar#close">
+            {{ ux_icon('lucide:x', {class: 'icon'}) }}
         </button>
     </div>
 

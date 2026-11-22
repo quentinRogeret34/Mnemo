@@ -18,7 +18,16 @@
     {% set verdicts = {verified: 'verdict.verified', refuted: 'verdict.refuted', conflict: 'verdict.conflict', unverified: 'verdict.unverified', none: 'verdict.never'} %}
     {% set filtered = q or type or archived or verdict or source %}
     <div class="explorer explorer--memories">
-        {{ include('memory/_tree.html.twig') }}
+        <div class="explorer__tree" data-controller="disclosure">
+            <button class="button explorer__tree-toggle" type="button" aria-expanded="false" data-disclosure-target="button" data-action="disclosure#toggle">
+                <twig:ux:icon name="lucide:lightbulb" />
+                <span>{{ 'memory.tree.label'|trans }}</span>
+                <twig:ux:icon name="lucide:chevron-down" class="icon explorer__tree-chevron" />
+            </button>
+            <div class="explorer__tree-panel" data-disclosure-target="panel">
+                {{ include('memory/_tree.html.twig') }}
+            </div>
+        </div>
         <div class="explorer__content">
             {% set state = {project: project ? project.slug : null, q: q ?: null, type: type ? type.value : null, verdict: verdict, source: source, archived: archived ? 1 : null, group: group}|filter(v => v is not null) %}
             <div class="view-head view-head--split">
@@ -121,10 +130,10 @@
                                             </div>
                                         </div>
                                     </td>
-                                    <td><span class="memory-cell__projects">{{ memory.projects ?? '-' }}</span></td>
-                                    <td>{% if memory.verdict %}<span class="pill pill--{{ verdict_tones[memory.verdict] ?? 'neutral' }}">{{ verdicts[memory.verdict]|trans }}</span>{% else %}<span class="row__sub">{{ 'verdict.never'|trans }}</span>{% endif %}</td>
-                                    <td class="num">{% if memory.links > 0 %}<span class="count-badge">{{ ux_icon('lucide:link') }}{{ memory.links }}</span>{% else %}<span class="row__sub">0</span>{% endif %}</td>
-                                    <td class="num row__sub">{{ memory.updated_at|format_date('medium') }}</td>
+                                    <td data-label="{{ 'nav.projects'|trans }}"><span class="memory-cell__projects">{{ memory.projects ?? '-' }}</span></td>
+                                    <td data-label="{{ 'memory.verification'|trans }}">{% if memory.verdict %}<span class="pill pill--{{ verdict_tones[memory.verdict] ?? 'neutral' }}">{{ verdicts[memory.verdict]|trans }}</span>{% else %}<span class="row__sub">{{ 'verdict.never'|trans }}</span>{% endif %}</td>
+                                    <td class="num" data-label="{{ 'memory.index.links'|trans }}">{% if memory.links > 0 %}<span class="count-badge">{{ ux_icon('lucide:link') }}{{ memory.links }}</span>{% else %}<span class="row__sub">0</span>{% endif %}</td>
+                                    <td class="num row__sub" data-label="{{ 'memory.index.updated'|trans }}">{{ memory.updated_at|format_date('medium') }}</td>
                                 </tr>
                             {% endfor %}
                         </tbody>

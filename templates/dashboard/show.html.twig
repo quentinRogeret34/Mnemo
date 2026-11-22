@@ -103,7 +103,7 @@
                             {% if chart.link %}<a class="button" href="{{ chart.link }}">{{ 'dashboard.see_memories'|trans }}</a>{% endif %}
                         </div>
                         <div class="chart" data-controller="chart" data-chart-series-value="{{ chart.series|json_encode }}" data-chart-hourly-value="{{ hourly ? 'true' : 'false' }}"
-                             data-action="pointermove->chart#move pointerleave->chart#leave" aria-label="{{ (hourly ? 'dashboard.chart_hourly' : 'dashboard.chart_daily')|trans({title: chart.title}) }}, {{ period_text }}">
+                             data-action="pointerdown->chart#move pointermove->chart#move pointerleave->chart#leave" aria-label="{{ (hourly ? 'dashboard.chart_hourly' : 'dashboard.chart_daily')|trans({title: chart.title}) }}, {{ period_text }}">
                             <div class="chart__plot" data-chart-target="plot"></div>
                             <div class="chart__tooltip" data-chart-target="tooltip" hidden></div>
                         </div>
@@ -162,19 +162,19 @@
                     {% if recent.items is empty %}
                         <p class="block__empty">{{ 'dashboard.recent_empty'|trans({endpoint: '<span class="mono">/mcp</span>'})|raw }}</p>
                     {% else %}
-                        <div class="table-wrap table-wrap--framed">
+                        <div class="table-wrap table-wrap--framed mcp-table">
                             <table class="data-table">
                                 <thead><tr><th>{{ 'activity.when'|trans }}</th><th>{{ 'dashboard.tool'|trans }}</th><th>{{ 'memory.index.project'|trans }}</th><th class="num">{{ 'palette.results'|trans }}</th><th class="num">{{ 'nav.memories'|trans }}</th><th class="num">{{ 'dashboard.duration'|trans }}</th><th>{{ 'dashboard.status'|trans }}</th></tr></thead>
                                 <tbody>
                                     {% for call in recent.items %}
                                         <tr>
-                                            <td class="data-table__nowrap"><span class="num" title="{{ call.created_at|format_datetime('medium', 'short') }}">{{ call.created_at|format_datetime(pattern: 'dd/MM HH:mm') }}</span>{% if call.client %}<div class="row__sub">{{ call.client }}</div>{% endif %}</td>
-                                            <td class="data-table__fill"><span class="code-chip">{{ call.tool }}</span>{% if call.query %}<div class="row__sub data-table__clip" title="{{ call.query }}">{{ call.query }}</div>{% endif %}</td>
-                                            <td class="data-table__nowrap">{{ call.project ?? '-' }}</td>
-                                            <td class="num">{{ call.results }}</td>
-                                            <td class="num">{{ call.memories }}</td>
-                                            <td class="num">{{ call.duration_ms }} ms</td>
-                                            <td>{% if call.failed %}<span class="pill pill--danger">{{ 'common.failed'|trans }}</span>{% else %}<span class="pill pill--success">{{ 'dashboard.ok'|trans }}</span>{% endif %}</td>
+                                            <td class="data-table__nowrap" data-label="{{ 'activity.when'|trans }}"><span class="num" title="{{ call.created_at|format_datetime('medium', 'short') }}">{{ call.created_at|format_datetime(pattern: 'dd/MM HH:mm') }}</span>{% if call.client %}<div class="row__sub">{{ call.client }}</div>{% endif %}</td>
+                                            <td class="data-table__fill" data-label="{{ 'dashboard.tool'|trans }}"><span class="code-chip">{{ call.tool }}</span>{% if call.query %}<div class="row__sub data-table__clip" title="{{ call.query }}">{{ call.query }}</div>{% endif %}</td>
+                                            <td class="data-table__nowrap" data-label="{{ 'memory.index.project'|trans }}">{{ call.project ?? '-' }}</td>
+                                            <td class="num" data-label="{{ 'palette.results'|trans }}">{{ call.results }}</td>
+                                            <td class="num" data-label="{{ 'nav.memories'|trans }}">{{ call.memories }}</td>
+                                            <td class="num" data-label="{{ 'dashboard.duration'|trans }}">{{ call.duration_ms }} ms</td>
+                                            <td data-label="{{ 'dashboard.status'|trans }}">{% if call.failed %}<span class="pill pill--danger">{{ 'common.failed'|trans }}</span>{% else %}<span class="pill pill--success">{{ 'dashboard.ok'|trans }}</span>{% endif %}</td>
                                         </tr>
                                     {% endfor %}
                                 </tbody>

@@ -82,15 +82,16 @@ export default class extends Controller {
             return;
         }
 
+        const height = this.plotTarget.clientHeight || HEIGHT;
         const max = niceMax(Math.max(...buckets.flatMap((bucket) => bucket.values)));
         const innerWidth = width - PAD.left - PAD.right;
-        const innerHeight = HEIGHT - PAD.top - PAD.bottom;
+        const innerHeight = height - PAD.top - PAD.bottom;
         const step = innerWidth / buckets.length;
         const count = this.seriesValue.length;
         const barWidth = Math.max(1, Math.min(14, (step * 0.72 - (count - 1) * 2) / count));
         const groupWidth = barWidth * count + (count - 1) * 2;
         const y = (value) => PAD.top + innerHeight - (value / max) * innerHeight;
-        const svg = node('svg', { viewBox: `0 0 ${width} ${HEIGHT}`, width, height: HEIGHT, role: 'img', 'aria-label': this.element.getAttribute('aria-label') ?? '' });
+        const svg = node('svg', { viewBox: `0 0 ${width} ${height}`, width, height, role: 'img', 'aria-label': this.element.getAttribute('aria-label') ?? '' });
 
         for (let tick = 0; tick <= 4; tick++) {
             const value = (max / 4) * tick;
@@ -112,7 +113,7 @@ export default class extends Controller {
                 }
             });
             if (index % every === 0 && (buckets.length - 1 - index >= every / 2 || index === buckets.length - 1)) {
-                svg.append(node('text', { class: 'chart__tick', x: PAD.left + index * step + step / 2, y: HEIGHT - 6, 'text-anchor': 'middle' }, this.format(bucket.from)));
+                svg.append(node('text', { class: 'chart__tick', x: PAD.left + index * step + step / 2, y: height - 6, 'text-anchor': 'middle' }, this.format(bucket.from)));
             }
         });
 
@@ -150,8 +151,9 @@ export default class extends Controller {
         this.tooltipTarget.hidden = false;
         const centre = left + this.scale.step / 2;
         const width = this.tooltipTarget.offsetWidth;
-        const x = centre + 12 + width <= bounds.width ? centre + 12 : centre - 12 - width;
-        this.tooltipTarget.style.transform = `translate(${Math.max(0, x)}px, ${PAD.top}px)`;
+        const raw = centre + 12 + width <= bounds.width ? centre + 12 : centre - 12 - width;
+        const x = Math.max(0, Math.min(raw, Math.max(0, bounds.width - width)));
+        this.tooltipTarget.style.transform = `translate(${x}px, ${PAD.top}px)`;
     }
 
     leave() {

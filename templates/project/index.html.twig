@@ -78,7 +78,7 @@ bin/console app:ingest:code &lt;slug&gt; var/graphify/&lt;slug&gt;/graphify-out/
                                     <span class="project-row__title"><span>{{ project.name }}</span><span class="row__sub">{{ project.slug }}</span></span>
                                 </a>
                             </td>
-                            <td>
+                            <td data-label="{{ 'project.index.col.status'|trans }}">
                                 {% if archived %}
                                     <span class="pill">{{ 'project.index.status.archived'|trans }}</span>
                                 {% elseif project.pending > 0 %}
@@ -89,19 +89,19 @@ bin/console app:ingest:code &lt;slug&gt; var/graphify/&lt;slug&gt;/graphify-out/
                                     <span class="pill pill--success">{{ 'project.index.status.ready'|trans }}</span>
                                 {% endif %}
                             </td>
-                            <td>
+                            <td data-label="{{ 'project.index.col.content'|trans }}">
                                 <span class="project-row__stack">
                                     <a href="{{ path('memory_index', {project: project.slug}) }}">{{ 'project.index.memories'|trans({count: k.memories}) }}</a>
                                     <span class="row__sub">{{ 'project.index.documents'|trans({count: k.documents}) }} · {{ 'project.index.rules'|trans({count: k.rules}) }}</span>
                                 </span>
                             </td>
-                            <td>
+                            <td data-label="{{ 'project.index.col.code'|trans }}">
                                 <span class="project-row__stack">
                                     <a href="{{ path('project_code', {slug: project.slug}) }}">{{ 'project.index.files'|trans({count: project.files}) }}</a>
                                     <span class="row__sub">{{ 'project.index.symbols'|trans({count: project.symbols}) }}{% if project.ref %} · <span class="mono">{{ project.ref|slice(0, 7) }}</span>{% endif %}</span>
                                 </span>
                             </td>
-                            <td>
+                            <td data-label="{{ 'project.index.col.rules'|trans }}">
                                 {% if k.rules == 0 %}
                                     <span class="row__sub">{{ 'project.index.no_rule'|trans }}</span>
                                 {% else %}

@@ -8,9 +8,12 @@ export default class extends Controller {
 
     connect() {
         this.load();
+        this.observer = new ResizeObserver(() => this.graph?.resize());
+        this.observer.observe(this.canvasTarget);
     }
 
     disconnect() {
+        this.observer?.disconnect();
         this.graph?.destroy();
     }
 
