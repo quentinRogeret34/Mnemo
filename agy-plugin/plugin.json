@@ -1,0 +1,10 @@
+{
+  "name": "mnemo",
+  "version": "0.1.0",
+  "description": "Mémoire de projet Mnemo : contexte au démarrage, contexte par fichier, capture des apprentissages et serveur MCP",
+  "logo": "assets/logo.svg",
+  "author": {
+    "name": "Quentin Rogeret"
+  },
+  "repository": "https://github.com/quentinRogeret34/Mnemo"
+}

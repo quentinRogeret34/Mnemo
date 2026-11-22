@@ -112,9 +112,12 @@ Then ask your agent: *"Using mnemo, what should I know before changing DiscountC
 | `add_memory` | Stores a typed memory, linked to files and rules |
 | `import_document` | Imports a Markdown business document |
 
-### Claude Code plugin
+### Agent plugins (Claude Code & Antigravity)
 
-[`claude-plugin/`](claude-plugin) wires Claude Code to Mnemo automatically: the project memory at session start, the context of each file read, and the session transcript sent to `learn` at the end. Its setup is described in the in-app **Wiki**.
+- [`claude-plugin/`](claude-plugin) wires Claude Code to Mnemo automatically: the project memory at session start, the context of each file read, and the session transcript sent to `learn` at the end.
+- [`agy-plugin/`](agy-plugin) provides the native Antigravity (`agy`) equivalent (`agy plugin install ./agy-plugin` or from GitHub).
+
+Their setup is described in the in-app **Wiki**.
 
 ## Built with Symfony AI and the PHP MCP SDK
 

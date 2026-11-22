@@ -14,7 +14,7 @@
         {id: 'projets', title: 'Projects', url: path('project_index'), what: "A project matches a git repository. It owns its code and its business rules; documents and memories can be shared between several projects.", how: [
             "Click a row to unfold it: repository path and clickable counters (documents, rules, memories, code, to review).",
             "The “…” menu opens each section of the project directly. The picker at the top of the sidebar switches project from any page.",
-            "A project is created on its own at the first session of a machine with the Claude Code plugin, or from the command line: bin/console app:project:create <slug> \"<Name>\" <path>. Then app:ingest:code for the code graph.",
+            "A project is created on its own at the first session of a machine with the Claude Code or Antigravity plugin, or from the command line: bin/console app:project:create <slug> \"<Name>\" <path>. Then app:ingest:code for the code graph.",
         ]},
         {id: 'documents', title: 'Documents', url: path('document_index'), what: "Business documents (Markdown, PDF, Word): specifications, meeting notes, guidelines. They are filed in folders and attached to one or more projects.", how: [
             "“All documents” is the shared space, with the folder tree. The Documents page of a project only shows those attached to it.",
@@ -80,7 +80,7 @@
             <span class="nav-group__label">Pages</span>
             {% for page in pages %}<a class="tree__item" href="#{{ page.id }}">{{ page.title }}</a>{% endfor %}
             <a class="tree__item" href="#agents">Agents and MCP</a>
-            <a class="tree__item" href="#plugin">Claude Code plugin</a>
+            <a class="tree__item" href="#plugin">Agent plugins</a>
             <a class="tree__item" href="#deploiement">Deployment</a>
         </nav>
         <article class="wiki__body prose">
@@ -99,7 +99,7 @@
 
             <section id="agents" class="wiki__section">
                 <h2>Agents and MCP</h2>
-                <p>Agents (Claude Code, Cursor, Codex...) plug into the MCP server at <code>/mcp</code>. Each tool call is counted on the dashboard.</p>
+                <p>Agents (Claude Code, Antigravity, Cursor, Codex...) plug into the MCP server at <code>/mcp</code>. Each tool call is counted on the dashboard.</p>
                 <ul>
                     <li><code>list_projects</code>, <code>search</code>, <code>file_context</code>, <code>get_document</code>, <code>memory_block</code>: read the graph.</li>
                     <li><code>add_memory</code>: stores a memory directly. <code>learn</code>: sends a source from which the LLM extracts proposals to review.</li>
@@ -109,8 +109,10 @@
             </section>
 
             <section id="plugin" class="wiki__section">
-                <h2>Claude Code plugin</h2>
-                <p>The repository holds its Claude Code plugin, in <code>claude-plugin/</code>. It is turned on project by project and brings the MCP server, the project memory at the start of a session, the context of each file read and the sending of learnings at the end of a session (secrets masked, to review here afterwards).</p>
+                <h2>Agent plugins (Claude Code &amp; Antigravity)</h2>
+                <p>The repository holds native plugins for Claude Code (<code>claude-plugin/</code>) and Antigravity (<code>agy-plugin/</code>). They bring the MCP server, the project memory at the start of a session, the context of each file read and the sending of learnings at the end of a session (secrets masked, to review here afterwards).</p>
+
+                <h3>Claude Code</h3>
                 <p>In the project's <code>.claude/settings.json</code>, committed:</p>
                 <pre><code>{
   "extraKnownMarketplaces": {
@@ -123,11 +125,21 @@
 }</code></pre>
                 <p>In <code>.claude/settings.local.json</code>, not committed, the key created in <a href="{{ path('api_key_index') }}">API keys</a>:</p>
                 <pre><code>{ "env": { "MNEMO_API_KEY": "gk_..." } }</code></pre>
+
+                <h3>Antigravity (<code>agy</code>)</h3>
+                <p>Install the plugin from GitHub or a local clone:</p>
+                <pre><code>agy plugin install https://github.com/quentinRogeret34/Mnemo/tree/main/agy-plugin
+# or from a local clone:
+agy plugin install /path/to/the/repository/agy-plugin</code></pre>
+                <p>Export the environment variables for the hooks (and for a remote or API-key protected server, declare the explicit URL and <code>Authorization</code> header in <code>~/.gemini/config/mcp_config.json</code>, since <code>mcp_config.json</code> does not expand <code>${VAR}</code>):</p>
+                <pre><code>export MNEMO_URL="{{ app.request.schemeAndHttpHost }}"
+export MNEMO_API_KEY="gk_..."</code></pre>
+
                 <ul>
                     <li>The project is recognised by the <code>origin</code> remote, otherwise by the working directory. Unknown, it is created at the first session and joins the groups of the key's owner; a key limited to some projects creates nothing.</li>
                     <li><code>MNEMO_PROJECT</code>, optional, forces the project slug instead of deriving it from the repository.</li>
                     <li><code>MNEMO_DISABLED=1</code> turns the hooks off, <code>MNEMO_CAPTURE=0</code> only turns off sending the transcripts.</li>
-                    <li>The machine needs <code>python3</code>. From a local clone, the marketplace source can be <code>{ "source": "directory", "path": "/path/to/the/repository" }</code>.</li>
+                    <li>The machine needs <code>python3</code>. For Claude Code from a local clone, the marketplace source can be <code>{ "source": "directory", "path": "/path/to/the/repository" }</code>.</li>
                 </ul>
             </section>
 
