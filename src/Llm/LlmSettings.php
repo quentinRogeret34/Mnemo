@@ -13,6 +13,7 @@ use Symfony\AI\Platform\PlatformInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
 use Symfony\Component\DependencyInjection\ServiceLocator;
+use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\Service\ResetInterface;
 
@@ -53,6 +54,7 @@ final class LlmSettings implements ResetInterface
         private readonly ?EntityManagerInterface $entityManager = null,
         private readonly ?SecretBox $secretBox = null,
         private readonly ?HttpClientInterface $httpClient = null,
+        private readonly ?EventDispatcherInterface $eventDispatcher = null,
     ) {
     }
 
@@ -76,7 +78,9 @@ final class LlmSettings implements ResetInterface
         }
         $key ??= $this->storedKey();
 
-        return null === $key ? $this->platforms->get($name) : $this->keyed[$key] ??= Factory::createPlatform($key, $this->httpClient);
+        return null === $key
+            ? $this->platforms->get($name)
+            : $this->keyed[hash('sha256', $key)] ??= Factory::createPlatform($key, $this->httpClient, eventDispatcher: $this->eventDispatcher);
     }
 
     /**

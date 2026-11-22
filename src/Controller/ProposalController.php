@@ -85,7 +85,10 @@ final class ProposalController extends AbstractController
 
     private function checkToken(Proposal $proposal, Request $request): void
     {
-        if (null !== $proposal->getProject() && !$this->projectScope->allows($proposal->getProject())) {
+        $allowed = null === $proposal->getProject()
+            ? null === $this->projectScope->slugs()
+            : $this->projectScope->allows($proposal->getProject());
+        if (!$allowed) {
             throw $this->createNotFoundException('Proposal not found.');
         }
         if (!$this->isCsrfTokenValid('proposal-'.$proposal->getId(), $request->getPayload()->getString('_token'))) {

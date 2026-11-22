@@ -104,16 +104,17 @@ final class WriteTools
         $this->requireProject($projects);
         $projectEntities = array_map($this->project(...), $projects);
 
-        $memory = $this->memoryStore->findByText($text);
-        $event = null === $memory ? 'ADD' : 'NONE';
+        $visibilityEnum = MemoryVisibility::tryFrom($visibility) ?? throw new ToolCallException(\sprintf('Unknown visibility "%s". Use project, private or group.', $visibility));
         try {
             $access = $this->memoryAccess->metadataFor(
-                MemoryVisibility::tryFrom($visibility) ?? throw new ToolCallException(\sprintf('Unknown visibility "%s". Use project, private or group.', $visibility)),
+                $visibilityEnum,
                 null === $group ? null : $this->entityManager->getRepository(UserGroup::class)->findOneBy(['name' => $group])?->getId(),
             );
         } catch (\InvalidArgumentException $exception) {
             throw new ToolCallException($exception->getMessage());
         }
+        $memory = $this->memoryStore->findByText($text, $projectEntities, $visibilityEnum);
+        $event = null === $memory ? 'ADD' : 'NONE';
         $memory ??= $this->memoryStore->add($text, $memoryType, 'mcp', (null === $agent ? [] : ['agent' => $agent]) + $access);
 
         foreach ($projectEntities as $project) {

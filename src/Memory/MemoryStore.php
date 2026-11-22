@@ -9,8 +9,11 @@ use App\Enum\Confidence;
 use App\Enum\EdgeOrigin;
 use App\Enum\EdgeStatus;
 use App\Enum\MemoryType;
+use App\Enum\MemoryVisibility;
 use App\Enum\NodeType;
 use App\Security\MemoryAccess;
+use App\Security\ProjectScope;
+use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Uid\Uuid;
 
@@ -33,6 +36,7 @@ final class MemoryStore
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly MemoryAccess $memoryAccess,
+        private readonly ProjectScope $projectScope,
     ) {
     }
 
@@ -43,13 +47,32 @@ final class MemoryStore
 
     /**
      * mem0 deduplicates with an LLM; here only exact duplicates (case-insensitive) among active memories are detected.
+     *
+     * @param list<Project> $projects when given, only matches memories already attached to one of these projects
      */
-    public function findByText(string $text): ?Node
+    public function findByText(string $text, array $projects = [], ?MemoryVisibility $visibility = null): ?Node
     {
-        $id = $this->entityManager->getConnection()->fetchOne(
-            "SELECT m.id FROM node m WHERE m.type = :memory AND lower(m.label) = lower(:text) AND COALESCE(m.metadata->>'status', 'active') = 'active' AND ".$this->memoryAccess->sql('m').' ORDER BY m.id LIMIT 1',
-            ['memory' => NodeType::Memory->value, 'text' => trim($text)],
-        );
+        $sql = "SELECT m.id FROM node m WHERE m.type = :memory AND lower(m.label) = lower(:text) AND COALESCE(m.metadata->>'status', 'active') = 'active' AND ".$this->memoryAccess->sql('m');
+        $params = ['memory' => NodeType::Memory->value, 'text' => trim($text)];
+        $types = [];
+
+        if (null !== $visibility) {
+            $sql .= " AND COALESCE(m.metadata->>'visibility', 'project') = :visibility";
+            $params['visibility'] = $visibility->value;
+        }
+        $slugs = $this->projectScope->slugs();
+        if (null !== $slugs) {
+            $sql .= ' AND EXISTS (SELECT 1 FROM node_project np JOIN project p ON p.id = np.project_id WHERE np.node_id = m.id AND p.slug IN (:slugs))';
+            $params['slugs'] = ['', ...$slugs];
+            $types['slugs'] = ArrayParameterType::STRING;
+        }
+        if ([] !== $projects) {
+            $sql .= ' AND EXISTS (SELECT 1 FROM node_project np WHERE np.node_id = m.id AND np.project_id IN (:projects))';
+            $params['projects'] = array_map(static fn (Project $project): int => (int) $project->getId(), $projects);
+            $types['projects'] = ArrayParameterType::INTEGER;
+        }
+
+        $id = $this->entityManager->getConnection()->fetchOne($sql.' ORDER BY m.id LIMIT 1', $params, $types);
 
         return false === $id ? null : $this->entityManager->find(Node::class, $id);
     }

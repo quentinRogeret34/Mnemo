@@ -9,6 +9,7 @@ use App\Entity\Project;
 use App\Graph\KnowledgeReader;
 use App\Security\ProjectScope;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\UX\LiveComponent\Attribute\AsLiveComponent;
 use Symfony\UX\LiveComponent\Attribute\LiveAction;
@@ -97,8 +98,16 @@ final class DocumentProperties
         return $this->knowledgeReader->linkableFiles($this->document, $this->fileQuery);
     }
 
+    public function mayMoveFolder(): bool
+    {
+        return null === $this->projectScope->slugs();
+    }
+
     public function onFolderUpdated(): void
     {
+        if (!$this->mayMoveFolder()) {
+            throw new AccessDeniedHttpException('Reserved to the super admin.');
+        }
         $this->document->moveTo(null === $this->folderId ? null : $this->entityManager->find(Folder::class, $this->folderId));
         $this->entityManager->flush();
     }
@@ -118,6 +127,9 @@ final class DocumentProperties
     public function linkFile(#[LiveArg] int $fileId): void
     {
         $file = $this->entityManager->find(Node::class, $fileId) ?? throw new \InvalidArgumentException('Unknown file.');
+        if (!$this->projectScope->allowsNode($file)) {
+            throw new \InvalidArgumentException('Unknown file.');
+        }
         $this->documentLinker->linkCode($this->document, $file);
         $this->entityManager->flush();
         $this->fileQuery = '';

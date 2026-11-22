@@ -19,7 +19,8 @@ use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 final class ProjectAccessListener
 {
     private const ACROSS_PROJECTS = ['dashboard', 'activity', 'activity_feed', 'memory_index', 'memory_graph', 'memory_graph_data', 'proposal_index'];
-    private const WORKSPACE = ['document_index', 'connector_index', 'connector_new', 'connector_edit', 'connector_show', 'connector_inspect', 'connector_sync', 'connector_review', 'connector_delete', 'connector_oauth', 'connector_oauth_check', 'connector_oauth_disconnect'];
+    private const WORKSPACE = ['document_index'];
+    private const WORKSPACE_PREFIXES = ['connector_'];
 
     public function __construct(
         private readonly ProjectScope $projectScope,
@@ -41,7 +42,7 @@ final class ProjectAccessListener
         if (null === $slugs || !$event->isMainRequest()) {
             return;
         }
-        if (\in_array($route, self::WORKSPACE, true)) {
+        if (\in_array($route, self::WORKSPACE, true) || array_any(self::WORKSPACE_PREFIXES, static fn (string $prefix): bool => str_starts_with($route, $prefix))) {
             throw new AccessDeniedHttpException('Reserved to the super admin.');
         }
         if (\in_array($route, self::ACROSS_PROJECTS, true) && '' === $request->query->getString('project')) {

@@ -5,6 +5,8 @@ namespace App\Entity;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity]
+#[ORM\UniqueConstraint(name: 'folder_root_name_unique', columns: ['name'], options: ['where' => '(parent_id IS NULL)'])]
+#[ORM\UniqueConstraint(name: 'folder_parent_name_unique', columns: ['parent_id', 'name'])]
 class Folder
 {
     #[ORM\Id]

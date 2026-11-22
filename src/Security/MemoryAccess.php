@@ -63,9 +63,7 @@ final class MemoryAccess
             MemoryVisibility::Group => null !== $viewer && $viewer->getGroups()->exists(static fn (int $key, UserGroup $group): bool => $group->getId() === (int) ($metadata['group_id'] ?? 0)),
             default => true,
         };
-        $slugs = $this->projectScope->slugs();
-
-        return $visible && (null === $slugs || $memory->getProjects()->isEmpty() || $memory->getProjects()->exists(fn (int $key, $project): bool => $this->projectScope->allows($project)));
+        return $visible && $this->projectScope->allowsNode($memory);
     }
 
     /**

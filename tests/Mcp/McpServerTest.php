@@ -124,6 +124,24 @@ final class McpServerTest extends WebTestCase
         self::assertSame($key->getId(), $this->entityManager->getConnection()->fetchOne('SELECT api_key_id FROM mcp_call ORDER BY id DESC LIMIT 1'));
     }
 
+    public function testAMemoryOfAProjectOutOfReachIsNotTakenOver(): void
+    {
+        $other = new Project('other', 'Other project', '/repos/other');
+        $this->entityManager->persist($other);
+        $this->entityManager->flush();
+        $hidden = $this->tool('add_memory', ['text' => 'Le tarif B2B reste confidentiel.', 'projects' => ['other']]);
+
+        [$key, $this->token] = ApiKey::generate('laptop');
+        $key->addProject($this->entityManager->getRepository(Project::class)->findOneBy(['slug' => 'demo']));
+        $this->entityManager->persist($key);
+        $this->entityManager->flush();
+
+        $added = $this->tool('add_memory', ['text' => 'Le tarif B2B reste confidentiel.', 'projects' => ['demo']]);
+        self::assertSame('ADD', $added['event']);
+        self::assertNotSame($hidden['id'], $added['id']);
+        self::assertSame(['other'], $this->entityManager->getConnection()->fetchFirstColumn('SELECT p.slug FROM node_project np JOIN project p ON p.id = np.project_id WHERE np.node_id = ?', [$hidden['id']]));
+    }
+
     public function testAPrivateMemoryIsOnlyRecalledForItsOwner(): void
     {
         $this->entityManager->getConnection()->executeStatement('TRUNCATE app_user, user_group RESTART IDENTITY CASCADE');

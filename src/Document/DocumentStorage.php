@@ -110,8 +110,7 @@ final class DocumentStorage
     {
         $folder = null;
         foreach (array_filter(array_map('trim', explode('/', (string) $path)), static fn (string $value): bool => '' !== $value) as $name) {
-            // A folder created in this loop is not flushed yet and cannot have children to look up.
-            $child = null !== $folder && null === $folder->getId() ? null : $this->entityManager->getRepository(Folder::class)->findOneBy(['name' => $name, 'parent' => $folder]);
+            $child = $this->findFolder($name, $folder);
             if (null === $child) {
                 $child = new Folder($name, $folder);
                 $this->entityManager->persist($child);
@@ -120,6 +119,32 @@ final class DocumentStorage
         }
 
         return $folder;
+    }
+
+    private function findFolder(string $name, ?Folder $parent): ?Folder
+    {
+        $needle = mb_strtolower($name);
+        foreach ($this->entityManager->getUnitOfWork()->getScheduledEntityInsertions() as $entity) {
+            if ($entity instanceof Folder && $entity->getParent() === $parent && mb_strtolower($entity->getName()) === $needle) {
+                return $entity;
+            }
+        }
+        if (null !== $parent && null === $parent->getId()) {
+            return null;
+        }
+
+        $dql = null === $parent
+            ? 'SELECT f FROM App\Entity\Folder f WHERE f.parent IS NULL AND LOWER(f.name) = LOWER(:name)'
+            : 'SELECT f FROM App\Entity\Folder f WHERE f.parent = :parent AND LOWER(f.name) = LOWER(:name)';
+        $query = $this->entityManager->createQuery($dql)->setParameter('name', $name)->setMaxResults(1);
+        if (null !== $parent) {
+            $query->setParameter('parent', $parent);
+        }
+
+        /** @var Folder|null $found */
+        $found = $query->getOneOrNullResult();
+
+        return $found;
     }
 
     public function replaceContent(Node $document, string $content): void

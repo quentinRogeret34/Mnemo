@@ -18,7 +18,7 @@ final class ApiKeyHandler implements AccessTokenHandlerInterface
     public function getUserBadgeFrom(#[\SensitiveParameter] string $accessToken): UserBadge
     {
         $key = $this->entityManager->getRepository(ApiKey::class)->findOneBy(['tokenHash' => ApiKey::hash($accessToken)]);
-        if (null === $key || $key->isRevoked()) {
+        if (null === $key || $key->isRevoked() || (null !== $key->getOwner() && !$key->getOwner()->isActive())) {
             throw new BadCredentialsException('Invalid API key.');
         }
         $key->markUsed();

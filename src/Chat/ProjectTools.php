@@ -149,7 +149,7 @@ final class ProjectTools
         if ('' === $text || mb_strlen($text) > 1000 || null === $memoryType) {
             return ['error' => 'Text of 1 to 1000 characters and type among decision, convention, task_learning, preference, fact.'];
         }
-        $memory = $this->memoryStore->findByText($text);
+        $memory = $this->memoryStore->findByText($text, [$this->project()], MemoryVisibility::Project);
         $created = null === $memory;
         $memory ??= $this->memoryStore->add($text, $memoryType, 'chat', $this->memoryAccess->metadataFor(MemoryVisibility::Project));
         $memory->addProject($this->project());

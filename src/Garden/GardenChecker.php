@@ -4,6 +4,7 @@ namespace App\Garden;
 
 use App\Entity\Project;
 use App\Security\MemoryAccess;
+use App\Security\ProjectScope;
 use Doctrine\DBAL\Connection;
 
 /**
@@ -19,6 +20,7 @@ final class GardenChecker
     public function __construct(
         private readonly Connection $connection,
         private readonly MemoryAccess $memoryAccess,
+        private readonly ProjectScope $projectScope,
     ) {
     }
 
@@ -31,12 +33,15 @@ final class GardenChecker
     {
         $active = self::ACTIVE_MEMORY.' AND '.$this->memoryAccess->sql('m');
         $inProject = self::PROJECT_MEMORY;
-        $findings = [
-            ['orphan_memories', 'memories', 'Mémoires sans projet ni lien', 'Les rattacher à un projet, les lier, ou les supprimer.', <<<SQL
+        $findings = [];
+        if (null === $this->projectScope->slugs()) {
+            $findings[] = ['orphan_memories', 'memories', 'Mémoires sans projet ni lien', 'Les rattacher à un projet, les lier, ou les supprimer.', <<<SQL
                 SELECT m.id, m.type, m.label, NULL AS code, NULL AS path FROM node m
                 WHERE {$active} AND NOT EXISTS (SELECT 1 FROM node_project np WHERE np.node_id = m.id)
                   AND NOT EXISTS (SELECT 1 FROM edge e WHERE e.source_id = m.id AND e.relation = 'about' AND e.status = 'active')
-                SQL],
+                SQL];
+        }
+        $findings = [...$findings,
             ['unlinked_memories', 'memories', 'Mémoires dont tous les liens ont été rejetés', 'Le sujet de la mémoire a peut-être changé : la relier ou la retirer.', <<<SQL
                 SELECT m.id, m.type, m.label, NULL AS code, NULL AS path FROM node m
                 WHERE {$active} AND {$inProject}

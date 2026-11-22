@@ -73,7 +73,14 @@ final class ProjectScope
      */
     public function allowsNode(Node $node): bool
     {
-        return null === $this->slugs() || $node->getProjects()->exists(fn (int $key, Project $project): bool => $this->allows($project));
+        if (null === $this->slugs()) {
+            return true;
+        }
+        if (null !== $node->getProject()) {
+            return $this->allows($node->getProject());
+        }
+
+        return $node->getProjects()->exists(fn (int $key, Project $project): bool => $this->allows($project));
     }
 
     /**

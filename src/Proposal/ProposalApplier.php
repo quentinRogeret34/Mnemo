@@ -7,6 +7,7 @@ use App\Entity\Proposal;
 use App\Enum\Confidence;
 use App\Enum\EdgeOrigin;
 use App\Enum\MemoryType;
+use App\Enum\MemoryVisibility;
 use App\Enum\NodeType;
 use App\Enum\ProposalKind;
 use App\Enum\ProposalStatus;
@@ -80,7 +81,8 @@ final class ProposalApplier
             $memory = $target;
             $this->memoryStore->update($memory, $lesson, $type);
         } else {
-            $memory = $this->memoryStore->findByText($lesson) ?? $this->memoryStore->add($lesson, $type, 'learn', [
+            $projects = null === $proposal->getProject() ? [] : [$proposal->getProject()];
+            $memory = $this->memoryStore->findByText($lesson, $projects, MemoryVisibility::Project) ?? $this->memoryStore->add($lesson, $type, 'learn', [
                 'score' => $payload['score'],
                 'evidence' => $payload['evidence'],
                 'learned_from' => $payload['source'],

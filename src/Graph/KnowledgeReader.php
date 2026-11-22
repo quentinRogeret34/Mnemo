@@ -7,6 +7,7 @@ use App\Entity\Project;
 use App\Enum\EdgeStatus;
 use App\Enum\NodeType;
 use App\Security\MemoryAccess;
+use App\Security\ProjectScope;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\ParameterType;
@@ -16,6 +17,7 @@ final class KnowledgeReader
     public function __construct(
         private readonly Connection $connection,
         private readonly MemoryAccess $memoryAccess,
+        private readonly ProjectScope $projectScope,
     ) {
     }
 
@@ -166,6 +168,9 @@ final class KnowledgeReader
         if ('' === trim($query)) {
             return [];
         }
+        $slugs = $this->projectScope->slugs();
+        $fileScope = null === $slugs ? '' : ' AND p.slug IN (:slugs)';
+        $docScope = null === $slugs ? '' : ' AND EXISTS (SELECT 1 FROM node_project np2 JOIN project p2 ON p2.id = np2.project_id WHERE np2.node_id = n.id AND p2.slug IN (:slugs))';
 
         return $this->connection->fetchAllAssociative(
             <<<SQL
@@ -173,8 +178,8 @@ final class KnowledgeReader
                 FROM node n
                 LEFT JOIN project p ON p.id = n.project_id
                 WHERE (
-                        (n.type IN (:file, :rule) AND EXISTS (SELECT 1 FROM node_project np WHERE np.node_id = :memory AND np.project_id = n.project_id))
-                        OR n.type = :document
+                        (n.type IN (:file, :rule) AND EXISTS (SELECT 1 FROM node_project np WHERE np.node_id = :memory AND np.project_id = n.project_id){$fileScope})
+                        OR (n.type = :document{$docScope})
                     )
                   AND (n.label ILIKE :like OR n.path ILIKE :like OR (n.type = :rule AND n.external_id ILIKE :like))
                   AND NOT EXISTS (SELECT 1 FROM edge e WHERE e.source_id = :memory AND e.target_id = n.id AND e.relation = 'about' AND e.status = :active)
@@ -188,7 +193,8 @@ final class KnowledgeReader
                 'document' => NodeType::Document->value,
                 'active' => EdgeStatus::Active->value,
                 'like' => '%'.addcslashes(trim($query), '\\%_').'%',
-            ],
+            ] + (null === $slugs ? [] : ['slugs' => ['', ...$slugs]]),
+            null === $slugs ? [] : ['slugs' => ArrayParameterType::STRING],
         );
     }
 
@@ -257,11 +263,15 @@ final class KnowledgeReader
      */
     public function documentTree(): array
     {
+        $slugs = $this->projectScope->slugs();
+        $scope = null === $slugs ? '' : ' AND EXISTS (SELECT 1 FROM node_project np JOIN project p ON p.id = np.project_id WHERE np.node_id = d.id AND p.slug IN (:slugs))';
+
         return array_map(
             static fn (array $row): array => ['id' => (int) $row['id'], 'folder_id' => null === $row['folder_id'] ? null : (int) $row['folder_id']] + $row,
             $this->connection->fetchAllAssociative(
-                "SELECT d.id, d.label AS title, d.metadata->>'format' AS format, d.folder_id FROM node d WHERE d.type = :document ORDER BY lower(d.label), d.id",
-                ['document' => NodeType::Document->value],
+                "SELECT d.id, d.label AS title, d.metadata->>'format' AS format, d.folder_id FROM node d WHERE d.type = :document{$scope} ORDER BY lower(d.label), d.id",
+                ['document' => NodeType::Document->value] + (null === $slugs ? [] : ['slugs' => ['', ...$slugs]]),
+                null === $slugs ? [] : ['slugs' => ArrayParameterType::STRING],
             ),
         );
     }
@@ -273,22 +283,32 @@ final class KnowledgeReader
      */
     public function folderTree(): array
     {
+        $slugs = $this->projectScope->slugs();
+        $docScope = null === $slugs ? '' : ' AND EXISTS (SELECT 1 FROM node_project np JOIN project p ON p.id = np.project_id WHERE np.node_id = d.id AND p.slug IN (:slugs))';
+        $having = null === $slugs ? '' : ' WHERE documents > 0';
+
         return array_map(
             static fn (array $row): array => ['id' => (int) $row['id'], 'parent_id' => null === $row['parent_id'] ? null : (int) $row['parent_id'], 'depth' => (int) $row['depth'], 'documents' => (int) $row['documents']] + $row,
             $this->connection->fetchAllAssociative(
-                <<<'SQL'
+                <<<SQL
                     WITH RECURSIVE tree AS (
                         SELECT id, name, parent_id, 0 AS depth, ARRAY[lower(name), id::text] AS sort_key, ARRAY[id] AS path FROM folder WHERE parent_id IS NULL
                         UNION ALL
                         SELECT f.id, f.name, f.parent_id, t.depth + 1, t.sort_key || ARRAY[lower(f.name), f.id::text], t.path || f.id
                         FROM folder f JOIN tree t ON f.parent_id = t.id
+                        WHERE NOT f.id = ANY(t.path)
+                    ),
+                    counted AS (
+                        SELECT t.id, t.name, t.parent_id, t.depth, t.sort_key,
+                               (SELECT COUNT(*) FROM node d JOIN tree s ON s.id = d.folder_id WHERE t.id = ANY(s.path) AND d.type = :document{$docScope}) AS documents
+                        FROM tree t
                     )
-                    SELECT t.id, t.name, t.parent_id, t.depth,
-                           (SELECT COUNT(*) FROM node d JOIN tree s ON s.id = d.folder_id WHERE t.id = ANY(s.path) AND d.type = :document) AS documents
-                    FROM tree t
-                    ORDER BY t.sort_key
+                    SELECT id, name, parent_id, depth, documents
+                    FROM counted{$having}
+                    ORDER BY sort_key
                     SQL,
-                ['document' => NodeType::Document->value],
+                ['document' => NodeType::Document->value] + (null === $slugs ? [] : ['slugs' => ['', ...$slugs]]),
+                null === $slugs ? [] : ['slugs' => ArrayParameterType::STRING],
             ),
         );
     }
@@ -300,16 +320,20 @@ final class KnowledgeReader
      */
     public function documentCodeLinks(Node $document): array
     {
+        $slugs = $this->projectScope->slugs();
+        $scope = null === $slugs ? '' : ' AND p.slug IN (:slugs)';
+
         return $this->connection->fetchAllAssociative(
-            <<<'SQL'
+            <<<SQL
                 SELECT e.id AS edge_id, c.path, p.slug AS project_slug, p.name AS project_name, e.confidence, e.origin
                 FROM edge e
                 JOIN node c ON c.id = e.source_id
                 JOIN project p ON p.id = c.project_id
-                WHERE e.target_id = :document AND e.relation = 'documented_by' AND e.status = :active
+                WHERE e.target_id = :document AND e.relation = 'documented_by' AND e.status = :active{$scope}
                 ORDER BY p.name, c.path
                 SQL,
-            ['document' => $document->getId(), 'active' => EdgeStatus::Active->value],
+            ['document' => $document->getId(), 'active' => EdgeStatus::Active->value] + (null === $slugs ? [] : ['slugs' => ['', ...$slugs]]),
+            null === $slugs ? [] : ['slugs' => ArrayParameterType::STRING],
         );
     }
 
@@ -323,6 +347,8 @@ final class KnowledgeReader
         if ('' === trim($query)) {
             return [];
         }
+        $slugs = $this->projectScope->slugs();
+        $scope = null === $slugs ? '' : ' AND p.slug IN (:slugs)';
 
         return $this->connection->fetchAllAssociative(
             <<<SQL
@@ -330,12 +356,13 @@ final class KnowledgeReader
                 FROM node c
                 JOIN project p ON p.id = c.project_id
                 JOIN node_project np ON np.project_id = c.project_id AND np.node_id = :document
-                WHERE c.type = :file AND c.path ILIKE :like
+                WHERE c.type = :file AND c.path ILIKE :like{$scope}
                   AND NOT EXISTS (SELECT 1 FROM edge e WHERE e.source_id = c.id AND e.target_id = :document AND e.relation = 'documented_by' AND e.status = :active)
                 ORDER BY length(c.path), c.path
                 LIMIT $limit
                 SQL,
-            ['document' => $document->getId(), 'file' => NodeType::CodeFile->value, 'active' => EdgeStatus::Active->value, 'like' => '%'.addcslashes(trim($query), '\\%_').'%'],
+            ['document' => $document->getId(), 'file' => NodeType::CodeFile->value, 'active' => EdgeStatus::Active->value, 'like' => '%'.addcslashes(trim($query), '\\%_').'%'] + (null === $slugs ? [] : ['slugs' => ['', ...$slugs]]),
+            null === $slugs ? [] : ['slugs' => ArrayParameterType::STRING],
         );
     }
 
@@ -362,15 +389,19 @@ final class KnowledgeReader
      */
     public function rulesDefinedBy(Node $document): array
     {
+        $slugs = $this->projectScope->slugs();
+        $scope = null === $slugs ? '' : ' AND p.slug IN (:slugs)';
+
         return $this->connection->fetchAllAssociative(
-            <<<'SQL'
+            <<<SQL
                 SELECT r.external_id AS code, r.label AS title, r.metadata->>'statement' AS statement, r.metadata->>'status' AS status,
                        e.confidence, e.origin, p.slug AS project_slug
                 FROM edge e JOIN node r ON r.id = e.target_id JOIN project p ON p.id = r.project_id
-                WHERE e.source_id = :document AND r.type = :rule AND e.status = :active
+                WHERE e.source_id = :document AND r.type = :rule AND e.status = :active{$scope}
                 ORDER BY r.external_id
                 SQL,
-            ['document' => $document->getId(), 'rule' => NodeType::BusinessRule->value, 'active' => EdgeStatus::Active->value],
+            ['document' => $document->getId(), 'rule' => NodeType::BusinessRule->value, 'active' => EdgeStatus::Active->value] + (null === $slugs ? [] : ['slugs' => ['', ...$slugs]]),
+            null === $slugs ? [] : ['slugs' => ArrayParameterType::STRING],
         );
     }
 
@@ -579,15 +610,19 @@ final class KnowledgeReader
      */
     public function supersession(Node $memory): array
     {
+        $slugs = $this->projectScope->slugs();
+        $scope = null === $slugs ? '' : ' AND EXISTS (SELECT 1 FROM node_project np JOIN project p ON p.id = np.project_id WHERE np.node_id = m.id AND p.slug IN (:slugs))';
         $rows = $this->connection->fetchAllAssociative(
-            <<<'SQL'
+            <<<SQL
                 SELECT CASE WHEN e.source_id = :memory THEN 'replaces' ELSE 'replaced_by' END AS direction,
                        m.id, m.label AS text, COALESCE(m.metadata->>'status', 'active') AS status
                 FROM edge e JOIN node m ON m.id = CASE WHEN e.source_id = :memory THEN e.target_id ELSE e.source_id END
                 WHERE (e.source_id = :memory OR e.target_id = :memory) AND e.relation = 'supersedes' AND e.status = :active
+                  AND {$this->memoryAccess->sql('m')}{$scope}
                 ORDER BY m.created_at
                 SQL,
-            ['memory' => $memory->getId(), 'active' => EdgeStatus::Active->value],
+            ['memory' => $memory->getId(), 'active' => EdgeStatus::Active->value] + (null === $slugs ? [] : ['slugs' => ['', ...$slugs]]),
+            null === $slugs ? [] : ['slugs' => ArrayParameterType::STRING],
         );
         $result = ['replaces' => [], 'replaced_by' => []];
         foreach ($rows as $row) {

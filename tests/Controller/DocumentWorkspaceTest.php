@@ -73,6 +73,16 @@ final class DocumentWorkspaceTest extends WebTestCase
         self::assertCount(0, $document->getProjects());
     }
 
+    public function testAFolderPathResolvesToTheSameFoldersBeforeAndAfterFlush(): void
+    {
+        $storage = self::getContainer()->get(DocumentStorage::class);
+        $first = $storage->folder('Spécifications/Facturation');
+        self::assertSame($first, $storage->folder('spécifications / facturation'));
+        $this->entityManager->flush();
+        self::assertSame($first, $storage->folder('Spécifications/Facturation'));
+        self::assertSame(2, $this->entityManager->getRepository(Folder::class)->count([]));
+    }
+
     public function testUploadFromProjectAttachesTheDocument(): void
     {
         $markdown = tempnam(sys_get_temp_dir(), 'doc').'.md';

@@ -10,6 +10,7 @@ use App\Forge\ForgeImporter;
 use App\Memory\MemoryStore;
 use App\Notion\NotionClient;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\Persistence\ManagerRegistry;
 use Mcp\Client;
 use Mcp\Schema\Content\BlobResourceContents;
 use Mcp\Schema\Content\TextContent;
@@ -45,6 +46,7 @@ final class ConnectorRunner
         private readonly ForgeImporter $forgeImporter,
         private readonly LockFactory $lockFactory,
         private readonly NotionClient $notion,
+        private readonly ManagerRegistry $doctrine,
     ) {
     }
 
@@ -98,6 +100,7 @@ final class ConnectorRunner
         if (!$lock->acquire()) {
             return ['error' => 'Une synchronisation de ce connecteur est déjà en cours.'] + $report;
         }
+        $connectorId = $connector->getId();
         $startedAt = new \DateTimeImmutable();
 
         try {
@@ -117,19 +120,42 @@ final class ConnectorRunner
                     $client->disconnect();
                 }
             }
+            $this->entityManager->flush();
         } catch (\Throwable $exception) {
             $report['error'] = $exception->getMessage();
+            $this->discardUnflushed($connector);
         }
 
         try {
-            $connector->recordRun($report);
-            $this->entityManager->persist(new ConnectorRun($connector, $trigger, $startedAt, $report));
-            $this->entityManager->flush();
+            $em = $this->entityManager->isOpen() ? $this->entityManager : $this->doctrine->resetManager();
+            if ($em instanceof EntityManagerInterface) {
+                if ($em !== $this->entityManager || !$em->contains($connector)) {
+                    $connector = null === $connectorId ? null : $em->find(Connector::class, $connectorId);
+                }
+                if (null !== $connector) {
+                    $connector->recordRun($report);
+                    $em->persist(new ConnectorRun($connector, $trigger, $startedAt, $report));
+                    $em->flush();
+                }
+            }
         } finally {
             $lock->release();
         }
 
         return $report;
+    }
+
+    private function discardUnflushed(Connector $connector): void
+    {
+        if (!$this->entityManager->isOpen()) {
+            return;
+        }
+        $uow = $this->entityManager->getUnitOfWork();
+        foreach ([...$uow->getScheduledEntityInsertions(), ...$uow->getScheduledEntityUpdates(), ...$uow->getScheduledEntityDeletions()] as $entity) {
+            if ($entity !== $connector) {
+                $this->entityManager->detach($entity);
+            }
+        }
     }
 
     /**

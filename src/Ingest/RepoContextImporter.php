@@ -3,6 +3,7 @@
 namespace App\Ingest;
 
 use App\Document\DocumentStorage;
+use App\Entity\Folder;
 use App\Entity\Node;
 use App\Entity\Project;
 use App\Enum\MemoryType;
@@ -58,9 +59,13 @@ final class RepoContextImporter
             $docs = \array_slice($docs, 0, self::MAX_DOCS);
         }
         $seen = [];
-        foreach (['AIDD/'.$project->getSlug() => $notes, 'AIDD/'.$project->getSlug().'/Plans' => $plans, 'Conventions agents/'.$project->getSlug() => $conventions, 'Dépôt/'.$project->getSlug() => $docs] as $folder => $paths) {
+        foreach (['AIDD/'.$project->getSlug() => $notes, 'AIDD/'.$project->getSlug().'/Plans' => $plans, 'Conventions agents/'.$project->getSlug() => $conventions, 'Dépôt/'.$project->getSlug() => $docs] as $folderPath => $paths) {
+            if ([] === $paths) {
+                continue;
+            }
+            $targetFolder = $this->documentStorage->folder($folderPath);
             foreach ($paths as $path) {
-                $seen[] = $this->importDocument($project, $root, $path, $folder, $result);
+                $seen[] = $this->importDocument($project, $root, $path, $targetFolder, $result);
             }
         }
         $this->entityManager->flush();
@@ -161,7 +166,7 @@ final class RepoContextImporter
     /**
      * @return string|null the document origin, null when the file was skipped
      */
-    private function importDocument(Project $project, string $root, string $path, string $folder, RepoContextImportResult $result): ?string
+    private function importDocument(Project $project, string $root, string $path, ?Folder $folder, RepoContextImportResult $result): ?string
     {
         $content = $this->read($root, $path, $result);
         if (null === $content) {
@@ -169,7 +174,7 @@ final class RepoContextImporter
         }
 
         $origin = 'repo:'.$project->getSlug().':'.$path;
-        [$document, $status] = $this->documentStorage->upsertContent($origin, $this->documentStorage->folder($folder), $content, $path, 'md', ['source' => 'repo', 'file' => $path]);
+        [$document, $status] = $this->documentStorage->upsertContent($origin, $folder, $content, $path, 'md', ['source' => 'repo', 'file' => $path]);
         // A repository file is known by its path: a heading such as "# Instructions" says nothing in a list.
         if ($path !== $document->getLabel()) {
             $document->update($path, $document->getPath(), null, $document->getMetadata());

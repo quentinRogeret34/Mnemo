@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\Entity\ApiKey;
 use App\Entity\Project;
 use App\Entity\User;
 use App\Entity\UserGroup;
@@ -51,6 +52,11 @@ final class AdminController extends AbstractController
 
         $user->setStatus($status);
         $user->setSuperAdmin($superAdmin);
+        if (UserStatus::Active !== $status) {
+            foreach ($this->entityManager->getRepository(ApiKey::class)->findBy(['owner' => $user, 'revokedAt' => null]) as $key) {
+                $key->revoke();
+            }
+        }
         $chosen = array_map('intval', $payload->all('groups'));
         foreach ($this->entityManager->getRepository(UserGroup::class)->findAll() as $group) {
             $member = $group->getUsers()->contains($user);

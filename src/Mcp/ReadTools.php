@@ -128,7 +128,7 @@ final class ReadTools
             'title' => $document->getLabel(),
             'format' => $format,
             'folder' => $document->getFolder()?->getName(),
-            'projects' => $document->getProjects()->map(static fn (Project $project): string => $project->getSlug())->getValues(),
+            'projects' => $document->getProjects()->filter(fn (Project $project): bool => $this->projectScope->allows($project))->map(static fn (Project $project): string => $project->getSlug())->getValues(),
             'url' => $this->urlGenerator->generate('document_show', ['id' => $id], UrlGeneratorInterface::ABSOLUTE_URL),
             'content' => 'md' === $format ? $this->documentStorage->markdownBody($document) : null,
             'business_rules' => $this->knowledgeReader->rulesDefinedBy($document),

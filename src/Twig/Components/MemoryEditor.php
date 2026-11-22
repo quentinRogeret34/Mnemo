@@ -177,6 +177,9 @@ final class MemoryEditor
     public function link(#[LiveArg] int $nodeId): void
     {
         $target = $this->entityManager->find(Node::class, $nodeId) ?? throw new \InvalidArgumentException('Unknown node.');
+        if (!$this->projectScope->allowsNode($target)) {
+            throw new \InvalidArgumentException('Unknown node.');
+        }
         $this->memoryStore->link($this->memory, $target);
         $this->entityManager->flush();
         $this->linkQuery = '';

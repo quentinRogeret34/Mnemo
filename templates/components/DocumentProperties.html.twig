@@ -17,12 +17,16 @@
 
         <dt><label for="document-folder">{{ 'document.props.folder'|trans }}</label></dt>
         <dd>
-            <select id="document-folder" class="select" data-model="folderId">
-                <option value="" {% if folderId is null %}selected{% endif %}>{{ 'form.connector.folder_root'|trans }}</option>
-                {% for folder in this.folders %}
-                    <option value="{{ folder.id }}" {% if folderId == folder.id %}selected{% endif %}>{% if folder.depth > 0 %}{% for i in 1..folder.depth %}&nbsp;&nbsp;&nbsp;{% endfor %}{% endif %}{{ folder.name }}</option>
-                {% endfor %}
-            </select>
+            {% if this.mayMoveFolder %}
+                <select id="document-folder" class="select" data-model="folderId">
+                    <option value="" {% if folderId is null %}selected{% endif %}>{{ 'form.connector.folder_root'|trans }}</option>
+                    {% for folder in this.folders %}
+                        <option value="{{ folder.id }}" {% if folderId == folder.id %}selected{% endif %}>{% if folder.depth > 0 %}{% for i in 1..folder.depth %}&nbsp;&nbsp;&nbsp;{% endfor %}{% endif %}{{ folder.name }}</option>
+                    {% endfor %}
+                </select>
+            {% else %}
+                <span>{{ document.folder ? document.folder.name : 'form.connector.folder_root'|trans }}</span>
+            {% endif %}
         </dd>
 
         <dt>{{ 'document.props.linked_code'|trans }}</dt>

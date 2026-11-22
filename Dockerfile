@@ -19,10 +19,18 @@ FROM base AS prod
 
 ENV APP_ENV=prod
 
+RUN cp "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
+COPY docker/php/app.ini /usr/local/etc/php/conf.d/zz-app.ini
+COPY docker/php/prod.ini /usr/local/etc/php/conf.d/zz-prod.ini
+
+COPY composer.json composer.lock symfony.lock ./
+RUN composer install --no-dev --no-scripts --no-autoloader --no-interaction
+
 COPY . .
 
-RUN composer install --no-dev --optimize-autoloader --no-interaction \
-    && php bin/console cache:warmup \
+RUN composer dump-autoload --classmap-authoritative --no-dev --no-interaction \
+    && composer dump-env prod \
+    && composer run-script --no-dev post-install-cmd \
     && php bin/console asset-map:compile \
     && mkdir -p var/storage var/repos var/lock
 
