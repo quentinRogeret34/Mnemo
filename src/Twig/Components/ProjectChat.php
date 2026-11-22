@@ -8,6 +8,8 @@ use App\Llm\LlmUnavailable;
 use App\Security\ProjectScope;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\Uid\Uuid;
+use Symfony\Component\Uid\UuidV7;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\UX\LiveComponent\Attribute\AsLiveComponent;
 use Symfony\UX\LiveComponent\Attribute\LiveAction;
@@ -70,7 +72,7 @@ final class ProjectChat
         $messages = $this->getMessages();
 
         try {
-            $reply = $this->assistant->reply($this->project, $messages, $message);
+            $reply = $this->assistant->reply($this->project, $messages, $message, $this->conversationId());
         } catch (\Throwable $exception) {
             $this->error = $exception instanceof LlmUnavailable ? $exception->translatable()->trans($this->translator) : $exception->getMessage();
 
@@ -86,11 +88,36 @@ final class ProjectChat
     #[LiveAction]
     public function reset(): void
     {
-        $this->requestStack->getSession()->remove($this->key());
+        $session = $this->requestStack->getSession();
+        $session->remove($this->key());
+        $session->remove($this->conversationKey());
+    }
+
+    private function conversationId(): UuidV7
+    {
+        $session = $this->requestStack->getSession();
+        $stored = $session->get($this->conversationKey());
+
+        if (\is_string($stored) && Uuid::isValid($stored)) {
+            $uuid = Uuid::fromString($stored);
+            if ($uuid instanceof UuidV7) {
+                return $uuid;
+            }
+        }
+
+        $id = Uuid::v7();
+        $session->set($this->conversationKey(), $id->toRfc4122());
+
+        return $id;
     }
 
     private function key(): string
     {
         return 'project_chat_'.$this->project->getId();
+    }
+
+    private function conversationKey(): string
+    {
+        return 'project_chat_id_'.$this->project->getId();
     }
 }

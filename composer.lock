@@ -3520,12 +3520,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/quentinRogeret34/ai-observability-bundle.git",
-                "reference": "0a931696d5ec5d8ba96bdcb7373e92a3c5ecd191"
+                "reference": "a6175d381daa3d083e252442f46081edd59d1932"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/quentinRogeret34/ai-observability-bundle/zipball/0a931696d5ec5d8ba96bdcb7373e92a3c5ecd191",
-                "reference": "0a931696d5ec5d8ba96bdcb7373e92a3c5ecd191",
+                "url": "https://api.github.com/repos/quentinRogeret34/ai-observability-bundle/zipball/a6175d381daa3d083e252442f46081edd59d1932",
+                "reference": "a6175d381daa3d083e252442f46081edd59d1932",
                 "shasum": ""
             },
             "require": {
@@ -3534,6 +3534,7 @@
                 "open-telemetry/exporter-otlp": "^1.0",
                 "open-telemetry/sdk": "^1.0",
                 "php": ">=8.2",
+                "psr/log": "^2.0|^3.0",
                 "symfony/ai-platform": "^1.0@beta",
                 "symfony/config": "^7.3|^8.0",
                 "symfony/dependency-injection": "^7.3|^8.0",
@@ -3542,6 +3543,8 @@
                 "symfony/http-kernel": "^7.3|^8.0"
             },
             "require-dev": {
+                "friendsofphp/php-cs-fixer": "^3.95",
+                "phpstan/phpstan": "^2.3",
                 "phpunit/phpunit": "^11.5",
                 "symfony/ai-agent": "^1.0@beta",
                 "symfony/browser-kit": "^7.3|^8.0",
@@ -3588,7 +3591,7 @@
                 "source": "https://github.com/quentinRogeret34/ai-observability-bundle/tree/main",
                 "issues": "https://github.com/quentinRogeret34/ai-observability-bundle/issues"
             },
-            "time": "2026-11-21T16:03:52+00:00"
+            "time": "2026-11-22T20:11:35+00:00"
         },
         {
             "name": "quentinrogeret34/ai-steering-bundle",
@@ -3596,12 +3599,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/quentinRogeret34/ai-steering-bundle.git",
-                "reference": "1aff12cce3fc5a6f06d023b5222498a81d0c427d"
+                "reference": "337b167518e51117846e1422db4bc977c0a2bb86"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/quentinRogeret34/ai-steering-bundle/zipball/1aff12cce3fc5a6f06d023b5222498a81d0c427d",
-                "reference": "1aff12cce3fc5a6f06d023b5222498a81d0c427d",
+                "url": "https://api.github.com/repos/quentinRogeret34/ai-steering-bundle/zipball/337b167518e51117846e1422db4bc977c0a2bb86",
+                "reference": "337b167518e51117846e1422db4bc977c0a2bb86",
                 "shasum": ""
             },
             "require": {
@@ -3616,6 +3619,8 @@
                 "symfony/http-kernel": "^7.3|^8.0"
             },
             "require-dev": {
+                "friendsofphp/php-cs-fixer": "^3.95",
+                "phpstan/phpstan": "^2.3",
                 "phpunit/phpunit": "^11.5",
                 "quentinrogeret34/ai-observability-bundle": "dev-main",
                 "symfony/browser-kit": "^7.3|^8.0",
@@ -3656,7 +3661,7 @@
                 "source": "https://github.com/quentinRogeret34/ai-steering-bundle/tree/main",
                 "issues": "https://github.com/quentinRogeret34/ai-steering-bundle/issues"
             },
-            "time": "2026-11-21T16:08:05+00:00"
+            "time": "2026-11-22T19:26:17+00:00"
         },
         {
             "name": "ramsey/collection",

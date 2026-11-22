@@ -2404,6 +2404,7 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  * @psalm-type AiObservabilityConfig = bool|array{
  *     enabled?: bool|Param, // Default: true
  *     capture_content?: bool|Param, // Records prompts, responses and tool arguments (gen_ai.input.messages, gen_ai.output.messages...). Opt-in, as they may hold personal data. // Default: false
+ *     max_content_length?: int|Param, // Maximum character length per captured content string when capture_content is enabled (0 for unlimited). // Default: 65536
  *     tracer_provider?: scalar|Param|null, // Id of an OpenTelemetry TracerProviderInterface service to reuse. By default one is built from the OTEL_* environment variables. // Default: null
  *     trace_url?: scalar|Param|null, // Url of a trace in the tracing backend, linked from the profiler. "{trace_id}" is replaced, e.g. "http://localhost:16686/trace/{trace_id}". // Default: null
  *     user_id_resolver?: scalar|Param|null, // Id of a UserIdResolverInterface service giving the pseudonymous user.id. By default the identifier of the logged-in user, hashed with kernel.secret. // Default: null

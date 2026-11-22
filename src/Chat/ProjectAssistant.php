@@ -2,6 +2,7 @@
 
 namespace App\Chat;
 
+use AiObservability\Agent\AgentTracer;
 use App\Entity\Project;
 use App\Llm\LlmSettings;
 use App\Llm\LlmUnavailable;
@@ -11,6 +12,8 @@ use Symfony\AI\Agent\Toolbox\FaultTolerantToolbox;
 use Symfony\AI\Agent\Toolbox\Toolbox;
 use Symfony\AI\Platform\Message\Message;
 use Symfony\AI\Platform\Message\MessageBag;
+use Symfony\Component\Uid\UuidV7;
+use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
 /**
  * Answers a conversation about one project from its knowledge graph, and writes rules and memories on request.
@@ -37,6 +40,8 @@ final class ProjectAssistant
     public function __construct(
         private readonly LlmSettings $settings,
         private readonly ProjectTools $tools,
+        private readonly EventDispatcherInterface $eventDispatcher,
+        private readonly ?AgentTracer $agentTracer = null,
     ) {
     }
 
@@ -45,7 +50,7 @@ final class ProjectAssistant
      *
      * @return array{answer: string, actions: list<array{label: string, parameters: array<string, int|string>, url: string}>}
      */
-    public function reply(Project $project, array $history, string $message): array
+    public function reply(Project $project, array $history, string $message, ?UuidV7 $conversationId = null): array
     {
         if (!$this->settings->isConfigured($this->settings->chatPlatform)) {
             throw new LlmUnavailable($this->settings->chatPlatform);
@@ -56,16 +61,20 @@ final class ProjectAssistant
             $this->settings->platform($this->settings->chatPlatform),
             $this->settings->chatModel($project),
             [new SystemPromptInputProcessor(\sprintf(self::SYSTEM, $project->getName()))],
-            toolbox: new ObjectParametersToolbox(new FaultTolerantToolbox(new Toolbox([$tools]))),
+            name: 'project_assistant',
+            toolbox: new ObjectParametersToolbox(new FaultTolerantToolbox(new Toolbox([$tools], eventDispatcher: $this->eventDispatcher))),
             maxToolCalls: self::MAX_TOOL_CALLS,
+            eventDispatcher: $this->eventDispatcher,
         );
+        $agent = $this->agentTracer?->trace($agent) ?? $agent;
         $messages = [];
         foreach (\array_slice($history, -self::HISTORY) as $turn) {
             $messages[] = 'user' === $turn['role'] ? Message::ofUser($turn['content']) : Message::ofAssistant($turn['content']);
         }
         $messages[] = Message::ofUser($message);
 
-        $answer = $agent->call(new MessageBag(...$messages), ['temperature' => 0])->asText();
+        $bag = null !== $conversationId ? MessageBag::forId($conversationId, ...$messages) : new MessageBag(...$messages);
+        $answer = $agent->call($bag, ['temperature' => 0])->asText();
 
         return ['answer' => trim($answer), 'actions' => $tools->actions()];
     }
