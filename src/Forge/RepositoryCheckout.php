@@ -44,7 +44,14 @@ class RepositoryCheckout
 
     public function remove(Connector $connector): void
     {
-        (new Filesystem())->remove([$this->directory.'/'.$connector->getId(), $this->directory.'/'.$connector->getId().'-graph']);
+        if (null !== $connector->getId()) {
+            $this->removeById($connector->getId());
+        }
+    }
+
+    public function removeById(int $connectorId): void
+    {
+        (new Filesystem())->remove([$this->directory.'/'.$connectorId, $this->directory.'/'.$connectorId.'-graph']);
     }
 
     public function cloneUrl(Connector $connector): string

@@ -59,12 +59,12 @@ bin/console app:ingest:code &lt;slug&gt; var/graphify/&lt;slug&gt;/graphify-out/
             <table class="data-table">
                 <thead>
                     <tr>
-                        <th>{{ 'project.index.col.name'|trans }}</th>
-                        <th>{{ 'project.index.col.status'|trans }}</th>
-                        <th>{{ 'project.index.col.content'|trans }}</th>
-                        <th>{{ 'project.index.col.code'|trans }}</th>
-                        <th>{{ 'project.index.col.rules'|trans }}</th>
-                        <th class="project-table__action"><span class="visually-hidden">{{ 'project.index.col.action'|trans }}</span></th>
+                        <th scope="col">{{ 'project.index.col.name'|trans }}</th>
+                        <th scope="col">{{ 'project.index.col.status'|trans }}</th>
+                        <th scope="col">{{ 'project.index.col.content'|trans }}</th>
+                        <th scope="col">{{ 'project.index.col.code'|trans }}</th>
+                        <th scope="col">{{ 'project.index.col.rules'|trans }}</th>
+                        <th scope="col" class="project-table__action"><span class="visually-hidden">{{ 'project.index.col.action'|trans }}</span></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -124,6 +124,8 @@ bin/console app:ingest:code &lt;slug&gt; var/graphify/&lt;slug&gt;/graphify-out/
                                         <a class="menu__item" href="{{ path('memory_index', {project: project.slug}) }}">{{ 'nav.memories'|trans }}</a>
                                         <a class="menu__item" href="{{ path('memory_graph', {project: project.slug}) }}">{{ 'nav.memory_graph'|trans }}</a>
                                         <a class="menu__item" href="{{ path('project_code', {slug: project.slug}) }}">{{ 'nav.code'|trans }}</a>
+                                        <a class="menu__item" href="{{ path('project_chat', {slug: project.slug}) }}">{{ 'nav.assistant'|trans }}</a>
+                                        <a class="menu__item" href="{{ path('agent_asset_index', {slug: project.slug}) }}">{{ 'nav.agent_assets'|trans }}</a>
                                         <a class="menu__item" href="{{ path('garden_show', {slug: project.slug}) }}">{{ 'nav.garden'|trans }}</a>
                                         <a class="menu__item" href="{{ path('proposal_index', {project: project.slug}) }}">{{ 'nav.to_review'|trans }}{% if project.pending > 0 %} ({{ project.pending }}){% endif %}</a>
                                         <hr class="menu__rule">

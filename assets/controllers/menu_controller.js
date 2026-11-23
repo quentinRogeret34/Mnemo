@@ -8,9 +8,35 @@ export default class extends Controller {
     static targets = ['trigger', 'panel', 'filter', 'item', 'empty'];
 
     #close = () => this.panelTarget.hidePopover();
+    #raf = null;
+    #onKeydown = (event) => {
+        const items = [...this.panelTarget.querySelectorAll('.menu__item:not([hidden])')];
+        if (items.length === 0) {
+            return;
+        }
+        const index = items.indexOf(document.activeElement);
+        if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            items[(index + 1) % items.length].focus();
+        } else if (event.key === 'ArrowUp') {
+            event.preventDefault();
+            items[(index - 1 + items.length) % items.length].focus();
+        } else if (event.key === 'Home') {
+            event.preventDefault();
+            items[0].focus();
+        } else if (event.key === 'End') {
+            event.preventDefault();
+            items[items.length - 1].focus();
+        }
+    };
 
     disconnect() {
         window.removeEventListener('scroll', this.#close);
+        this.panelTarget.removeEventListener('keydown', this.#onKeydown);
+        if (this.#raf !== null) {
+            cancelAnimationFrame(this.#raf);
+            this.#raf = null;
+        }
     }
 
     // Without anchor positioning nothing ties the panel to its trigger: it is placed once shown, before the next paint.
@@ -20,7 +46,10 @@ export default class extends Controller {
         }
 
         this.panelTarget.style.minWidth = `${this.triggerTarget.getBoundingClientRect().width}px`;
-        requestAnimationFrame(() => this.#fit());
+        this.#raf = requestAnimationFrame(() => {
+            this.#raf = null;
+            this.#fit();
+        });
     }
 
     sync(event) {
@@ -30,6 +59,11 @@ export default class extends Controller {
         if (!open && this.hasFilterTarget) {
             this.filterTarget.value = '';
             this.filter();
+        }
+        if (open) {
+            this.panelTarget.addEventListener('keydown', this.#onKeydown);
+        } else {
+            this.panelTarget.removeEventListener('keydown', this.#onKeydown);
         }
         if (open && !ANCHORED) {
             window.addEventListener('scroll', this.#close, { once: true, passive: true });

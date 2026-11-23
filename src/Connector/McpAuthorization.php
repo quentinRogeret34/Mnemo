@@ -3,6 +3,7 @@
 namespace App\Connector;
 
 use App\Entity\Connector;
+use App\Security\SafeUrl;
 use App\Security\SecretBox;
 use Doctrine\DBAL\Connection;
 use Symfony\Component\Lock\LockFactory;
@@ -17,6 +18,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 final class McpAuthorization
 {
     private const CLIENT_NAME = 'Mnemo';
+    private const TIMEOUT = 15;
 
     public function __construct(
         private readonly HttpClientInterface $httpClient,
@@ -32,13 +34,16 @@ final class McpAuthorization
      */
     public function start(Connector $connector, string $redirectUri, string $state): array
     {
-        $endpoint = $connector->getEndpoint();
+        $endpoint = SafeUrl::requireHttps($connector->getEndpoint());
         $challenge = $this->challenge($endpoint);
         $resource = $this->protectedResource($endpoint, $challenge['resource_metadata'] ?? null);
-        $server = $this->authorizationServer((string) ($resource['authorization_servers'][0] ?? $this->origin($endpoint)));
+        $issuer = SafeUrl::requireHttps((string) ($resource['authorization_servers'][0] ?? $this->origin($endpoint)));
+        $server = $this->authorizationServer($issuer);
         if (isset($server['code_challenge_methods_supported']) && !\in_array('S256', (array) $server['code_challenge_methods_supported'], true)) {
             throw new \RuntimeException('Le serveur d\'autorisation ne prend pas en charge PKCE (S256).');
         }
+        $authorize = SafeUrl::requireHttps((string) $server['authorization_endpoint']);
+        $tokenEndpoint = SafeUrl::requireHttps((string) $server['token_endpoint']);
         $client = $this->register($server, $redirectUri);
         $verifier = $this->base64Url(random_bytes(32));
         $resourceUri = \is_string($resource['resource'] ?? null) ? $resource['resource'] : $endpoint;
@@ -54,14 +59,13 @@ final class McpAuthorization
             'resource' => $resourceUri,
             'scope' => $scope,
         ], static fn (string $value): bool => '' !== $value);
-        $authorize = (string) $server['authorization_endpoint'];
 
         return [
             'url' => $authorize.(str_contains($authorize, '?') ? '&' : '?').http_build_query($query),
             'pending' => [
                 'endpoint' => $endpoint,
                 'resource' => $resourceUri,
-                'token_endpoint' => (string) $server['token_endpoint'],
+                'token_endpoint' => $tokenEndpoint,
                 'client_id' => $client['client_id'],
                 'client_secret' => $client['client_secret'],
                 'auth_method' => $client['auth_method'],
@@ -96,7 +100,7 @@ final class McpAuthorization
         }
 
         // The web and the worker may refresh at the same time, and a refresh token is often valid only once.
-        $lock = $this->lockFactory->createLock('connector-authorization-'.$connector->getId());
+        $lock = $this->lockFactory->createLock('connector-authorization-'.$connector->getId(), 30);
         $lock->acquire(true);
         try {
             $stored = $this->connection->fetchOne('SELECT mcp_authorization FROM connector WHERE id = ?', [$connector->getId()]);
@@ -132,6 +136,7 @@ final class McpAuthorization
     private function challenge(string $endpoint): array
     {
         $response = $this->httpClient->request('POST', $endpoint, [
+            'timeout' => self::TIMEOUT,
             'headers' => ['Accept' => 'application/json, text/event-stream'],
             'json' => ['jsonrpc' => '2.0', 'id' => 1, 'method' => 'initialize', 'params' => ['protocolVersion' => '2025-06-18', 'capabilities' => new \stdClass(), 'clientInfo' => ['name' => 'mnemo', 'version' => '0.1.0']]],
         ]);
@@ -153,7 +158,7 @@ final class McpAuthorization
     private function protectedResource(string $endpoint, ?string $metadataUrl): array
     {
         $path = rtrim((string) parse_url($endpoint, \PHP_URL_PATH), '/');
-        $candidates = null !== $metadataUrl ? [$metadataUrl] : array_unique([
+        $candidates = null !== $metadataUrl ? [SafeUrl::requireHttps($metadataUrl)] : array_unique([
             $this->origin($endpoint).'/.well-known/oauth-protected-resource'.$path,
             $this->origin($endpoint).'/.well-known/oauth-protected-resource',
         ]);
@@ -200,13 +205,17 @@ final class McpAuthorization
         if (!\is_string($server['registration_endpoint'] ?? null)) {
             throw new \RuntimeException('Le serveur d\'autorisation ne permet pas l\'enregistrement dynamique de client : il n\'est pas pris en charge.');
         }
-        $client = $this->httpClient->request('POST', $server['registration_endpoint'], ['json' => [
-            'client_name' => self::CLIENT_NAME,
-            'redirect_uris' => [$redirectUri],
-            'grant_types' => ['authorization_code', 'refresh_token'],
-            'response_types' => ['code'],
-            'token_endpoint_auth_method' => 'none',
-        ]])->toArray();
+        $endpoint = SafeUrl::requireHttps($server['registration_endpoint']);
+        $client = $this->httpClient->request('POST', $endpoint, [
+            'timeout' => self::TIMEOUT,
+            'json' => [
+                'client_name' => self::CLIENT_NAME,
+                'redirect_uris' => [$redirectUri],
+                'grant_types' => ['authorization_code', 'refresh_token'],
+                'response_types' => ['code'],
+                'token_endpoint_auth_method' => 'none',
+            ],
+        ])->toArray();
 
         return [
             'client_id' => \is_string($client['client_id'] ?? null) ? $client['client_id'] : throw new \RuntimeException('Le serveur d\'autorisation n\'a pas délivré d\'identifiant de client.'),
@@ -223,8 +232,9 @@ final class McpAuthorization
      */
     private function token(array $client, array $grant): array
     {
+        $endpoint = SafeUrl::requireHttps($client['token_endpoint']);
         $body = $grant + ['client_id' => $client['client_id'], 'resource' => $client['resource']];
-        $options = ['headers' => ['Accept' => 'application/json']];
+        $options = ['timeout' => self::TIMEOUT, 'headers' => ['Accept' => 'application/json']];
         if ('' !== $client['client_secret']) {
             if ('client_secret_post' === $client['auth_method']) {
                 $body['client_secret'] = $client['client_secret'];
@@ -232,7 +242,7 @@ final class McpAuthorization
                 $options['auth_basic'] = [$client['client_id'], $client['client_secret']];
             }
         }
-        $tokens = $this->httpClient->request('POST', $client['token_endpoint'], $options + ['body' => $body])->toArray();
+        $tokens = $this->httpClient->request('POST', $endpoint, $options + ['body' => $body])->toArray();
 
         return [
             'access_token' => \is_string($tokens['access_token'] ?? null) ? $tokens['access_token'] : throw new \RuntimeException('Le serveur d\'autorisation n\'a pas délivré de jeton.'),
@@ -276,7 +286,7 @@ final class McpAuthorization
     private function json(string $url): ?array
     {
         try {
-            $response = $this->httpClient->request('GET', $url, ['headers' => ['Accept' => 'application/json']]);
+            $response = $this->httpClient->request('GET', $url, ['timeout' => self::TIMEOUT, 'headers' => ['Accept' => 'application/json']]);
 
             return 200 === $response->getStatusCode() ? $response->toArray() : null;
         } catch (\Throwable) {

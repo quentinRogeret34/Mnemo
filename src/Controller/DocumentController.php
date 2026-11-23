@@ -15,6 +15,7 @@ use App\Security\ProjectScope;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bridge\Doctrine\Attribute\MapEntity;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\Form\FormError;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
@@ -24,6 +25,7 @@ use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Translation\TranslatableMessage;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 final class DocumentController extends AbstractController
 {
@@ -34,6 +36,7 @@ final class DocumentController extends AbstractController
         private readonly DocumentStorage $documentStorage,
         private readonly EntityManagerInterface $entityManager,
         private readonly ProjectScope $projectScope,
+        private readonly TranslatorInterface $translator,
     ) {
     }
 
@@ -51,11 +54,20 @@ final class DocumentController extends AbstractController
         $folderForm = $this->createForm(FolderType::class);
         $folderForm->handleRequest($request);
         if ($folderForm->isSubmitted() && $folderForm->isValid()) {
-            $created = new Folder(trim($folderForm->get('name')->getData()), $current);
-            $this->entityManager->persist($created);
-            $this->entityManager->flush();
+            $name = trim((string) $folderForm->get('name')->getData());
+            $exists = false !== $this->entityManager->getConnection()->fetchOne(
+                'SELECT 1 FROM folder WHERE lower(name) = lower(:name) AND '.(null === $current ? 'parent_id IS NULL' : 'parent_id = :parent').' LIMIT 1',
+                ['name' => $name] + (null === $current ? [] : ['parent' => $current->getId()]),
+            );
+            if ($exists) {
+                $folderForm->get('name')->addError(new FormError($this->translator->trans('folder.duplicate', domain: 'validators')));
+            } else {
+                $created = new Folder($name, $current);
+                $this->entityManager->persist($created);
+                $this->entityManager->flush();
 
-            return $this->redirectToRoute('document_index', ['folder' => $created->getId()]);
+                return $this->redirectToRoute('document_index', ['folder' => $created->getId()]);
+            }
         }
 
         $ancestors = [];
@@ -129,6 +141,9 @@ final class DocumentController extends AbstractController
             default => 'text/markdown; charset=UTF-8',
         });
         $response->headers->set('X-Content-Type-Options', 'nosniff');
+        if ('pdf' === $format) {
+            $response->headers->set('Content-Security-Policy', "default-src 'none'; frame-ancestors 'self'");
+        }
 
         return $response;
     }

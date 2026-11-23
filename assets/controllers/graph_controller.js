@@ -13,8 +13,10 @@ export default class extends Controller {
     }
 
     disconnect() {
+        this.abort?.abort();
         this.observer?.disconnect();
         this.graph?.destroy();
+        this.graph = null;
     }
 
     setDepth(event) {
@@ -23,10 +25,32 @@ export default class extends Controller {
     }
 
     async load() {
-        const response = await fetch(`${this.urlValue}?depth=${this.depthValue}`, { headers: { Accept: 'application/json' } });
-        const { nodes, edges } = await response.json();
+        this.abort?.abort();
+        this.abort = new AbortController();
+        try {
+            const response = await fetch(`${this.urlValue}?depth=${this.depthValue}`, { headers: { Accept: 'application/json' }, signal: this.abort.signal });
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            this.data = await response.json();
+            this.render();
+        } catch (error) {
+            if (error.name !== 'AbortError') {
+                this.graph?.destroy();
+                this.graph = null;
+                this.emptyTarget.hidden = false;
+            }
+        }
+    }
+
+    render() {
+        if (!this.data) {
+            return;
+        }
+        const { nodes, edges } = this.data;
 
         this.graph?.destroy();
+        this.graph = null;
         this.emptyTarget.hidden = edges.length > 0;
         if (edges.length === 0) {
             return;

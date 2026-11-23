@@ -20,8 +20,10 @@ use App\Message\ReviewPullRequest;
 use App\Message\SyncConnector;
 use App\Review\PullRequestReviewer;
 use App\Security\OAuth\OAuthClient;
+use App\Security\SafeUrl;
 use App\Security\SecretBox;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Form\FormError;
 use Symfony\Component\HttpFoundation\Request;
@@ -55,6 +57,7 @@ final class ConnectorController extends AbstractController
         private readonly ModelCheck $modelCheck,
         private readonly McpAuthorization $authorization,
         private readonly TranslatorInterface $translator,
+        private readonly LoggerInterface $logger,
     ) {
     }
 
@@ -81,6 +84,7 @@ final class ConnectorController extends AbstractController
             }
         }
         $previousCredentials = $connector->getCredentials();
+        $previousOrigin = SafeUrl::origin($connector->getEndpoint());
         $form = $this->createForm(ConnectorType::class, $connector);
         $form->handleRequest($request);
 
@@ -88,7 +92,8 @@ final class ConnectorController extends AbstractController
             $form->get('transport')->addError(new FormError($this->translator->trans('connector.stdio_disabled')));
         }
         if ($form->isSubmitted() && $form->isValid()) {
-            $connector->setCredentials($this->credentials->seal($connector->getCredentials(), $previousCredentials));
+            $originChanged = null !== $previousOrigin && $previousOrigin !== SafeUrl::origin($connector->getEndpoint());
+            $connector->setCredentials($this->credentials->seal($connector->getCredentials(), $originChanged ? [] : $previousCredentials));
             $this->entityManager->persist($connector);
             $this->entityManager->flush();
 
@@ -139,7 +144,8 @@ final class ConnectorController extends AbstractController
             $connector->setOauthToken($this->secretBox->encrypt($this->oauthClient->accessToken('github', $request->query->getString('code'), $this->generateUrl('connector_oauth_check', [], UrlGeneratorInterface::ABSOLUTE_URL))));
             $this->entityManager->flush();
             $this->addFlash('success', new TranslatableMessage('flash.connector.github_connected'));
-        } catch (\Throwable) {
+        } catch (\Throwable $exception) {
+            $this->logger->warning('GitHub OAuth token exchange failed for connector {id}: {message}', ['id' => $connector->getId(), 'message' => $exception->getMessage()]);
             $this->addFlash('error', new TranslatableMessage('flash.github.refused'));
         }
 

@@ -13,6 +13,7 @@ use App\Search\HybridSearch;
 use App\Security\MemoryAccess;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\AI\Agent\Toolbox\Attribute\AsTool;
+use Symfony\Component\Lock\LockFactory;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 
 /**
@@ -38,6 +39,7 @@ final class ProjectTools
         private readonly MemoryAccess $memoryAccess,
         private readonly EntityManagerInterface $entityManager,
         private readonly UrlGeneratorInterface $urlGenerator,
+        private readonly LockFactory $lockFactory,
     ) {
     }
 
@@ -121,13 +123,19 @@ final class ProjectTools
             return ['error' => 'The title (255 characters at most) and the statement (2000 at most) are required.'];
         }
         $project = $this->project();
-        $last = (int) $this->entityManager->getConnection()->fetchOne(
-            "SELECT COALESCE(MAX(substring(external_id FROM 4)::int), 0) FROM node WHERE project_id = :project AND type = :rule AND external_id ~ '^RG-[0-9]+$'",
-            ['project' => $project->getId(), 'rule' => NodeType::BusinessRule->value],
-        );
-        $rule = new Node($project, NodeType::BusinessRule, \sprintf('RG-%03d', $last + 1), $title, null, null, ['statement' => $statement, 'status' => 'to_review', 'source' => 'chat']);
-        $this->entityManager->persist($rule);
-        $this->entityManager->flush();
+        $lock = $this->lockFactory->createLock('rule-code-'.$project->getId(), 15);
+        $lock->acquire(true);
+        try {
+            $last = (int) $this->entityManager->getConnection()->fetchOne(
+                "SELECT COALESCE(MAX(substring(external_id FROM 4)::int), 0) FROM node WHERE project_id = :project AND type = :rule AND external_id ~ '^RG-[0-9]+$'",
+                ['project' => $project->getId(), 'rule' => NodeType::BusinessRule->value],
+            );
+            $rule = new Node($project, NodeType::BusinessRule, \sprintf('RG-%03d', $last + 1), $title, null, null, ['statement' => $statement, 'status' => 'to_review', 'source' => 'chat']);
+            $this->entityManager->persist($rule);
+            $this->entityManager->flush();
+        } finally {
+            $lock->release();
+        }
         $this->actions[] = [
             'label' => 'chat.action.rule', 'parameters' => ['code' => $rule->getExternalId()],
             'url' => $this->urlGenerator->generate('rule_show', ['slug' => $project->getSlug(), 'code' => $rule->getExternalId()]),

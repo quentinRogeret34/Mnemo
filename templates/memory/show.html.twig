@@ -1,16 +1,17 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}{{ 'form.memory.text'|trans }}{% endblock %}
+{% block title %}{{ memory.label|length > 60 ? memory.label|slice(0, 60) ~ '…' : memory.label }}{% endblock %}
 
 {% block crumbs %}
     <a href="{{ path('memory_index') }}">{{ 'nav.memories'|trans }}</a>
     <span class="crumbs__sep" aria-hidden="true">/</span>
-    <span class="crumbs__current">{{ memory.label }}</span>
+    <span class="crumbs__current" aria-current="page">{{ memory.label }}</span>
 {% endblock %}
 
 {% block body %}
     {% set status = memory.metadata.status ?? 'active' %}
     {% set meta = memory.metadata %}
+    <h1 class="visually-hidden">{{ memory.label }}</h1>
     <div class="memory-layout">
         <article class="memory-main">
             {% if status != 'active' %}
@@ -38,7 +39,7 @@
             {% endif %}
         </article>
 
-        <aside class="doc-aside memory-aside">
+        <aside class="doc-aside memory-aside" aria-label="{{ 'document.properties'|trans }}">
             {% set verification = meta.verification ?? null %}
             <section class="doc-card" aria-labelledby="verification-title">
                 <div class="doc-card__head">

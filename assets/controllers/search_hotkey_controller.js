@@ -9,7 +9,7 @@ export default class extends Controller {
             this.palette();
             return;
         }
-        if (event.key !== '/' || event.target.closest('input, textarea, select, [contenteditable]')) {
+        if (event.key !== '/' || event.target.closest('input, textarea, select, [contenteditable]') || document.querySelector('dialog[open]')) {
             return;
         }
 

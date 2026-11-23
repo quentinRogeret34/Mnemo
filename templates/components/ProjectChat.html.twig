@@ -1,16 +1,16 @@
-<div{{ attributes.defaults({class: 'chat'}) }} data-loading="addClass(is-loading)">
+<div{{ attributes.defaults({class: 'chat'}) }} data-controller="chat">
     {% set messages = this.messages %}
     {% if messages is empty %}
         <div class="chat__empty">
             <p>{{ 'chat.empty'|trans }}</p>
             <ul class="chat__examples">
-                <li>{{ 'chat.example1'|trans }}</li>
-                <li>{{ 'chat.example2'|trans }}</li>
-                <li>{{ 'chat.example3'|trans }}</li>
+                {% for key in ['chat.example1', 'chat.example2', 'chat.example3'] %}
+                    <li><button type="button" class="chat__example" data-action="chat#useExample" data-prompt="{{ key|trans }}">{{ key|trans }}</button></li>
+                {% endfor %}
             </ul>
         </div>
     {% else %}
-        <ol class="chat__messages" aria-live="polite">
+        <ol class="chat__messages" aria-live="polite" data-chat-target="log">
             {% for item in messages %}
                 <li class="chat__message chat__message--{{ item.role }}">
                     <span class="chat__author">{{ (item.role == 'user' ? 'chat.you' : 'nav.assistant')|trans }}</span>
@@ -31,10 +31,10 @@
 
     <form class="chat__form" data-action="live#action:prevent" data-live-action-param="send">
         <label class="visually-hidden" for="chat-message">{{ 'chat.message'|trans }}</label>
-        <input class="input" id="chat-message" type="text" data-model="norender|message" value="{{ message }}" maxlength="4000" placeholder="{{ 'chat.placeholder'|trans({name: project.name}) }}" autocomplete="off" autofocus required>
-        <button class="button button--primary" type="submit" data-loading="addAttribute(disabled)"><twig:ux:icon name="lucide:message-circle" /><span data-loading="hide">{{ 'chat.send'|trans }}</span><span data-loading="show">{{ 'chat.thinking'|trans }}</span></button>
+        <textarea class="input chat__input" id="chat-message" rows="1" data-model="norender|message" data-chat-target="input" data-action="keydown->chat#keydown" maxlength="4000" placeholder="{{ 'chat.placeholder'|trans({name: project.name}) }}" autocomplete="off" autofocus required>{{ message }}</textarea>
+        <button class="button button--primary" type="submit" data-loading="action(send)|addAttribute(disabled)"><twig:ux:icon name="lucide:message-circle" /><span data-loading="action(send)|hide">{{ 'chat.send'|trans }}</span><span data-loading="action(send)|show">{{ 'chat.thinking'|trans }}</span></button>
         {% if messages is not empty %}
-            <button class="button" type="button" data-action="live#action" data-live-action-param="reset" data-loading="addAttribute(disabled)">{{ 'chat.reset'|trans }}</button>
+            <button class="button" type="button" data-action="live#action" data-live-action-param="reset" data-loading="addAttribute(disabled)" data-confirm="{{ 'chat.reset_confirm'|trans }}" data-confirm-label="{{ 'chat.reset'|trans }}">{{ 'chat.reset'|trans }}</button>
         {% endif %}
     </form>
 </div>

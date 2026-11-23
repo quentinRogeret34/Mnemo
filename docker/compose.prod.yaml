@@ -61,10 +61,18 @@ services:
         condition: service_completed_successfully
     environment:
       <<: *app-env
-      SERVER_NAME: ":80"
+      SERVER_NAME: ":8080"
       SYMFONY_TRUSTED_PROXIES: private_ranges
+      SYMFONY_TRUSTED_HOSTS: "^${SERVER_NAME:?}$$"
     expose:
-      - "80"
+      - "8080"
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD-SHELL", "php -r 'exit(@fsockopen(\"127.0.0.1\", 8080) ? 0 : 1);'"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
     volumes:
       - storage:/app/var/storage
       - repos:/app/var/repos
@@ -80,6 +88,8 @@ services:
       migrate:
         condition: service_completed_successfully
     command: ["php", "bin/console", "messenger:consume", "scheduler_default", "async", "--time-limit=3600", "--memory-limit=256M"]
+    security_opt:
+      - no-new-privileges:true
     healthcheck:
       disable: true
 

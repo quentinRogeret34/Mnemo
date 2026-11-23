@@ -1,4 +1,4 @@
-<div{{ attributes.defaults({class: 'props-editor memory-editor'}) }} data-loading="addClass(is-loading)">
+<div{{ attributes.defaults({class: 'props-editor memory-editor'}) }}>
     <div class="memory-editor__meta">
         <label class="type-select">
             <span class="visually-hidden">{{ 'form.memory.type'|trans }}</span>
@@ -23,13 +23,16 @@
     </div>
 
     <label class="visually-hidden" for="memory-text">{{ 'proposal.lesson'|trans }}</label>
-    <textarea id="memory-text" class="memory-editor__text" data-model="text" rows="2" maxlength="1000">{{ text }}</textarea>
-    {% if error %}<p class="form-errors">{{ error|trans }}</p>{% endif %}
+    <textarea id="memory-text" class="memory-editor__text" data-model="on(input)|debounce(200)|text" rows="2" maxlength="1000"{% if error %} aria-invalid="true" aria-describedby="memory-text-error"{% endif %}>{{ text }}</textarea>
+    {% if error %}<p class="form-errors" id="memory-text-error" role="alert">{{ error|trans }}</p>{% endif %}
     {% if this.dirty %}
         <div class="memory-editor__save">
-            <button type="button" class="button button--primary" data-action="live#action" data-live-action-param="save">{{ 'common.save'|trans }}</button>
+            <button type="button" class="button button--primary" data-action="live#action" data-live-action-param="save" data-loading="action(save)|addAttribute(disabled)">{{ 'common.save'|trans }}</button>
+            <button type="button" class="button" data-action="live#action" data-live-action-param="reset" data-loading="action(save)|addAttribute(disabled)">{{ 'common.cancel'|trans }}</button>
             <span class="row__sub">{{ 'memory.editor.previous_kept'|trans }}</span>
         </div>
+    {% elseif saved %}
+        <p class="row__sub memory-editor__saved" role="status">{{ ux_icon('lucide:check') }}{{ 'memory.editor.saved'|trans }}</p>
     {% endif %}
 
     {% if type == 'decision' %}
@@ -39,7 +42,7 @@
                 {% for field, label in this.adrFields %}
                     <div class="adr-grid__field">
                         <label class="adr__label" for="adr-{{ field }}">{{ label|trans }}</label>
-                        <textarea id="adr-{{ field }}" class="adr__text" data-model="adr[{{ field }}]" rows="3" maxlength="4000">{{ adr[field] ?? '' }}</textarea>
+                        <textarea id="adr-{{ field }}" class="adr__text" data-model="on(input)|debounce(200)|adr[{{ field }}]" rows="3" maxlength="4000">{{ adr[field] ?? '' }}</textarea>
                     </div>
                 {% endfor %}
             </div>
@@ -74,15 +77,17 @@
             <input class="input" type="search" data-model="debounce(150)|linkQuery" value="{{ linkQuery }}"
                    placeholder="{{ 'memory.editor.link'|trans }}" aria-label="{{ 'memory.editor.link_label'|trans }}" autocomplete="off" spellcheck="false">
             {% if this.linkables is not empty %}
-                <span class="link-search__results" role="list">
+                <ul class="link-search__results">
                     {% for item in this.linkables %}
-                        <button type="button" role="listitem" class="link-search__item"
-                                data-action="live#action" data-live-action-param="link" data-live-node-id-param="{{ item.id }}">
-                            <span>{% if item.type == 'code_file' %}<span class="mono">{{ item.path }}</span>{% elseif item.type == 'business_rule' %}<span class="mono">{{ item.code }}</span> {{ item.label }}{% else %}{{ item.label }}{% endif %}</span>
-                            <span class="row__sub">{{ item.type == 'code_file' ? 'nav.code'|trans ~ ' · ' ~ item.project_name : (item.type == 'document' ? 'activity.kind.document'|trans : 'activity.kind.rule'|trans ~ ' · ' ~ item.project_name) }}</span>
-                        </button>
+                        <li>
+                            <button type="button" class="link-search__item"
+                                    data-action="live#action" data-live-action-param="link" data-live-node-id-param="{{ item.id }}">
+                                <span>{% if item.type == 'code_file' %}<span class="mono">{{ item.path }}</span>{% elseif item.type == 'business_rule' %}<span class="mono">{{ item.code }}</span> {{ item.label }}{% else %}{{ item.label }}{% endif %}</span>
+                                <span class="row__sub">{{ item.type == 'code_file' ? 'nav.code'|trans ~ ' · ' ~ item.project_name : (item.type == 'document' ? 'activity.kind.document'|trans : 'activity.kind.rule'|trans ~ ' · ' ~ item.project_name) }}</span>
+                            </button>
+                        </li>
                     {% endfor %}
-                </span>
+                </ul>
             {% elseif linkQuery|trim is not empty %}
                 <span class="row__sub">{{ (memory.projects is empty ? 'memory.editor.no_match_project' : 'memory.editor.no_match')|trans }}</span>
             {% endif %}

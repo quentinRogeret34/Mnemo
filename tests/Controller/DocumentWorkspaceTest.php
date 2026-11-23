@@ -62,7 +62,7 @@ final class DocumentWorkspaceTest extends WebTestCase
         self::assertSame('Remises', $crawler->filter('.doc-cell__main > span:first-child')->last()->text());
         self::assertSame(['Spécifications 1', 'Facturation 1'], $crawler->filter('.filetree summary')->each(static fn ($item): string => trim(preg_replace('/\s+/', ' ', $item->text()))));
         self::assertSame('Remises', $crawler->filter('.filetree details details .filetree__file .filetree__label')->text());
-        self::assertSame('page', $crawler->filter('.filetree details details summary a')->attr('aria-current'));
+        self::assertSame('page', $crawler->filter('.filetree .filetree__children .filetree__item > a.filetree__overlay-link')->attr('aria-current'));
 
         $crawler = $this->client->request('GET', '/documents');
         self::assertSame('1 doc.', $crawler->filter('.folder-card__count')->text());
@@ -71,6 +71,10 @@ final class DocumentWorkspaceTest extends WebTestCase
         self::assertSame('Facturation', $document->getFolder()->getName());
         self::assertSame('Spécifications', $document->getFolder()->getParent()->getName());
         self::assertCount(0, $document->getProjects());
+
+        $this->client->submit($crawler->selectButton('Créer le dossier')->form(['folder[name]' => 'spécifications']));
+        self::assertResponseStatusCodeSame(422);
+        self::assertSelectorTextContains('.form-errors', 'Un dossier de ce nom existe déjà ici.');
     }
 
     public function testAFolderPathResolvesToTheSameFoldersBeforeAndAfterFlush(): void

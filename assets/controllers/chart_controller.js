@@ -15,13 +15,16 @@ function node(name, attributes = {}, text = null) {
     return element;
 }
 
+// Picks a ceiling divisible by 4 so integer counts never render fractional ticks (e.g. 2.5, 7.5).
 function niceMax(value) {
     if (value <= 4) {
         return 4;
     }
-    const magnitude = 10 ** Math.floor(Math.log10(value));
+    const rawStep = value / 4;
+    const magnitude = 10 ** Math.floor(Math.log10(rawStep));
+    const step = [1, 2, 2.5, 5, 10].map((factor) => factor * magnitude).find((candidate) => candidate >= rawStep);
 
-    return [1, 2, 4, 5, 10].map((step) => step * magnitude).find((step) => step >= value);
+    return Math.ceil(step) * 4;
 }
 
 function bar(x, y, width, height) {

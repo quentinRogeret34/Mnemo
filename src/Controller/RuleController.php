@@ -11,6 +11,7 @@ use App\Pagination\Page;
 use App\Rule\ShadowAreaDetector;
 use App\Rule\ShadowCategory;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Bridge\Doctrine\Attribute\MapEntity;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -28,6 +29,7 @@ final class RuleController extends AbstractController
         private readonly KnowledgeReader $knowledgeReader,
         private readonly EntityManagerInterface $entityManager,
         private readonly ShadowAreaDetector $shadowAreaDetector,
+        private readonly LoggerInterface $logger,
     ) {
     }
 
@@ -73,6 +75,9 @@ final class RuleController extends AbstractController
             $this->addFlash('success', new TranslatableMessage('flash.rule.shadow_areas', ['count' => \count($areas)]));
         } catch (LlmUnavailable|\UnexpectedValueException $exception) {
             $this->addFlash('error', $exception instanceof LlmUnavailable ? $exception->translatable() : $exception->getMessage());
+        } catch (\Throwable $exception) {
+            $this->logger->error('Shadow area analysis failed for rule {code}: {message}', ['code' => $code, 'message' => $exception->getMessage(), 'exception' => $exception]);
+            $this->addFlash('error', new TranslatableMessage('flash.llm.error'));
         }
 
         return $this->redirectToRoute('rule_show', ['slug' => $project->getSlug(), 'code' => $code, '_fragment' => 'shadow-title']);

@@ -77,7 +77,7 @@ final class MemoryTest extends WebTestCase
         self::assertSame(['Convention 1', 'Fait 1'], $summaries($this->client->request('GET', '/memories?project=demo')));
         $crawler = $this->client->request('GET', '/memories?project=demo&group=source&source=mcp');
         self::assertSame(['manual 1', 'mcp 1'], $summaries($crawler));
-        self::assertSame('page', $crawler->filter('.memtree-nav summary a[href*="source=mcp"]')->attr('aria-current'));
+        self::assertSame('page', $crawler->filter('.memtree-nav a.filetree__overlay-link[href*="source=mcp"]')->attr('aria-current'));
 
         $this->client->request('GET', '/memories/graph?project=demo');
         self::assertResponseIsSuccessful();

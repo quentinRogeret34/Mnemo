@@ -33,29 +33,41 @@ export default class extends Controller {
     static values = { url: String, labels: Object };
 
     async connect() {
-        const response = await fetch(this.urlValue, { headers: { Accept: 'application/json' } });
-        const { nodes, edges } = await response.json();
-        const memories = new Map(nodes.filter((node) => node.kind === 'memory').map((node) => [node.id, node]));
-        this.hubs = nodes.filter((node) => node.kind !== 'memory').sort((a, b) => b.weight - a.weight || a.label.localeCompare(b.label));
-        this.children = new Map(this.hubs.map((hub) => [hub.id, []]));
-        edges.forEach((edge) => this.children.get(edge.target)?.push(memories.get(edge.source)));
-        this.kinds = KINDS.filter((kind) => this.hubs.some((hub) => hub.kind === kind));
-        const small = this.hubs.length <= OPEN_ALL.hubs && memories.size <= OPEN_ALL.memories;
-        this.open = new Set([...(this.hubs.length <= OPEN_KINDS ? this.kinds : []), ...(small ? this.hubs.map((hub) => hub.id) : [])]);
-        this.memoryCount = memories.size;
-        this.render();
-        this.observer = new ResizeObserver(() => {
-            if (this.graph) {
-                this.graph.resize();
-                this.viewport();
+        this.abort = new AbortController();
+        try {
+            const response = await fetch(this.urlValue, { headers: { Accept: 'application/json' }, signal: this.abort.signal });
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
             }
-        });
-        this.observer.observe(this.canvasTarget);
+            const { nodes, edges } = await response.json();
+            const memories = new Map(nodes.filter((node) => node.kind === 'memory').map((node) => [node.id, node]));
+            this.hubs = nodes.filter((node) => node.kind !== 'memory').sort((a, b) => b.weight - a.weight || a.label.localeCompare(b.label));
+            this.children = new Map(this.hubs.map((hub) => [hub.id, []]));
+            edges.forEach((edge) => this.children.get(edge.target)?.push(memories.get(edge.source)));
+            this.kinds = KINDS.filter((kind) => this.hubs.some((hub) => hub.kind === kind));
+            const small = this.hubs.length <= OPEN_ALL.hubs && memories.size <= OPEN_ALL.memories;
+            this.open = new Set([...(this.hubs.length <= OPEN_KINDS ? this.kinds : []), ...(small ? this.hubs.map((hub) => hub.id) : [])]);
+            this.memoryCount = memories.size;
+            this.render();
+            this.observer = new ResizeObserver(() => {
+                if (this.graph) {
+                    this.graph.resize();
+                    this.viewport();
+                }
+            });
+            this.observer.observe(this.canvasTarget);
+        } catch (error) {
+            if (error.name !== 'AbortError') {
+                this.emptyTarget.hidden = false;
+            }
+        }
     }
 
     disconnect() {
+        this.abort?.abort();
         this.observer?.disconnect();
         this.graph?.destroy();
+        this.graph = null;
     }
 
     render() {
@@ -263,6 +275,9 @@ export default class extends Controller {
     }
 
     viewport() {
+        if (!this.graph) {
+            return;
+        }
         const zoom = this.graph.zoom();
         const pan = this.graph.pan();
         let size = 18 * zoom;
@@ -271,10 +286,13 @@ export default class extends Controller {
         }
         this.canvasTarget.style.backgroundSize = `${size}px ${size}px`;
         this.canvasTarget.style.backgroundPosition = `${pan.x}px ${pan.y}px`;
-        this.zoomTarget.textContent = `${Math.round(zoom * 100)} %`;
+        this.zoomTarget.textContent = new Intl.NumberFormat(document.documentElement.lang, { style: 'percent' }).format(zoom);
     }
 
     zoomBy(factor) {
+        if (!this.graph) {
+            return;
+        }
         const { width, height } = this.canvasTarget.getBoundingClientRect();
         this.graph.zoom({ level: this.graph.zoom() * factor, renderedPosition: { x: width / 2, y: height / 2 } });
     }
@@ -288,6 +306,9 @@ export default class extends Controller {
     }
 
     fit() {
+        if (!this.graph) {
+            return;
+        }
         this.graph.fit(undefined, 48);
         const zoom = this.graph.zoom();
         if (zoom > 1 || zoom < MIN_FIT_ZOOM) {
@@ -299,6 +320,9 @@ export default class extends Controller {
     }
 
     expand() {
+        if (!this.graph || !this.hubs) {
+            return;
+        }
         this.hubs.forEach((hub) => this.open.add(hub.id));
         this.kinds.forEach((kind) => this.open.add(kind));
         this.rebuild('root');
@@ -306,6 +330,9 @@ export default class extends Controller {
     }
 
     collapse() {
+        if (!this.graph || !this.hubs) {
+            return;
+        }
         this.hubs.forEach((hub) => this.open.delete(hub.id));
         this.rebuild('root');
         this.fit();

@@ -83,7 +83,7 @@ final class McpServerTest extends WebTestCase
         self::assertSame(['src/main.ts'], $context['used_by']);
 
         $memory = $this->entityManager->find(Node::class, $first['id']);
-        self::assertSame(['source' => 'mcp', 'agent' => 'claude-code'], array_intersect_key($memory->getMetadata(), ['source' => 1, 'agent' => 1]));
+        self::assertEquals(['source' => 'mcp', 'agent' => 'claude-code'], array_intersect_key($memory->getMetadata(), ['source' => 1, 'agent' => 1]));
         self::assertSame(2, $this->entityManager->getRepository(Edge::class)->count(['source' => $memory, 'relation' => 'about']));
     }
 

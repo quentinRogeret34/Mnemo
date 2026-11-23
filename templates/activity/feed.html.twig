@@ -21,10 +21,11 @@
         <span class="view-head__meta">{{ 'activity.entries'|trans({count: feed.total}) }}</span>
     </div>
 
+    {% set scoped = app.user and not is_granted('ROLE_SUPER_ADMIN') %}
     <form class="filters" method="get" action="{{ path('activity_feed') }}" role="search" data-controller="autosubmit">
         <input class="input filters__search" type="search" name="q" value="{{ q }}" placeholder="{{ 'activity.search'|trans }}" aria-label="{{ 'activity.search'|trans }}">
         <select class="select" name="project" aria-label="{{ 'memory.index.project'|trans }}" data-action="autosubmit#submit">
-            <option value="">{{ 'nav.all_projects'|trans }}</option>
+            {% if not scoped %}<option value="">{{ 'nav.all_projects'|trans }}</option>{% endif %}
             {% for item in projects %}<option value="{{ item.slug }}" {{ project and project.id == item.id ? 'selected' }}>{{ item.name }}</option>{% endfor %}
         </select>
         <select class="select" name="type" aria-label="{{ 'activity.filter_type'|trans }}" data-action="autosubmit#submit">

@@ -12,6 +12,7 @@ use Doctrine\ORM\Mapping as ORM;
  */
 #[ORM\Entity]
 #[ORM\Index(name: 'proposal_status_idx', columns: ['status'])]
+#[ORM\Index(name: 'proposal_status_project_idx', columns: ['status', 'project_id'])]
 class Proposal
 {
     #[ORM\Id]
@@ -37,7 +38,7 @@ class Proposal
         private ?Project $project,
         #[ORM\Column(length: 20, enumType: ProposalKind::class)]
         private ProposalKind $kind,
-        #[ORM\Column(type: Types::JSON)]
+        #[ORM\Column(type: Types::JSON, options: ['jsonb' => true])]
         private array $payload,
     ) {
         $this->createdAt = new \DateTimeImmutable();

@@ -84,12 +84,9 @@ final class MemoryVerifier
 
     private function hasPendingProposal(Node $memory): bool
     {
-        foreach ($this->entityManager->getRepository(Proposal::class)->findBy(['kind' => ProposalKind::Refuted, 'status' => ProposalStatus::Pending]) as $proposal) {
-            if ($memory->getId() === $proposal->getPayload()['memory_id']) {
-                return true;
-            }
-        }
-
-        return false;
+        return false !== $this->entityManager->getConnection()->fetchOne(
+            "SELECT 1 FROM proposal WHERE kind = :kind AND status = :status AND (payload->>'memory_id')::int = :id LIMIT 1",
+            ['kind' => ProposalKind::Refuted->value, 'status' => ProposalStatus::Pending->value, 'id' => $memory->getId()],
+        );
     }
 }

@@ -11,6 +11,7 @@
 {% endblock %}
 
 {% block body %}
+    {% set scoped = app.user and not is_granted('ROLE_SUPER_ADMIN') %}
     {% set filters = {project: project ? project.slug : null} %}
     {% set reconciliations = {new: 'memory.new', updates: 'proposal.updates', supersedes: 'memory.show.replaces', retracts: 'proposal.retracts'} %}
     {% set tones = {new: 'success', updates: 'warning', supersedes: 'warning', retracts: 'danger'} %}
@@ -23,11 +24,21 @@
 
     <div class="filter-bar">
         <nav class="tabs" aria-label="{{ 'proposal.filter_kind'|trans }}">
-            <a href="{{ path('proposal_index', filters|filter(v => v is not null)) }}" {% if kind is null %}aria-current="page"{% endif %}>{{ 'common.all'|trans }}</a>
+            <a href="{{ path('proposal_index', filters|filter(v => v is not null)) }}" {% if kind is null %}aria-current="page"{% endif %}>{{ 'common.all'|trans }}{% if all_count > 0 %} <span class="tab__count num">{{ all_count }}</span>{% endif %}</a>
             {% for item in kinds %}
-                <a href="{{ path('proposal_index', (filters|merge({kind: item.value}))|filter(v => v is not null)) }}" {% if kind == item %}aria-current="page"{% endif %}>{{ item|trans }}</a>
+                {% set c = kind_counts[item.value] ?? 0 %}
+                <a href="{{ path('proposal_index', (filters|merge({kind: item.value}))|filter(v => v is not null)) }}" {% if kind == item %}aria-current="page"{% endif %}>{{ item|trans }}{% if c > 0 %} <span class="tab__count num">{{ c }}</span>{% endif %}</a>
             {% endfor %}
         </nav>
+        {% if projects is not empty %}
+            <form method="get" action="{{ path('proposal_index') }}" data-controller="autosubmit">
+                {% if kind %}<input type="hidden" name="kind" value="{{ kind.value }}">{% endif %}
+                <select class="select" name="project" aria-label="{{ 'memory.index.project'|trans }}" data-action="autosubmit#submit">
+                    {% if not scoped %}<option value="">{{ 'nav.all_projects'|trans }}</option>{% endif %}
+                    {% for item in projects %}<option value="{{ item.slug }}" {{ project and project.id == item.id ? 'selected' }}>{{ item.name }}</option>{% endfor %}
+                </select>
+            </form>
+        {% endif %}
     </div>
 
     {% if proposals.items is empty %}
@@ -92,16 +103,18 @@
                             <fieldset class="proposal__pair">
                                 <legend class="row__sub">{{ (proposal.kind.value == 'duplicate' ? 'proposal.keep_merge' : 'proposal.keep')|trans }}</legend>
                                 {% for side in ['a', 'b'] %}
-                                    <label class="proposal__choice">
-                                        <input type="radio" name="keep" value="{{ attribute(p, side ~ '_id') }}" {% if side == 'a' %}checked{% endif %}>
-                                        <span>{{ attribute(p, side ~ '_text') }}</span>
-                                        <a class="row__sub" href="{{ path('memory_show', {id: attribute(p, side ~ '_id')}) }}">{{ 'proposal.page'|trans }}</a>
-                                    </label>
+                                    <div class="proposal__choice">
+                                        <label class="proposal__choice-label">
+                                            <input type="radio" name="keep" value="{{ attribute(p, side ~ '_id') }}" {% if side == 'a' %}checked{% endif %}>
+                                            <span>{{ attribute(p, side ~ '_text') }}</span>
+                                        </label>
+                                        <a class="link proposal__choice-link" href="{{ path('memory_show', {id: attribute(p, side ~ '_id')}) }}">{{ 'proposal.page'|trans }}</a>
+                                    </div>
                                 {% endfor %}
                             </fieldset>
                             <dl class="kv">
                                 <div class="kv__group">
-                                    <div class="kv__row"><dt>{{ 'proposal.why'|trans }}</dt><dd>{{ p.reason }}</dd></div>
+                                    <div class="kv__row kv__row--stack"><dt>{{ 'proposal.why'|trans }}</dt><dd>{{ p.reason }}</dd></div>
                                 </div>
                                 <div class="kv__group">
                                     <div class="kv__row"><dt>{{ 'proposal.proposed'|trans }}</dt><dd class="num">{{ proposal.createdAt|format_datetime('short', 'short') }}</dd></div>
@@ -111,12 +124,12 @@
                             <p class="proposal__text"><a href="{{ path('memory_show', {id: p.memory_id}) }}">{{ p.memory_text }}</a></p>
                             <dl class="kv">
                                 <div class="kv__group">
-                                    <div class="kv__row"><dt>{{ 'proposal.verdict_label'|trans }}</dt><dd>{{ p.verdict }}</dd></div>
-                                    <div class="kv__row"><dt>{{ 'proposal.why'|trans }}</dt><dd>{{ p.reason }}</dd></div>
+                                    <div class="kv__row"><dt>{{ 'proposal.verdict_label'|trans }}</dt><dd>{{ p.verdict in ['verified', 'refuted', 'conflict', 'unverified'] ? ('verdict.' ~ p.verdict)|trans : p.verdict }}</dd></div>
+                                    <div class="kv__row kv__row--stack"><dt>{{ 'proposal.why'|trans }}</dt><dd>{{ p.reason }}</dd></div>
                                 </div>
                                 {% if p.sources is not empty %}
                                     <div class="kv__group">
-                                        <div class="kv__row"><dt>{{ 'memory.show.sources'|trans }}</dt><dd>{% for source in p.sources %}{{ source.label }}{{ not loop.last ? ', ' }}{% endfor %}</dd></div>
+                                        <div class="kv__row kv__row--stack"><dt>{{ 'memory.show.sources'|trans }}</dt><dd>{% for source in p.sources %}{{ source.label }}{{ not loop.last ? ', ' }}{% endfor %}</dd></div>
                                     </div>
                                 {% endif %}
                                 <div class="kv__group">
@@ -127,7 +140,7 @@
 
                         <div class="proposal__actions">
                             <button class="button button--primary" type="submit">{{ (proposal.kind.value == 'refuted' ? 'proposal.retract_memory' : 'proposal.apply')|trans }}</button>
-                            <button class="button" type="submit" formaction="{{ path('proposal_reject', {id: proposal.id}|merge(query)) }}">{{ 'proposal.reject'|trans }}</button>
+                            <button class="button" type="submit" formaction="{{ path('proposal_reject', {id: proposal.id}|merge(query)) }}" data-confirm="{{ 'proposal.reject_confirm'|trans }}" data-confirm-label="{{ 'proposal.reject'|trans }}">{{ 'proposal.reject'|trans }}</button>
                         </div>
                     </form>
                 </li>

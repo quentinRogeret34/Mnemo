@@ -1,9 +1,7 @@
 <!DOCTYPE html>
 <html lang="{{ app.request.locale }}">
     <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        {{ include('_appearance_head.html.twig') }}
+        {{ include('_head_common.html.twig') }}
         <title>{{ 'pending.title'|trans }} · {{ 'app.name'|trans }}</title>
         {{ importmap('app') }}
     </head>
@@ -14,7 +12,7 @@
                 <h1>{{ 'pending.title'|trans }}</h1>
                 {% if app.user %}
                     <p>{{ 'pending.text'|trans({account: '<strong>' ~ app.user.userIdentifier|e ~ '</strong>'})|raw }}</p>
-                    <a class="button" href="{{ path('logout') }}">{{ 'nav.logout'|trans }}</a>
+                    <a class="button" href="{{ logout_path() }}">{{ 'nav.logout'|trans }}</a>
                 {% else %}
                     <a class="button button--primary" href="{{ path('login') }}">{{ 'login.submit'|trans }}</a>
                 {% endif %}

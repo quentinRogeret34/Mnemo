@@ -176,7 +176,11 @@ final class DocumentStorage
      */
     public function markdownBody(Node $document): string
     {
-        $markdown = (string) file_get_contents($this->absolutePath($document));
+        $path = $this->absolutePath($document);
+        $markdown = is_file($path) ? @file_get_contents($path) : false;
+        if (false === $markdown) {
+            return '';
+        }
 
         return preg_replace('/\A\s*#\s+.+\R/', '', $markdown, 1) ?? $markdown;
     }

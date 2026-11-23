@@ -10,6 +10,7 @@ use Doctrine\ORM\Mapping as ORM;
  */
 #[ORM\Entity]
 #[ORM\Index(name: 'mcp_call_created_idx', columns: ['created_at'])]
+#[ORM\Index(name: 'mcp_call_project_created_idx', columns: ['project', 'created_at'])]
 class McpCall
 {
     #[ORM\Id]

@@ -8,6 +8,7 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
 final class GitLabClient implements ForgeClient
 {
     private const PAGE = 100;
+    private const CONCURRENCY = 20;
 
     public function __construct(
         private readonly HttpClientInterface $http,
@@ -28,7 +29,7 @@ final class GitLabClient implements ForgeClient
     public function commits(?\DateTimeImmutable $since, int $limit): array
     {
         $rows = $this->pages('/repository/commits', null === $since ? [] : ['since' => $since->format(\DATE_ATOM)], $limit);
-        $diffs = $this->all(array_map(fn (array $row) => $this->http->request('GET', $this->path('/repository/commits/'.$row['id'].'/diff'), ['query' => ['per_page' => self::PAGE]]), $rows));
+        $diffs = $this->batched($rows, fn (array $row): ResponseInterface => $this->http->request('GET', $this->path('/repository/commits/'.$row['id'].'/diff'), ['query' => ['per_page' => self::PAGE]]));
 
         return array_map(static fn (array $row, array $diff): ForgeCommit => new ForgeCommit(
             $row['id'],
@@ -43,7 +44,7 @@ final class GitLabClient implements ForgeClient
     public function changeRequests(?\DateTimeImmutable $since, int $limit): array
     {
         $rows = $this->pages('/merge_requests', $this->updated($since), $limit);
-        $commits = $this->all(array_map(fn (array $row) => $this->http->request('GET', $this->path('/merge_requests/'.$row['iid'].'/commits'), ['query' => ['per_page' => self::PAGE]]), $rows));
+        $commits = $this->batched($rows, fn (array $row): ResponseInterface => $this->http->request('GET', $this->path('/merge_requests/'.$row['iid'].'/commits'), ['query' => ['per_page' => self::PAGE]]));
 
         return array_map(fn (array $row, array $list): ForgeTicket => $this->ticket($row, true, array_column($list, 'id')), $rows, $commits);
     }
@@ -104,6 +105,22 @@ final class GitLabClient implements ForgeClient
         }
 
         return \array_slice($rows, 0, $limit);
+    }
+
+    /**
+     * @param list<array<string, mixed>>                        $rows
+     * @param callable(array<string, mixed>): ResponseInterface $request
+     *
+     * @return list<array<mixed>>
+     */
+    private function batched(array $rows, callable $request): array
+    {
+        $results = [];
+        foreach (array_chunk($rows, self::CONCURRENCY) as $chunk) {
+            $results = [...$results, ...$this->all(array_map($request, $chunk))];
+        }
+
+        return $results;
     }
 
     /**

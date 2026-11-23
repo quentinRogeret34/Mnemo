@@ -9,7 +9,6 @@ use App\Graph\KnowledgeReader;
 use App\Project\ProjectResolver;
 use App\Security\OAuth\OAuthClient;
 use App\Security\ProjectScope;
-use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bridge\Doctrine\Attribute\MapEntity;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -25,7 +24,6 @@ final class GraphController extends AbstractController
         private readonly GraphReader $graphReader,
         private readonly KnowledgeReader $knowledgeReader,
         private readonly CapabilityDetector $capabilityDetector,
-        private readonly EntityManagerInterface $entityManager,
         private readonly ProjectScope $projectScope,
         private readonly ProjectResolver $projectResolver,
         private readonly OAuthClient $oauthClient,
@@ -35,13 +33,24 @@ final class GraphController extends AbstractController
     #[Route('/', name: 'project_index', methods: ['GET'])]
     public function listProjects(#[MapQueryParameter] bool $archived = false, #[MapQueryParameter] string $q = '', #[MapQueryParameter] string $sort = 'name'): Response
     {
-        $summaries = array_filter($this->graphReader->projectSummaries(), fn (array $summary): bool => $this->projectScope->allows($this->entityManager->getReference(Project::class, $summary['id'])));
+        $allowedSlugs = $this->projectScope->slugs();
+        $summaries = array_values(array_filter(
+            $this->graphReader->projectSummaries(),
+            static fn (array $summary): bool => null === $allowedSlugs || \in_array($summary['slug'], $allowedSlugs, true),
+        ));
         $shown = array_values(array_filter($summaries, static fn (array $summary): bool => $archived === (null !== $summary['archived_at'])));
         $sort = \in_array($sort, self::PROJECT_SORTS, true) ? $sort : 'name';
         $q = trim($q);
+        $matched = array_values(array_filter($shown, static fn (array $summary): bool => '' === $q || false !== mb_stripos($summary['name'].' '.$summary['slug'], $q)));
+        $ids = array_column($matched, 'id');
+        $countsByProject = $this->knowledgeReader->countsByProject($ids);
+        $pendingByProject = $this->knowledgeReader->pendingProposalsByProject($ids);
         $projects = array_map(
-            fn (array $summary): array => $summary + ['knowledge' => $this->knowledgeReader->counts($this->entityManager->getReference(Project::class, $summary['id'])), 'pending' => $this->knowledgeReader->pendingProposals($this->entityManager->getReference(Project::class, $summary['id']))],
-            array_values(array_filter($shown, static fn (array $summary): bool => '' === $q || false !== mb_stripos($summary['name'].' '.$summary['slug'], $q))),
+            static fn (array $summary): array => $summary + [
+                'knowledge' => $countsByProject[$summary['id']],
+                'pending' => $pendingByProject[$summary['id']],
+            ],
+            $matched,
         );
         usort($projects, static fn (array $a, array $b): int => match ($sort) {
             'memories' => $b['knowledge']['memories'] <=> $a['knowledge']['memories'],

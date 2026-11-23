@@ -48,7 +48,7 @@ final class Sidebar
 
     public function getPendingProposals(): int
     {
-        return $this->knowledgeReader->pendingProposals();
+        return $this->knowledgeReader->pendingProposals($this->project);
     }
 
     /**

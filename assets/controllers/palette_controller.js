@@ -10,8 +10,14 @@ export default class extends Controller {
     connect() {
         this.optionTargets.forEach((option, index) => {
             option.id = `palette-option-${index}`;
+            option.tabIndex = -1;
             option.dataset.search = fold(option.textContent);
         });
+    }
+
+    disconnect() {
+        clearTimeout(this.timer);
+        this.controller?.abort();
     }
 
     toggle() {
@@ -35,14 +41,17 @@ export default class extends Controller {
         this.optionTargets.forEach((option) => { option.hidden = query !== '' && !option.dataset.search.includes(query); });
         this.groupTargets.forEach((group) => { group.hidden = !group.querySelector('[role="option"]:not([hidden])'); });
         this.select(this.visible()[0]);
-        this.announce();
 
         clearTimeout(this.timer);
         this.controller?.abort();
         if (query.length < 2) {
+            this.loading = false;
             this.remoteTargets.forEach((group) => this.fill(group, []));
+            this.announce();
             return;
         }
+        this.loading = true;
+        this.announce();
         this.timer = setTimeout(() => this.fetch(this.inputTarget.value.trim()), 150);
     }
 
@@ -56,9 +65,12 @@ export default class extends Controller {
         try {
             const response = await fetch(url, { headers: { Accept: 'application/json' }, signal: this.controller.signal });
             if (!response.ok) {
+                this.loading = false;
+                this.announce();
                 return;
             }
             const results = await response.json();
+            this.loading = false;
             this.remoteTargets.forEach((group) => this.fill(group, results[group.dataset.kind] ?? []));
             if (!this.current() || this.current().hidden) {
                 this.select(this.visible()[0]);
@@ -66,7 +78,8 @@ export default class extends Controller {
             this.announce();
         } catch (error) {
             if (error.name !== 'AbortError') {
-                throw error;
+                this.loading = false;
+                this.announce();
             }
         }
     }
@@ -77,6 +90,7 @@ export default class extends Controller {
             const option = document.createElement('a');
             option.className = 'palette__option';
             option.setAttribute('role', 'option');
+            option.tabIndex = -1;
             option.id = `palette-${group.dataset.kind}-${index}`;
             option.href = item.url;
             option.textContent = item.label;
@@ -144,7 +158,8 @@ export default class extends Controller {
 
     announce() {
         const count = this.visible().length;
-        this.emptyTarget.hidden = count > 0;
-        this.statusTarget.textContent = trans('js.palette.results', { count });
+        this.inputTarget.setAttribute('aria-expanded', String(count > 0));
+        this.emptyTarget.hidden = this.loading || count > 0;
+        this.statusTarget.textContent = this.loading ? '' : trans('js.palette.results', { count });
     }
 }

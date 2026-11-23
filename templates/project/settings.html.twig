@@ -85,7 +85,7 @@
         <form class="key-form project-delete" method="post" action="{{ path('project_delete', {slug: project.slug}) }}">
             <input type="hidden" name="_token" value="{{ token }}">
             <label for="project-delete-confirm">{{ 'project.settings.retype'|trans({slug: '<code class="mono">' ~ project.slug|e ~ '</code>'})|raw }}</label>
-            <input class="input" id="project-delete-confirm" type="text" name="confirm" required pattern="{{ project.slug }}" autocomplete="off" autocapitalize="off" spellcheck="false">
+            <input class="input" id="project-delete-confirm" type="text" name="confirm" required pattern="{{ project.slug }}" title="{{ 'project.settings.retype_title'|trans({slug: project.slug}) }}" autocomplete="off" autocapitalize="off" spellcheck="false">
             <div class="dialog__actions">
                 <button class="button" type="button" commandfor="project-delete" command="close" autofocus>{{ 'common.cancel'|trans }}</button>
                 <button class="button button--danger" type="submit"><twig:ux:icon name="lucide:trash-2" />{{ 'project.settings.delete_forever'|trans }}</button>

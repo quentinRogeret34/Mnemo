@@ -39,11 +39,18 @@ final class DashboardReader
             <<<SQL
                 SELECT (SELECT COUNT(*) FROM node m WHERE {$active} AND {$inProject}) AS memories,
                        (SELECT COUNT(*) FROM node m WHERE {$active} AND {$inProject} AND (CAST(:from AS timestamp) IS NULL OR m.created_at >= :from) AND (CAST(:to AS timestamp) IS NULL OR m.created_at < :to)) AS memories_added,
-                       (SELECT COALESCE(SUM(c.memories), 0) FROM mcp_call c WHERE {$scope}) AS recalled,
-                       (SELECT COUNT(*) FROM mcp_call c WHERE {$scope} AND c.tool IN ('search', 'file_context', 'get_document')) AS lookups,
-                       (SELECT COUNT(*) FROM mcp_call c WHERE {$scope}) AS requests,
-                       (SELECT COUNT(*) FROM mcp_call c WHERE {$scope} AND c.failed) AS failed,
+                       calls.recalled,
+                       calls.lookups,
+                       calls.requests,
+                       calls.failed,
                        (SELECT COUNT(*) FROM proposal p WHERE p.status = 'pending' AND (CAST(:project AS int) IS NULL OR p.project_id = :project)) AS pending
+                FROM (
+                    SELECT COALESCE(SUM(c.memories), 0) AS recalled,
+                           COUNT(*) FILTER (WHERE c.tool IN ('search', 'file_context', 'get_document')) AS lookups,
+                           COUNT(*) AS requests,
+                           COUNT(*) FILTER (WHERE c.failed) AS failed
+                    FROM mcp_call c WHERE {$scope}
+                ) calls
                 SQL,
             ['project' => $project?->getId()] + $this->parameters($project, $from, $to),
             self::TIMESTAMPS,
@@ -217,7 +224,7 @@ final class DashboardReader
                 <<<SQL
                     SELECT to_char(b.at, 'YYYY-MM-DD"T"HH24:MI') AS at, COALESCE(SUM(x.weight), 0) AS value
                     FROM generate_series(date_trunc('{$unit}', CAST(:from AS timestamp)), date_trunc('{$unit}', CAST(:to AS timestamp)), INTERVAL '1 {$unit}') AS b(at)
-                    LEFT JOIN (SELECT date_trunc('{$unit}', {$column}) AS at, {$weight} AS weight FROM {$table} WHERE {$where}) x ON x.at = b.at
+                    LEFT JOIN (SELECT date_trunc('{$unit}', {$column}) AS at, {$weight} AS weight FROM {$table} WHERE {$where} AND {$column} >= date_trunc('{$unit}', CAST(:from AS timestamp))) x ON x.at = b.at
                     GROUP BY b.at ORDER BY b.at
                     SQL,
                 ['from' => $from, 'to' => new \DateTimeImmutable()] + (str_contains($where, ':slug') ? ['slug' => $project?->getSlug()] : ['project' => $project?->getId()]),

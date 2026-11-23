@@ -15,12 +15,13 @@ use Mcp\Schema\Result\CallToolResult;
 use Mcp\Server\Session\SessionInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
+use Symfony\Contracts\Service\ResetInterface;
 
 /**
  * Records every MCP tool call for the usage dashboard.
  * Rows are inserted with DBAL, not the entity manager: flushing here would also write whatever a failed tool left pending.
  */
-final class McpCallRecorder
+final class McpCallRecorder implements ResetInterface
 {
     private const SEARCH_TYPES = ['memory', 'document', 'business_rule', 'code_file'];
 
@@ -53,6 +54,11 @@ final class McpCallRecorder
     public function onError(ErrorEvent $event): void
     {
         $this->record($event->getRequest(), $event->getSession(), null, true);
+    }
+
+    public function reset(): void
+    {
+        $this->startedAt = [];
     }
 
     private function record(Request $request, SessionInterface $session, ?CallToolResult $result, bool $failed): void

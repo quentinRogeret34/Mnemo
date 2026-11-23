@@ -15,6 +15,7 @@ use App\Ingest\RepoContextImporter;
 use App\Learn\Learner;
 use App\Learn\SourceKind;
 use App\Llm\LlmUnavailable;
+use App\Security\SafeUrl;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -71,55 +72,61 @@ final class ForgeImporter
         $prefix = $client->changeRequestPrefix();
 
         $this->people = [];
-        $links = [];
-        foreach ($commits as $commit) {
-            $node = $this->upsert($project, NodeType::Commit, $commit->sha, strtok($commit->message, "\n") ?: $commit->sha, [
-                'message' => mb_substr($commit->message, 0, self::MAX_TEXT), 'author' => $commit->author, 'date' => $commit->date->format(\DATE_ATOM), 'url' => $commit->url,
-            ], $report);
-            $links[] = [$node, $this->person($commit->author), 'authored_by', $commit->sha];
-            foreach ($this->files($project, $commit->files) as $file) {
-                $links[] = [$node, $file, 'touches', $commit->sha];
+        try {
+            $links = [];
+            foreach ($commits as $commit) {
+                $url = SafeUrl::http($commit->url);
+                $node = $this->upsert($project, NodeType::Commit, $commit->sha, strtok($commit->message, "\n") ?: $commit->sha, [
+                    'message' => mb_substr($commit->message, 0, self::MAX_TEXT), 'author' => $commit->author, 'date' => $commit->date->format(\DATE_ATOM), 'url' => $url,
+                ], $report);
+                $links[] = [$node, $this->person($commit->author), 'authored_by', $commit->sha];
+                foreach ($this->files($project, $commit->files) as $file) {
+                    $links[] = [$node, $file, 'touches', $commit->sha];
+                }
+                foreach ($this->rules($project, $commit->message) as $rule) {
+                    $links[] = [$node, $rule, 'mentions', $commit->sha];
+                }
             }
-            foreach ($this->rules($project, $commit->message) as $rule) {
-                $links[] = [$node, $rule, 'mentions', $commit->sha];
-            }
-        }
 
-        // A change request is learnt from once: when it first shows up merged, whether or not the graph saw it open.
-        $alreadyMerged = array_flip($this->entityManager->getConnection()->fetchFirstColumn(
-            "SELECT external_id FROM node WHERE project_id = :project AND type = :ticket AND metadata->>'state' = 'merged'",
-            ['project' => $project->getId(), 'ticket' => NodeType::Ticket->value],
-        ));
-        $merged = [];
-        foreach ([...$issues, ...$changeRequests] as $ticket) {
-            $externalId = ($ticket->changeRequest ? $prefix : 'issue').'-'.$ticket->number;
-            $node = $this->upsert($project, NodeType::Ticket, $externalId, $ticket->title, [
-                'kind' => $ticket->changeRequest ? 'change_request' : 'issue', 'number' => $ticket->number, 'state' => $ticket->state, 'author' => $ticket->author,
-                'date' => $ticket->updatedAt->format(\DATE_ATOM), 'url' => $ticket->url, 'body' => mb_substr($ticket->body, 0, self::MAX_TEXT),
-            ], $report);
-            if ('' !== $ticket->author) {
-                $links[] = [$node, $this->person($ticket->author), 'authored_by', $ticket->url];
+            // A change request is learnt from once: when it first shows up merged, whether or not the graph saw it open.
+            $alreadyMerged = array_flip($this->entityManager->getConnection()->fetchFirstColumn(
+                "SELECT external_id FROM node WHERE project_id = :project AND type = :ticket AND metadata->>'state' = 'merged'",
+                ['project' => $project->getId(), 'ticket' => NodeType::Ticket->value],
+            ));
+            $merged = [];
+            foreach ([...$issues, ...$changeRequests] as $ticket) {
+                $externalId = ($ticket->changeRequest ? $prefix : 'issue').'-'.$ticket->number;
+                $url = SafeUrl::http($ticket->url);
+                $node = $this->upsert($project, NodeType::Ticket, $externalId, $ticket->title, [
+                    'kind' => $ticket->changeRequest ? 'change_request' : 'issue', 'number' => $ticket->number, 'state' => $ticket->state, 'author' => $ticket->author,
+                    'date' => $ticket->updatedAt->format(\DATE_ATOM), 'url' => $url, 'body' => mb_substr($ticket->body, 0, self::MAX_TEXT),
+                ], $report);
+                if ('' !== $ticket->author) {
+                    $links[] = [$node, $this->person($ticket->author), 'authored_by', $url ?? $externalId];
+                }
+                foreach ($this->rules($project, $ticket->title."\n".$ticket->body) as $rule) {
+                    $links[] = [$node, $rule, 'mentions', $url ?? $externalId];
+                }
+                if (!$ticket->changeRequest) {
+                    continue;
+                }
+                foreach ($this->find($project, NodeType::Commit, $ticket->commits) as $commit) {
+                    $links[] = [$node, $commit, 'includes', $url ?? $externalId];
+                }
+                preg_match_all(self::CLOSES, $ticket->title."\n".$ticket->body, $closed);
+                foreach ($this->find($project, NodeType::Ticket, array_map(static fn (string $number): string => 'issue-'.$number, $closed[1])) as $issue) {
+                    $links[] = [$node, $issue, 'closes', $url ?? $externalId];
+                }
+                if ('merged' === $ticket->state && !isset($alreadyMerged[$externalId])) {
+                    $merged[] = $ticket;
+                }
             }
-            foreach ($this->rules($project, $ticket->title."\n".$ticket->body) as $rule) {
-                $links[] = [$node, $rule, 'mentions', $ticket->url];
-            }
-            if (!$ticket->changeRequest) {
-                continue;
-            }
-            foreach ($this->find($project, NodeType::Commit, $ticket->commits) as $commit) {
-                $links[] = [$node, $commit, 'includes', $ticket->url];
-            }
-            preg_match_all(self::CLOSES, $ticket->title."\n".$ticket->body, $closed);
-            foreach ($this->find($project, NodeType::Ticket, array_map(static fn (string $number): string => 'issue-'.$number, $closed[1])) as $issue) {
-                $links[] = [$node, $issue, 'closes', $ticket->url];
-            }
-            if ('merged' === $ticket->state && !isset($alreadyMerged[$externalId])) {
-                $merged[] = $ticket;
-            }
-        }
 
-        $this->entityManager->flush();
-        $this->link($links);
+            $this->entityManager->flush();
+            $this->link($links);
+        } finally {
+            $this->people = [];
+        }
 
         $connector->setCursor(array_filter([
             'code_commit' => $cursor['code_commit'] ?? null,

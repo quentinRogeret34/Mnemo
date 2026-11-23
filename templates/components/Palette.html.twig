@@ -7,41 +7,46 @@
     <div class="palette__list" id="palette-list" role="listbox" aria-label="{{ 'palette.results'|trans }}" data-action="click->palette#choose mousemove->palette#hover">
         <div role="group" aria-label="{{ 'palette.actions'|trans }}" class="palette__group" data-palette-target="group">
             <span class="palette__heading" aria-hidden="true">{{ 'palette.actions'|trans }}</span>
-            {% if this.mayCreate %}<a class="palette__option" role="option" href="{{ path('project_new') }}" data-command="project-new" data-palette-target="option"><twig:ux:icon name="lucide:folder-plus" />{{ 'project.new'|trans }}</a>{% endif %}
-            <a class="palette__option" role="option" href="{{ path('memory_index', scope) }}" data-palette-target="option"><twig:ux:icon name="lucide:plus" />{{ 'memory.new'|trans }}</a>
-            {% if this.hasGithub %}<a class="palette__option" role="option" href="{{ path('github_repositories', scope) }}" data-palette-target="option"><twig:ux:icon name="simple-icons:github" />{{ 'palette.github'|trans }}</a>{% endif %}
-            {% if project %}<a class="palette__option" role="option" href="{{ path('project_settings', {slug: project.slug}) }}" data-palette-target="option"><twig:ux:icon name="lucide:settings" />{{ 'palette.project_settings'|trans({name: project.name}) }}</a>{% endif %}
-            <a class="palette__option" role="option" href="{{ path('appearance') }}" data-palette-target="option"><twig:ux:icon name="lucide:palette" />{{ 'palette.appearance'|trans }}</a>
+            {% if this.mayCreate %}<a class="palette__option" role="option" tabindex="-1" href="{{ path('project_new') }}" data-command="project-new" data-palette-target="option"><twig:ux:icon name="lucide:folder-plus" />{{ 'project.new'|trans }}</a>{% endif %}
+            <a class="palette__option" role="option" tabindex="-1" href="{{ path('memory_index', scope) }}#memory-new" data-command="memory-new" data-palette-target="option"><twig:ux:icon name="lucide:plus" />{{ 'memory.new'|trans }}</a>
+            {% if this.hasGithub %}<a class="palette__option" role="option" tabindex="-1" href="{{ path('github_repositories', scope) }}" data-palette-target="option"><twig:ux:icon name="simple-icons:github" />{{ 'palette.github'|trans }}</a>{% endif %}
+            {% if project %}<a class="palette__option" role="option" tabindex="-1" href="{{ path('project_settings', {slug: project.slug}) }}" data-palette-target="option"><twig:ux:icon name="lucide:sliders-horizontal" />{{ 'palette.project_settings'|trans({name: project.name}) }}</a>{% endif %}
+            <a class="palette__option" role="option" tabindex="-1" href="{{ path('appearance') }}" data-palette-target="option"><twig:ux:icon name="lucide:palette" />{{ 'palette.appearance'|trans }}</a>
         </div>
         {% if this.projects is not empty %}
             <div role="group" aria-label="{{ 'nav.projects'|trans }}" class="palette__group" data-palette-target="group">
                 <span class="palette__heading" aria-hidden="true">{{ 'nav.projects'|trans }}</span>
                 {% for item in this.projects %}
-                    <a class="palette__option" role="option" href="{{ path('project_show', {slug: item.slug}) }}" data-palette-target="option"><twig:ux:icon name="lucide:folder" />{{ item.name }}<span class="palette__hint">{{ item.slug }}</span></a>
+                    <a class="palette__option" role="option" tabindex="-1" href="{{ path('project_show', {slug: item.slug}) }}" data-palette-target="option"><twig:ux:icon name="lucide:folder" />{{ item.name }}<span class="palette__hint">{{ item.slug }}</span></a>
                 {% endfor %}
             </div>
         {% endif %}
         <div role="group" aria-label="{{ 'palette.pages'|trans }}" class="palette__group" data-palette-target="group">
             <span class="palette__heading" aria-hidden="true">{{ 'palette.pages'|trans }}</span>
             {% if project %}
-                <a class="palette__option" role="option" href="{{ path('project_show', {slug: project.slug}) }}" data-palette-target="option"><twig:ux:icon name="lucide:file-text" />{{ 'nav.documents'|trans }}<span class="palette__hint">{{ project.name }}</span></a>
-                <a class="palette__option" role="option" href="{{ path('rule_index', {slug: project.slug}) }}" data-palette-target="option"><twig:ux:icon name="lucide:clipboard-check" />{{ 'nav.rules'|trans }}<span class="palette__hint">{{ project.name }}</span></a>
-                <a class="palette__option" role="option" href="{{ path('project_code', {slug: project.slug}) }}" data-palette-target="option"><twig:ux:icon name="lucide:code" />{{ 'nav.code'|trans }}<span class="palette__hint">{{ project.name }}</span></a>
-                <a class="palette__option" role="option" href="{{ path('garden_show', {slug: project.slug}) }}" data-palette-target="option"><twig:ux:icon name="lucide:sprout" />{{ 'nav.garden'|trans }}<span class="palette__hint">{{ project.name }}</span></a>
+                <a class="palette__option" role="option" tabindex="-1" href="{{ path('project_show', {slug: project.slug}) }}" data-palette-target="option"><twig:ux:icon name="lucide:file-text" />{{ 'nav.documents'|trans }}<span class="palette__hint">{{ project.name }}</span></a>
+                <a class="palette__option" role="option" tabindex="-1" href="{{ path('rule_index', {slug: project.slug}) }}" data-palette-target="option"><twig:ux:icon name="lucide:clipboard-check" />{{ 'nav.rules'|trans }}<span class="palette__hint">{{ project.name }}</span></a>
+                <a class="palette__option" role="option" tabindex="-1" href="{{ path('project_code', {slug: project.slug}) }}" data-palette-target="option"><twig:ux:icon name="lucide:code" />{{ 'nav.code'|trans }}<span class="palette__hint">{{ project.name }}</span></a>
+                <a class="palette__option" role="option" tabindex="-1" href="{{ path('project_chat', {slug: project.slug}) }}" data-palette-target="option"><twig:ux:icon name="lucide:message-circle" />{{ 'nav.assistant'|trans }}<span class="palette__hint">{{ project.name }}</span></a>
+                <a class="palette__option" role="option" tabindex="-1" href="{{ path('agent_asset_index', {slug: project.slug}) }}" data-palette-target="option"><twig:ux:icon name="lucide:wand-sparkles" />{{ 'nav.agent_assets'|trans }}<span class="palette__hint">{{ project.name }}</span></a>
+                <a class="palette__option" role="option" tabindex="-1" href="{{ path('garden_show', {slug: project.slug}) }}" data-palette-target="option"><twig:ux:icon name="lucide:sprout" />{{ 'nav.garden'|trans }}<span class="palette__hint">{{ project.name }}</span></a>
             {% endif %}
-            <a class="palette__option" role="option" href="{{ path('dashboard', scope) }}" data-palette-target="option"><twig:ux:icon name="lucide:layout-dashboard" />{{ 'nav.dashboard'|trans }}</a>
-            <a class="palette__option" role="option" href="{{ path('activity', scope) }}" data-palette-target="option"><twig:ux:icon name="lucide:activity" />{{ 'nav.activity'|trans }}</a>
-            <a class="palette__option" role="option" href="{{ path('project_index') }}" data-palette-target="option"><twig:ux:icon name="lucide:layout-grid" />{{ 'nav.projects'|trans }}</a>
-            <a class="palette__option" role="option" href="{{ path('memory_index', scope) }}" data-palette-target="option"><twig:ux:icon name="lucide:lightbulb" />{{ 'nav.memories'|trans }}</a>
-            <a class="palette__option" role="option" href="{{ path('memory_graph', scope) }}" data-palette-target="option"><twig:ux:icon name="lucide:network" />{{ 'nav.memory_graph'|trans }}</a>
-            <a class="palette__option" role="option" href="{{ path('proposal_index', scope) }}" data-palette-target="option"><twig:ux:icon name="lucide:check" />{{ 'nav.to_review'|trans }}</a>
+            <a class="palette__option" role="option" tabindex="-1" href="{{ path('dashboard', scope) }}" data-palette-target="option"><twig:ux:icon name="lucide:layout-dashboard" />{{ 'nav.dashboard'|trans }}</a>
+            <a class="palette__option" role="option" tabindex="-1" href="{{ path('activity', scope) }}" data-palette-target="option"><twig:ux:icon name="lucide:activity" />{{ 'nav.activity'|trans }}</a>
+            <a class="palette__option" role="option" tabindex="-1" href="{{ path('project_index') }}" data-palette-target="option"><twig:ux:icon name="lucide:layout-grid" />{{ 'nav.projects'|trans }}</a>
+            <a class="palette__option" role="option" tabindex="-1" href="{{ path('memory_index', scope) }}" data-palette-target="option"><twig:ux:icon name="lucide:lightbulb" />{{ 'nav.memories'|trans }}</a>
+            <a class="palette__option" role="option" tabindex="-1" href="{{ path('memory_graph', scope) }}" data-palette-target="option"><twig:ux:icon name="lucide:network" />{{ 'nav.memory_graph'|trans }}</a>
+            <a class="palette__option" role="option" tabindex="-1" href="{{ path('proposal_index', scope) }}" data-palette-target="option"><twig:ux:icon name="lucide:check" />{{ 'nav.to_review'|trans }}</a>
             {% if not this.scoped %}
-                <a class="palette__option" role="option" href="{{ path('document_index') }}" data-palette-target="option"><twig:ux:icon name="lucide:file" />{{ 'nav.all_documents'|trans }}</a>
-                <a class="palette__option" role="option" href="{{ path('connector_index') }}" data-palette-target="option"><twig:ux:icon name="lucide:plug" />{{ 'nav.connectors'|trans }}</a>
+                <a class="palette__option" role="option" tabindex="-1" href="{{ path('document_index') }}" data-palette-target="option"><twig:ux:icon name="lucide:file" />{{ 'nav.all_documents'|trans }}</a>
+                <a class="palette__option" role="option" tabindex="-1" href="{{ path('connector_index') }}" data-palette-target="option"><twig:ux:icon name="lucide:plug" />{{ 'nav.connectors'|trans }}</a>
             {% endif %}
-            <a class="palette__option" role="option" href="{{ path('wiki') }}" data-palette-target="option"><twig:ux:icon name="lucide:book-open" />{{ 'nav.wiki'|trans }}</a>
-            <a class="palette__option" role="option" href="{{ path('api_key_index') }}" data-palette-target="option"><twig:ux:icon name="lucide:key-round" />{{ 'nav.api_keys'|trans }}</a>
-            {% if is_granted('ROLE_SUPER_ADMIN') %}<a class="palette__option" role="option" href="{{ path('admin_users') }}" data-palette-target="option"><twig:ux:icon name="lucide:users" />{{ 'nav.users'|trans }}</a>{% endif %}
+            <a class="palette__option" role="option" tabindex="-1" href="{{ path('wiki') }}" data-palette-target="option"><twig:ux:icon name="lucide:book-open" />{{ 'nav.wiki'|trans }}</a>
+            <a class="palette__option" role="option" tabindex="-1" href="{{ path('api_key_index') }}" data-palette-target="option"><twig:ux:icon name="lucide:key-round" />{{ 'nav.api_keys'|trans }}</a>
+            {% if not app.user or is_granted('ROLE_SUPER_ADMIN') %}
+                <a class="palette__option" role="option" tabindex="-1" href="{{ path('llm_settings') }}" data-palette-target="option"><twig:ux:icon name="lucide:brain" />{{ 'nav.llm'|trans }}</a>
+            {% endif %}
+            {% if is_granted('ROLE_SUPER_ADMIN') %}<a class="palette__option" role="option" tabindex="-1" href="{{ path('admin_users') }}" data-palette-target="option"><twig:ux:icon name="lucide:users" />{{ 'nav.users'|trans }}</a>{% endif %}
         </div>
         <div role="group" aria-label="{{ 'nav.memories'|trans }}" class="palette__group" data-palette-target="remote" data-kind="memories" hidden>
             <span class="palette__heading" aria-hidden="true">{{ 'nav.memories'|trans }}</span>

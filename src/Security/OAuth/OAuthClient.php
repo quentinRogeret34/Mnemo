@@ -12,6 +12,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 final class OAuthClient
 {
     private const LABELS = ['github' => 'GitHub', 'gitlab' => 'GitLab', 'google' => 'Google'];
+    private const TIMEOUT = 15;
 
     /** @var array<string, array{id: string, secret: string, authorize: string, token: string, scope: string}> */
     private readonly array $providers;
@@ -44,28 +45,38 @@ final class OAuthClient
     }
 
     /**
-     * @param string|null $scope what to ask instead of the sign-in scope, e.g. "repo" to read the repositories
+     * @param string|null $scope         what to ask instead of the sign-in scope, e.g. "repo" to read the repositories
+     * @param string|null $codeChallenge optional PKCE S256 code challenge
      */
-    public function authorizeUrl(string $provider, string $redirectUri, string $state, ?string $scope = null): string
+    public function authorizeUrl(string $provider, string $redirectUri, string $state, ?string $scope = null, ?string $codeChallenge = null): string
     {
         $config = $this->provider($provider);
+        $params = ['client_id' => $config['id'], 'redirect_uri' => $redirectUri, 'response_type' => 'code', 'scope' => $scope ?? $config['scope'], 'state' => $state];
+        if (null !== $codeChallenge) {
+            $params += ['code_challenge' => $codeChallenge, 'code_challenge_method' => 'S256'];
+        }
 
-        return $config['authorize'].'?'.http_build_query(['client_id' => $config['id'], 'redirect_uri' => $redirectUri, 'response_type' => 'code', 'scope' => $scope ?? $config['scope'], 'state' => $state]);
+        return $config['authorize'].'?'.http_build_query($params);
     }
 
-    public function accessToken(string $provider, string $code, string $redirectUri): string
+    public function accessToken(string $provider, string $code, string $redirectUri, ?string $codeVerifier = null): string
     {
         $config = $this->provider($provider);
+        $body = ['client_id' => $config['id'], 'client_secret' => $config['secret'], 'code' => $code, 'redirect_uri' => $redirectUri, 'grant_type' => 'authorization_code'];
+        if (null !== $codeVerifier) {
+            $body['code_verifier'] = $codeVerifier;
+        }
 
         return $this->httpClient->request('POST', $config['token'], [
+            'timeout' => self::TIMEOUT,
             'headers' => ['Accept' => 'application/json'],
-            'body' => ['client_id' => $config['id'], 'client_secret' => $config['secret'], 'code' => $code, 'redirect_uri' => $redirectUri, 'grant_type' => 'authorization_code'],
+            'body' => $body,
         ])->toArray()['access_token'] ?? throw new \RuntimeException('Le fournisseur n\'a pas délivré de jeton.');
     }
 
-    public function profile(string $provider, string $code, string $redirectUri): OAuthProfile
+    public function profile(string $provider, string $code, string $redirectUri, ?string $codeVerifier = null): OAuthProfile
     {
-        $token = $this->accessToken($provider, $code, $redirectUri);
+        $token = $this->accessToken($provider, $code, $redirectUri, $codeVerifier);
 
         return match ($provider) {
             'github' => $this->github($token),
@@ -109,7 +120,7 @@ final class OAuthClient
      */
     private function get(string $url, string $token): array
     {
-        return $this->httpClient->request('GET', $url, ['headers' => ['Authorization' => 'Bearer '.$token, 'Accept' => 'application/json', 'User-Agent' => 'mnemo']])->toArray();
+        return $this->httpClient->request('GET', $url, ['timeout' => self::TIMEOUT, 'headers' => ['Authorization' => 'Bearer '.$token, 'Accept' => 'application/json', 'User-Agent' => 'mnemo']])->toArray();
     }
 
     /**

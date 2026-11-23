@@ -1,7 +1,9 @@
 framework:
     messenger:
+        failure_transport: failed
         transports:
             async: '%env(MESSENGER_TRANSPORT_DSN)%'
+            failed: 'doctrine://default?queue_name=failed&auto_setup=0'
         routing:
             App\Message\SyncConnector: async
             App\Message\ReviewPullRequest: async
@@ -13,3 +15,4 @@ when@test:
         messenger:
             transports:
                 async: 'in-memory://'
+                failed: 'in-memory://'

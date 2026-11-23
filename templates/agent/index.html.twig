@@ -25,17 +25,17 @@
             <twig:block name="actions"><a class="button button--primary" href="{{ path('agent_asset_new', {slug: project.slug}) }}"><twig:ux:icon name="lucide:plus" />{{ 'common.add'|trans }}</a></twig:block>
         </twig:EmptyState>
     {% else %}
-        <div class="table-wrap">
+        <div class="table-wrap table-wrap--framed agent-table">
             <table class="data-table">
-                <thead><tr><th>{{ 'form.agent_asset.kind'|trans }}</th><th>{{ 'form.agent_asset.name'|trans }}</th><th>{{ 'form.agent_asset.description'|trans }}</th><th>{{ 'document.props.file'|trans }}</th><th class="num">{{ 'agent.updated'|trans }}</th><th></th></tr></thead>
+                <thead><tr><th scope="col">{{ 'form.agent_asset.kind'|trans }}</th><th scope="col">{{ 'form.agent_asset.name'|trans }}</th><th scope="col">{{ 'form.agent_asset.description'|trans }}</th><th scope="col">{{ 'document.props.file'|trans }}</th><th scope="col" class="num">{{ 'agent.updated'|trans }}</th><th scope="col"><span class="visually-hidden">{{ 'project.index.col.action'|trans }}</span></th></tr></thead>
                 <tbody>
                     {% for asset in assets %}
                         <tr>
-                            <td><span class="tag">{{ asset.kind|trans }}</span></td>
-                            <td><a href="{{ path('agent_asset_edit', {slug: project.slug, id: asset.id}) }}">{{ asset.name }}</a></td>
-                            <td>{{ asset.description }}</td>
-                            <td class="mono">{{ asset.path }}</td>
-                            <td class="num">{{ asset.updatedAt|format_datetime('short', 'short') }}</td>
+                            <td data-label="{{ 'form.agent_asset.kind'|trans }}"><span class="tag">{{ asset.kind|trans }}</span></td>
+                            <td data-label="{{ 'form.agent_asset.name'|trans }}"><a href="{{ path('agent_asset_edit', {slug: project.slug, id: asset.id}) }}">{{ asset.name }}</a></td>
+                            <td data-label="{{ 'form.agent_asset.description'|trans }}">{{ asset.description }}</td>
+                            <td class="mono" data-label="{{ 'document.props.file'|trans }}">{{ asset.path }}</td>
+                            <td class="num" data-label="{{ 'agent.updated'|trans }}">{{ asset.updatedAt|format_datetime('short', 'short') }}</td>
                             <td class="num">
                                 <form method="post" action="{{ path('agent_asset_delete', {slug: project.slug, id: asset.id}) }}">
                                     <input type="hidden" name="_token" value="{{ csrf_token('agent-asset-' ~ asset.id) }}">

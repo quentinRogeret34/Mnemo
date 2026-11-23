@@ -62,24 +62,28 @@ export default class extends Controller {
     }
 
     async load() {
-        const response = await fetch(this.urlValue, { headers: { Accept: 'application/json' } });
-        if (!response.ok || !this.select) {
-            return;
-        }
-        const { favorites, models } = await response.json();
-        const favored = new Set(favorites);
-        // Favourites in the order they were chosen, then the rest of the catalogue.
-        const byId = new Map(models.map((model) => [model.id, model]));
-        const ordered = [...favorites.filter((id) => byId.has(id)).map((id) => byId.get(id)), ...models.filter((model) => !favored.has(model.id))];
-        // The chosen models already have an option, kept when missing from the catalogue.
-        for (const model of ordered) {
-            const option = { ...model, group: favored.has(model.id) ? 'favorites' : 'all' };
-            if (this.select.options[model.id]) {
-                this.select.updateOption(model.id, option);
-            } else {
-                this.select.addOption(option);
+        try {
+            const response = await fetch(this.urlValue, { headers: { Accept: 'application/json' } });
+            if (!response.ok || !this.select) {
+                return;
             }
+            const { favorites, models } = await response.json();
+            const favored = new Set(favorites);
+            // Favourites in the order they were chosen, then the rest of the catalogue.
+            const byId = new Map(models.map((model) => [model.id, model]));
+            const ordered = [...favorites.filter((id) => byId.has(id)).map((id) => byId.get(id)), ...models.filter((model) => !favored.has(model.id))];
+            // The chosen models already have an option, kept when missing from the catalogue.
+            for (const model of ordered) {
+                const option = { ...model, group: favored.has(model.id) ? 'favorites' : 'all' };
+                if (this.select.options[model.id]) {
+                    this.select.updateOption(model.id, option);
+                } else {
+                    this.select.addOption(option);
+                }
+            }
+            this.select.refreshOptions(false);
+        } catch {
+            // Free-text model input stays usable when the catalogue cannot be fetched.
         }
-        this.select.refreshOptions(false);
     }
 }

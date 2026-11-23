@@ -47,15 +47,17 @@
                     <input class="input input--compact" type="search" data-model="debounce(150)|fileQuery" value="{{ fileQuery }}"
                            placeholder="{{ 'document.props.link_file'|trans }}" aria-label="{{ 'document.props.link_file_label'|trans }}" autocomplete="off" spellcheck="false">
                     {% if this.fileResults is not empty %}
-                        <span class="link-search__results" role="list">
+                        <ul class="link-search__results">
                             {% for file in this.fileResults %}
-                                <button type="button" role="listitem" class="link-search__item"
-                                        data-action="live#action" data-live-action-param="linkFile" data-live-file-id-param="{{ file.id }}">
-                                    <span class="mono">{{ file.path }}</span>
-                                    <span class="row__sub">{{ file.project_name }}</span>
-                                </button>
+                                <li>
+                                    <button type="button" class="link-search__item"
+                                            data-action="live#action" data-live-action-param="linkFile" data-live-file-id-param="{{ file.id }}">
+                                        <span class="mono">{{ file.path }}</span>
+                                        <span class="row__sub">{{ file.project_name }}</span>
+                                    </button>
+                                </li>
                             {% endfor %}
-                        </span>
+                        </ul>
                     {% elseif fileQuery|trim is not empty %}
                         <span class="row__sub">{{ 'document.props.no_file'|trans }}</span>
                     {% endif %}

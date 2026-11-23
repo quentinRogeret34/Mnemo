@@ -24,7 +24,7 @@ final class DocumentUploadType extends AbstractType
             'remove_label' => 'form.upload.remove',
             'attr' => ['accept' => '.md,.pdf,.docx'],
             'constraints' => [
-                new Count(min: 1, minMessage: 'upload.min'),
+                new Count(min: 1, max: 20, minMessage: 'upload.min'),
                 new All([
                     new File(
                         maxSize: '32M',

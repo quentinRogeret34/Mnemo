@@ -20,8 +20,6 @@ final class NotionClient
     private const HEADINGS = ['heading_1' => '##', 'heading_2' => '###', 'heading_3' => '####'];
     private const LIST_ITEMS = ['bulleted_list_item', 'numbered_list_item', 'to_do', 'toggle'];
 
-    private int $blocks = 0;
-
     public function __construct(
         private readonly HttpClientInterface $httpClient,
         private readonly CredentialResolver $credentials,
@@ -70,20 +68,20 @@ final class NotionClient
 
     public function markdown(Connector $connector, string $pageId): string
     {
-        $this->blocks = 0;
+        $blocks = 0;
 
-        return trim($this->render($connector, $pageId, 0));
+        return trim($this->render($connector, $pageId, 0, $blocks));
     }
 
-    private function render(Connector $connector, string $blockId, int $depth): string
+    private function render(Connector $connector, string $blockId, int $depth, int &$blocks): string
     {
         $markdown = '';
         $previous = null;
         $number = 0;
-        foreach ($this->children($connector, $blockId) as $block) {
+        foreach ($this->children($connector, $blockId, $blocks) as $block) {
             $type = $block['type'];
             $number = 'numbered_list_item' === $type ? ($previous === $type ? $number + 1 : 1) : 0;
-            $text = $this->block($connector, $block, $depth, $number);
+            $text = $this->block($connector, $block, $depth, $number, $blocks);
             if ('' === $text) {
                 continue;
             }
@@ -98,13 +96,13 @@ final class NotionClient
     /**
      * @param array<string, mixed> $block
      */
-    private function block(Connector $connector, array $block, int $depth, int $number): string
+    private function block(Connector $connector, array $block, int $depth, int $number, int &$blocks): string
     {
         $type = $block['type'];
         $data = $block[$type] ?? [];
         $text = $this->richText($data['rich_text'] ?? []);
         $children = ($block['has_children'] ?? false) && $depth < self::MAX_DEPTH && !\in_array($type, ['child_page', 'child_database', 'table'], true)
-            ? $this->render($connector, $block['id'], $depth + 1)
+            ? $this->render($connector, $block['id'], $depth + 1, $blocks)
             : '';
 
         $line = match ($type) {
@@ -121,7 +119,7 @@ final class NotionClient
             'child_page', 'child_database' => '**'.($data['title'] ?? '').'**',
             'bookmark', 'embed', 'link_preview' => isset($data['url']) ? '<'.$data['url'].'>' : '',
             'image', 'file', 'pdf', 'video' => $this->file($data),
-            'table' => $this->table($connector, $block),
+            'table' => $this->table($connector, $block, $blocks),
             default => '',
         };
 
@@ -140,10 +138,10 @@ final class NotionClient
     /**
      * @param array<string, mixed> $block
      */
-    private function table(Connector $connector, array $block): string
+    private function table(Connector $connector, array $block, int &$blocks): string
     {
         $rows = [];
-        foreach ($this->children($connector, $block['id']) as $row) {
+        foreach ($this->children($connector, $block['id'], $blocks) as $row) {
             $rows[] = '| '.implode(' | ', array_map(fn (array $cell): string => str_replace('|', '\|', $this->richText($cell)), $row['table_row']['cells'] ?? [])).' |';
         }
         if ([] === $rows) {
@@ -223,13 +221,13 @@ final class NotionClient
     /**
      * @return iterable<array<string, mixed>>
      */
-    private function children(Connector $connector, string $blockId): iterable
+    private function children(Connector $connector, string $blockId, int &$blocks): iterable
     {
         $cursor = null;
         do {
             $page = $this->request($connector, 'GET', 'blocks/'.$blockId.'/children', ['query' => array_filter(['page_size' => 100, 'start_cursor' => $cursor])]);
             foreach ($page['results'] ?? [] as $block) {
-                if (++$this->blocks > self::MAX_BLOCKS) {
+                if (++$blocks > self::MAX_BLOCKS) {
                     return;
                 }
                 yield $block;
@@ -253,8 +251,10 @@ final class NotionClient
         ]), maxRetries: 4);
         $response = $client->request($method, $path, $options);
         if ($response->getStatusCode() >= 400) {
-            $error = $response->toArray(false);
-            throw new \RuntimeException(\sprintf('Notion a répondu %d : %s', $response->getStatusCode(), $error['message'] ?? $error['code'] ?? 'erreur inconnue'));
+            $raw = $response->getContent(false);
+            $error = json_validate($raw) ? json_decode($raw, true) : null;
+            $message = \is_array($error) ? ($error['message'] ?? $error['code'] ?? 'erreur inconnue') : mb_substr(trim($raw), 0, 200);
+            throw new \RuntimeException(\sprintf('Notion a répondu %d : %s', $response->getStatusCode(), '' !== $message ? $message : 'erreur inconnue'));
         }
 
         return $response->toArray();

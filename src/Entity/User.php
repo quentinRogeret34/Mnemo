@@ -49,6 +49,7 @@ class User implements UserInterface
         #[ORM\Column(length: 100)]
         private string $providerId,
     ) {
+        $this->email = strtolower(trim($email));
         $this->groups = new ArrayCollection();
         $this->createdAt = new \DateTimeImmutable();
     }

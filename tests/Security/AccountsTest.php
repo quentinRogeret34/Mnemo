@@ -64,7 +64,8 @@ final class AccountsTest extends WebTestCase
         $this->client->followRedirect();
         self::assertResponseRedirects('/pending');
         self::assertFalse($this->entityManager->getRepository(User::class)->findOneBy(['email' => 'mallory@example.com'])->isSuperAdmin());
-        $this->client->request('GET', '/logout');
+        $this->client->followRedirect();
+        $this->logOut();
 
         $account = ['id' => 11, 'login' => 'alice', 'name' => 'Alice', 'email' => 'alice@example.com'];
         $this->signIn();
@@ -73,7 +74,7 @@ final class AccountsTest extends WebTestCase
         self::assertTrue($alice->isSuperAdmin());
         $this->client->request('GET', '/admin/users');
         self::assertResponseIsSuccessful();
-        $this->client->request('GET', '/logout');
+        $this->logOut();
 
         $account = ['id' => 12, 'login' => 'bob', 'name' => 'Bob', 'email' => 'bob@example.com'];
         $this->signIn();
@@ -82,7 +83,7 @@ final class AccountsTest extends WebTestCase
         $this->client->followRedirect();
         self::assertSelectorTextContains('.login__card', 'bob@example.com');
         self::assertSame(UserStatus::Pending, $this->entityManager->getRepository(User::class)->findOneBy(['email' => 'bob@example.com'])->getStatus());
-        $this->client->request('GET', '/logout');
+        $this->logOut();
 
         $this->client->request('GET', '/oauth/github');
         $this->client->request('GET', '/oauth/github/check?code=abc&state=forged');
@@ -224,6 +225,13 @@ final class AccountsTest extends WebTestCase
         self::assertSame('client-id', $query['client_id']);
         self::assertSame('http://localhost/oauth/github/check', $query['redirect_uri']);
         $this->client->request('GET', '/oauth/github/check?code=abc&state='.$query['state']);
+    }
+
+    private function logOut(): void
+    {
+        $href = $this->client->getCrawler()->filter('a[href^="/logout"]')->attr('href');
+        self::assertNotNull($href);
+        $this->client->request('GET', $href);
     }
 
     private function user(string $email, string $name, UserStatus $status = UserStatus::Active, bool $superAdmin = false): User

@@ -9,7 +9,7 @@ export default class extends Controller {
     #media = window.matchMedia('(min-width: 56rem)');
     #onMediaChange = (event) => {
         if (event.matches) {
-            this.close();
+            this.close(false);
         }
     };
 
@@ -20,7 +20,7 @@ export default class extends Controller {
 
     disconnect() {
         this.#media.removeEventListener('change', this.#onMediaChange);
-        this.close();
+        this.close(false);
     }
 
     toggle() {
@@ -45,6 +45,9 @@ export default class extends Controller {
             return;
         }
         this.panelTarget.classList.add('is-open');
+        this.panelTarget.setAttribute('role', 'dialog');
+        this.panelTarget.setAttribute('aria-modal', 'true');
+        this.element.querySelector('.main')?.setAttribute('inert', '');
         if (this.hasBackdropTarget) {
             this.backdropTarget.hidden = false;
         }
@@ -55,17 +58,22 @@ export default class extends Controller {
         this.panelTarget.querySelector('a, button')?.focus();
     }
 
-    close() {
+    close(restoreFocus = true) {
         if (!this.hasPanelTarget || !this.panelTarget.classList.contains('is-open')) {
             return;
         }
         this.panelTarget.classList.remove('is-open');
+        this.panelTarget.removeAttribute('role');
+        this.panelTarget.removeAttribute('aria-modal');
+        this.element.querySelector('.main')?.removeAttribute('inert');
         if (this.hasBackdropTarget) {
             this.backdropTarget.hidden = true;
         }
         if (this.hasOpenerTarget) {
             this.openerTarget.setAttribute('aria-expanded', 'false');
-            this.openerTarget.focus();
+            if (restoreFocus && !this.#media.matches) {
+                this.openerTarget.focus();
+            }
         }
         document.documentElement.removeAttribute('data-drawer-open');
     }

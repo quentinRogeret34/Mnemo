@@ -16,6 +16,7 @@ use Mcp\Schema\Content\BlobResourceContents;
 use Mcp\Schema\Content\TextContent;
 use Mcp\Schema\Content\TextResourceContents;
 use Mcp\Schema\ResourceDefinition;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Lock\LockFactory;
 
 /**
@@ -47,6 +48,7 @@ final class ConnectorRunner
         private readonly LockFactory $lockFactory,
         private readonly NotionClient $notion,
         private readonly ManagerRegistry $doctrine,
+        private readonly LoggerInterface $logger,
     ) {
     }
 
@@ -122,6 +124,7 @@ final class ConnectorRunner
             }
             $this->entityManager->flush();
         } catch (\Throwable $exception) {
+            $this->logger->error('Connector {id} ({name}) sync failed: {message}', ['id' => $connectorId, 'name' => $connector->getName(), 'message' => $exception->getMessage(), 'exception' => $exception]);
             $report['error'] = $exception->getMessage();
             $this->discardUnflushed($connector);
         }
@@ -215,17 +218,22 @@ final class ConnectorRunner
     {
         $cursor = $connector->getCursor();
         $latest = $cursor['pages'] ?? null;
+        $hadFailure = false;
         foreach ($this->notion->pages($connector, $cursor['pages'] ?? null) as $page) {
             try {
                 $body = $this->notion->markdown($connector, $page['id']);
             } catch (\RuntimeException $exception) {
+                $hadFailure = true;
                 $report['skipped'][] = \sprintf('%s (%s)', $page['title'], $exception->getMessage());
                 continue;
             }
             $this->upsertDocument($connector, 'notion:'.$page['id'], $page['title'], 'md', '# '.$page['title']."\n\n".$body, $report);
             $latest = max($latest ?? '', $page['edited']);
         }
-        $connector->setCursor(['pages' => $latest] + $cursor);
+        // Only advance the cursor when no page failed (pages arrive newest-first, so advancing would skip failed pages).
+        if (!$hadFailure && null !== $latest && '' !== $latest) {
+            $connector->setCursor(['pages' => $latest] + $cursor);
+        }
     }
 
     /**

@@ -31,10 +31,17 @@
             "Sur la fiche : modifier le texte, relier la mémoire à du code, une règle ou un document, la vérifier contre le graphe, lire son historique.",
             "Une mémoire remplacée ou retirée est archivée, jamais supprimée : le filtre « Archivées » les retrouve.",
         ]},
-        {id: 'graphe-memoires', title: 'Graphe des mémoires', url: path('memory_graph'), what: "Une vue satellite : chaque mémoire gravite autour du sujet dont elle parle. Elle montre d'un coup d'œil où la connaissance se concentre et ce qui n'est relié à rien.", how: [
-            "Les gros points sont les sujets (carré : fichier de code, losange : règle, triangle : document, hexagone : projet). Leur taille suit le nombre de mémoires attachées.",
-            "Survoler un point isole son voisinage et affiche son texte sous le graphe. Cliquer ouvre la fiche. La molette zoome, le glisser déplace.",
-            "Une mémoire sans lien tourne autour de son projet : c'est une candidate à relier depuis sa fiche.",
+        {id: 'graphe-memoires', title: 'Graphe des mémoires', url: path('memory_graph'), what: "Un arbre de cartes sur toile pointillée : du projet aux types de sujets (fichiers, règles, documents), puis chaque sujet et les mémoires empilées dessous.", how: [
+            "Les grands graphes s'ouvrent repliés : cliquer sur une catégorie ou un sujet pour le déplier ou le replier.",
+            "Les boutons en bas à droite permettent de zoomer, recadrer, tout déplier ou tout replier. Cliquer sur une mémoire ouvre sa fiche.",
+            "Une mémoire sans lien apparaît directement sous son projet : c'est une candidate à relier depuis sa fiche.",
+        ]},
+        {id: 'assistant', title: 'Assistant', url: null, what: "Un assistant conversationnel par projet qui interroge le graphe (règles, mémoires, documents, code) avant de répondre et cite ses sources.", how: [
+            "L'historique vit dans la session courante et reste privé à l'utilisateur connecté.",
+            "Sur demande explicite, l'assistant peut créer une règle métier (en attente de validation) ou enregistrer une mémoire partagée.",
+        ]},
+        {id: 'fichiers-agents', title: "Fichiers d'agents", url: null, what: "Skills, commandes et sous-agents attachés à un projet, distribués automatiquement dans .claude/ sur chaque poste équipé du plugin.", how: [
+            "Chaque fichier possède un type (skill, commande, agent), un nom, une description et un contenu Markdown.",
         ]},
         {id: 'a-valider', title: 'À valider', url: path('proposal_index'), what: "La file des propositions du LLM. Rien de ce qu'il propose n'entre dans le graphe sans passer ici.", how: [
             "Apprentissage : une mémoire extraite d'une conversation, d'un diff, d'un fichier ou d'une revue. Le texte est modifiable avant d'appliquer ; « Preuve et source » montre d'où elle vient.",

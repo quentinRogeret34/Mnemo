@@ -35,6 +35,10 @@ final class ReviewKnowledge
      */
     public function rules(Project $project, array $paths): array
     {
+        if ([] === $paths) {
+            return [];
+        }
+
         return array_map(
             static fn (array $row): array => ['shadow_areas' => json_decode($row['shadow_areas'], true), 'paths' => json_decode($row['paths'], true)] + $row,
             $this->connection->fetchAllAssociative(
@@ -65,6 +69,10 @@ final class ReviewKnowledge
      */
     public function linkedMemories(Project $project, array $paths, array $ruleCodes): array
     {
+        if ([] === $paths && [] === $ruleCodes) {
+            return [];
+        }
+
         return array_map(
             static fn (array $row): array => ['id' => (int) $row['id'], 'about' => json_decode($row['about'], true)] + $row,
             $this->connection->fetchAllAssociative(

@@ -31,10 +31,17 @@
             "On the page: edit the text, link the memory to code, a rule or a document, verify it against the graph, read its history.",
             "A superseded or retracted memory is archived, never deleted: the “Archived” filter finds them.",
         ]},
-        {id: 'graphe-memoires', title: 'Memory graph', url: path('memory_graph'), what: "A satellite view: each memory orbits the subject it talks about. It shows at a glance where knowledge gathers and what is linked to nothing.", how: [
-            "The big points are the subjects (square: code file, diamond: rule, triangle: document, hexagon: project). Their size follows the number of memories attached.",
-            "Hovering a point isolates its neighbourhood and shows its text below the graph. Clicking opens its page. The wheel zooms, dragging pans.",
-            "A memory with no link orbits its project: a candidate to link from its page.",
+        {id: 'graphe-memoires', title: 'Memory graph', url: path('memory_graph'), what: "A tree of cards on a dotted canvas: from the project to subject kinds (code files, business rules, documents), then each subject with its memories stacked underneath.", how: [
+            "Large graphs open folded: click a category or a subject card to unfold or fold it.",
+            "The toolbar at the bottom right zooms, fits the view, expands all or collapses all. Clicking a memory card opens its page.",
+            "A memory linked to nothing sits directly under its project: a candidate to link from its page.",
+        ]},
+        {id: 'assistant', title: 'Assistant', url: null, what: "A per-project conversational assistant that queries the knowledge graph (rules, memories, documents, code) before answering and cites its sources.", how: [
+            "Conversation history lives in the current session and stays private to the signed-in user.",
+            "When explicitly asked, the assistant can add a business rule (status to review) or store a project memory.",
+        ]},
+        {id: 'fichiers-agents', title: 'Agent skills', url: null, what: "Skills, commands and subagents stored on a project and synced into .claude/ on every connected machine.", how: [
+            "Each asset has a kind (skill, command, subagent), a name, a description and Markdown content.",
         ]},
         {id: 'a-valider', title: 'To review', url: path('proposal_index'), what: "The queue of the LLM's proposals. Nothing it proposes enters the graph without going through here.", how: [
             "Learning: a memory extracted from a conversation, a diff, a file or a review. The text can be edited before applying; “Evidence and source” shows where it comes from.",

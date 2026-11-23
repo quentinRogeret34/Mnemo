@@ -19,9 +19,11 @@ final class OAuthController extends AbstractController
             throw $this->createNotFoundException(\sprintf('Sign-in provider "%s" is not configured.', $provider));
         }
         $state = bin2hex(random_bytes(16));
-        $request->getSession()->set(OAuthAuthenticator::STATE, $state);
+        $verifier = rtrim(strtr(base64_encode(random_bytes(32)), '+/', '-_'), '=');
+        $challenge = rtrim(strtr(base64_encode(hash('sha256', $verifier, true)), '+/', '-_'), '=');
+        $request->getSession()->set(OAuthAuthenticator::STATE, ['state' => $state, 'provider' => $provider, 'verifier' => $verifier]);
 
-        return $this->redirect($client->authorizeUrl($provider, $this->generateUrl('oauth_check', ['provider' => $provider], UrlGeneratorInterface::ABSOLUTE_URL), $state));
+        return $this->redirect($client->authorizeUrl($provider, $this->generateUrl('oauth_check', ['provider' => $provider], UrlGeneratorInterface::ABSOLUTE_URL), $state, codeChallenge: $challenge));
     }
 
     #[Route('/oauth/{provider}/check', name: 'oauth_check', requirements: ['provider' => 'github|gitlab|google'], methods: ['GET'])]

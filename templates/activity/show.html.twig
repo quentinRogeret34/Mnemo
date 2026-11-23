@@ -40,10 +40,11 @@
         </section>
     {% endif %}
 
+    {% set scoped = app.user and not is_granted('ROLE_SUPER_ADMIN') %}
     <section class="activity-block" aria-labelledby="runs-title">
         <div class="activity-block__head">
             <h2 id="runs-title">{{ 'activity.runs'|trans }}</h2>
-            <a class="button" href="{{ path('connector_index') }}">{{ 'project.settings.connectors'|trans }}</a>
+            {% if not scoped %}<a class="button" href="{{ path('connector_index') }}">{{ 'project.settings.connectors'|trans }}</a>{% endif %}
         </div>
         {% if runs.items is empty %}
             <p class="block__empty">{{ 'activity.no_run'|trans({worker: '<span class="mono">worker</span>'})|raw }}</p>
@@ -64,7 +65,7 @@
                             </p>
                             {% if failed %}<p class="run__error">{{ failed }}</p>{% endif %}
                         </div>
-                        <a class="button" href="{{ path('connector_show', {id: run.connector_id}) }}">{{ 'activity.details'|trans }}{{ ux_icon('lucide:chevron-right') }}</a>
+                        {% if not scoped %}<a class="button" href="{{ path('connector_show', {id: run.connector_id}) }}">{{ 'activity.details'|trans }}{{ ux_icon('lucide:chevron-right') }}</a>{% endif %}
                     </li>
                 {% endfor %}
             </ul>

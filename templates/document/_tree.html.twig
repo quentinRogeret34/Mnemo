@@ -1,16 +1,21 @@
 {# folders: KnowledgeReader::folderTree(), files: KnowledgeReader::documentTree(), open: ids of the folders on the current path #}
-{% macro branch(parent, folders, files, open, current_folder, current_document) %}
+{% set scoped = app.user and not is_granted('ROLE_SUPER_ADMIN') %}
+{% set on_index = app.request.attributes.get('_route') == 'document_index' %}
+{% macro branch(parent, folders, files, open, current_folder, current_document, scoped) %}
     {% for folder in folders|filter(folder => folder.parent_id == parent) %}
         <li class="filetree__item">
             <details class="filetree__folder" {% if folder.id in open %}open{% endif %}>
                 <summary class="filetree__row{{ current_folder == folder.id ? ' is-current' }}">
                     {{ ux_icon('lucide:chevron-right', {class: 'icon filetree__chevron'}) }}
                     {{ ux_icon('lucide:folder', {class: 'icon filetree__folder-icon'}) }}
-                    <a class="filetree__label" href="{{ path('document_index', {folder: folder.id}) }}" {% if current_folder == folder.id %}aria-current="page"{% endif %}>{{ folder.name }}</a>
+                    <span class="filetree__label">{{ folder.name }}</span>
                     {% if folder.documents > 0 %}<span class="filetree__count">{{ folder.documents }}</span>{% endif %}
                 </summary>
-                <ul class="filetree__children">{{ _self.branch(folder.id, folders, files, open, current_folder, current_document) }}</ul>
+                <ul class="filetree__children">{{ _self.branch(folder.id, folders, files, open, current_folder, current_document, scoped) }}</ul>
             </details>
+            {% if not scoped %}
+                <a class="filetree__overlay-link" href="{{ path('document_index', {folder: folder.id}) }}" {% if current_folder == folder.id %}aria-current="page"{% endif %}><span class="visually-hidden">{{ folder.name }}</span></a>
+            {% endif %}
         </li>
     {% endfor %}
     {% for file in files|filter(file => file.folder_id == parent) %}
@@ -25,14 +30,23 @@
 
 <nav class="filetree" aria-label="{{ 'document.folders'|trans }}" data-controller="filetree">
     <div class="filetree__bar">
-        <a class="filetree__root{{ current_folder is null and current_document is null ? ' is-current' }}" href="{{ path('document_index') }}">{{ ux_icon('lucide:library') }}{{ 'nav.documents'|trans }}</a>
-        <a class="filetree__tool" href="{{ path('document_index', current_folder ? {folder: current_folder} : {}) }}#upload" title="{{ 'document.add_files'|trans }}" aria-label="{{ 'document.add_files'|trans }}">{{ ux_icon('lucide:file-plus') }}</a>
-        <a class="filetree__tool" href="{{ path('document_index', current_folder ? {folder: current_folder} : {}) }}#new-folder" title="{{ 'document.create_folder'|trans }}" aria-label="{{ 'document.create_folder'|trans }}">{{ ux_icon('lucide:folder-plus') }}</a>
+        {% if scoped %}
+            <span class="filetree__root">{{ ux_icon('lucide:library') }}{{ 'nav.documents'|trans }}</span>
+        {% else %}
+            <a class="filetree__root{{ current_folder is null and current_document is null ? ' is-current' }}" href="{{ path('document_index') }}">{{ ux_icon('lucide:library') }}{{ 'nav.documents'|trans }}</a>
+            {% if on_index %}
+                <button class="filetree__tool" type="button" commandfor="upload" command="show-modal" title="{{ 'document.add_files'|trans }}" aria-label="{{ 'document.add_files'|trans }}">{{ ux_icon('lucide:file-plus') }}</button>
+                <button class="filetree__tool" type="button" commandfor="new-folder" command="show-modal" title="{{ 'document.create_folder'|trans }}" aria-label="{{ 'document.create_folder'|trans }}">{{ ux_icon('lucide:folder-plus') }}</button>
+            {% else %}
+                <a class="filetree__tool" href="{{ path('document_index', current_folder ? {folder: current_folder} : {}) }}#upload" title="{{ 'document.add_files'|trans }}" aria-label="{{ 'document.add_files'|trans }}">{{ ux_icon('lucide:file-plus') }}</a>
+                <a class="filetree__tool" href="{{ path('document_index', current_folder ? {folder: current_folder} : {}) }}#new-folder" title="{{ 'document.create_folder'|trans }}" aria-label="{{ 'document.create_folder'|trans }}">{{ ux_icon('lucide:folder-plus') }}</a>
+            {% endif %}
+        {% endif %}
     </div>
     <label class="filetree__search">
         {{ ux_icon('lucide:search') }}
         <input class="input" type="search" placeholder="{{ 'document.filter_tree'|trans }}" aria-label="{{ 'document.filter_tree'|trans }}" data-action="filetree#filter" data-filetree-target="query">
     </label>
-    <ul class="filetree__list" data-filetree-target="list">{{ _self.branch(null, folders, files, open, current_folder, current_document) }}</ul>
+    <ul class="filetree__list" data-filetree-target="list">{{ _self.branch(null, folders, files, open, current_folder, current_document, scoped) }}</ul>
     <p class="filetree__empty" data-filetree-target="empty" hidden>{{ 'document.tree_no_match'|trans }}</p>
 </nav>

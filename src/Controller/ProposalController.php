@@ -37,11 +37,25 @@ final class ProposalController extends AbstractController
         $kindEnum = null === $kind ? null : ProposalKind::tryFrom($kind);
 
         $criteria = ['status' => ProposalStatus::Pending] + (null === $projectEntity ? [] : ['project' => $projectEntity]) + (null === $kindEnum ? [] : ['kind' => $kindEnum]);
+        $kindCounts = [];
+        foreach (ProposalKind::cases() as $case) {
+            $kindCounts[$case->value] = 0;
+        }
+        $rows = $this->entityManager->getConnection()->fetchAllKeyValue(
+            'SELECT kind, COUNT(*) FROM proposal WHERE status = :pending AND (CAST(:project AS int) IS NULL OR project_id = :project) GROUP BY kind',
+            ['pending' => ProposalStatus::Pending->value, 'project' => $projectEntity?->getId()],
+        );
+        foreach ($rows as $rowKind => $count) {
+            $kindCounts[(string) $rowKind] = (int) $count;
+        }
 
         return $this->render('proposal/index.html.twig', [
             'project' => $projectEntity,
+            'projects' => $this->projectScope->projects(),
             'kind' => $kindEnum,
             'kinds' => ProposalKind::cases(),
+            'kind_counts' => $kindCounts,
+            'all_count' => array_sum($kindCounts),
             'proposals' => new Page($repository->findBy($criteria, ['createdAt' => 'ASC', 'id' => 'ASC'], self::PAGE_SIZE, Page::offset($page, self::PAGE_SIZE)), $repository->count($criteria), $page, self::PAGE_SIZE),
         ]);
     }

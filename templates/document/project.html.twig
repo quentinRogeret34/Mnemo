@@ -9,7 +9,9 @@
 {% endblock %}
 
 {% block header_actions %}
-    <a class="button" href="{{ path('document_index') }}">{{ 'document.all_folders'|trans }}</a>
+    {% if not app.user or is_granted('ROLE_SUPER_ADMIN') %}
+        <a class="button" href="{{ path('document_index') }}">{{ 'document.all_folders'|trans }}</a>
+    {% endif %}
 {% endblock %}
 
 {% block body %}

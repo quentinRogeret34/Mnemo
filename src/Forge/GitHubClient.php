@@ -8,6 +8,7 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
 final class GitHubClient implements ForgeClient
 {
     private const PAGE = 100;
+    private const CONCURRENCY = 20;
 
     public function __construct(
         private readonly HttpClientInterface $http,
@@ -28,7 +29,7 @@ final class GitHubClient implements ForgeClient
     public function commits(?\DateTimeImmutable $since, int $limit): array
     {
         $rows = $this->pages('/commits', null === $since ? [] : ['since' => $since->format(\DATE_ATOM)], $limit);
-        $details = $this->all(array_map(fn (array $row) => $this->http->request('GET', $this->path('/commits/'.$row['sha'])), $rows));
+        $details = $this->batched($rows, fn (array $row): ResponseInterface => $this->http->request('GET', $this->path('/commits/'.$row['sha'])));
 
         return array_map(static fn (array $row, array $detail): ForgeCommit => new ForgeCommit(
             $row['sha'],
@@ -42,11 +43,11 @@ final class GitHubClient implements ForgeClient
 
     public function changeRequests(?\DateTimeImmutable $since, int $limit): array
     {
-        $rows = array_filter(
+        $rows = array_values(array_filter(
             $this->pages('/pulls', ['state' => 'all', 'sort' => 'updated', 'direction' => 'desc'], $limit),
             static fn (array $row): bool => null === $since || new \DateTimeImmutable($row['updated_at']) >= $since,
-        );
-        $commits = $this->all(array_map(fn (array $row) => $this->http->request('GET', $this->path('/pulls/'.$row['number'].'/commits'), ['query' => ['per_page' => self::PAGE]]), $rows));
+        ));
+        $commits = $this->batched($rows, fn (array $row): ResponseInterface => $this->http->request('GET', $this->path('/pulls/'.$row['number'].'/commits'), ['query' => ['per_page' => self::PAGE]]));
 
         return array_map(fn (array $row, array $list): ForgeTicket => $this->ticket($row, true, array_column($list, 'sha')), $rows, $commits);
     }
@@ -102,6 +103,24 @@ final class GitHubClient implements ForgeClient
         }
 
         return \array_slice($rows, 0, $limit);
+    }
+
+    /**
+     * Requests in bounded parallel batches to avoid triggering GitHub secondary rate limits.
+     *
+     * @param list<array<string, mixed>>                        $rows
+     * @param callable(array<string, mixed>): ResponseInterface $request
+     *
+     * @return list<array<mixed>>
+     */
+    private function batched(array $rows, callable $request): array
+    {
+        $results = [];
+        foreach (array_chunk($rows, self::CONCURRENCY) as $chunk) {
+            $results = [...$results, ...$this->all(array_map($request, $chunk))];
+        }
+
+        return $results;
     }
 
     /**

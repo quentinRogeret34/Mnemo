@@ -3,9 +3,11 @@
 namespace App\Twig\Components;
 
 use App\Document\DocumentLinker;
+use App\Entity\Edge;
 use App\Entity\Folder;
 use App\Entity\Node;
 use App\Entity\Project;
+use App\Enum\NodeType;
 use App\Graph\KnowledgeReader;
 use App\Security\ProjectScope;
 use Doctrine\ORM\EntityManagerInterface;
@@ -61,7 +63,7 @@ final class DocumentProperties
     #[PostHydrate]
     public function guard(): void
     {
-        if (!$this->projectScope->allowsNode($this->document)) {
+        if (NodeType::Document !== $this->document->getType() || !$this->projectScope->allowsNode($this->document)) {
             throw new NotFoundHttpException('Document not found.');
         }
     }
@@ -138,6 +140,10 @@ final class DocumentProperties
     #[LiveAction]
     public function unlinkFile(#[LiveArg] int $edgeId): void
     {
+        $edge = $this->entityManager->find(Edge::class, $edgeId);
+        if (null === $edge || $edge->getTarget() !== $this->document || !$this->projectScope->allowsNode($edge->getSource())) {
+            throw new \InvalidArgumentException('Unknown edge.');
+        }
         $this->documentLinker->unlinkCode($this->document, $edgeId);
         $this->entityManager->flush();
     }

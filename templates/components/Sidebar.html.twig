@@ -1,6 +1,6 @@
 {% set route = app.request.attributes.get('_route') %}
 {% set scope = project ? {project: project.slug} : {} %}
-<aside{{ attributes.defaults({class: 'sidebar', id: 'app-sidebar'}) }} data-sidebar-target="panel">
+<aside{{ attributes.defaults({class: 'sidebar', id: 'app-sidebar', 'aria-label': 'nav.sidebar'|trans}) }} data-sidebar-target="panel">
     <div class="sidebar__top">
         <a class="workspace" href="{{ path('dashboard') }}"><span class="workspace__mark" aria-hidden="true">M</span><span class="workspace__name">{{ 'app.name'|trans }}</span></a>
         <button class="sidebar__toggle" type="button" aria-expanded="true" aria-label="{{ 'nav.collapse'|trans }}" title="{{ 'nav.collapse'|trans }}" data-sidebar-target="toggle" data-action="sidebar#toggle">
@@ -13,8 +13,9 @@
 
     {% set projects = this.projects %}
     <div class="menu menu--switcher" data-controller="menu">
-        <button class="menu__trigger" type="button" aria-label="{{ 'nav.switch_project'|trans }}" aria-expanded="false" commandfor="project-menu" command="toggle-popover" data-menu-target="trigger">
+        <button class="menu__trigger" type="button" aria-expanded="false" aria-controls="project-menu" commandfor="project-menu" command="toggle-popover" data-menu-target="trigger">
             <twig:ux:icon name="lucide:folder" class="icon nav-item__icon" />
+            <span class="visually-hidden">{{ 'nav.switch_project'|trans }}: </span>
             <span class="nav-item__label">{{ project ? project.name : 'nav.all_projects'|trans }}</span>
             <twig:ux:icon name="lucide:chevron-down" class="icon menu__chevron" />
         </button>
@@ -36,55 +37,30 @@
                 <button class="menu__item" type="button" commandfor="project-new" command="show-modal"><twig:ux:icon name="lucide:plus" />{{ 'project.new'|trans }}</button>
             {% endif %}
             {% if project %}
-                <a class="menu__item" href="{{ path('project_settings', {slug: project.slug}) }}"><twig:ux:icon name="lucide:settings" />{{ 'nav.project_settings'|trans }}</a>
+                <a class="menu__item" href="{{ path('project_settings', {slug: project.slug}) }}"><twig:ux:icon name="lucide:sliders-horizontal" />{{ 'nav.project_settings'|trans }}</a>
             {% endif %}
         </div>
     </div>
 
-    <nav class="nav-group" aria-label="{{ 'nav.workspace'|trans }}">
-        <a class="nav-item" href="{{ path('dashboard', scope) }}" {% if route == 'dashboard' %}aria-current="page"{% endif %}>
-            <twig:ux:icon name="lucide:layout-dashboard" class="icon nav-item__icon" />
-            <span class="nav-item__label">{{ 'nav.dashboard'|trans }}</span>
-        </a>
-        <a class="nav-item" href="{{ path('activity', scope) }}" {% if route in ['activity', 'activity_feed'] %}aria-current="page"{% endif %}>
-            <twig:ux:icon name="lucide:activity" class="icon nav-item__icon" />
-            <span class="nav-item__label">{{ 'nav.activity'|trans }}</span>
-        </a>
-        <a class="nav-item" href="{{ path('project_index') }}" {% if route == 'project_index' %}aria-current="page"{% endif %}>
-            <twig:ux:icon name="lucide:layout-grid" class="icon nav-item__icon" />
-            <span class="nav-item__label">{{ 'nav.projects'|trans }}</span>
-        </a>
-        {% if not this.scoped %}
-        <a class="nav-item" href="{{ path('document_index') }}" {% if route in ['document_index', 'document_show'] %}aria-current="page"{% endif %}>
-            <twig:ux:icon name="lucide:file" class="icon nav-item__icon" />
-            <span class="nav-item__label">{{ 'nav.all_documents'|trans }}</span>
-        </a>
-        {% endif %}
-        <a class="nav-item" href="{{ path('memory_index') }}" {% if route in ['memory_index', 'memory_show'] and not app.request.query.get('project') %}aria-current="page"{% endif %}>
-            <twig:ux:icon name="lucide:lightbulb" class="icon nav-item__icon" />
-            <span class="nav-item__label">{{ (this.scoped ? 'nav.memories' : 'nav.all_memories')|trans }}</span>
-            {% if not this.scoped %}<span class="nav-item__count">{{ this.memoryCount }}</span>{% endif %}
-        </a>
-        <a class="nav-item" href="{{ path('memory_graph', scope) }}" {% if route == 'memory_graph' %}aria-current="page"{% endif %}>
-            <twig:ux:icon name="lucide:network" class="icon nav-item__icon" />
-            <span class="nav-item__label">{{ 'nav.memory_graph'|trans }}</span>
-        </a>
-        {% set pending = this.scoped ? 0 : this.pendingProposals %}
-        <a class="nav-item" href="{{ path('proposal_index') }}" {% if route == 'proposal_index' %}aria-current="page"{% endif %}>
-            <twig:ux:icon name="lucide:check" class="icon nav-item__icon" />
-            <span class="nav-item__label">{{ 'nav.to_review'|trans }}</span>
-            {% if pending > 0 %}<span class="nav-item__count nav-item__count--alert">{{ pending }}</span>{% endif %}
-        </a>
-        {% if not this.scoped %}
-        <a class="nav-item" href="{{ path('connector_index') }}" {% if route starts with 'connector_' %}aria-current="page"{% endif %}>
-            <twig:ux:icon name="lucide:plug" class="icon nav-item__icon" />
-            <span class="nav-item__label">{{ 'nav.connectors'|trans }}</span>
-        </a>
-        {% endif %}
-    </nav>
-
     {% if project %}
         {% set counts = this.counts %}
+        {% set pending = this.pendingProposals %}
+        <nav class="nav-group" aria-label="{{ 'nav.overview'|trans }}">
+            <a class="nav-item" href="{{ path('dashboard', scope) }}" {% if route == 'dashboard' %}aria-current="page"{% endif %}>
+                <twig:ux:icon name="lucide:layout-dashboard" class="icon nav-item__icon" />
+                <span class="nav-item__label">{{ 'nav.dashboard'|trans }}</span>
+            </a>
+            <a class="nav-item" href="{{ path('activity', scope) }}" {% if route in ['activity', 'activity_feed'] %}aria-current="page"{% endif %}>
+                <twig:ux:icon name="lucide:activity" class="icon nav-item__icon" />
+                <span class="nav-item__label">{{ 'nav.activity'|trans }}</span>
+            </a>
+            <a class="nav-item" href="{{ path('proposal_index', scope) }}" {% if route == 'proposal_index' %}aria-current="page"{% endif %}>
+                <twig:ux:icon name="lucide:check" class="icon nav-item__icon" />
+                <span class="nav-item__label">{{ 'nav.to_review'|trans }}</span>
+                {% if pending > 0 %}<span class="nav-item__count nav-item__count--alert">{{ pending }}</span>{% endif %}
+            </a>
+        </nav>
+
         <nav class="nav-group" aria-label="{{ project.name }}">
             <span class="nav-group__label">{{ project.name }}{% if project.archived %} <span class="tag tag--demo">{{ 'project.archived'|trans }}</span>{% endif %}</span>
             <a class="nav-item" href="{{ path('project_show', {slug: project.slug}) }}" {% if route == 'project_show' %}aria-current="page"{% endif %}>
@@ -101,16 +77,23 @@
                     <span class="nav-item__count">{{ counts.rules }}</span>
                 {% endif %}
             </a>
-            <a class="nav-item" href="{{ path('memory_index', {project: project.slug}) }}" {% if route == 'memory_index' and app.request.query.get('project') == project.slug %}aria-current="page"{% endif %}>
+            <a class="nav-item" href="{{ path('memory_index', {project: project.slug}) }}" {% if route in ['memory_index', 'memory_show'] %}aria-current="page"{% endif %}>
                 <twig:ux:icon name="lucide:lightbulb" class="icon nav-item__icon" />
                 <span class="nav-item__label">{{ 'nav.memories'|trans }}</span>
                 <span class="nav-item__count">{{ counts.memories }}</span>
+            </a>
+            <a class="nav-item" href="{{ path('memory_graph', scope) }}" {% if route == 'memory_graph' %}aria-current="page"{% endif %}>
+                <twig:ux:icon name="lucide:network" class="icon nav-item__icon" />
+                <span class="nav-item__label">{{ 'nav.memory_graph'|trans }}</span>
             </a>
             <a class="nav-item" href="{{ path('project_code', {slug: project.slug}) }}" {% if route in ['project_code', 'file_show'] %}aria-current="page"{% endif %}>
                 <twig:ux:icon name="lucide:code" class="icon nav-item__icon" />
                 <span class="nav-item__label">{{ 'nav.code'|trans }}</span>
                 <span class="nav-item__count">{{ counts.files }}</span>
             </a>
+        </nav>
+
+        <nav class="nav-group" aria-label="{{ 'nav.tools'|trans }}">
             <a class="nav-item" href="{{ path('project_chat', {slug: project.slug}) }}" {% if route == 'project_chat' %}aria-current="page"{% endif %}>
                 <twig:ux:icon name="lucide:message-circle" class="icon nav-item__icon" />
                 <span class="nav-item__label">{{ 'nav.assistant'|trans }}</span>
@@ -124,9 +107,51 @@
                 <span class="nav-item__label">{{ 'nav.garden'|trans }}</span>
             </a>
             <a class="nav-item" href="{{ path('project_settings', {slug: project.slug}) }}" {% if route == 'project_settings' %}aria-current="page"{% endif %}>
-                <twig:ux:icon name="lucide:settings" class="icon nav-item__icon" />
-                <span class="nav-item__label">{{ 'nav.settings'|trans }}</span>
+                <twig:ux:icon name="lucide:sliders-horizontal" class="icon nav-item__icon" />
+                <span class="nav-item__label">{{ 'nav.project_settings'|trans }}</span>
             </a>
+        </nav>
+    {% else %}
+        <nav class="nav-group" aria-label="{{ 'nav.workspace'|trans }}">
+            <a class="nav-item" href="{{ path('dashboard') }}" {% if route == 'dashboard' %}aria-current="page"{% endif %}>
+                <twig:ux:icon name="lucide:layout-dashboard" class="icon nav-item__icon" />
+                <span class="nav-item__label">{{ 'nav.dashboard'|trans }}</span>
+            </a>
+            <a class="nav-item" href="{{ path('activity') }}" {% if route in ['activity', 'activity_feed'] %}aria-current="page"{% endif %}>
+                <twig:ux:icon name="lucide:activity" class="icon nav-item__icon" />
+                <span class="nav-item__label">{{ 'nav.activity'|trans }}</span>
+            </a>
+            <a class="nav-item" href="{{ path('project_index') }}" {% if route == 'project_index' %}aria-current="page"{% endif %}>
+                <twig:ux:icon name="lucide:layout-grid" class="icon nav-item__icon" />
+                <span class="nav-item__label">{{ 'nav.projects'|trans }}</span>
+            </a>
+            {% if not this.scoped %}
+            <a class="nav-item" href="{{ path('document_index') }}" {% if route in ['document_index', 'document_show'] %}aria-current="page"{% endif %}>
+                <twig:ux:icon name="lucide:file" class="icon nav-item__icon" />
+                <span class="nav-item__label">{{ 'nav.all_documents'|trans }}</span>
+            </a>
+            {% endif %}
+            <a class="nav-item" href="{{ path('memory_index') }}" {% if route in ['memory_index', 'memory_show'] %}aria-current="page"{% endif %}>
+                <twig:ux:icon name="lucide:lightbulb" class="icon nav-item__icon" />
+                <span class="nav-item__label">{{ (this.scoped ? 'nav.memories' : 'nav.all_memories')|trans }}</span>
+                {% if not this.scoped %}<span class="nav-item__count">{{ this.memoryCount }}</span>{% endif %}
+            </a>
+            <a class="nav-item" href="{{ path('memory_graph') }}" {% if route == 'memory_graph' %}aria-current="page"{% endif %}>
+                <twig:ux:icon name="lucide:network" class="icon nav-item__icon" />
+                <span class="nav-item__label">{{ 'nav.memory_graph'|trans }}</span>
+            </a>
+            {% set pending = this.scoped ? 0 : this.pendingProposals %}
+            <a class="nav-item" href="{{ path('proposal_index') }}" {% if route == 'proposal_index' %}aria-current="page"{% endif %}>
+                <twig:ux:icon name="lucide:check" class="icon nav-item__icon" />
+                <span class="nav-item__label">{{ 'nav.to_review'|trans }}</span>
+                {% if pending > 0 %}<span class="nav-item__count nav-item__count--alert">{{ pending }}</span>{% endif %}
+            </a>
+            {% if not this.scoped %}
+            <a class="nav-item" href="{{ path('connector_index') }}" {% if route starts with 'connector_' %}aria-current="page"{% endif %}>
+                <twig:ux:icon name="lucide:plug" class="icon nav-item__icon" />
+                <span class="nav-item__label">{{ 'nav.connectors'|trans }}</span>
+            </a>
+            {% endif %}
         </nav>
     {% endif %}
 
@@ -137,12 +162,15 @@
         </a>
         {% set settings_routes = ['api_key_index', 'llm_settings', 'appearance', 'admin_users'] %}
         <div class="menu" data-controller="menu">
-            <button class="nav-item menu__nav{{ route in settings_routes ? ' is-current' }}" type="button" aria-expanded="false" commandfor="settings-menu" command="toggle-popover" data-menu-target="trigger">
+            <button class="nav-item menu__nav{{ route in settings_routes ? ' is-current' }}" type="button" aria-expanded="false" aria-controls="settings-menu" commandfor="settings-menu" command="toggle-popover" data-menu-target="trigger">
                 <twig:ux:icon name="lucide:settings" class="icon nav-item__icon" />
                 <span class="nav-item__label">{{ 'nav.settings'|trans }}</span>
                 <twig:ux:icon name="lucide:chevron-up" class="icon menu__chevron" />
             </button>
             <div class="menu__panel" id="settings-menu" popover data-menu-target="panel" data-action="beforetoggle->menu#place toggle->menu#sync">
+                {% if project and not this.scoped %}
+                    <a class="menu__item" href="{{ path('connector_index') }}"><twig:ux:icon name="lucide:plug" />{{ 'nav.connectors'|trans }}</a>
+                {% endif %}
                 <a class="menu__item" href="{{ path('api_key_index') }}" {% if route == 'api_key_index' %}aria-current="page"{% endif %}><twig:ux:icon name="lucide:key-round" />{{ 'nav.api_keys'|trans }}</a>
                 {% if not app.user or is_granted('ROLE_SUPER_ADMIN') %}
                     <a class="menu__item" href="{{ path('llm_settings') }}" {% if route == 'llm_settings' %}aria-current="page"{% endif %}><twig:ux:icon name="lucide:brain" />{{ 'nav.llm'|trans }}</a>
@@ -152,9 +180,9 @@
                     <a class="menu__item" href="{{ path('admin_users') }}" {% if route == 'admin_users' %}aria-current="page"{% endif %}><twig:ux:icon name="lucide:users" />{{ 'nav.users'|trans }}</a>
                 {% endif %}
                 <hr class="menu__rule">
-                <a class="menu__item" href="https://github.com/quentinRogeret34/Mnemo" target="_blank" rel="noopener"><twig:ux:icon name="simple-icons:github" />{{ 'nav.source'|trans }}</a>
+                <a class="menu__item" href="https://github.com/quentinRogeret34/Mnemo" target="_blank" rel="noopener"><twig:ux:icon name="simple-icons:github" />{{ 'nav.source'|trans }}<span class="visually-hidden"> {{ 'common.opens_new_tab'|trans }}</span></a>
                 {% if is_granted('IS_AUTHENTICATED') %}
-                    <a class="menu__item" href="{{ path('logout') }}"><twig:ux:icon name="lucide:log-out" />{{ 'nav.logout'|trans }}</a>
+                    <a class="menu__item" href="{{ logout_path() }}"><twig:ux:icon name="lucide:log-out" />{{ 'nav.logout'|trans }}</a>
                 {% endif %}
             </div>
         </div>

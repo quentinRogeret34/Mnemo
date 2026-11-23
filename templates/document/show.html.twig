@@ -5,13 +5,22 @@
 {% block title %}{{ document.label }} · {{ 'nav.documents'|trans }}{% endblock %}
 
 {% block crumbs %}
-    <a href="{{ path('document_index') }}">{{ 'nav.documents'|trans }}</a>
-    {% if document.folder %}
-        <span class="crumbs__sep" aria-hidden="true">/</span>
-        <a href="{{ path('document_index', {folder: document.folder.id}) }}">{{ document.folder.name }}</a>
+    {% set scoped = app.user and not is_granted('ROLE_SUPER_ADMIN') %}
+    {% if scoped %}
+        <span>{{ 'nav.documents'|trans }}</span>
+        {% if document.folder %}
+            <span class="crumbs__sep" aria-hidden="true">/</span>
+            <span>{{ document.folder.name }}</span>
+        {% endif %}
+    {% else %}
+        <a href="{{ path('document_index') }}">{{ 'nav.documents'|trans }}</a>
+        {% if document.folder %}
+            <span class="crumbs__sep" aria-hidden="true">/</span>
+            <a href="{{ path('document_index', {folder: document.folder.id}) }}">{{ document.folder.name }}</a>
+        {% endif %}
     {% endif %}
     <span class="crumbs__sep" aria-hidden="true">/</span>
-    <span class="crumbs__current">{{ document.label }}</span>
+    <span class="crumbs__current" aria-current="page">{{ document.label }}</span>
 {% endblock %}
 
 {% block header_actions %}
@@ -21,12 +30,12 @@
 {% block body %}
     <div class="doc-layout" data-controller="toc">
         <div class="explorer__tree" data-controller="disclosure">
-            <button class="button explorer__tree-toggle" type="button" aria-expanded="false" data-disclosure-target="button" data-action="disclosure#toggle">
+            <button class="button explorer__tree-toggle" type="button" aria-expanded="false" aria-controls="doc-tree-panel" data-disclosure-target="button" data-action="disclosure#toggle">
                 <twig:ux:icon name="lucide:folder-open" />
                 <span>{{ 'document.folders'|trans }}</span>
                 <twig:ux:icon name="lucide:chevron-down" class="icon explorer__tree-chevron" />
             </button>
-            <div class="explorer__tree-panel" data-disclosure-target="panel">
+            <div class="explorer__tree-panel" id="doc-tree-panel" data-disclosure-target="panel">
                 {{ include('document/_tree.html.twig', {open: ancestors|map(folder => folder.id), current_folder: null, current_document: document.id}) }}
             </div>
         </div>
@@ -76,14 +85,14 @@
             {{ include('memory/_about.html.twig', {memories: memories}) }}
         </article>
 
-        <aside class="doc-aside">
+        <aside class="doc-aside" aria-label="{{ 'document.properties'|trans }}">
             <nav class="doc-toc" aria-labelledby="toc-title" data-toc-target="nav" data-controller="disclosure" hidden>
-                <button class="button doc-toc__toggle" type="button" aria-expanded="false" data-disclosure-target="button" data-action="disclosure#toggle">
+                <button class="button doc-toc__toggle" type="button" aria-expanded="false" aria-controls="doc-toc-panel" data-disclosure-target="button" data-action="disclosure#toggle">
                     <span>{{ 'document.on_this_page'|trans }}</span>
                     <twig:ux:icon name="lucide:chevron-down" class="icon explorer__tree-chevron" />
                 </button>
                 <h2 class="doc-aside__title" id="toc-title">{{ 'document.on_this_page'|trans }}</h2>
-                <div class="doc-toc__panel" data-disclosure-target="panel">
+                <div class="doc-toc__panel" id="doc-toc-panel" data-disclosure-target="panel">
                     <ol class="doc-toc__list" data-toc-target="list" data-action="click->disclosure#close"></ol>
                 </div>
             </nav>

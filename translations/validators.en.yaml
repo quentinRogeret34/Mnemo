@@ -21,6 +21,7 @@ connector:
     tool:
         missing: 'Give the tool to call.'
 folder:
+    duplicate: 'A folder with this name already exists here.'
     name:
         blank: 'Give the folder a name.'
 memory:
@@ -42,3 +43,4 @@ upload:
     max_size: 'File too large ({{ size }} {{ suffix }}), {{ limit }} {{ suffix }} at most.'
     mime_type: 'The content of the file does not match its extension ({{ type }}).'
     min: 'Add at least one file.'
+'Send the project slug, the repository or the working directory.': 'Send the project slug, the repository or the working directory.'

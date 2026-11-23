@@ -13,12 +13,12 @@
 {% block body %}
     <div class="explorer">
         <div class="explorer__tree" data-controller="disclosure">
-            <button class="button explorer__tree-toggle" type="button" aria-expanded="false" data-disclosure-target="button" data-action="disclosure#toggle">
+            <button class="button explorer__tree-toggle" type="button" aria-expanded="false" aria-controls="doc-tree-panel" data-disclosure-target="button" data-action="disclosure#toggle">
                 <twig:ux:icon name="lucide:folder-open" />
                 <span>{{ 'document.folders'|trans }}</span>
                 <twig:ux:icon name="lucide:chevron-down" class="icon explorer__tree-chevron" />
             </button>
-            <div class="explorer__tree-panel" data-disclosure-target="panel">
+            <div class="explorer__tree-panel" id="doc-tree-panel" data-disclosure-target="panel">
                 {{ include('document/_tree.html.twig', {open: ancestors|map(folder => folder.id), current_folder: current ? current.id : null, current_document: null}) }}
             </div>
         </div>
@@ -47,8 +47,10 @@
                 <p class="dialog__text row__sub">{{ current ? 'document.folder_in'|trans({name: current.name}) : 'document.folder_at_root'|trans }}</p>
                 {{ form_start(folder_form, {attr: {class: 'form-stack', novalidate: 'novalidate'}}) }}
                     {{ form_label(folder_form.name, null, {label_attr: {class: 'visually-hidden'}}) }}
-                    {{ form_widget(folder_form.name, {attr: {class: 'input', autofocus: 'autofocus'}}) }}
-                    {% for error in folder_form.name.vars.errors %}<p class="form-errors">{{ error.message }}</p>{% endfor %}
+                    {{ form_widget(folder_form.name, {attr: {class: 'input', autofocus: 'autofocus'}|merge(folder_form.name.vars.errors|length > 0 ? {'aria-invalid': 'true', 'aria-describedby': 'new-folder-name-error'} : {})}) }}
+                    {% if folder_form.name.vars.errors|length > 0 %}
+                        <div id="new-folder-name-error" role="alert">{% for error in folder_form.name.vars.errors %}<p class="form-errors">{{ error.message }}</p>{% endfor %}</div>
+                    {% endif %}
                     <div class="dialog__actions">
                         <button class="button" type="button" commandfor="new-folder" command="close">{{ 'common.cancel'|trans }}</button>
                         <button class="button button--primary" type="submit"><twig:ux:icon name="lucide:plus" />{{ 'document.create_folder'|trans }}</button>
@@ -75,7 +77,7 @@
                 <div class="table-wrap table-wrap--framed doc-table">
                     <table class="data-table">
                         <thead>
-                            <tr><th>{{ 'document.col.name'|trans }}</th><th>{{ 'nav.projects'|trans }}</th><th>{{ 'nav.rules'|trans }}</th><th>{{ 'nav.code'|trans }}</th><th class="num">{{ 'document.col.added'|trans }}</th></tr>
+                            <tr><th scope="col">{{ 'document.col.name'|trans }}</th><th scope="col">{{ 'nav.projects'|trans }}</th><th scope="col">{{ 'nav.rules'|trans }}</th><th scope="col">{{ 'nav.code'|trans }}</th><th scope="col" class="num">{{ 'document.col.added'|trans }}</th></tr>
                         </thead>
                         <tbody>
                             {% for document in documents.items %}

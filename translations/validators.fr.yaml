@@ -21,6 +21,7 @@ connector:
     tool:
         missing: "Indiquer l'outil à appeler."
 folder:
+    duplicate: 'Un dossier de ce nom existe déjà ici.'
     name:
         blank: 'Donner un nom au dossier.'
 memory:
@@ -42,3 +43,4 @@ upload:
     max_size: 'Fichier trop lourd ({{ size }} {{ suffix }}), maximum {{ limit }} {{ suffix }}.'
     mime_type: 'Le contenu du fichier ne correspond pas à son extension ({{ type }}).'
     min: 'Ajouter au moins un fichier.'
+'Send the project slug, the repository or the working directory.': 'Envoyer le slug du projet, le dépôt ou le répertoire de travail.'

@@ -10,7 +10,10 @@ use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity]
 #[ORM\UniqueConstraint(name: 'node_external_id_unique', columns: ['project_id', 'type', 'external_id'])]
+#[ORM\UniqueConstraint(name: 'node_workspace_external_id_unique', columns: ['type', 'external_id'], options: ['where' => '(project_id IS NULL)'])]
 #[ORM\Index(name: 'node_path_idx', columns: ['project_id', 'path'])]
+#[ORM\Index(name: 'node_type_updated_idx', columns: ['type', 'updated_at'])]
+#[ORM\Index(name: 'node_type_created_idx', columns: ['type', 'created_at'])]
 class Node
 {
     #[ORM\Id]
@@ -57,7 +60,7 @@ class Node
         private ?string $path = null,
         #[ORM\Column(nullable: true)]
         private ?int $line = null,
-        #[ORM\Column(type: Types::JSON)]
+        #[ORM\Column(type: Types::JSON, options: ['jsonb' => true])]
         private array $metadata = [],
     ) {
         $this->createdAt = new \DateTimeImmutable();

@@ -7,6 +7,7 @@ use App\Garden\DuplicateFinder;
 use App\Garden\GardenChecker;
 use App\Graph\KnowledgeReader;
 use App\Llm\LlmUnavailable;
+use Psr\Log\LoggerInterface;
 use Symfony\Bridge\Doctrine\Attribute\MapEntity;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -21,6 +22,7 @@ final class GardenController extends AbstractController
         private readonly GardenChecker $checker,
         private readonly DuplicateFinder $duplicateFinder,
         private readonly KnowledgeReader $knowledgeReader,
+        private readonly LoggerInterface $logger,
     ) {
     }
 
@@ -46,6 +48,9 @@ final class GardenController extends AbstractController
             $this->addFlash('success', new TranslatableMessage('flash.garden.compared', ['compared' => $report['compared'], 'proposed' => $report['proposed']]));
         } catch (LlmUnavailable|\UnexpectedValueException $exception) {
             $this->addFlash('error', $exception instanceof LlmUnavailable ? $exception->translatable() : $exception->getMessage());
+        } catch (\Throwable $exception) {
+            $this->logger->error('Duplicate detection failed for project {slug}: {message}', ['slug' => $project->getSlug(), 'message' => $exception->getMessage(), 'exception' => $exception]);
+            $this->addFlash('error', new TranslatableMessage('flash.llm.error'));
         }
 
         return $this->redirectToRoute('garden_show', ['slug' => $project->getSlug()]);

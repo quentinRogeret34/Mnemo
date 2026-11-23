@@ -54,7 +54,7 @@ final class CredentialResolver
         foreach ($values as $name => $value) {
             $sealed[$name] = match (true) {
                 self::MASK === $value => $previous[$name] ?? '',
-                str_contains($value, 'env:') => $value,
+                1 === preg_match('/\benv:[A-Za-z_][A-Za-z0-9_]*/', $value) => $value,
                 default => self::SEALED.$this->secretBox->encrypt($value),
             };
         }

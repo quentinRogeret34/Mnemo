@@ -31,6 +31,7 @@
     --color-format-pdf: oklch(52% 0.17 25);
     --color-format-docx: oklch(50% 0.15 255);
     --color-format-ink: oklch(99% 0.004 285);
+    --color-on-solid: light-dark(oklch(99% 0.004 285), oklch(16% 0.01 285));
     --color-graphite: light-dark(oklch(19% 0.008 285), oklch(10.5% 0.004 285));
     --color-graphite-2: light-dark(oklch(27% 0.012 285), oklch(21% 0.01 285));
     --color-graphite-rule: light-dark(oklch(33% 0.012 285), oklch(27% 0.01 285));
@@ -41,7 +42,7 @@
     --color-series-wash: color-mix(in oklch, var(--color-series) 10%, transparent);
     --color-hub-file: light-dark(#2a78d6, #3987e5);
     --color-hub-rule: light-dark(#eb6834, #d95926);
-    --color-hub-document: light-dark(#1baf7a, #199e70);
+    --color-hub-document: light-dark(#158a5f, #199e70);
     --color-hub-project: var(--color-ink-2);
     --shadow-pop: 0 8px 24px light-dark(oklch(21% 0.014 285 / 0.12), oklch(0% 0 0 / 0.5));
 

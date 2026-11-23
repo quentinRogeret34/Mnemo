@@ -33,12 +33,16 @@ security:
                 login_path: login
                 check_path: login
                 enable_csrf: true
+            login_throttling:
+                max_attempts: 5
+                interval: '15 minutes'
             custom_authenticators:
                 - App\Security\OAuth\OAuthAuthenticator
             entry_point: form_login
             access_denied_handler: App\Security\AccessDeniedHandler
             logout:
                 path: logout
+                enable_csrf: true
 
     # APP_ACCESS_ROLE is PUBLIC_ACCESS on a local machine and ROLE_USER once the server is shared.
     access_control:

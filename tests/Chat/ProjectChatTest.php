@@ -112,7 +112,7 @@ final class ProjectChatTest extends WebTestCase
         $crawler = $this->client->request('GET', '/projects/demo/chat');
 
         self::assertResponseIsSuccessful();
-        self::assertCount(1, $crawler->filter('.chat input#chat-message'));
+        self::assertCount(1, $crawler->filter('.chat textarea#chat-message'));
         self::assertSame('Assistant', $crawler->filter('.sidebar a[aria-current="page"] .nav-item__label')->text());
     }
 

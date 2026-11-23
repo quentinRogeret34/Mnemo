@@ -79,7 +79,7 @@
 
     <section class="graph-panel block" aria-labelledby="graph-title"
              data-controller="graph"
-             data-action="theme:change@window->graph#load"
+             data-action="theme:change@window->graph#render"
              data-graph-url-value="{{ path('file_graph', {slug: project.slug, path: file.path}) }}"
              data-graph-file-url-value="{{ path('file_show', {slug: project.slug, path: '__PATH__'}) }}">
         <div class="graph-panel__bar">
@@ -90,8 +90,8 @@
                 <label><input type="radio" name="depth" value="2" data-action="graph#setDepth"><span>{{ 'file.hops'|trans({count: 2}) }}</span></label>
             </fieldset>
             <p class="graph-panel__legend">
-                <span><span class="legend-line" aria-hidden="true"></span>EXTRACTED</span>
-                <span><span class="legend-line legend-line--dashed" aria-hidden="true"></span>INFERRED</span>
+                <span><span class="legend-line" aria-hidden="true"></span>{{ 'file.confidence.extracted'|trans }}</span>
+                <span><span class="legend-line legend-line--dashed" aria-hidden="true"></span>{{ 'file.confidence.inferred'|trans }}</span>
             </p>
         </div>
         <div class="graph-panel__canvas">
@@ -121,10 +121,20 @@
                     <ul class="list">
                         {% for commit in history %}
                             <li class="row row--commit">
-                                <a class="code-chip" href="{{ commit.url }}" rel="noopener noreferrer" target="_blank">{{ commit.sha|slice(0, 7) }}</a>
+                                {% if commit.url %}
+                                    <a class="code-chip" href="{{ commit.url }}" rel="noopener noreferrer" target="_blank" aria-label="{{ commit.sha|slice(0, 7) }} {{ 'common.opens_new_tab'|trans }}">{{ commit.sha|slice(0, 7) }}</a>
+                                {% else %}
+                                    <span class="code-chip">{{ commit.sha|slice(0, 7) }}</span>
+                                {% endif %}
                                 <span class="row__title">
                                     <span>{{ commit.label }}</span>
-                                    {% for ticket in commit.tickets %}<a class="tag" href="{{ ticket.url }}" rel="noopener noreferrer" target="_blank" title="{{ ticket.title }}">{{ ticket.ref }}</a>{% endfor %}
+                                    {% for ticket in commit.tickets %}
+                                        {% if ticket.url %}
+                                            <a class="tag" href="{{ ticket.url }}" rel="noopener noreferrer" target="_blank" title="{{ ticket.title }}" aria-label="{{ ticket.ref }} {{ 'common.opens_new_tab'|trans }}">{{ ticket.ref }}</a>
+                                        {% else %}
+                                            <span class="tag" title="{{ ticket.title }}">{{ ticket.ref }}</span>
+                                        {% endif %}
+                                    {% endfor %}
                                 </span>
                                 <span class="row__meta"><span>{{ commit.author }}</span><span class="num">{{ commit.date ? commit.date|format_date('short') }}</span></span>
                             </li>

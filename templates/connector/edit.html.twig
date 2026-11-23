@@ -22,6 +22,7 @@
             </aside>
         {% endif %}
         {{ form_start(form, {attr: {class: 'form-stack', novalidate: 'novalidate'}}) }}
+            {{ form_errors(form) }}
             <fieldset>
                 <legend>{{ 'connector.server'|trans }}</legend>
                 {{ form_row(form.name) }}

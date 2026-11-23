@@ -22,8 +22,8 @@
     <form class="panel key-form" method="post" action="{{ path('api_key_index') }}">
         <input type="hidden" name="_token" value="{{ csrf_token('api-key-create') }}">
         <label for="key-name">{{ 'form.project.name'|trans }}</label>
-        <input class="input" id="key-name" type="text" name="name" maxlength="100" placeholder="claude-code-portable" required>
-        {% if error %}<p class="form-errors">{{ error }}</p>{% endif %}
+        <input class="input" id="key-name" type="text" name="name" maxlength="100" placeholder="{{ 'keys.placeholder'|trans }}" required{% if error %} aria-invalid="true" aria-describedby="key-name-error"{% endif %}>
+        {% if error %}<p class="form-errors" id="key-name-error" role="alert">{{ error }}</p>{% endif %}
         {% if projects is not empty %}
             <fieldset class="key-form__projects">
                 <legend>{{ 'keys.projects'|trans }} <span class="row__sub">{{ 'keys.projects_help'|trans }}</span></legend>
@@ -42,7 +42,7 @@
     {% else %}
         <div class="table-wrap keys-table">
             <table class="data-table">
-                <thead><tr><th>{{ 'form.project.name'|trans }}</th><th>{{ 'llm.key'|trans }}</th><th>{{ 'nav.projects'|trans }}</th><th class="num">{{ 'keys.created_at'|trans }}</th><th class="num">{{ 'keys.last_used'|trans }}</th><th></th></tr></thead>
+                <thead><tr><th scope="col">{{ 'form.project.name'|trans }}</th><th scope="col">{{ 'llm.key'|trans }}</th><th scope="col">{{ 'nav.projects'|trans }}</th><th scope="col" class="num">{{ 'keys.created_at'|trans }}</th><th scope="col" class="num">{{ 'keys.last_used'|trans }}</th><th scope="col"><span class="visually-hidden">{{ 'project.index.col.action'|trans }}</span></th></tr></thead>
                 <tbody>
                     {% for key in keys %}
                         <tr class="{{ key.revoked ? 'row--archived' }}">

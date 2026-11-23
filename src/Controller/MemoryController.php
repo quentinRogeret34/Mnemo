@@ -18,6 +18,7 @@ use App\Security\MemoryAccess;
 use App\Security\ProjectScope;
 use App\Verify\MemoryVerifier;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -43,6 +44,7 @@ final class MemoryController extends AbstractController
         private readonly ProjectScope $projectScope,
         private readonly MemoryAccess $memoryAccess,
         private readonly TranslatorInterface $translator,
+        private readonly LoggerInterface $logger,
     ) {
     }
 
@@ -130,6 +132,9 @@ final class MemoryController extends AbstractController
         if (!$this->isCsrfTokenValid('delete-memory-'.$id, $request->getPayload()->getString('_token'))) {
             throw new AccessDeniedHttpException('Invalid CSRF token.');
         }
+        if ($memory->getProjects()->exists(fn (int $key, Project $project): bool => !$this->projectScope->allows($project))) {
+            throw new AccessDeniedHttpException('Cannot delete a memory shared with projects outside your scope.');
+        }
 
         $this->entityManager->remove($memory);
         $this->entityManager->flush();
@@ -179,7 +184,7 @@ final class MemoryController extends AbstractController
             throw new AccessDeniedHttpException('Invalid CSRF token.');
         }
 
-        $project = $memory->getProjects()->first();
+        $project = $memory->getProjects()->filter(fn (Project $p): bool => $this->projectScope->allows($p))->first();
         if (false === $project) {
             $this->addFlash('error', new TranslatableMessage('flash.memory.verify_needs_project'));
 
@@ -191,6 +196,9 @@ final class MemoryController extends AbstractController
             $this->addFlash('success', new TranslatableMessage('flash.memory.verified', ['verdict' => $verification['verdict']]));
         } catch (LlmUnavailable|\UnexpectedValueException $exception) {
             $this->addFlash('error', $exception instanceof LlmUnavailable ? $exception->translatable() : $exception->getMessage());
+        } catch (\Throwable $exception) {
+            $this->logger->error('Memory verification failed for memory {id}: {message}', ['id' => $id, 'message' => $exception->getMessage(), 'exception' => $exception]);
+            $this->addFlash('error', new TranslatableMessage('flash.llm.error'));
         }
 
         return $this->redirectToRoute('memory_show', ['id' => $id]);

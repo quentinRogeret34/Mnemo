@@ -6,6 +6,10 @@ use App\Entity\Connector;
 use App\Entity\Project;
 use App\Enum\MemoryType;
 use App\Forge\GitHubApp;
+use App\Llm\LlmUnavailable;
+use App\Security\SafeUrl;
+use Psr\Log\LoggerInterface;
+use Symfony\Component\Lock\LockFactory;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
@@ -30,6 +34,8 @@ final class PullRequestReviewer
         private readonly ReviewKnowledge $knowledge,
         private readonly ReviewAdvisor $advisor,
         private readonly UrlGeneratorInterface $urlGenerator,
+        private readonly ?LockFactory $lockFactory = null,
+        private readonly ?LoggerInterface $logger = null,
     ) {
     }
 
@@ -37,6 +43,20 @@ final class PullRequestReviewer
      * @return string the comment, whether or not it was published
      */
     public function review(Connector $connector, int $number, bool $publish = true): string
+    {
+        $lock = $publish && null !== $this->lockFactory ? $this->lockFactory->createLock(\sprintf('pr-review-%d-%d', (int) $connector->getId(), $number), 120) : null;
+        if (null !== $lock && !$lock->acquire()) {
+            return '';
+        }
+
+        try {
+            return $this->doReview($connector, $number, $publish);
+        } finally {
+            $lock?->release();
+        }
+    }
+
+    private function doReview(Connector $connector, int $number, bool $publish): string
     {
         $project = $connector->getProject() ?? throw new \RuntimeException('Un connecteur de forge doit être rattaché à un projet.');
         $arguments = $connector->getArguments();
@@ -76,7 +96,10 @@ final class PullRequestReviewer
                     '' === ($arguments['review_model'] ?? '') ? null : (string) $arguments['review_model'],
                 );
             } catch (\Throwable $exception) {
-                $note = 'Lecture du diff par le LLM indisponible : '.$exception->getMessage();
+                $this->logger?->warning('PR review LLM analysis failed for {repo}#{number}: {message}', ['repo' => $repository, 'number' => $number, 'message' => $exception->getMessage()]);
+                $note = $exception instanceof LlmUnavailable
+                    ? 'Lecture du diff par le LLM indisponible : '.$exception->getMessage()
+                    : 'Lecture du diff par le LLM temporairement indisponible.';
             }
         }
 
@@ -105,7 +128,7 @@ final class PullRequestReviewer
             'title' => (string) $pullRequest['title'],
             'author' => (string) ($pullRequest['user']['login'] ?? ''),
             'draft' => (bool) ($pullRequest['draft'] ?? false),
-            'url' => (string) $pullRequest['html_url'],
+            'url' => SafeUrl::http((string) ($pullRequest['html_url'] ?? '')) ?? '',
             'updated_at' => (string) $pullRequest['updated_at'],
         ], $pullRequests);
     }

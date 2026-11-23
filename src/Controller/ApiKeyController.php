@@ -12,12 +12,14 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Translation\TranslatableMessage;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 final class ApiKeyController extends AbstractController
 {
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly ProjectScope $projectScope,
+        private readonly TranslatorInterface $translator,
     ) {
     }
 
@@ -42,7 +44,7 @@ final class ApiKeyController extends AbstractController
             }
             $name = trim($request->getPayload()->getString('name'));
             if ('' === $name || mb_strlen($name) > 100) {
-                $error = 'Donner un nom à la clé (100 caractères au plus).';
+                $error = $this->translator->trans('keys.error_name');
             } else {
                 [$key, $token] = ApiKey::generate($name);
                 $key->setOwner($this->projectScope->viewer());

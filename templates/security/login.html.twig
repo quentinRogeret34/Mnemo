@@ -1,13 +1,11 @@
 <!DOCTYPE html>
 <html lang="{{ app.request.locale }}">
     <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        {{ include('_appearance_head.html.twig') }}
+        {{ include('_head_common.html.twig') }}
         <title>{{ 'login.title'|trans }} · {{ 'app.name'|trans }}</title>
         {{ importmap('app') }}
     </head>
-    <body>
+    <body data-controller="busy" data-action="submit@window->busy#mark pageshow@window->busy#reset">
         <main class="login">
             <div class="login__card">
                 <span class="workspace"><span class="workspace__mark" aria-hidden="true">M</span>{{ 'app.name'|trans }}</span>
@@ -17,16 +15,16 @@
                     <a class="button login__provider" href="{{ path('oauth_connect', {provider: key}) }}">{% if key == 'github' %}<twig:ux:icon name="simple-icons:github" />{% endif %}{{ 'login.continue_with'|trans({provider: label}) }}</a>
                 {% endfor %}
                 {% if providers is empty %}<p class="row__sub">{{ 'login.no_provider'|trans({variables: '<span class="mono">OAUTH_*</span>'})|raw }}</p>{% endif %}
-                <details class="login__password" {% if error and last_username %}open{% endif %}>
+                <details class="login__password" {% if providers is empty or (error and last_username) %}open{% endif %}>
                     <summary class="row__sub">{{ 'login.fallback'|trans }}</summary>
-            <form method="post" action="{{ path('login') }}">
-                <label for="username">{{ 'login.username'|trans }}</label>
-                <input class="input" id="username" type="text" name="_username" value="{{ last_username }}" autocomplete="username" required autofocus>
-                <label for="password">{{ 'login.password'|trans }}</label>
-                <input class="input" id="password" type="password" name="_password" autocomplete="current-password" required>
-                <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
-                <button class="button button--primary" type="submit">{{ 'login.submit'|trans }}</button>
-            </form>
+                    <form method="post" action="{{ path('login') }}">
+                        <label for="username">{{ 'login.username'|trans }}</label>
+                        <input class="input" id="username" type="text" name="_username" value="{{ last_username }}" autocomplete="username" required autofocus>
+                        <label for="password">{{ 'login.password'|trans }}</label>
+                        <input class="input" id="password" type="password" name="_password" autocomplete="current-password" required>
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
+                        <button class="button button--primary" type="submit">{{ 'login.submit'|trans }}</button>
+                    </form>
                 </details>
             </div>
         </main>

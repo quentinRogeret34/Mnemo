@@ -45,8 +45,11 @@ final class OAuthAuthenticator extends AbstractAuthenticator
     public function authenticate(Request $request): Passport
     {
         $provider = (string) $request->attributes->get('provider');
-        $expected = $request->getSession()->remove(self::STATE);
-        if (!\is_string($expected) || '' === $expected || !hash_equals($expected, $request->query->getString('state'))) {
+        $pending = $request->getSession()->remove(self::STATE);
+        $expected = \is_array($pending) ? ($pending['state'] ?? null) : null;
+        $expectedProvider = \is_array($pending) ? ($pending['provider'] ?? null) : null;
+        $verifier = \is_array($pending) && \is_string($pending['verifier'] ?? null) ? $pending['verifier'] : null;
+        if (!\is_string($expected) || '' === $expected || $expectedProvider !== $provider || !hash_equals($expected, $request->query->getString('state'))) {
             throw new CustomUserMessageAuthenticationException('La connexion a expiré, recommencer.');
         }
         if ('' === $request->query->getString('code')) {
@@ -54,7 +57,7 @@ final class OAuthAuthenticator extends AbstractAuthenticator
         }
 
         try {
-            $profile = $this->client->profile($provider, $request->query->getString('code'), $this->urlGenerator->generate('oauth_check', ['provider' => $provider], UrlGeneratorInterface::ABSOLUTE_URL));
+            $profile = $this->client->profile($provider, $request->query->getString('code'), $this->urlGenerator->generate('oauth_check', ['provider' => $provider], UrlGeneratorInterface::ABSOLUTE_URL), $verifier);
         } catch (\Throwable $exception) {
             throw new CustomUserMessageAuthenticationException($exception instanceof \RuntimeException && !$exception instanceof HttpExceptionInterface ? $exception->getMessage() : 'Le fournisseur a refusé la connexion.');
         }
@@ -78,11 +81,12 @@ final class OAuthAuthenticator extends AbstractAuthenticator
 
     private function account(OAuthProfile $profile): User
     {
+        $email = strtolower(trim($profile->email));
         $users = $this->entityManager->getRepository(User::class);
-        $user = $users->findOneBy(['provider' => $profile->provider, 'providerId' => $profile->id]) ?? $users->findOneBy(['email' => $profile->email]);
+        $user = $users->findOneBy(['provider' => $profile->provider, 'providerId' => $profile->id]) ?? $users->findOneBy(['email' => $email]);
         if (null === $user) {
-            $user = new User($profile->email, $profile->name, $profile->provider, $profile->id);
-            if (\in_array(strtolower($profile->email), array_map('trim', explode(',', strtolower($this->adminEmails))), true)) {
+            $user = new User($email, $profile->name, $profile->provider, $profile->id);
+            if (\in_array($email, array_map('trim', explode(',', strtolower($this->adminEmails))), true)) {
                 $user->setStatus(UserStatus::Active);
                 $user->setSuperAdmin(true);
             }

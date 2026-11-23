@@ -11,10 +11,10 @@
         <a class="filetree__root{{ selected is null ? ' is-current' }}" href="{{ path('memory_index', scope|merge({group: group})) }}">{{ ux_icon('lucide:lightbulb') }}{{ 'nav.memories'|trans }}</a>
         <span class="filetree__count">{{ tree|length }}</span>
     </div>
-    <nav class="segmented-links" aria-label="{{ 'memory.tree.group_by'|trans }}">
+    <div class="segmented-links" role="group" aria-label="{{ 'memory.tree.group_by'|trans }}">
         <a href="{{ path('memory_index', scope|merge({group: 'type'})) }}" {% if group == 'type' %}aria-current="page"{% endif %}>{{ 'memory.tree.by_type'|trans }}</a>
         <a href="{{ path('memory_index', scope|merge({group: 'source'})) }}" {% if group == 'source' %}aria-current="page"{% endif %}>{{ 'memory.tree.by_source'|trans }}</a>
-    </nav>
+    </div>
     <label class="filetree__search">
         {{ ux_icon('lucide:search') }}
         <input class="input" type="search" placeholder="{{ 'document.filter_tree'|trans }}" aria-label="{{ 'memory.tree.filter'|trans }}" data-action="filetree#filter" data-filetree-target="query">
@@ -29,11 +29,7 @@
                     <summary class="filetree__row{{ selected == key ? ' is-current' }}">
                         {{ ux_icon('lucide:chevron-right', {class: 'icon filetree__chevron'}) }}
                         {{ ux_icon(group == 'type' ? (type_icons[key] ?? 'lucide:info') : 'lucide:plug', {class: 'icon memtree-nav__icon memtree-nav__icon--' ~ (group == 'type' ? key : 'source')}) }}
-                        {% if key == '' %}
-                            <span class="filetree__label">{{ label }}</span>
-                        {% else %}
-                            <a class="filetree__label" href="{{ path('memory_index', scope|merge(filter)|merge({group: group})) }}" {% if selected == key %}aria-current="page"{% endif %}>{{ label }}</a>
-                        {% endif %}
+                        <span class="filetree__label">{{ label }}</span>
                         <span class="filetree__count">{{ items|length }}</span>
                     </summary>
                     <ul class="filetree__children">
@@ -47,6 +43,9 @@
                         {% endfor %}
                     </ul>
                 </details>
+                {% if key != '' %}
+                    <a class="filetree__overlay-link" href="{{ path('memory_index', scope|merge(filter)|merge({group: group})) }}" {% if selected == key %}aria-current="page"{% endif %}><span class="visually-hidden">{{ label }}</span></a>
+                {% endif %}
             </li>
         {% endfor %}
     </ul>

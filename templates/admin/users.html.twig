@@ -28,7 +28,7 @@
                         <select class="select" id="status-{{ user.id }}" name="status">
                             {% for status in enum_cases('App\\Enum\\UserStatus') %}<option value="{{ status.value }}" {{ user.status == status ? 'selected' }}>{{ status|trans }}</option>{% endfor %}
                         </select>
-                        <label class="key-form__check"><input type="checkbox" name="super_admin" value="1" {{ user.superAdmin ? 'checked' }}> Super admin</label>
+                        <label class="key-form__check"><input type="checkbox" name="super_admin" value="1" {{ user.superAdmin ? 'checked' }}> {{ 'admin.super_admin'|trans }}</label>
                         <fieldset class="key-form__projects">
                             <legend class="visually-hidden">{{ 'admin.groups_of'|trans({name: user.name}) }}</legend>
                             {% for group in groups %}

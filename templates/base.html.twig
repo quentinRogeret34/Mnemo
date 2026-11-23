@@ -1,21 +1,15 @@
 <!DOCTYPE html>
 <html lang="{{ app.request.locale }}">
     <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        {{ include('_appearance_head.html.twig') }}
+        {{ include('_head_common.html.twig') }}
         <title>{% block title %}{{ 'nav.projects'|trans }}{% endblock %} · {{ 'app.name'|trans }}</title>
-        <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22><rect x=%223%22 y=%223%22 width=%2210%22 height=%2210%22 rx=%222.5%22 fill=%22%236250d6%22/></svg>">
-        <link rel="preconnect" href="https://fonts.googleapis.com">
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap">
         {% block stylesheets %}{% endblock %}
 
         {% block javascripts %}
             {% block importmap %}{{ importmap('app') }}{% endblock %}
         {% endblock %}
 
-        {% set frankenphp_hot_reload = app.request.server.get('FRANKENPHP_HOT_RELOAD') %}
+        {% set frankenphp_hot_reload = app.debug ? app.request.server.get('FRANKENPHP_HOT_RELOAD') : null %}
         {% if frankenphp_hot_reload %}
         <meta name="frankenphp-hot-reload:url" content="{{ frankenphp_hot_reload }}">
         <script src="https://cdn.jsdelivr.net/npm/idiomorph"></script>
@@ -23,6 +17,7 @@
         {% endif %}
     </head>
     <body data-controller="search-hotkey busy" data-search-hotkey-url-value="{{ (project ?? null) ? path('project_code', {slug: project.slug}) : '' }}" data-action="keydown@window->search-hotkey#handle submit@window->busy#mark pageshow@window->busy#reset">
+        <a class="visually-hidden skip-link" href="#main-content">{{ 'layout.skip_to_content'|trans }}</a>
         <div class="app" data-controller="sidebar" data-sidebar-collapse-label-value="{{ 'nav.collapse'|trans }}" data-sidebar-expand-label-value="{{ 'nav.expand'|trans }}" data-action="keydown.esc@window->sidebar#close">
             <twig:Sidebar :project="project ?? null" />
             <div class="sidebar-backdrop" data-sidebar-target="backdrop" data-action="click->sidebar#close" hidden></div>
@@ -38,7 +33,9 @@
                             dashboard: 'tableau-de-bord', project_index: 'projets', project_show: 'documents', document_index: 'documents', document_show: 'documents',
                             rule_index: 'regles', rule_show: 'regles', memory_index: 'memoires', memory_show: 'memoires', memory_graph: 'graphe-memoires',
                             proposal_index: 'a-valider', garden_show: 'jardinage', project_code: 'code', file_show: 'code',
-                            connector_index: 'connexions', connector_show: 'connexions', connector_new: 'connexions', connector_edit: 'connexions', api_key_index: 'cles-api', admin_users: 'utilisateurs', activity: 'activite',
+                            project_chat: 'assistant', agent_asset_index: 'fichiers-agents', agent_asset_new: 'fichiers-agents', agent_asset_edit: 'fichiers-agents',
+                            connector_index: 'connexions', connector_show: 'connexions', connector_new: 'connexions', connector_edit: 'connexions',
+                            api_key_index: 'cles-api', llm_settings: 'modeles-ia', appearance: 'apparence', admin_users: 'utilisateurs', activity: 'activite', activity_feed: 'activite',
                         }[app.request.attributes.get('_route')] ?? null %}
                         <button class="button button--ghost palette-trigger" type="button" data-action="search-hotkey#palette" aria-keyshortcuts="Meta+K Control+K"><twig:ux:icon name="lucide:search" /><span class="header__label">{{ 'layout.search'|trans }}</span> <kbd class="kbd" aria-hidden="true">⌘K</kbd></button>
                         {% if help %}<a class="button button--ghost header__help" href="{{ path('wiki') }}#{{ help }}" title="{{ 'layout.help_title'|trans }}"><twig:ux:icon name="lucide:book-open" class="icon header__help-icon" /><span class="header__label">{{ 'layout.help'|trans }}</span></a>{% endif %}
@@ -48,7 +45,7 @@
                         </button>
                     </div>
                 </header>
-                <main class="content">
+                <main class="content" id="main-content" tabindex="-1">
                     {% block body %}{% endblock %}
                 </main>
             </div>

@@ -15,16 +15,17 @@
 {% endblock %}
 
 {% block body %}
+    {% set scoped = app.user and not is_granted('ROLE_SUPER_ADMIN') %}
     {% set verdicts = {verified: 'verdict.verified', refuted: 'verdict.refuted', conflict: 'verdict.conflict', unverified: 'verdict.unverified', none: 'verdict.never'} %}
     {% set filtered = q or type or archived or verdict or source %}
     <div class="explorer explorer--memories">
         <div class="explorer__tree" data-controller="disclosure">
-            <button class="button explorer__tree-toggle" type="button" aria-expanded="false" data-disclosure-target="button" data-action="disclosure#toggle">
+            <button class="button explorer__tree-toggle" type="button" aria-expanded="false" aria-controls="memory-tree-panel" data-disclosure-target="button" data-action="disclosure#toggle">
                 <twig:ux:icon name="lucide:lightbulb" />
                 <span>{{ 'memory.tree.label'|trans }}</span>
                 <twig:ux:icon name="lucide:chevron-down" class="icon explorer__tree-chevron" />
             </button>
-            <div class="explorer__tree-panel" data-disclosure-target="panel">
+            <div class="explorer__tree-panel" id="memory-tree-panel" data-disclosure-target="panel">
                 {{ include('memory/_tree.html.twig') }}
             </div>
         </div>
@@ -42,8 +43,10 @@
                 <h2 class="dialog__title" id="memory-new-title">{{ 'memory.new'|trans }}</h2>
                 {{ form_start(form, {attr: {class: 'form-stack', novalidate: 'novalidate'}}) }}
                     {{ form_label(form.text, null, {label_attr: {class: 'visually-hidden'}}) }}
-                    {{ form_widget(form.text, {attr: {class: 'input memory-new__text', rows: 4}}) }}
-                    {% for error in form.text.vars.errors %}<p class="form-errors">{{ error.message }}</p>{% endfor %}
+                    {{ form_widget(form.text, {attr: {class: 'input memory-new__text', rows: 4}|merge(form.text.vars.errors|length > 0 ? {'aria-invalid': 'true', 'aria-describedby': 'memory-new-text-error'} : {})}) }}
+                    {% if form.text.vars.errors|length > 0 %}
+                        <div id="memory-new-text-error" role="alert">{% for error in form.text.vars.errors %}<p class="form-errors">{{ error.message }}</p>{% endfor %}</div>
+                    {% endif %}
                     <div class="memory-new__actions">
                         {{ form_label(form.type, null, {label_attr: {class: 'visually-hidden'}}) }}
                         {{ form_widget(form.type, {attr: {class: 'select'}}) }}
@@ -67,7 +70,7 @@
                     {% if state[key] is defined %}<input type="hidden" name="{{ key }}" value="{{ state[key] }}">{% endif %}
                 {% endfor %}
                 <select class="select list-toolbar__sort" name="project" aria-label="{{ 'memory.index.project'|trans }}" data-action="autosubmit#submit">
-                    <option value="">{{ 'nav.all_projects'|trans }}</option>
+                    {% if not scoped %}<option value="">{{ 'nav.all_projects'|trans }}</option>{% endif %}
                     {% for item in projects %}<option value="{{ item.slug }}" {{ project and project.id == item.id ? 'selected' }}>{{ item.name }}</option>{% endfor %}
                 </select>
                 <select class="select" name="verdict" aria-label="{{ 'memory.verification'|trans }}" data-action="autosubmit#submit">
@@ -100,6 +103,7 @@
                 {% else %}
                     <twig:EmptyState :title="'memory.index.empty'|trans" :text="'memory.index.empty_text'|trans">
                         <twig:block name="icon"><twig:ux:icon name="lucide:lightbulb" /></twig:block>
+                        <twig:block name="actions"><button class="button button--primary" type="button" commandfor="memory-new" command="show-modal"><twig:ux:icon name="lucide:plus" />{{ 'memory.new'|trans }}</button></twig:block>
                     </twig:EmptyState>
                 {% endif %}
             {% else %}
@@ -109,7 +113,7 @@
                 <div class="table-wrap table-wrap--framed memory-table">
                     <table class="data-table">
                         <thead>
-                            <tr><th>{{ 'form.memory.text'|trans }}</th><th>{{ 'nav.projects'|trans }}</th><th>{{ 'memory.verification'|trans }}</th><th class="num">{{ 'memory.index.links'|trans }}</th><th class="num">{{ 'memory.index.updated'|trans }}</th></tr>
+                            <tr><th scope="col">{{ 'form.memory.text'|trans }}</th><th scope="col">{{ 'nav.projects'|trans }}</th><th scope="col">{{ 'memory.verification'|trans }}</th><th scope="col" class="num">{{ 'memory.index.links'|trans }}</th><th scope="col" class="num">{{ 'memory.index.updated'|trans }}</th></tr>
                         </thead>
                         <tbody>
                             {% for memory in memories.items %}

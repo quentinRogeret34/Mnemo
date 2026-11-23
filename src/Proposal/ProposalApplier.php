@@ -69,15 +69,19 @@ final class ProposalApplier
             throw new \InvalidArgumentException('La mémoire doit contenir entre 1 et 1000 caractères.');
         }
         $type = MemoryType::from($payload['type']);
-        $target = null === ($payload['target_id'] ?? null) ? null : $this->activeMemory($payload['target_id']);
+        $reconciliation = (string) ($payload['reconciliation'] ?? 'new');
+        $target = null === ($payload['target_id'] ?? null) ? null : $this->activeMemory((int) $payload['target_id']);
+        if (\in_array($reconciliation, ['retracts', 'updates', 'supersedes'], true) && null === $target) {
+            throw new \InvalidArgumentException('La mémoire visée est absente de la proposition : rejeter la proposition.');
+        }
 
-        if ('retracts' === $payload['reconciliation']) {
+        if ('retracts' === $reconciliation) {
             $this->memoryStore->archive($target, MemoryStore::STATUS_RETRACTED);
 
             return null;
         }
 
-        if ('updates' === $payload['reconciliation']) {
+        if ('updates' === $reconciliation) {
             $memory = $target;
             $this->memoryStore->update($memory, $lesson, $type);
         } else {
@@ -87,7 +91,7 @@ final class ProposalApplier
                 'evidence' => $payload['evidence'],
                 'learned_from' => $payload['source'],
             ]);
-            if ('supersedes' === $payload['reconciliation']) {
+            if ('supersedes' === $reconciliation) {
                 $this->memoryStore->archive($target, MemoryStore::STATUS_SUPERSEDED, $memory);
             }
         }

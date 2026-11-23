@@ -57,6 +57,7 @@ admin:
     pending: pending
     seen: 'seen on {date}'
     status_of: 'Status of {name}'
+    super_admin: 'Super admin'
     title: 'Users and groups'
 agent:
     content: Content
@@ -105,6 +106,7 @@ chat:
     no_answer: 'No answer.'
     placeholder: 'Ask something about {name}'
     reset: 'New conversation'
+    reset_confirm: 'Clear this conversation and start over?'
     send: Send
     thinking: Thinking...
     you: You
@@ -120,6 +122,7 @@ common:
     failed: failed
     filter: Filter
     open: Open
+    opens_new_tab: '(opens in a new tab)'
     reset: Reset
     save: Save
     save_settings: 'Save the settings'
@@ -467,6 +470,9 @@ enum:
         disabled: Disabled
         pending: Pending
 file:
+    confidence:
+        extracted: extracted
+        inferred: inferred
     count:
         dependencies: '{count, plural, one {# dependency} other {# dependencies}}'
         documents: '{count, plural, one {# document} other {# documents}}'
@@ -546,6 +552,7 @@ flash:
         skipped: 'No project possible for {repositories}: an archived or out-of-reach project already has this repository, or its name is taken.'
         token_refused: 'GitHub refused the token: connect the account again.'
     llm:
+        error: 'The language model failed: {error}'
         saved: 'Model settings saved.'
         saved_reindex: 'Settings saved. The content is indexed again in the background with the embedding model.'
     memory:
@@ -713,9 +720,11 @@ keys:
     created_at: Created
     empty: 'No key'
     empty_text: 'As long as access is not restricted (APP_ACCESS_ROLE=ROLE_USER), the agents call the server without a key.'
+    error_name: 'Give a name (100 characters at most).'
     key: key
     last_used: 'Last used'
     lede: 'A key identifies an agent or a machine calling {mcp} and {api}, with the header {header}. Limited to projects, it reads and writes in those only.'
+    placeholder: 'e.g. Claude Code — MacBook'
     projects: 'Allowed projects'
     projects_help: 'none checked: every project'
     revoke: Revoke
@@ -727,6 +736,7 @@ layout:
     help: Help
     help_title: 'Understand this page'
     search: Search
+    skip_to_content: 'Skip to main content'
     theme_dark: 'Switch to the dark theme'
     theme_light: 'Switch to the light theme'
 llm:
@@ -775,6 +785,7 @@ memory:
         no_match: 'Nothing matches.'
         no_match_project: 'Nothing matches (attach a project to link its code and rules).'
         previous_kept: 'The previous version stays in the history.'
+        saved: 'Saved.'
         unknown_type: 'Unknown memory type.'
         updated: 'Updated on'
     graph:
@@ -902,13 +913,16 @@ nav:
     memory_graph: 'Memory graph'
     no_project: 'No project'
     no_project_matches: 'No matching project'
+    overview: Overview
     project_settings: 'Project settings'
     projects: Projects
     rules: 'Business rules'
     settings: Settings
+    sidebar: 'Primary navigation'
     source: 'Source code on GitHub'
     switch_project: 'Switch project'
     to_review: 'To review'
+    tools: Tools
     users: Users
     wiki: Wiki
     workspace: Workspace
@@ -1011,6 +1025,7 @@ project:
         project: Project
         restore: 'Restore the project'
         retype: 'Type {slug} again to confirm'
+        retype_title: 'Type “{slug}” exactly'
 proposal:
     apply: Apply
     archives: 'Archives:'
@@ -1029,6 +1044,7 @@ proposal:
     pending_project: '{count} pending for {name}'
     proposed: Proposed
     reject: Reject
+    reject_confirm: 'Reject this proposal?'
     replaces_text: 'Replaces the text of:'
     retract: 'Retract:'
     retract_memory: 'Retract the memory'

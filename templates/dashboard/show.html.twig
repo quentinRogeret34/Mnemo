@@ -164,7 +164,7 @@
                     {% else %}
                         <div class="table-wrap table-wrap--framed mcp-table">
                             <table class="data-table">
-                                <thead><tr><th>{{ 'activity.when'|trans }}</th><th>{{ 'dashboard.tool'|trans }}</th><th>{{ 'memory.index.project'|trans }}</th><th class="num">{{ 'palette.results'|trans }}</th><th class="num">{{ 'nav.memories'|trans }}</th><th class="num">{{ 'dashboard.duration'|trans }}</th><th>{{ 'dashboard.status'|trans }}</th></tr></thead>
+                                <thead><tr><th scope="col">{{ 'activity.when'|trans }}</th><th scope="col">{{ 'dashboard.tool'|trans }}</th><th scope="col">{{ 'memory.index.project'|trans }}</th><th scope="col" class="num">{{ 'palette.results'|trans }}</th><th scope="col" class="num">{{ 'nav.memories'|trans }}</th><th scope="col" class="num">{{ 'dashboard.duration'|trans }}</th><th scope="col">{{ 'dashboard.status'|trans }}</th></tr></thead>
                                 <tbody>
                                     {% for call in recent.items %}
                                         <tr>
@@ -186,7 +186,8 @@
             </div>
         </div>
 
-        <aside class="dash__aside">
+        <aside class="dash__aside" aria-label="{{ 'dashboard.attention'|trans }}">
+            {% set scoped = app.user and not is_granted('ROLE_SUPER_ADMIN') %}
             <section class="side-block" aria-labelledby="attention-title">
                 <h2 class="side-block__title" id="attention-title">{{ 'dashboard.attention'|trans }} <span class="block__count">{{ attention_count }}</span></h2>
                 {% if attention_count == 0 %}
@@ -215,7 +216,9 @@
                                     <p class="attention__text" title="{{ connector.error }}">{{ connector.error }}</p>
                                     <span class="row__sub num">{{ 'dashboard.connector_failed'|trans }} · {{ connector.last_run_at|format_datetime('short', 'short') }}</span>
                                 </div>
-                                <a class="attention__link" href="{{ path('connector_show', {id: connector.id}) }}">{{ 'dashboard.open'|trans }}{{ ux_icon('lucide:arrow-up-right') }}</a>
+                                {% if not scoped %}
+                                    <a class="attention__link" href="{{ path('connector_show', {id: connector.id}) }}">{{ 'dashboard.open'|trans }}{{ ux_icon('lucide:arrow-up-right') }}</a>
+                                {% endif %}
                             </li>
                         {% endfor %}
                         {% if refuted > 0 %}

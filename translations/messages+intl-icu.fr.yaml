@@ -57,6 +57,7 @@ admin:
     pending: 'en attente'
     seen: 'vu le {date}'
     status_of: 'Statut de {name}'
+    super_admin: 'Super admin'
     title: 'Utilisateurs et groupes'
 agent:
     content: Contenu
@@ -105,6 +106,7 @@ chat:
     no_answer: 'Pas de réponse.'
     placeholder: 'Demander quelque chose sur {name}'
     reset: 'Nouvelle conversation'
+    reset_confirm: 'Effacer cette conversation et repartir de zéro ?'
     send: Envoyer
     thinking: Réflexion...
     you: Vous
@@ -120,6 +122,7 @@ common:
     failed: échec
     filter: Filtrer
     open: Ouvrir
+    opens_new_tab: '(ouvre un nouvel onglet)'
     reset: Réinitialiser
     save: Enregistrer
     save_settings: 'Enregistrer les réglages'
@@ -467,6 +470,9 @@ enum:
         disabled: Désactivé
         pending: 'En attente'
 file:
+    confidence:
+        extracted: extrait
+        inferred: inféré
     count:
         dependencies: '{count, plural, one {# dépendance} other {# dépendances}}'
         documents: '{count, plural, one {# document} other {# documents}}'
@@ -546,6 +552,7 @@ flash:
         skipped: 'Pas de projet possible pour {repositories} : un projet archivé ou hors de portée a déjà ce dépôt, ou son nom est pris.'
         token_refused: 'GitHub a refusé le jeton : reconnecter le compte.'
     llm:
+        error: 'Le modèle de langage a échoué : {error}'
         saved: 'Réglages des modèles enregistrés.'
         saved_reindex: "Réglages enregistrés. Le contenu est réindexé en arrière-plan avec le modèle d'embeddings."
     memory:
@@ -713,9 +720,11 @@ keys:
     created_at: Créée
     empty: 'Aucune clé'
     empty_text: "Tant que l'accès n'est pas restreint (APP_ACCESS_ROLE=ROLE_USER), les agents appellent le serveur sans clé."
+    error_name: 'Donner un nom (100 caractères au plus).'
     key: clé
     last_used: 'Dernier usage'
     lede: "Une clé identifie un agent ou un poste qui appelle {mcp} et {api}, avec l'en-tête {header}. Limitée à des projets, elle ne lit et n'écrit que dans ceux-là."
+    placeholder: 'ex. Claude Code — MacBook'
     projects: 'Projets autorisés'
     projects_help: 'aucun coché : tous les projets'
     revoke: Révoquer
@@ -727,6 +736,7 @@ layout:
     help: Aide
     help_title: 'Comprendre cette page'
     search: Rechercher
+    skip_to_content: 'Aller au contenu principal'
     theme_dark: 'Passer au thème sombre'
     theme_light: 'Passer au thème clair'
 llm:
@@ -775,6 +785,7 @@ memory:
         no_match: 'Rien ne correspond.'
         no_match_project: 'Rien ne correspond (rattacher un projet pour lier son code et ses règles).'
         previous_kept: "La version précédente reste dans l'historique."
+        saved: 'Enregistré.'
         unknown_type: 'Type de mémoire inconnu.'
         updated: 'Modifiée le'
     graph:
@@ -902,13 +913,16 @@ nav:
     memory_graph: 'Graphe des mémoires'
     no_project: 'Aucun projet'
     no_project_matches: 'Aucun projet ne correspond'
+    overview: Aperçu
     project_settings: 'Réglages du projet'
     projects: Projets
     rules: 'Règles métier'
     settings: Réglages
+    sidebar: 'Navigation principale'
     source: 'Code source sur GitHub'
     switch_project: 'Changer de projet'
     to_review: 'À valider'
+    tools: Outils
     users: Utilisateurs
     wiki: Wiki
     workspace: Espace
@@ -1011,6 +1025,7 @@ project:
         project: Projet
         restore: 'Restaurer le projet'
         retype: 'Retaper {slug} pour confirmer'
+        retype_title: 'Retaper exactement « {slug} »'
 proposal:
     apply: Appliquer
     archives: 'Archive :'
@@ -1029,6 +1044,7 @@ proposal:
     pending_project: '{count} en attente pour {name}'
     proposed: Proposée
     reject: Rejeter
+    reject_confirm: 'Rejeter cette proposition ?'
     replaces_text: 'Remplace le texte de :'
     retract: 'Retirer :'
     retract_memory: 'Retirer la mémoire'

@@ -2,9 +2,11 @@
 
 namespace App\Twig\Components;
 
+use App\Entity\Edge;
 use App\Entity\Node;
 use App\Entity\Project;
 use App\Enum\MemoryType;
+use App\Enum\NodeType;
 use App\Graph\KnowledgeReader;
 use App\Memory\MemoryStore;
 use App\Security\MemoryAccess;
@@ -45,6 +47,8 @@ final class MemoryEditor
 
     public ?string $error = null;
 
+    public bool $saved = false;
+
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly KnowledgeReader $knowledgeReader,
@@ -69,7 +73,7 @@ final class MemoryEditor
     #[PostHydrate]
     public function guard(): void
     {
-        if (!$this->memoryAccess->canSee($this->memory)) {
+        if (NodeType::Memory !== $this->memory->getType() || !$this->memoryAccess->canSee($this->memory)) {
             throw new NotFoundHttpException('Memory not found.');
         }
     }
@@ -152,6 +156,17 @@ final class MemoryEditor
         $this->entityManager->flush();
         $this->text = $this->memory->getLabel();
         $this->adr = $this->storedAdr();
+        $this->saved = true;
+    }
+
+    #[LiveAction]
+    public function reset(): void
+    {
+        $this->text = $this->memory->getLabel();
+        $this->type = $this->memory->getMetadata()['type'];
+        $this->adr = $this->storedAdr();
+        $this->error = null;
+        $this->saved = false;
     }
 
     /**
@@ -188,6 +203,10 @@ final class MemoryEditor
     #[LiveAction]
     public function unlink(#[LiveArg] int $edgeId): void
     {
+        $edge = $this->entityManager->find(Edge::class, $edgeId);
+        if (null === $edge || $edge->getSource() !== $this->memory || !$this->projectScope->allowsNode($edge->getTarget())) {
+            throw new \InvalidArgumentException('Unknown edge.');
+        }
         $this->memoryStore->unlink($this->memory, $edgeId);
         $this->entityManager->flush();
     }

@@ -15,6 +15,7 @@ export default class extends Controller {
         }
         const used = new Set();
         this.links = new Map();
+        this.listTarget.replaceChildren();
         headings.forEach((heading) => {
             const base = heading.id || heading.textContent.trim().toLocaleLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'section';
             let id = base;

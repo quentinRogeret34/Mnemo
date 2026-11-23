@@ -31,7 +31,7 @@ final class PaletteController extends AbstractController
         }
 
         // Without a project, KnowledgeReader reads every project: a caller limited to some of them gets none.
-        $memories = null === $project && null !== $this->projectScope->slugs() ? [] : \array_slice($this->knowledgeReader->memories($project, query: $q), 0, self::LIMIT);
+        $memories = null === $project && null !== $this->projectScope->slugs() ? [] : $this->knowledgeReader->memories($project, query: $q, limit: self::LIMIT);
         $files = null === $project ? [] : $this->graphReader->searchFiles($project, $q, self::LIMIT)['files'];
 
         return $this->json([
