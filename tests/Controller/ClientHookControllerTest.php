@@ -115,6 +115,22 @@ final class ClientHookControllerTest extends WebTestCase
         self::assertSame('', $this->get('/api/file-context?cwd=/repos/demo&path=/etc/passwd')['context']);
     }
 
+    public function testPromptContextListsTheMemoriesAndRulesCloseToThePrompt(): void
+    {
+        $this->client->jsonRequest('POST', '/api/prompt-context', ['cwd' => '/repos/demo', 'prompt' => 'Comment sont calculées les remises ?']);
+        self::assertResponseIsSuccessful();
+        $context = json_decode((string) $this->client->getResponse()->getContent(), true);
+
+        self::assertSame('demo', $context['project']);
+        self::assertStringContainsString('- Mémoire : Les remises passent par catalog.ts.', $context['context']);
+        self::assertStringContainsString('- Règle RG-042 Remise plafonnée : Une remise ne dépasse jamais 10 %.', $context['context']);
+
+        $this->client->jsonRequest('POST', '/api/prompt-context', ['cwd' => '/repos/demo', 'prompt' => 'ok']);
+        self::assertSame('', json_decode((string) $this->client->getResponse()->getContent(), true)['context']);
+        $this->client->jsonRequest('POST', '/api/prompt-context', ['cwd' => '/elsewhere', 'prompt' => 'Comment sont calculées les remises ?']);
+        self::assertSame(['project' => null, 'context' => ''], json_decode((string) $this->client->getResponse()->getContent(), true));
+    }
+
     public function testAClientOnAnotherMachineNamesItsProject(): void
     {
         self::assertSame('demo', $this->get('/api/context?cwd=/home/dev/shop&project=demo')['project']);
