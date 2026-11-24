@@ -1,15 +1,68 @@
 import { Controller } from '@hotwired/stimulus';
+import { EditorView, basicSetup } from 'codemirror';
+import { EditorState } from '@codemirror/state';
+import { keymap } from '@codemirror/view';
+import { indentWithTab } from '@codemirror/commands';
+import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
+import { markdown } from '@codemirror/lang-markdown';
+import { yaml, yamlFrontmatter } from '@codemirror/lang-yaml';
+import { tags } from '@lezer/highlight';
+
+const theme = EditorView.theme({
+    '&': { height: '100%', color: 'var(--color-ink)', backgroundColor: 'var(--color-card)', fontSize: '0.8125rem' },
+    '&.cm-focused': { outline: 'none' },
+    '.cm-scroller': { fontFamily: 'var(--font-mono)', lineHeight: '1.65' },
+    '.cm-content': { padding: 'var(--space-md) 0', caretColor: 'var(--color-ink)' },
+    '.cm-line': { padding: '0 var(--space-md)' },
+    '.cm-gutters': { backgroundColor: 'var(--color-paper)', color: 'var(--color-faint)', borderRight: 'var(--rule-width) solid var(--color-rule)' },
+    '.cm-activeLineGutter': { backgroundColor: 'var(--color-hover)', color: 'var(--color-ink-2)' },
+    '.cm-activeLine': { backgroundColor: 'color-mix(in oklch, var(--color-hover) 55%, transparent)' },
+    '.cm-cursor, .cm-dropCursor': { borderLeftColor: 'var(--color-ink)' },
+    '&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection': {
+        backgroundColor: 'color-mix(in oklch, var(--color-accent) 22%, transparent)',
+    },
+    '.cm-selectionMatch': { backgroundColor: 'color-mix(in oklch, var(--color-accent) 12%, transparent)' },
+    '&.cm-focused .cm-matchingBracket': { backgroundColor: 'color-mix(in oklch, var(--color-success) 22%, transparent)', outline: 'none' },
+    '.cm-foldPlaceholder': { backgroundColor: 'var(--color-hover)', border: 'none', color: 'var(--color-muted)' },
+    '.cm-panels': { backgroundColor: 'var(--color-paper)', color: 'var(--color-ink)' },
+    '.cm-panels.cm-panels-top': { borderBottom: 'var(--rule-width) solid var(--color-rule)' },
+    '.cm-searchMatch': { backgroundColor: 'color-mix(in oklch, var(--color-warning) 28%, transparent)' },
+    '.cm-searchMatch.cm-searchMatch-selected': { backgroundColor: 'color-mix(in oklch, var(--color-warning) 50%, transparent)' },
+    '.cm-tooltip': { backgroundColor: 'var(--color-card)', border: 'var(--rule-width) solid var(--color-rule)', borderRadius: 'var(--radius-sm)' },
+    '.cm-tooltip-autocomplete > ul > li[aria-selected]': { backgroundColor: 'var(--color-selected)', color: 'var(--color-ink)' },
+});
+
+const highlight = HighlightStyle.define([
+    { tag: [tags.heading1, tags.heading2], color: 'var(--color-ink)', fontWeight: '700' },
+    { tag: [tags.heading3, tags.heading4, tags.heading5, tags.heading6], color: 'var(--color-ink)', fontWeight: '600' },
+    { tag: tags.strong, fontWeight: '700' },
+    { tag: tags.emphasis, fontStyle: 'italic' },
+    { tag: tags.strikethrough, textDecoration: 'line-through' },
+    { tag: [tags.link, tags.url], color: 'var(--color-accent)', textDecoration: 'underline' },
+    { tag: tags.monospace, color: 'var(--color-danger)' },
+    { tag: [tags.processingInstruction, tags.meta, tags.contentSeparator, tags.quote], color: 'var(--color-faint)' },
+    { tag: tags.list, color: 'var(--color-ink-2)' },
+    { tag: [tags.propertyName, tags.definition(tags.propertyName)], color: 'var(--color-accent)' },
+    { tag: [tags.string, tags.special(tags.string)], color: 'var(--color-success)' },
+    { tag: [tags.number, tags.bool, tags.null, tags.atom, tags.keyword], color: 'var(--color-warning)' },
+    { tag: [tags.comment, tags.lineComment], color: 'var(--color-faint)', fontStyle: 'italic' },
+    { tag: [tags.punctuation, tags.separator, tags.squareBracket, tags.brace], color: 'var(--color-muted)' },
+    { tag: [tags.labelName, tags.typeName, tags.tagName], color: 'var(--color-danger)' },
+    { tag: tags.invalid, color: 'var(--color-danger)' },
+]);
 
 export default class extends Controller {
-    static targets = ['textarea', 'gutter', 'dirty', 'form', 'saveButton', 'treeItem', 'treeGroup', 'search', 'editorPane', 'previewPane', 'modeBtn'];
+    static targets = ['textarea', 'dirty', 'form', 'saveButton', 'treeItem', 'treeGroup', 'search', 'editorPane', 'previewPane', 'modeBtn'];
+    static values = { language: String };
 
     #initialContent = '';
     #initialDescription = '';
+    #view = null;
 
     connect() {
         if (this.hasTextareaTarget) {
             this.#initialContent = this.textareaTarget.value;
-            this.syncLines();
+            this.#mountEditor();
         }
         const desc = this.element.querySelector('input[name="description"]');
         if (desc) {
@@ -21,6 +74,43 @@ export default class extends Controller {
 
     disconnect() {
         window.removeEventListener('keydown', this.boundKeydown);
+        this.#view?.destroy();
+        this.#view = null;
+        if (this.hasTextareaTarget) {
+            this.textareaTarget.hidden = false;
+        }
+    }
+
+    #mountEditor() {
+        const textarea = this.textareaTarget;
+        const readOnly = textarea.readOnly;
+        const language = this.languageValue === 'yaml' ? yaml() : yamlFrontmatter({ content: markdown() });
+
+        this.#view = new EditorView({
+            parent: textarea.parentElement,
+            state: EditorState.create({
+                doc: textarea.value,
+                extensions: [
+                    basicSetup,
+                    keymap.of([indentWithTab]),
+                    EditorState.tabSize.of(2),
+                    EditorView.lineWrapping,
+                    EditorState.readOnly.of(readOnly),
+                    EditorView.editable.of(!readOnly),
+                    EditorView.contentAttributes.of({ 'aria-label': textarea.getAttribute('aria-label') ?? '' }),
+                    language,
+                    theme,
+                    syntaxHighlighting(highlight),
+                    EditorView.updateListener.of((update) => {
+                        if (update.docChanged) {
+                            textarea.value = update.state.doc.toString();
+                            this.updateDirty();
+                        }
+                    }),
+                ],
+            }),
+        });
+        textarea.hidden = true;
     }
 
     onGlobalKeydown(event) {
@@ -30,44 +120,6 @@ export default class extends Controller {
                 this.formTarget.requestSubmit();
             }
         }
-    }
-
-    onInput() {
-        this.syncLines();
-        this.updateDirty();
-    }
-
-    onKeydown(event) {
-        if (event.key !== 'Tab' || !this.hasTextareaTarget || this.textareaTarget.readOnly) {
-            return;
-        }
-        event.preventDefault();
-        const el = this.textareaTarget;
-        const start = el.selectionStart;
-        const end = el.selectionEnd;
-        const val = el.value;
-        el.value = val.slice(0, start) + '  ' + val.slice(end);
-        el.selectionStart = el.selectionEnd = start + 2;
-        this.onInput();
-    }
-
-    syncScroll() {
-        if (this.hasGutterTarget && this.hasTextareaTarget) {
-            this.gutterTarget.scrollTop = this.textareaTarget.scrollTop;
-        }
-    }
-
-    syncLines() {
-        if (!this.hasGutterTarget || !this.hasTextareaTarget) {
-            return;
-        }
-        const count = Math.max(1, this.textareaTarget.value.split('\n').length);
-        const lines = [];
-        for (let i = 1; i <= count; i++) {
-            lines.push(String(i));
-        }
-        this.gutterTarget.textContent = lines.join('\n');
-        this.syncScroll();
     }
 
     updateDirty() {
@@ -114,6 +166,8 @@ export default class extends Controller {
         if (isPreview && this.hasTextareaTarget) {
             this.previewPaneTarget.textContent = '';
             this.renderPreview(this.textareaTarget.value, this.previewPaneTarget);
+        } else {
+            this.#view?.focus();
         }
     }
 
