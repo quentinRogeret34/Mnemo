@@ -4,19 +4,14 @@ namespace App\Briefing;
 
 use App\Dashboard\DashboardReader;
 use App\Entity\Project;
-use App\Enum\EdgeStatus;
-use App\Enum\MemoryType;
-use App\Enum\NodeType;
 use App\Llm\Chat;
-use App\Security\MemoryAccess;
-use Doctrine\DBAL\Connection;
-use Doctrine\DBAL\Types\Types;
+use App\Repository\BriefingRepository;
 
 /**
  * Collects project activity (merged PRs/tickets, commits, touched business rules, recorded decisions,
  * open & answered shadow questions) and renders a plain-language business briefing in Markdown.
  */
-final class BusinessBriefingGenerator
+final readonly class BusinessBriefingGenerator
 {
     public const PERIODS = ['7d', '30d'];
 
@@ -34,87 +29,16 @@ final class BusinessBriefingGenerator
         PROMPT;
 
     public function __construct(
-        private readonly Connection $connection,
-        private readonly DashboardReader $dashboardReader,
-        private readonly MemoryAccess $memoryAccess,
-        private readonly Chat $chat,
+        private BriefingRepository $briefingRepository,
+        private DashboardReader $dashboardReader,
+        private Chat $chat,
     ) {
     }
 
-    /**
-     * @return array{
-     *     period: string,
-     *     since: \DateTimeImmutable,
-     *     alignment: array{rules_total: int, rules_validated: int, rules_to_review: int, rules_without_code: int, shadow_open: int, shadow_blockers: int, documents_total: int, documents_added: int, alignment_score: ?int},
-     *     rules_touched: list<array{code: string, title: string, status: string, statement: string}>,
-     *     decisions: list<array{id: int, text: string, created_at: string}>,
-     *     open_questions: list<array{rule_code: string, rule_title: string, severity: string, gap: string, question: string}>,
-     *     answered_questions: list<array{rule_code: string, rule_title: string, question: string, answer: string, resolved_by: ?string, resolved_at: string}>,
-     *     tickets: list<array{ref: string, label: string, kind: ?string, state: ?string, author: ?string, url: ?string, created_at: string}>,
-     *     commits: list<array{ref: string, label: string, author: ?string, created_at: string}>,
-     *     commits_total: int,
-     * }
-     */
-    public function collect(Project $project, string $period = '7d'): array
+    public function collect(Project $project, string $period = '7d'): BriefingSnapshot
     {
         $period = \in_array($period, self::PERIODS, true) ? $period : '7d';
         $since = new \DateTimeImmutable('30d' === $period ? '-30 days' : '-7 days');
-
-        $rulesTouched = $this->connection->fetchAllAssociative(
-            <<<'SQL'
-                SELECT DISTINCT r.external_id AS code, r.label AS title,
-                       COALESCE(r.metadata->>'status', 'to_review') AS status,
-                       COALESCE(r.metadata->>'statement', '') AS statement
-                FROM node r
-                WHERE r.project_id = :project AND r.type = :rule
-                  AND (
-                      r.updated_at >= :since
-                      OR EXISTS (
-                          SELECT 1
-                          FROM edge impl
-                          JOIN edge touch ON touch.target_id = impl.target_id AND touch.relation = 'touches' AND touch.status = :active
-                          JOIN node c ON c.id = touch.source_id AND c.type = :commit AND c.created_at >= :since
-                          WHERE impl.source_id = r.id AND impl.relation = 'implemented_by' AND impl.status = :active
-                      )
-                  )
-                ORDER BY r.external_id
-                LIMIT 25
-                SQL,
-            [
-                'project' => $project->getId(),
-                'rule' => NodeType::BusinessRule->value,
-                'commit' => NodeType::Commit->value,
-                'active' => EdgeStatus::Active->value,
-                'since' => $since,
-            ],
-            ['since' => Types::DATETIME_IMMUTABLE],
-        );
-
-        $decisions = array_map(
-            static fn (array $row): array => ['id' => (int) $row['id'], 'text' => (string) $row['text'], 'created_at' => (string) $row['created_at']],
-            $this->connection->fetchAllAssociative(
-                <<<SQL
-                    SELECT m.id, m.label AS text, m.created_at
-                    FROM node m
-                    JOIN node_project np ON np.node_id = m.id
-                    WHERE np.project_id = :project
-                      AND m.type = :memory
-                      AND m.metadata->>'type' = :decision
-                      AND COALESCE(m.metadata->>'status', 'active') = 'active'
-                      AND m.created_at >= :since
-                      AND {$this->memoryAccess->sql('m')}
-                    ORDER BY m.created_at DESC
-                    LIMIT 20
-                    SQL,
-                [
-                    'project' => $project->getId(),
-                    'memory' => NodeType::Memory->value,
-                    'decision' => MemoryType::Decision->value,
-                    'since' => $since,
-                ],
-                ['since' => Types::DATETIME_IMMUTABLE],
-            ),
-        );
 
         $openQuestions = array_map(
             static fn (array $row): array => [
@@ -127,77 +51,25 @@ final class BusinessBriefingGenerator
             $this->dashboardReader->openShadowQuestions($project, 15),
         );
 
-        $answeredRaw = $this->connection->fetchAllAssociative(
-            <<<'SQL'
-                SELECT r.external_id AS rule_code, r.label AS rule_title,
-                       COALESCE(item->>'question', item->>'gap', '') AS question,
-                       COALESCE(item->>'answer', '') AS answer,
-                       item->>'resolved_by' AS resolved_by,
-                       COALESCE(item->>'resolved_at', '') AS resolved_at
-                FROM node r
-                CROSS JOIN LATERAL jsonb_array_elements(COALESCE(r.metadata->'resolved_shadow_areas', '[]'::jsonb)) AS item
-                WHERE r.project_id = :project AND r.type = :rule
-                  AND NULLIF(item->>'resolved_at', '')::timestamptz >= :since
-                ORDER BY item->>'resolved_at' DESC
-                LIMIT 15
-                SQL,
-            ['project' => $project->getId(), 'rule' => NodeType::BusinessRule->value, 'since' => $since],
-            ['since' => Types::DATETIME_IMMUTABLE],
+        return new BriefingSnapshot(
+            period: $period,
+            since: $since,
+            alignment: $this->dashboardReader->businessSummary($project, $since),
+            rulesTouched: $this->briefingRepository->rulesTouchedSince($project, $since),
+            decisions: $this->briefingRepository->decisionsSince($project, $since),
+            openQuestions: $openQuestions,
+            answeredQuestions: $this->briefingRepository->answeredQuestionsSince($project, $since),
+            tickets: $this->briefingRepository->ticketsSince($project, $since),
+            commits: $this->briefingRepository->recentCommitsSince($project, $since),
+            commitsTotal: $this->briefingRepository->countCommitsSince($project, $since),
         );
-
-        $tickets = $this->connection->fetchAllAssociative(
-            <<<'SQL'
-                SELECT external_id AS ref, label, metadata->>'kind' AS kind, metadata->>'state' AS state,
-                       metadata->>'author' AS author, metadata->>'url' AS url, created_at
-                FROM node
-                WHERE project_id = :project AND type = :ticket AND created_at >= :since
-                ORDER BY created_at DESC
-                LIMIT 20
-                SQL,
-            ['project' => $project->getId(), 'ticket' => NodeType::Ticket->value, 'since' => $since],
-            ['since' => Types::DATETIME_IMMUTABLE],
-        );
-
-        $commitsTotal = (int) $this->connection->fetchOne(
-            'SELECT COUNT(*) FROM node WHERE project_id = :project AND type = :commit AND created_at >= :since',
-            ['project' => $project->getId(), 'commit' => NodeType::Commit->value, 'since' => $since],
-            ['since' => Types::DATETIME_IMMUTABLE],
-        );
-
-        $commits = $this->connection->fetchAllAssociative(
-            <<<'SQL'
-                SELECT external_id AS ref, label, metadata->>'author' AS author, created_at
-                FROM node
-                WHERE project_id = :project AND type = :commit AND created_at >= :since
-                ORDER BY created_at DESC
-                LIMIT 15
-                SQL,
-            ['project' => $project->getId(), 'commit' => NodeType::Commit->value, 'since' => $since],
-            ['since' => Types::DATETIME_IMMUTABLE],
-        );
-
-        return [
-            'period' => $period,
-            'since' => $since,
-            'alignment' => $this->dashboardReader->businessSummary($project, $since),
-            'rules_touched' => $rulesTouched,
-            'decisions' => $decisions,
-            'open_questions' => $openQuestions,
-            'answered_questions' => $answeredRaw,
-            'tickets' => $tickets,
-            'commits' => $commits,
-            'commits_total' => $commitsTotal,
-        ];
     }
 
-    /**
-     * @param array<string, mixed> $data
-     */
-    public function synthesize(Project $project, array $data): string
+    public function synthesize(Project $project, BriefingSnapshot $snapshot): string
     {
         $answer = $this->chat->ask(
             self::SYSTEM,
-            $this->renderMarkdown($project, $data),
+            $this->renderMarkdown($project, $snapshot),
             [
                 'type' => 'object',
                 'properties' => ['summary' => ['type' => 'string']],
@@ -210,13 +82,10 @@ final class BusinessBriefingGenerator
         return trim((string) ($answer['summary'] ?? ''));
     }
 
-    /**
-     * @param array<string, mixed> $data
-     */
-    public function renderMarkdown(Project $project, array $data, ?string $narrative = null): string
+    public function renderMarkdown(Project $project, BriefingSnapshot $snapshot, ?string $narrative = null): string
     {
-        $periodLabel = '30d' === $data['period'] ? '30 derniers jours' : '7 derniers jours';
-        $alignment = $data['alignment'];
+        $periodLabel = '30d' === $snapshot->period ? '30 derniers jours' : '7 derniers jours';
+        $alignment = $snapshot->alignment;
         $lines = [
             \sprintf('# Briefing métier · %s (%s)', $project->getName(), $periodLabel),
             '',
@@ -229,10 +98,10 @@ final class BusinessBriefingGenerator
             ),
             \sprintf(
                 '- **Activité** : %d règle(s) évoluée(s) · %d décision(s) actée(s) · %d PR/ticket(s) · %d commit(s)',
-                \count($data['rules_touched']),
-                \count($data['decisions']),
-                \count($data['tickets']),
-                $data['commits_total'],
+                \count($snapshot->rulesTouched),
+                \count($snapshot->decisions),
+                \count($snapshot->tickets),
+                $snapshot->commitsTotal,
             ),
         ];
 
@@ -240,37 +109,37 @@ final class BusinessBriefingGenerator
             array_push($lines, '', '## Synthèse', '', trim($narrative));
         }
 
-        if ([] !== $data['rules_touched']) {
+        if ([] !== $snapshot->rulesTouched) {
             array_push($lines, '', '## Règles métier évoluées ou touchées', '');
-            foreach ($data['rules_touched'] as $rule) {
+            foreach ($snapshot->rulesTouched as $rule) {
                 $lines[] = \sprintf('- **%s · %s** (%s)%s', $rule['code'], $rule['title'], 'validated' === $rule['status'] ? 'validée' : 'à valider', '' !== $rule['statement'] ? ' — '.mb_strimwidth($rule['statement'], 0, 160, '…') : '');
             }
         }
 
-        if ([] !== $data['decisions']) {
+        if ([] !== $snapshot->decisions) {
             array_push($lines, '', '## Décisions actées', '');
-            foreach ($data['decisions'] as $decision) {
+            foreach ($snapshot->decisions as $decision) {
                 $lines[] = '- '.$decision['text'];
             }
         }
 
-        if ([] !== $data['answered_questions']) {
+        if ([] !== $snapshot->answeredQuestions) {
             array_push($lines, '', '## Clarifications métier obtenues', '');
-            foreach ($data['answered_questions'] as $item) {
+            foreach ($snapshot->answeredQuestions as $item) {
                 $lines[] = \sprintf('- **%s** : %s → _%s_', $item['rule_code'], $item['question'], $item['answer']);
             }
         }
 
-        if ([] !== $data['open_questions']) {
+        if ([] !== $snapshot->openQuestions) {
             array_push($lines, '', '## Questions en attente côté métier', '');
-            foreach ($data['open_questions'] as $q) {
+            foreach ($snapshot->openQuestions as $q) {
                 $lines[] = \sprintf('- [%s] **%s** : %s', strtoupper($q['severity']), $q['rule_code'], $q['question'] ?: $q['gap']);
             }
         }
 
-        if ([] !== $data['tickets']) {
+        if ([] !== $snapshot->tickets) {
             array_push($lines, '', '## Pull requests & tickets récents', '');
-            foreach (\array_slice($data['tickets'], 0, 10) as $ticket) {
+            foreach (\array_slice($snapshot->tickets, 0, 10) as $ticket) {
                 $lines[] = \sprintf('- %s — %s%s', $ticket['ref'], $ticket['label'], $ticket['state'] ? ' ('.$ticket['state'].')' : '');
             }
         }

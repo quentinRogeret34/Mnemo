@@ -33,8 +33,8 @@ final class AlignmentController extends AbstractController
             'project_mode' => false,
             'filter' => $filter,
             'filters' => AlignmentReport::FILTERS,
-            'summary' => $report['summary'],
-            'rows' => $report['rows'],
+            'summary' => $report->summary,
+            'rows' => $report->rows,
         ]);
     }
 
@@ -51,8 +51,8 @@ final class AlignmentController extends AbstractController
             'project_mode' => true,
             'filter' => $filter,
             'filters' => AlignmentReport::FILTERS,
-            'summary' => $report['summary'],
-            'rows' => $report['rows'],
+            'summary' => $report->summary,
+            'rows' => $report->rows,
         ]);
     }
 }

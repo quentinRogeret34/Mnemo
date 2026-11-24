@@ -4,20 +4,23 @@ namespace App\Graph;
 
 use App\Entity\Node;
 use App\Entity\Project;
-use App\Enum\EdgeStatus;
-use App\Enum\NodeType;
-use App\Security\MemoryAccess;
-use App\Security\ProjectScope;
-use Doctrine\DBAL\ArrayParameterType;
-use Doctrine\DBAL\Connection;
-use Doctrine\DBAL\ParameterType;
+use App\Repository\DocumentRepository;
+use App\Repository\KnowledgeSearchRepository;
+use App\Repository\MemoryRepository;
+use App\Repository\ProposalRepository;
+use App\Repository\RuleRepository;
 
-final class KnowledgeReader
+/**
+ * Facade delegating graph read queries to domain-focused repositories under App\Repository.
+ */
+final readonly class KnowledgeReader
 {
     public function __construct(
-        private readonly Connection $connection,
-        private readonly MemoryAccess $memoryAccess,
-        private readonly ProjectScope $projectScope,
+        private MemoryRepository $memories,
+        private DocumentRepository $documents,
+        private RuleRepository $rules,
+        private KnowledgeSearchRepository $search,
+        private ProposalRepository $proposals,
     ) {
     }
 
@@ -26,120 +29,30 @@ final class KnowledgeReader
      */
     public function counts(Project $project): array
     {
-        return $this->countsByProject([$project->getId()])[$project->getId()];
+        return $this->search->countsByProject([$project->getId()])[$project->getId()];
     }
 
     /**
-     * Batched knowledge counters for a list of project IDs (2 queries instead of N).
-     *
      * @param list<int> $projectIds
      *
      * @return array<int, array{documents: int, memories: int, rules: int, rules_to_review: int, files: int}>
      */
     public function countsByProject(array $projectIds): array
     {
-        $empty = ['documents' => 0, 'memories' => 0, 'rules' => 0, 'rules_to_review' => 0, 'files' => 0];
-        if ([] === $projectIds) {
-            return [];
-        }
-        $result = array_fill_keys($projectIds, $empty);
-
-        $owned = $this->connection->fetchAllAssociative(
-            <<<'SQL'
-                SELECT project_id,
-                       COUNT(*) FILTER (WHERE type = :rule) AS rules,
-                       COUNT(*) FILTER (WHERE type = :rule AND metadata->>'status' = 'to_review') AS rules_to_review,
-                       COUNT(*) FILTER (WHERE type = :file) AS files
-                FROM node
-                WHERE project_id IN (:projects)
-                GROUP BY project_id
-                SQL,
-            ['projects' => $projectIds, 'rule' => NodeType::BusinessRule->value, 'file' => NodeType::CodeFile->value],
-            ['projects' => ArrayParameterType::INTEGER],
-        );
-        foreach ($owned as $row) {
-            $id = (int) $row['project_id'];
-            $result[$id]['rules'] = (int) $row['rules'];
-            $result[$id]['rules_to_review'] = (int) $row['rules_to_review'];
-            $result[$id]['files'] = (int) $row['files'];
-        }
-
-        $attached = $this->connection->fetchAllAssociative(
-            <<<SQL
-                SELECT np.project_id,
-                       COUNT(*) FILTER (WHERE n.type = :document) AS documents,
-                       COUNT(*) FILTER (WHERE n.type = :memory AND COALESCE(n.metadata->>'status', 'active') = 'active' AND {$this->memoryAccess->sql('n')}) AS memories
-                FROM node_project np
-                JOIN node n ON n.id = np.node_id
-                WHERE np.project_id IN (:projects) AND n.type IN (:document, :memory)
-                GROUP BY np.project_id
-                SQL,
-            ['projects' => $projectIds, 'document' => NodeType::Document->value, 'memory' => NodeType::Memory->value],
-            ['projects' => ArrayParameterType::INTEGER],
-        );
-        foreach ($attached as $row) {
-            $id = (int) $row['project_id'];
-            $result[$id]['documents'] = (int) $row['documents'];
-            $result[$id]['memories'] = (int) $row['memories'];
-        }
-
-        return $result;
+        return $this->search->countsByProject($projectIds);
     }
 
     public function memoryCount(): int
     {
-        return (int) $this->connection->fetchOne("SELECT COUNT(*) FROM node m WHERE m.type = :memory AND COALESCE(m.metadata->>'status', 'active') = 'active' AND ".$this->memoryAccess->sql('m'), ['memory' => NodeType::Memory->value]);
+        return $this->memories->countActive();
     }
 
     /**
-     * Active memories, or the archived ones (superseded or retracted) when asked.
-     * The verdict "none" keeps the memories never verified.
-     *
      * @return list<array{id: int, text: string, type: string, source: ?string, status: string, verdict: ?string, demo: bool, created_at: string, updated_at: string, projects: ?string, links: int, total: int}>
      */
     public function memories(?Project $project = null, ?string $type = null, string $query = '', bool $archived = false, ?string $verdict = null, ?string $source = null, ?int $limit = null, int $offset = 0): array
     {
-        $slugs = $this->projectScope->slugs();
-        $projectAggScope = null === $slugs ? '' : ' AND p.slug IN (:slugs)';
-
-        return array_map(
-            static fn (array $row): array => ['id' => (int) $row['id'], 'demo' => (bool) $row['demo'], 'links' => (int) $row['links']] + $row,
-            $this->connection->fetchAllAssociative(
-                <<<SQL
-                    SELECT m.id, m.label AS text, m.metadata->>'type' AS type, m.metadata->>'source' AS source,
-                           COALESCE(m.metadata->>'status', 'active') AS status, m.metadata->'verification'->>'verdict' AS verdict,
-                           COALESCE(m.metadata->>'visibility', 'project') AS visibility,
-                           COALESCE((m.metadata->>'demo')::boolean, false) AS demo, m.created_at, m.updated_at,
-                           (SELECT string_agg(p.name, ', ' ORDER BY p.name) FROM node_project np JOIN project p ON p.id = np.project_id WHERE np.node_id = m.id{$projectAggScope}) AS projects,
-                           (SELECT COUNT(*) FROM edge e WHERE e.source_id = m.id AND e.relation = 'about' AND e.status = :active) AS links,
-                           COUNT(*) OVER () AS total
-                    FROM node m
-                    WHERE m.type = :memory AND {$this->memoryAccess->sql('m')}
-                      AND (COALESCE(m.metadata->>'status', 'active') = 'active') <> :archived
-                      AND (CAST(:project AS int) IS NULL OR EXISTS (SELECT 1 FROM node_project np WHERE np.node_id = m.id AND np.project_id = :project))
-                      AND (CAST(:type AS text) IS NULL OR m.metadata->>'type' = :type)
-                      AND (:query = '' OR m.label ILIKE :like)
-                      AND (CAST(:verdict AS text) IS NULL OR COALESCE(m.metadata->'verification'->>'verdict', 'none') = :verdict)
-                      AND (CAST(:source AS text) IS NULL OR m.metadata->>'source' = :source)
-                    ORDER BY m.updated_at DESC, m.id DESC
-                    LIMIT :limit OFFSET :offset
-                    SQL,
-                [
-                    'limit' => $limit,
-                    'offset' => $offset,
-                    'memory' => NodeType::Memory->value,
-                    'active' => EdgeStatus::Active->value,
-                    'project' => $project?->getId(),
-                    'type' => $type,
-                    'query' => trim($query),
-                    'like' => '%'.addcslashes(trim($query), '\\%_').'%',
-                    'archived' => $archived,
-                    'verdict' => $verdict,
-                    'source' => $source,
-                ] + (null === $slugs ? [] : ['slugs' => ['', ...$slugs]]),
-                ['archived' => ParameterType::BOOLEAN] + (null === $slugs ? [] : ['slugs' => ArrayParameterType::STRING]),
-            ),
-        );
+        return $this->memories->findFiltered($project, $type, $query, $archived, $verdict, $source, $limit, $offset);
     }
 
     /**
@@ -147,56 +60,15 @@ final class KnowledgeReader
      */
     public function memorySources(): array
     {
-        $slugs = $this->projectScope->slugs();
-        $scope = null === $slugs ? '' : ' AND EXISTS (SELECT 1 FROM node_project np JOIN project p ON p.id = np.project_id WHERE np.node_id = m.id AND p.slug IN (:slugs))';
-
-        return $this->connection->fetchFirstColumn(
-            "SELECT DISTINCT m.metadata->>'source' FROM node m WHERE m.type = :memory AND m.metadata->>'source' IS NOT NULL AND {$this->memoryAccess->sql('m')}{$scope} ORDER BY 1",
-            ['memory' => NodeType::Memory->value] + (null === $slugs ? [] : ['slugs' => ['', ...$slugs]]),
-            null === $slugs ? [] : ['slugs' => ArrayParameterType::STRING],
-        );
+        return $this->memories->sources();
     }
 
     /**
-     * The most recent active memories with what they are about and the projects they belong to.
-     *
      * @return array{memories: list<array{id: int, text: string, type: ?string}>, links: list<array{memory_id: int, id: int, type: string, label: string, path: ?string, code: string, project_slug: ?string}>, projects: list<array{memory_id: int, slug: string, name: string}>}
      */
     public function memoryGalaxy(?Project $project, int $limit = 300): array
     {
-        $slugs = $this->projectScope->slugs();
-        $memories = $this->connection->fetchAllAssociative(
-            <<<SQL
-                SELECT m.id, m.label AS text, m.metadata->>'type' AS type
-                FROM node m
-                WHERE m.type = :memory AND COALESCE(m.metadata->>'status', 'active') = 'active' AND {$this->memoryAccess->sql('m')}
-                  AND (CAST(:project AS int) IS NULL OR EXISTS (SELECT 1 FROM node_project np WHERE np.node_id = m.id AND np.project_id = :project))
-                ORDER BY m.updated_at DESC, m.id DESC
-                LIMIT $limit
-                SQL,
-            ['memory' => NodeType::Memory->value, 'project' => $project?->getId()],
-        );
-        $ids = [0, ...array_column($memories, 'id')];
-        $linkScope = null === $slugs ? '' : ' AND ((t.project_id IS NOT NULL AND p.slug IN (:slugs)) OR (t.project_id IS NULL AND EXISTS (SELECT 1 FROM node_project np JOIN project p2 ON p2.id = np.project_id WHERE np.node_id = t.id AND p2.slug IN (:slugs))))';
-        $projectScope = null === $slugs ? '' : ' AND p.slug IN (:slugs)';
-
-        return [
-            'memories' => $memories,
-            'links' => $this->connection->fetchAllAssociative(
-                <<<SQL
-                    SELECT e.source_id AS memory_id, t.id, t.type, t.label, t.path, t.external_id AS code, p.slug AS project_slug
-                    FROM edge e JOIN node t ON t.id = e.target_id LEFT JOIN project p ON p.id = t.project_id
-                    WHERE e.relation = 'about' AND e.status = :active AND e.source_id IN (:ids){$linkScope}
-                    SQL,
-                ['active' => EdgeStatus::Active->value, 'ids' => $ids] + (null === $slugs ? [] : ['slugs' => ['', ...$slugs]]),
-                ['ids' => ArrayParameterType::INTEGER] + (null === $slugs ? [] : ['slugs' => ArrayParameterType::STRING]),
-            ),
-            'projects' => $this->connection->fetchAllAssociative(
-                "SELECT np.node_id AS memory_id, p.slug, p.name FROM node_project np JOIN project p ON p.id = np.project_id WHERE np.node_id IN (:ids){$projectScope}",
-                ['ids' => $ids] + (null === $slugs ? [] : ['slugs' => ['', ...$slugs]]),
-                ['ids' => ArrayParameterType::INTEGER] + (null === $slugs ? [] : ['slugs' => ArrayParameterType::STRING]),
-            ),
-        ];
+        return $this->memories->galaxy($project, $limit);
     }
 
     /**
@@ -204,234 +76,63 @@ final class KnowledgeReader
      */
     public function memoryLinks(Node $memory): array
     {
-        $slugs = $this->projectScope->slugs();
-        $scope = null === $slugs ? '' : ' AND ((t.project_id IS NOT NULL AND p.slug IN (:slugs)) OR (t.project_id IS NULL AND EXISTS (SELECT 1 FROM node_project np JOIN project p2 ON p2.id = np.project_id WHERE np.node_id = t.id AND p2.slug IN (:slugs))))';
-
-        return $this->connection->fetchAllAssociative(
-            <<<SQL
-                SELECT e.id AS edge_id, t.id, t.type, t.label, t.path, t.external_id AS code, t.metadata->>'format' AS format,
-                       p.slug AS project_slug, p.name AS project_name
-                FROM edge e
-                JOIN node t ON t.id = e.target_id
-                LEFT JOIN project p ON p.id = t.project_id
-                WHERE e.source_id = :memory AND e.relation = 'about' AND e.status = :active{$scope}
-                ORDER BY t.type, t.label
-                SQL,
-            ['memory' => $memory->getId(), 'active' => EdgeStatus::Active->value] + (null === $slugs ? [] : ['slugs' => ['', ...$slugs]]),
-            null === $slugs ? [] : ['slugs' => ArrayParameterType::STRING],
-        );
+        return $this->memories->links($memory);
     }
 
     /**
-     * Code files and rules of the memory's projects, and any document, matching the query and not linked yet.
-     *
      * @return list<array{id: int, type: string, label: string, path: ?string, code: string, project_name: ?string}>
      */
     public function memoryLinkables(Node $memory, string $query, int $limit = 10): array
     {
-        if ('' === trim($query)) {
-            return [];
-        }
-        $slugs = $this->projectScope->slugs();
-        $fileScope = null === $slugs ? '' : ' AND p.slug IN (:slugs)';
-        $docScope = null === $slugs ? '' : ' AND EXISTS (SELECT 1 FROM node_project np2 JOIN project p2 ON p2.id = np2.project_id WHERE np2.node_id = n.id AND p2.slug IN (:slugs))';
-
-        return $this->connection->fetchAllAssociative(
-            <<<SQL
-                SELECT n.id, n.type, n.label, n.path, n.external_id AS code, p.name AS project_name
-                FROM node n
-                LEFT JOIN project p ON p.id = n.project_id
-                WHERE (
-                        (n.type IN (:file, :rule) AND EXISTS (SELECT 1 FROM node_project np WHERE np.node_id = :memory AND np.project_id = n.project_id){$fileScope})
-                        OR (n.type = :document{$docScope})
-                    )
-                  AND (n.label ILIKE :like OR n.path ILIKE :like OR (n.type = :rule AND n.external_id ILIKE :like))
-                  AND NOT EXISTS (SELECT 1 FROM edge e WHERE e.source_id = :memory AND e.target_id = n.id AND e.relation = 'about' AND e.status = :active)
-                ORDER BY CASE n.type WHEN :rule THEN 0 WHEN :document THEN 1 ELSE 2 END, length(COALESCE(n.path, n.label)), n.label
-                LIMIT $limit
-                SQL,
-            [
-                'memory' => $memory->getId(),
-                'file' => NodeType::CodeFile->value,
-                'rule' => NodeType::BusinessRule->value,
-                'document' => NodeType::Document->value,
-                'active' => EdgeStatus::Active->value,
-                'like' => '%'.addcslashes(trim($query), '\\%_').'%',
-            ] + (null === $slugs ? [] : ['slugs' => ['', ...$slugs]]),
-            null === $slugs ? [] : ['slugs' => ArrayParameterType::STRING],
-        );
+        return $this->memories->linkables($memory, $query, $limit);
     }
 
     /**
-     * Active memories linked to a code file, document or rule, with their decision record and verification verdict.
-     *
      * @return list<array{id: int, text: string, type: string, demo: bool, verdict: ?string, adr: ?array<string, string>}>
      */
     public function memoriesAbout(int $nodeId): array
     {
-        return array_map(
-            static fn (array $row): array => ['id' => (int) $row['id'], 'demo' => (bool) $row['demo'], 'adr' => null === $row['adr'] ? null : json_decode($row['adr'], true)] + $row,
-            $this->connection->fetchAllAssociative(
-                <<<SQL
-                    SELECT m.id, m.label AS text, m.metadata->>'type' AS type, COALESCE((m.metadata->>'demo')::boolean, false) AS demo,
-                           m.metadata->'verification'->>'verdict' AS verdict, m.metadata->'adr' AS adr
-                    FROM edge e JOIN node m ON m.id = e.source_id
-                    WHERE e.target_id = :node AND e.relation = 'about' AND e.status = :active AND m.type = :memory
-                      AND COALESCE(m.metadata->>'status', 'active') = 'active' AND {$this->memoryAccess->sql('m')}
-                    ORDER BY m.updated_at DESC
-                    SQL,
-                ['node' => $nodeId, 'active' => EdgeStatus::Active->value, 'memory' => NodeType::Memory->value],
-            ),
-        );
+        return $this->memories->aboutNode($nodeId);
     }
 
     /**
-     * Documents attached to a project, or the documents of a folder when no project is given.
-     *
      * @return list<array{id: int, title: string, filename: string, format: string, size: int, demo: bool, created_at: string, rules: int, folder: ?string, projects: ?string, code_links: int, total: int}>
      */
     public function documents(?Project $project = null, ?int $folderId = null, ?int $limit = null, int $offset = 0): array
     {
-        $slugs = $this->projectScope->slugs();
-        $projectAggScope = null === $slugs ? '' : ' AND p.slug IN (:slugs)';
-        $scope = null !== $project
-            ? 'EXISTS (SELECT 1 FROM node_project np WHERE np.node_id = d.id AND np.project_id = :project)'
-            : (null === $folderId ? 'd.folder_id IS NULL' : 'd.folder_id = :folder');
-
-        return array_map(
-            static fn (array $row): array => ['id' => (int) $row['id'], 'size' => (int) $row['size'], 'demo' => (bool) $row['demo'], 'rules' => (int) $row['rules'], 'code_links' => (int) $row['code_links']] + $row,
-            $this->connection->fetchAllAssociative(
-                <<<SQL
-                    SELECT d.id, d.label AS title, d.path AS filename, d.metadata->>'format' AS format, (d.metadata->>'size')::int AS size,
-                           COALESCE((d.metadata->>'demo')::boolean, false) AS demo, d.created_at, f.name AS folder,
-                           (SELECT string_agg(p.name, ', ' ORDER BY p.name) FROM node_project np JOIN project p ON p.id = np.project_id WHERE np.node_id = d.id{$projectAggScope}) AS projects,
-                           (SELECT COUNT(*) FROM edge e JOIN node r ON r.id = e.target_id
-                            WHERE e.source_id = d.id AND r.type = :rule AND e.status = :active) AS rules,
-                           (SELECT COUNT(*) FROM edge e WHERE e.target_id = d.id AND e.relation = 'documented_by' AND e.status = :active) AS code_links,
-                           COUNT(*) OVER () AS total
-                    FROM node d
-                    LEFT JOIN folder f ON f.id = d.folder_id
-                    WHERE d.type = :document AND $scope
-                    ORDER BY d.label, d.id
-                    LIMIT :limit OFFSET :offset
-                    SQL,
-                ['limit' => $limit, 'offset' => $offset, 'document' => NodeType::Document->value, 'rule' => NodeType::BusinessRule->value, 'active' => EdgeStatus::Active->value]
-                    + (null !== $project ? ['project' => $project->getId()] : [])
-                    + (null === $project && null !== $folderId ? ['folder' => $folderId] : [])
-                    + (null === $slugs ? [] : ['slugs' => ['', ...$slugs]]),
-                null === $slugs ? [] : ['slugs' => ArrayParameterType::STRING],
-            ),
-        );
+        return $this->documents->findPaginated($project, $folderId, $limit, $offset);
     }
 
     /**
-     * Every document with its folder, for the file tree.
-     *
      * @return list<array{id: int, title: string, format: string, folder_id: ?int}>
      */
     public function documentTree(): array
     {
-        $slugs = $this->projectScope->slugs();
-        $scope = null === $slugs ? '' : ' AND EXISTS (SELECT 1 FROM node_project np JOIN project p ON p.id = np.project_id WHERE np.node_id = d.id AND p.slug IN (:slugs))';
-
-        return array_map(
-            static fn (array $row): array => ['id' => (int) $row['id'], 'folder_id' => null === $row['folder_id'] ? null : (int) $row['folder_id']] + $row,
-            $this->connection->fetchAllAssociative(
-                "SELECT d.id, d.label AS title, d.metadata->>'format' AS format, d.folder_id FROM node d WHERE d.type = :document{$scope} ORDER BY lower(d.label), d.id",
-                ['document' => NodeType::Document->value] + (null === $slugs ? [] : ['slugs' => ['', ...$slugs]]),
-                null === $slugs ? [] : ['slugs' => ArrayParameterType::STRING],
-            ),
-        );
+        return $this->documents->documentTree();
     }
 
     /**
-     * Every folder in tree order (parents before children, siblings by name).
-     *
      * @return list<array{id: int, name: string, parent_id: ?int, depth: int, documents: int}>
      */
     public function folderTree(): array
     {
-        $slugs = $this->projectScope->slugs();
-        $docScope = null === $slugs ? '' : ' AND EXISTS (SELECT 1 FROM node_project np JOIN project p ON p.id = np.project_id WHERE np.node_id = d.id AND p.slug IN (:slugs))';
-        $having = null === $slugs ? '' : ' WHERE documents > 0';
-
-        return array_map(
-            static fn (array $row): array => ['id' => (int) $row['id'], 'parent_id' => null === $row['parent_id'] ? null : (int) $row['parent_id'], 'depth' => (int) $row['depth'], 'documents' => (int) $row['documents']] + $row,
-            $this->connection->fetchAllAssociative(
-                <<<SQL
-                    WITH RECURSIVE tree AS (
-                        SELECT id, name, parent_id, 0 AS depth, ARRAY[lower(name), id::text] AS sort_key, ARRAY[id] AS path FROM folder WHERE parent_id IS NULL
-                        UNION ALL
-                        SELECT f.id, f.name, f.parent_id, t.depth + 1, t.sort_key || ARRAY[lower(f.name), f.id::text], t.path || f.id
-                        FROM folder f JOIN tree t ON f.parent_id = t.id
-                        WHERE NOT f.id = ANY(t.path)
-                    ),
-                    counted AS (
-                        SELECT t.id, t.name, t.parent_id, t.depth, t.sort_key,
-                               (SELECT COUNT(*) FROM node d JOIN tree s ON s.id = d.folder_id WHERE t.id = ANY(s.path) AND d.type = :document{$docScope}) AS documents
-                        FROM tree t
-                    )
-                    SELECT id, name, parent_id, depth, documents
-                    FROM counted{$having}
-                    ORDER BY sort_key
-                    SQL,
-                ['document' => NodeType::Document->value] + (null === $slugs ? [] : ['slugs' => ['', ...$slugs]]),
-                null === $slugs ? [] : ['slugs' => ArrayParameterType::STRING],
-            ),
-        );
+        return $this->documents->folderTree();
     }
 
     /**
-     * Code files documented by this document (manual links), grouped by project in the query order.
-     *
      * @return list<array{edge_id: int, path: string, project_slug: string, project_name: string, confidence: string, origin: string}>
      */
     public function documentCodeLinks(Node $document): array
     {
-        $slugs = $this->projectScope->slugs();
-        $scope = null === $slugs ? '' : ' AND p.slug IN (:slugs)';
-
-        return $this->connection->fetchAllAssociative(
-            <<<SQL
-                SELECT e.id AS edge_id, c.path, p.slug AS project_slug, p.name AS project_name, e.confidence, e.origin
-                FROM edge e
-                JOIN node c ON c.id = e.source_id
-                JOIN project p ON p.id = c.project_id
-                WHERE e.target_id = :document AND e.relation = 'documented_by' AND e.status = :active{$scope}
-                ORDER BY p.name, c.path
-                SQL,
-            ['document' => $document->getId(), 'active' => EdgeStatus::Active->value] + (null === $slugs ? [] : ['slugs' => ['', ...$slugs]]),
-            null === $slugs ? [] : ['slugs' => ArrayParameterType::STRING],
-        );
+        return $this->documents->codeLinks($document);
     }
 
     /**
-     * Code files of the document's projects matching the query and not linked yet.
-     *
      * @return list<array{id: int, path: string, project_name: string}>
      */
     public function linkableFiles(Node $document, string $query, int $limit = 8): array
     {
-        if ('' === trim($query)) {
-            return [];
-        }
-        $slugs = $this->projectScope->slugs();
-        $scope = null === $slugs ? '' : ' AND p.slug IN (:slugs)';
-
-        return $this->connection->fetchAllAssociative(
-            <<<SQL
-                SELECT c.id, c.path, p.name AS project_name
-                FROM node c
-                JOIN project p ON p.id = c.project_id
-                JOIN node_project np ON np.project_id = c.project_id AND np.node_id = :document
-                WHERE c.type = :file AND c.path ILIKE :like{$scope}
-                  AND NOT EXISTS (SELECT 1 FROM edge e WHERE e.source_id = c.id AND e.target_id = :document AND e.relation = 'documented_by' AND e.status = :active)
-                ORDER BY length(c.path), c.path
-                LIMIT $limit
-                SQL,
-            ['document' => $document->getId(), 'file' => NodeType::CodeFile->value, 'active' => EdgeStatus::Active->value, 'like' => '%'.addcslashes(trim($query), '\\%_').'%'] + (null === $slugs ? [] : ['slugs' => ['', ...$slugs]]),
-            null === $slugs ? [] : ['slugs' => ArrayParameterType::STRING],
-        );
+        return $this->documents->linkableFiles($document, $query, $limit);
     }
 
     /**
@@ -439,17 +140,7 @@ final class KnowledgeReader
      */
     public function documentsForFile(Project $project, string $path): array
     {
-        return $this->connection->fetchAllAssociative(
-            <<<'SQL'
-                SELECT d.id, d.label AS title, d.metadata->>'format' AS format, e.confidence, e.origin
-                FROM edge e
-                JOIN node c ON c.id = e.source_id
-                JOIN node d ON d.id = e.target_id
-                WHERE c.project_id = :project AND c.type = :file AND c.path = :path AND e.relation = 'documented_by' AND e.status = :active
-                ORDER BY d.label
-                SQL,
-            ['project' => $project->getId(), 'file' => NodeType::CodeFile->value, 'path' => $path, 'active' => EdgeStatus::Active->value],
-        );
+        return $this->documents->forFile($project, $path);
     }
 
     /**
@@ -457,20 +148,7 @@ final class KnowledgeReader
      */
     public function rulesDefinedBy(Node $document): array
     {
-        $slugs = $this->projectScope->slugs();
-        $scope = null === $slugs ? '' : ' AND p.slug IN (:slugs)';
-
-        return $this->connection->fetchAllAssociative(
-            <<<SQL
-                SELECT r.external_id AS code, r.label AS title, r.metadata->>'statement' AS statement, r.metadata->>'status' AS status,
-                       e.confidence, e.origin, p.slug AS project_slug
-                FROM edge e JOIN node r ON r.id = e.target_id JOIN project p ON p.id = r.project_id
-                WHERE e.source_id = :document AND r.type = :rule AND e.status = :active{$scope}
-                ORDER BY r.external_id
-                SQL,
-            ['document' => $document->getId(), 'rule' => NodeType::BusinessRule->value, 'active' => EdgeStatus::Active->value] + (null === $slugs ? [] : ['slugs' => ['', ...$slugs]]),
-            null === $slugs ? [] : ['slugs' => ArrayParameterType::STRING],
-        );
+        return $this->rules->definedBy($document);
     }
 
     /**
@@ -478,25 +156,7 @@ final class KnowledgeReader
      */
     public function rules(Project $project, ?string $status = null, ?int $limit = null, int $offset = 0): array
     {
-        return array_map(
-            static fn (array $row): array => ['demo' => (bool) $row['demo'], 'documents' => (int) $row['documents'], 'files' => (int) $row['files'], 'verified_files' => (int) $row['verified_files'], 'shadow_areas' => (int) $row['shadow_areas']] + $row,
-            $this->connection->fetchAllAssociative(
-                <<<'SQL'
-                    SELECT r.external_id AS code, r.label AS title, r.metadata->>'statement' AS statement, r.metadata->>'status' AS status,
-                           COALESCE((r.metadata->>'demo')::boolean, false) AS demo,
-                           COALESCE(jsonb_array_length(r.metadata->'shadow_areas'), 0) AS shadow_areas,
-                           (SELECT COUNT(*) FROM edge e WHERE e.target_id = r.id AND e.relation = 'defines' AND e.status = :active) AS documents,
-                           (SELECT COUNT(*) FROM edge e WHERE e.source_id = r.id AND e.relation = 'implemented_by' AND e.status = :active) AS files,
-                           (SELECT COUNT(*) FROM edge e WHERE e.source_id = r.id AND e.relation = 'implemented_by' AND e.status = :active AND e.confidence = 'VERIFIED') AS verified_files,
-                           COUNT(*) OVER () AS total
-                    FROM node r
-                    WHERE r.project_id = :project AND r.type = :rule AND (CAST(:status AS text) IS NULL OR r.metadata->>'status' = :status)
-                    ORDER BY r.external_id
-                    LIMIT :limit OFFSET :offset
-                    SQL,
-                ['project' => $project->getId(), 'rule' => NodeType::BusinessRule->value, 'active' => EdgeStatus::Active->value, 'status' => $status, 'limit' => $limit, 'offset' => $offset],
-            ),
-        );
+        return $this->rules->rules($project, $status, $limit, $offset);
     }
 
     /**
@@ -504,15 +164,7 @@ final class KnowledgeReader
      */
     public function ruleSources(Node $rule): array
     {
-        return $this->connection->fetchAllAssociative(
-            <<<'SQL'
-                SELECT d.id, d.label AS title, d.path AS filename, d.metadata->>'format' AS format, e.confidence, e.origin
-                FROM edge e JOIN node d ON d.id = e.source_id
-                WHERE e.target_id = :rule AND d.type = :document AND e.status = :active
-                ORDER BY d.label
-                SQL,
-            ['rule' => $rule->getId(), 'document' => NodeType::Document->value, 'active' => EdgeStatus::Active->value],
-        );
+        return $this->rules->ruleSources($rule);
     }
 
     /**
@@ -520,203 +172,57 @@ final class KnowledgeReader
      */
     public function ruleImplementations(Node $rule): array
     {
-        return $this->connection->fetchAllAssociative(
-            <<<'SQL'
-                SELECT c.path, c.label, c.type, e.confidence, e.origin
-                FROM edge e JOIN node c ON c.id = e.target_id
-                WHERE e.source_id = :rule AND e.relation = 'implemented_by' AND e.status = :active
-                ORDER BY CASE e.confidence WHEN 'VERIFIED' THEN 0 WHEN 'EXTRACTED' THEN 1 ELSE 2 END, c.path
-                SQL,
-            ['rule' => $rule->getId(), 'active' => EdgeStatus::Active->value],
-        );
+        return $this->rules->ruleImplementations($rule);
     }
 
     /**
-     * Commits, change requests and issues that name the rule (RG-042) in their text.
-     *
      * @return list<array{type: string, ref: string, label: string, author: ?string, date: ?string, url: ?string, state: ?string}>
      */
     public function ruleMentions(Node $rule): array
     {
-        return $this->connection->fetchAllAssociative(
-            <<<'SQL'
-                SELECT n.type, n.external_id AS ref, n.label, n.metadata->>'author' AS author, n.metadata->>'date' AS date,
-                       n.metadata->>'url' AS url, n.metadata->>'state' AS state
-                FROM edge e JOIN node n ON n.id = e.source_id
-                WHERE e.target_id = :rule AND e.relation = 'mentions' AND e.status = :active
-                ORDER BY n.metadata->>'date' DESC
-                LIMIT 30
-                SQL,
-            ['rule' => $rule->getId(), 'active' => EdgeStatus::Active->value],
-        );
+        return $this->rules->mentions($rule);
     }
 
     /**
-     * Rules implemented by the file itself or by one of its symbols.
-     *
      * @return list<array{code: string, title: string, status: ?string, confidence: string, origin: string}>
      */
     public function rulesForFile(Project $project, string $path): array
     {
-        return $this->connection->fetchAllAssociative(
-            <<<'SQL'
-                SELECT DISTINCT ON (r.external_id) r.external_id AS code, r.label AS title, r.metadata->>'status' AS status, e.confidence, e.origin
-                FROM edge e
-                JOIN node r ON r.id = e.source_id
-                JOIN node c ON c.id = e.target_id
-                WHERE r.project_id = :project AND r.type = :rule AND e.relation = 'implemented_by' AND e.status = :active AND c.path = :path
-                ORDER BY r.external_id, CASE e.confidence WHEN 'VERIFIED' THEN 0 WHEN 'EXTRACTED' THEN 1 ELSE 2 END
-                SQL,
-            ['project' => $project->getId(), 'rule' => NodeType::BusinessRule->value, 'active' => EdgeStatus::Active->value, 'path' => $path],
-        );
+        return $this->rules->forFile($project, $path);
     }
 
     /**
-     * Keyword search across memories, documents, business rules and code (file paths and symbol names).
-     * Code and rules are owned by a project; memories and documents are matched through their attached projects.
-     *
-     * @param list<string> $types node types to search, among memory, document, business_rule, code_file
+     * @param list<string> $types
      *
      * @return list<array{id: int, type: string, label: string, path: ?string, code: string, project_slug: ?string, snippet: ?string}>
      */
     public function search(string $query, ?Project $project, array $types, int $limit): array
     {
-        if ('' === trim($query) || [] === $types) {
-            return [];
-        }
-
-        $slugs = null === $project ? $this->projectScope->slugs() : null;
-        if ([] === $slugs) {
-            return [];
-        }
-        $scopeSql = null === $slugs
-            ? ''
-            : ' AND (p.slug IN (:slugs) OR EXISTS (SELECT 1 FROM node_project np JOIN project p2 ON p2.id = np.project_id WHERE np.node_id = n.id AND p2.slug IN (:slugs)))';
-
-        return array_map(
-            static fn (array $row): array => ['id' => (int) $row['id']] + $row,
-            $this->connection->fetchAllAssociative(
-                <<<SQL
-                    SELECT id, type, label, path, code, project_slug, snippet FROM (
-                    SELECT DISTINCT ON (n.id) n.id, n.type, n.label, n.path, n.external_id AS code, p.slug AS project_slug,
-                           CASE WHEN n.type = :rule THEN n.metadata->>'statement' WHEN n.type = :memory THEN n.metadata->'adr'->>'decision' WHEN s.id IS NOT NULL THEN 'symbol: ' || s.label END AS snippet,
-                           CASE n.type WHEN :memory THEN 0 WHEN :rule THEN 1 WHEN :document THEN 2 ELSE 3 END AS rank
-                    FROM node n
-                    LEFT JOIN project p ON p.id = n.project_id
-                    LEFT JOIN node s ON n.type = :file AND s.project_id = n.project_id AND s.path = n.path AND s.type = :symbol AND s.label ILIKE :like
-                    WHERE n.type IN (:types)
-                      AND (n.type <> :memory OR (COALESCE(n.metadata->>'status', 'active') = 'active' AND {$this->memoryAccess->sql('n')}))
-                      AND (
-                          n.label ILIKE :like OR n.path ILIKE :like OR s.id IS NOT NULL
-                          OR (n.type = :rule AND (n.external_id ILIKE :like OR n.metadata->>'statement' ILIKE :like))
-                      )
-                      AND (
-                          CAST(:project AS int) IS NULL
-                          OR n.project_id = :project
-                          OR EXISTS (SELECT 1 FROM node_project np WHERE np.node_id = n.id AND np.project_id = :project)
-                      ){$scopeSql}
-                    ORDER BY n.id
-                    ) matches
-                    ORDER BY rank, length(COALESCE(path, label)), label
-                    LIMIT $limit
-                    SQL,
-                [
-                    'types' => $types,
-                    'project' => $project?->getId(),
-                    'like' => '%'.addcslashes(trim($query), '\\%_').'%',
-                    'memory' => NodeType::Memory->value,
-                    'rule' => NodeType::BusinessRule->value,
-                    'document' => NodeType::Document->value,
-                    'file' => NodeType::CodeFile->value,
-                    'symbol' => NodeType::Symbol->value,
-                ] + (null === $slugs ? [] : ['slugs' => $slugs]),
-                ['types' => ArrayParameterType::STRING] + (null === $slugs ? [] : ['slugs' => ArrayParameterType::STRING]),
-            ),
-        );
+        return $this->search->search($query, $project, $types, $limit);
     }
 
     /**
-     * Nodes sharing words with the text, best first: a keyword stand-in for semantic search until vectors exist.
-     * Only active memories are returned; memories without any project are shared by all projects.
-     *
-     * @param list<string> $types   node types among memory, document, business_rule
-     * @param list<int>    $exclude node ids to leave out
+     * @param list<string> $types
+     * @param list<int>    $exclude
      *
      * @return list<array{id: int, type: string, label: string, code: string, path: ?string, statement: ?string}>
      */
     public function related(string $text, Project $project, array $types, int $limit, array $exclude = []): array
     {
-        preg_match_all('/[\p{L}\p{N}_]{4,}/u', mb_strtolower($text), $words);
-        // Prefixes stand in for stemming in any language: "remises" and "remise" both match "remise:*".
-        $words = \array_slice(array_values(array_unique(array_map(
-            static fn (string $word): string => mb_substr($word, 0, max(4, min(6, mb_strlen($word) - 1))).':*',
-            $words[0],
-        ))), 0, 40);
-        if ([] === $words || [] === $types) {
-            return [];
-        }
-
-        $workspaceClause = null === $this->projectScope->slugs()
-            ? ' OR (n.type = :memory AND NOT EXISTS (SELECT 1 FROM node_project np WHERE np.node_id = n.id))'
-            : '';
-
-        return array_map(
-            static fn (array $row): array => ['id' => (int) $row['id']] + $row,
-            $this->connection->fetchAllAssociative(
-                <<<SQL
-                    SELECT n.id, n.type, n.label, n.external_id AS code, n.path, n.metadata->>'statement' AS statement
-                    FROM node n, to_tsquery('simple', :query) q,
-                         to_tsvector('simple', n.label || ' ' || COALESCE(n.metadata->>'statement', '') || ' ' || COALESCE(n.metadata->'adr'->>'decision', '')) v
-                    WHERE n.type IN (:types) AND v @@ q AND n.id NOT IN (:exclude)
-                      AND (n.type <> :memory OR (COALESCE(n.metadata->>'status', 'active') = 'active' AND {$this->memoryAccess->sql('n')}))
-                      AND (
-                          n.project_id = :project
-                          OR EXISTS (SELECT 1 FROM node_project np WHERE np.node_id = n.id AND np.project_id = :project){$workspaceClause}
-                      )
-                    ORDER BY ts_rank(v, q) DESC, n.id
-                    LIMIT $limit
-                    SQL,
-                ['query' => implode(' | ', $words), 'types' => $types, 'exclude' => [0, ...$exclude], 'memory' => NodeType::Memory->value, 'project' => $project->getId()],
-                ['types' => ArrayParameterType::STRING, 'exclude' => ArrayParameterType::INTEGER],
-            ),
-        );
+        return $this->search->related($text, $project, $types, $limit, $exclude);
     }
 
     /**
-     * Memories this one replaces, and the ones that replace it ("supersedes" edges).
-     *
      * @return array{replaces: list<array{id: int, text: string, status: string}>, replaced_by: list<array{id: int, text: string, status: string}>}
      */
     public function supersession(Node $memory): array
     {
-        $slugs = $this->projectScope->slugs();
-        $scope = null === $slugs ? '' : ' AND EXISTS (SELECT 1 FROM node_project np JOIN project p ON p.id = np.project_id WHERE np.node_id = m.id AND p.slug IN (:slugs))';
-        $rows = $this->connection->fetchAllAssociative(
-            <<<SQL
-                SELECT CASE WHEN e.source_id = :memory THEN 'replaces' ELSE 'replaced_by' END AS direction,
-                       m.id, m.label AS text, COALESCE(m.metadata->>'status', 'active') AS status
-                FROM edge e JOIN node m ON m.id = CASE WHEN e.source_id = :memory THEN e.target_id ELSE e.source_id END
-                WHERE (e.source_id = :memory OR e.target_id = :memory) AND e.relation = 'supersedes' AND e.status = :active
-                  AND {$this->memoryAccess->sql('m')}{$scope}
-                ORDER BY m.created_at
-                SQL,
-            ['memory' => $memory->getId(), 'active' => EdgeStatus::Active->value] + (null === $slugs ? [] : ['slugs' => ['', ...$slugs]]),
-            null === $slugs ? [] : ['slugs' => ArrayParameterType::STRING],
-        );
-        $result = ['replaces' => [], 'replaced_by' => []];
-        foreach ($rows as $row) {
-            $result[$row['direction']][] = ['id' => (int) $row['id'], 'text' => $row['text'], 'status' => $row['status']];
-        }
-
-        return $result;
+        return $this->memories->supersession($memory);
     }
 
     public function pendingProposals(?Project $project = null): int
     {
-        return (int) $this->connection->fetchOne(
-            'SELECT COUNT(*) FROM proposal WHERE status = :pending AND (CAST(:project AS int) IS NULL OR project_id = :project)',
-            ['pending' => 'pending', 'project' => $project?->getId()],
-        );
+        return $this->proposals->countPending($project);
     }
 
     /**
@@ -726,18 +232,6 @@ final class KnowledgeReader
      */
     public function pendingProposalsByProject(array $projectIds): array
     {
-        if ([] === $projectIds) {
-            return [];
-        }
-        $counts = array_fill_keys($projectIds, 0);
-        foreach ($this->connection->fetchAllAssociative(
-            'SELECT project_id, COUNT(*) AS total FROM proposal WHERE status = :pending AND project_id IN (:projects) GROUP BY project_id',
-            ['pending' => 'pending', 'projects' => $projectIds],
-            ['projects' => ArrayParameterType::INTEGER],
-        ) as $row) {
-            $counts[(int) $row['project_id']] = (int) $row['total'];
-        }
-
-        return $counts;
+        return $this->proposals->countPendingByProject($projectIds);
     }
 }

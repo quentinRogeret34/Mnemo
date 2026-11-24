@@ -30,7 +30,7 @@
     } %}
     {% set filter_counts = {
         drift: summary.drift,
-        to_clarify: summary.to_clarify,
+        to_clarify: summary.toClarify,
         unlinked: summary.unlinked,
         aligned: summary.aligned,
     } %}
@@ -52,13 +52,13 @@
         </div>
         <div class="kpi">
             <span class="kpi__label">{{ ux_icon('lucide:code') }}{{ 'alignment.kpi.code'|trans }}</span>
-            <span class="kpi__value">{{ summary.with_code }} <span class="row__sub num">/ {{ summary.total }}</span></span>
-            <div class="kpi__foot"><span class="kpi__delta"><span>{{ 'alignment.kpi.sources'|trans({count: summary.with_source}) }}</span></span></div>
+            <span class="kpi__value">{{ summary.withCode }} <span class="row__sub num">/ {{ summary.total }}</span></span>
+            <div class="kpi__foot"><span class="kpi__delta"><span>{{ 'alignment.kpi.sources'|trans({count: summary.withSource}) }}</span></span></div>
         </div>
         <div class="kpi">
             <span class="kpi__label">{{ ux_icon('lucide:triangle-alert') }}{{ 'alignment.kpi.blockers'|trans }}</span>
             <span class="kpi__value">{{ summary.blockers }}</span>
-            <div class="kpi__foot"><span class="kpi__delta"><span>{{ 'alignment.kpi.to_clarify'|trans({count: summary.to_clarify}) }}</span></span></div>
+            <div class="kpi__foot"><span class="kpi__delta"><span>{{ 'alignment.kpi.to_clarify'|trans({count: summary.toClarify}) }}</span></span></div>
         </div>
         <div class="kpi">
             <span class="kpi__label">{{ ux_icon('lucide:shield-alert') }}{{ 'alignment.kpi.drift'|trans }}</span>
@@ -114,17 +114,17 @@
                     {% for row in rows %}
                         <tr class="alignment-row alignment-row--{{ row.state }}">
                             <td class="data-table__fill" data-label="{{ 'alignment.col.rule'|trans }}">
-                                <a class="alignment-rule" href="{{ path('rule_show', {slug: row.project_slug, code: row.code}) }}">
+                                <a class="alignment-rule" href="{{ path('rule_show', {slug: row.projectSlug, code: row.code}) }}">
                                     <span class="code-chip">{{ row.code }}</span>
                                     <span class="alignment-rule__title">{{ row.title }}</span>
                                 </a>
                                 {% if not project_mode and not project %}
-                                    <div class="row__sub">{{ row.project_name }}</div>
+                                    <div class="row__sub">{{ row.projectName }}</div>
                                 {% endif %}
                             </td>
                             <td class="data-table__nowrap" data-label="{{ 'alignment.col.source'|trans }}">
-                                {% if row.sources_count > 0 %}
-                                    <span class="pill pill--success">{{ 'document.docs_count'|trans({count: row.sources_count}) }}</span>
+                                {% if row.sourcesCount > 0 %}
+                                    <span class="pill pill--success">{{ 'document.docs_count'|trans({count: row.sourcesCount}) }}</span>
                                 {% else %}
                                     <span class="pill pill--neutral">{{ 'alignment.cell.missing'|trans }}</span>
                                 {% endif %}
@@ -137,37 +137,37 @@
                                 {% endif %}
                             </td>
                             <td class="data-table__nowrap" data-label="{{ 'alignment.col.shadow'|trans }}">
-                                {% if row.shadow_blockers > 0 %}
-                                    <span class="pill pill--danger">{{ 'alignment.cell.blockers'|trans({count: row.shadow_blockers}) }}</span>
-                                {% elseif row.shadow_open > 0 %}
-                                    <span class="pill pill--warning">{{ 'alignment.cell.open_shadow'|trans({count: row.shadow_open}) }}</span>
-                                {% elseif row.shadow_checked %}
+                                {% if row.shadowBlockers > 0 %}
+                                    <span class="pill pill--danger">{{ 'alignment.cell.blockers'|trans({count: row.shadowBlockers}) }}</span>
+                                {% elseif row.shadowOpen > 0 %}
+                                    <span class="pill pill--warning">{{ 'alignment.cell.open_shadow'|trans({count: row.shadowOpen}) }}</span>
+                                {% elseif row.shadowChecked %}
                                     <span class="pill pill--success">{{ 'alignment.cell.clear'|trans }}</span>
                                 {% else %}
                                     <span class="pill pill--neutral">{{ 'alignment.cell.unchecked'|trans }}</span>
                                 {% endif %}
                             </td>
                             <td class="data-table__nowrap" data-label="{{ 'alignment.col.code'|trans }}">
-                                {% if row.verified_code_count > 0 %}
-                                    <span class="pill pill--success">{{ 'alignment.cell.code_verified'|trans({count: row.code_count}) }}</span>
-                                {% elseif row.code_count > 0 %}
-                                    <span class="pill pill--accent">{{ 'alignment.cell.code_inferred'|trans({count: row.code_count}) }}</span>
+                                {% if row.verifiedCodeCount > 0 %}
+                                    <span class="pill pill--success">{{ 'alignment.cell.code_verified'|trans({count: row.codeCount}) }}</span>
+                                {% elseif row.codeCount > 0 %}
+                                    <span class="pill pill--accent">{{ 'alignment.cell.code_inferred'|trans({count: row.codeCount}) }}</span>
                                 {% else %}
                                     <span class="pill pill--danger">{{ 'alignment.cell.no_code'|trans }}</span>
                                 {% endif %}
                             </td>
                             <td data-label="{{ 'alignment.col.health'|trans }}">
-                                {% if row.refuted_memories > 0 %}
-                                    <span class="pill pill--danger">{{ 'alignment.cell.refuted'|trans({count: row.refuted_memories}) }}</span>
-                                {% elseif row.last_ticket_ref %}
-                                    {% if row.last_ticket_url %}
-                                        <a class="link mono" href="{{ row.last_ticket_url }}" target="_blank" rel="noopener noreferrer">{{ row.last_ticket_ref }}</a>
+                                {% if row.refutedMemories > 0 %}
+                                    <span class="pill pill--danger">{{ 'alignment.cell.refuted'|trans({count: row.refutedMemories}) }}</span>
+                                {% elseif row.lastTicketRef %}
+                                    {% if row.lastTicketUrl %}
+                                        <a class="link mono" href="{{ row.lastTicketUrl }}" target="_blank" rel="noopener noreferrer">{{ row.lastTicketRef }}</a>
                                     {% else %}
-                                        <span class="code-chip">{{ row.last_ticket_ref }}</span>
+                                        <span class="code-chip">{{ row.lastTicketRef }}</span>
                                     {% endif %}
-                                    <div class="row__sub data-table__clip" title="{{ row.last_ticket_label }}">{{ row.last_ticket_label }}</div>
-                                {% elseif row.decisions_count > 0 %}
-                                    <span class="row__sub">{{ 'alignment.cell.decisions'|trans({count: row.decisions_count}) }}</span>
+                                    <div class="row__sub data-table__clip" title="{{ row.lastTicketLabel }}">{{ row.lastTicketLabel }}</div>
+                                {% elseif row.decisionsCount > 0 %}
+                                    <span class="row__sub">{{ 'alignment.cell.decisions'|trans({count: row.decisionsCount}) }}</span>
                                 {% else %}
                                     <span class="row__sub">—</span>
                                 {% endif %}
@@ -179,14 +179,14 @@
                                 </div>
                             </td>
                             <td class="num data-table__nowrap">
-                                {% if row.shadow_open > 0 %}
-                                    <a class="button" href="{{ path('rule_show', {slug: row.project_slug, code: row.code}) }}#shadow-title">{{ 'alignment.action.answer'|trans }}</a>
-                                {% elseif row.code_count == 0 %}
-                                    <a class="button" href="{{ path('rule_show', {slug: row.project_slug, code: row.code}) }}#impl-title">{{ 'alignment.action.link_code'|trans }}</a>
+                                {% if row.shadowOpen > 0 %}
+                                    <a class="button" href="{{ path('rule_show', {slug: row.projectSlug, code: row.code}) }}#shadow-title">{{ 'alignment.action.answer'|trans }}</a>
+                                {% elseif row.codeCount == 0 %}
+                                    <a class="button" href="{{ path('rule_show', {slug: row.projectSlug, code: row.code}) }}#impl-title">{{ 'alignment.action.link_code'|trans }}</a>
                                 {% elseif row.status != 'validated' %}
-                                    <a class="button" href="{{ path('rule_show', {slug: row.project_slug, code: row.code}) }}">{{ 'alignment.action.validate'|trans }}</a>
+                                    <a class="button" href="{{ path('rule_show', {slug: row.projectSlug, code: row.code}) }}">{{ 'alignment.action.validate'|trans }}</a>
                                 {% else %}
-                                    <a class="button button--ghost" href="{{ path('rule_show', {slug: row.project_slug, code: row.code}) }}">{{ 'common.open'|trans }}</a>
+                                    <a class="button button--ghost" href="{{ path('rule_show', {slug: row.projectSlug, code: row.code}) }}">{{ 'common.open'|trans }}</a>
                                 {% endif %}
                             </td>
                         </tr>

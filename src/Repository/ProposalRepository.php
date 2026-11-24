@@ -7,6 +7,7 @@ use App\Entity\Proposal;
 use App\Enum\ProposalKind;
 use App\Enum\ProposalStatus;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
@@ -50,9 +51,31 @@ final class ProposalRepository extends ServiceEntityRepository
         return $this->findBy($criteria, ['createdAt' => 'ASC', 'id' => 'ASC'], $limit, $offset);
     }
 
-    public function countPending(?Project $project, ?ProposalKind $kind): int
+    public function countPending(?Project $project, ?ProposalKind $kind = null): int
     {
         return $this->count($this->pendingCriteria($project, $kind));
+    }
+
+    /**
+     * @param list<int> $projectIds
+     *
+     * @return array<int, int>
+     */
+    public function countPendingByProject(array $projectIds): array
+    {
+        if ([] === $projectIds) {
+            return [];
+        }
+        $counts = array_fill_keys($projectIds, 0);
+        foreach ($this->getEntityManager()->getConnection()->fetchAllAssociative(
+            'SELECT project_id, COUNT(*) AS total FROM proposal WHERE status = :pending AND project_id IN (:projects) GROUP BY project_id',
+            ['pending' => ProposalStatus::Pending->value, 'projects' => $projectIds],
+            ['projects' => ArrayParameterType::INTEGER],
+        ) as $row) {
+            $counts[(int) $row['project_id']] = (int) $row['total'];
+        }
+
+        return $counts;
     }
 
     /**
