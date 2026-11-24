@@ -36,10 +36,13 @@ x-app: &app
     OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
     OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
     OTEL_EXPORTER_OTLP_HEADERS: ${OTEL_EXPORTER_OTLP_HEADERS:-}
+    FACTORY_ENABLED: ${FACTORY_ENABLED:-auto}
+    FACTORY_CLI_TIMEOUT: ${FACTORY_CLI_TIMEOUT:-300}
   volumes:
     - storage:/app/var/storage
     - repos:/app/var/repos
     - locks:/app/var/lock
+    - worktrees:/app/var/worktrees
   depends_on:
     database:
       condition: service_healthy
@@ -77,6 +80,7 @@ services:
       - storage:/app/var/storage
       - repos:/app/var/repos
       - locks:/app/var/lock
+      - worktrees:/app/var/worktrees
       - caddy_data:/data
       - caddy_config:/config
 
@@ -112,6 +116,7 @@ volumes:
   storage:
   repos:
   locks:
+  worktrees:
   caddy_data:
   caddy_config:
   database_data:
