@@ -7,6 +7,7 @@ use App\Entity\Project;
 use App\Enum\MemoryType;
 use App\Forge\GitHubApp;
 use App\Llm\LlmUnavailable;
+use App\Notification\WorkspaceNotifier;
 use App\Security\SafeUrl;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Lock\LockFactory;
@@ -36,6 +37,7 @@ final class PullRequestReviewer
         private readonly UrlGeneratorInterface $urlGenerator,
         private readonly ?LockFactory $lockFactory = null,
         private readonly ?LoggerInterface $logger = null,
+        private readonly ?WorkspaceNotifier $notifier = null,
     ) {
     }
 
@@ -108,6 +110,9 @@ final class PullRequestReviewer
             $this->comment($http, $base, $number, $body, [] !== $rules || [] !== $memories || [] !== $remarks);
             $this->check($http, $base, $pullRequest['head']['sha'], $rules, $unguarded, 'fail' === ($arguments['review_check'] ?? 'warn'));
             $this->lineComments($http, $base, $number, $pullRequest['head']['sha'], $project, array_values(array_filter($remarks, static fn (array $remark): bool => null !== $remark['line'])));
+            if ([] !== $remarks) {
+                $this->notifier?->notifyPullRequestRemarks($project, $number, (string) $pullRequest['title'], SafeUrl::http((string) ($pullRequest['html_url'] ?? '')), $remarks);
+            }
         }
 
         return $body;

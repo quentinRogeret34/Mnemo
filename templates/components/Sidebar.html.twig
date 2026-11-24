@@ -102,6 +102,10 @@
                 <twig:ux:icon name="lucide:message-circle" class="icon nav-item__icon" />
                 <span class="nav-item__label">{{ 'nav.assistant'|trans }}</span>
             </a>
+            <a class="nav-item" href="{{ path('project_briefing', {slug: project.slug}) }}" {% if route == 'project_briefing' %}aria-current="page"{% endif %}>
+                <twig:ux:icon name="lucide:library" class="icon nav-item__icon" />
+                <span class="nav-item__label">{{ 'nav.briefing'|trans }}</span>
+            </a>
             <a class="nav-item" href="{{ path('agent_asset_index', {slug: project.slug}) }}" {% if route starts with 'agent_asset_' %}aria-current="page"{% endif %}>
                 <twig:ux:icon name="lucide:wand-sparkles" class="icon nav-item__icon" />
                 <span class="nav-item__label">{{ 'nav.agent_assets'|trans }}</span>

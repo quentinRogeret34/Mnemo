@@ -49,11 +49,44 @@
                     {% endif %}
                 </p>
             </div>
+        </fieldset>
+        <fieldset id="notifications">
+            <legend>{{ 'project.settings.notifications'|trans }}</legend>
+            <p class="row__sub">{{ 'project.settings.notifications_lede'|trans }}</p>
+            {{ form_row(form.webhookFormat) }}
+            {{ form_row(form.webhookUrl) }}
+            {% if project.hasWebhook %}
+                <div class="checkbox-field">
+                    <label class="checkbox-field__label">
+                        {{ form_widget(form.clearWebhook) }}
+                        <span>{{ form.clearWebhook.vars.label|trans }}</span>
+                    </label>
+                </div>
+            {% else %}
+                {% do form.clearWebhook.setRendered %}
+            {% endif %}
+            <div class="webhook-events">
+                <span class="form-label">{{ form.webhookEvents.vars.label|trans }}</span>
+                {% for child in form.webhookEvents %}
+                    <label class="checkbox-field__label">
+                        {{ form_widget(child) }}
+                        <span>{{ child.vars.label|trans }}</span>
+                    </label>
+                {% endfor %}
+            </div>
             <div class="upload__actions">
                 <button class="button button--primary" type="submit">{{ 'common.save_settings'|trans }}</button>
             </div>
         </fieldset>
     {{ form_end(form) }}
+
+    {% if project.hasWebhook %}
+        <form class="inline-form" method="post" action="{{ path('project_webhook_test', {slug: project.slug}) }}">
+            <input type="hidden" name="_token" value="{{ token }}">
+            <button class="button" type="submit"><twig:ux:icon name="lucide:send-horizontal" />{{ 'project.settings.webhook_test'|trans }}</button>
+            <span class="row__sub">{{ 'project.settings.webhook_configured'|trans({format: project.webhookFormat|trans}) }}</span>
+        </form>
+    {% endif %}
 
     <section class="block" aria-labelledby="connectors-title">
         <div class="block__head">

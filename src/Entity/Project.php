@@ -2,6 +2,8 @@
 
 namespace App\Entity;
 
+use App\Enum\WebhookFormat;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Component\Validator\Constraints as Assert;
@@ -45,6 +47,18 @@ class Project
 
     #[ORM\Column(nullable: true)]
     private ?\DateTimeImmutable $lastAutoGardenAt = null;
+
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    private ?string $webhookUrlEncrypted = null;
+
+    #[ORM\Column(length: 20, enumType: WebhookFormat::class, options: ['default' => 'slack'])]
+    private WebhookFormat $webhookFormat = WebhookFormat::Slack;
+
+    /**
+     * @var list<string>
+     */
+    #[ORM\Column(type: Types::JSON, options: ['jsonb' => true, 'default' => '["shadow_blocker","pr_contradiction"]'])]
+    private array $webhookEvents = ['shadow_blocker', 'pr_contradiction'];
 
     public function __construct(
         #[ORM\Column(length: 100, unique: true)]
@@ -162,5 +176,51 @@ class Project
     public function markAutoGardened(?\DateTimeImmutable $at = null): void
     {
         $this->lastAutoGardenAt = $at ?? new \DateTimeImmutable();
+    }
+
+    public function hasWebhook(): bool
+    {
+        return null !== $this->webhookUrlEncrypted && '' !== $this->webhookUrlEncrypted;
+    }
+
+    public function getWebhookUrlEncrypted(): ?string
+    {
+        return $this->webhookUrlEncrypted;
+    }
+
+    public function setWebhookUrlEncrypted(?string $webhookUrlEncrypted): void
+    {
+        $this->webhookUrlEncrypted = '' === trim((string) $webhookUrlEncrypted) ? null : $webhookUrlEncrypted;
+    }
+
+    public function getWebhookFormat(): WebhookFormat
+    {
+        return $this->webhookFormat;
+    }
+
+    public function setWebhookFormat(WebhookFormat $webhookFormat): void
+    {
+        $this->webhookFormat = $webhookFormat;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function getWebhookEvents(): array
+    {
+        return $this->webhookEvents;
+    }
+
+    /**
+     * @param list<string> $webhookEvents
+     */
+    public function setWebhookEvents(array $webhookEvents): void
+    {
+        $this->webhookEvents = array_values(array_unique($webhookEvents));
+    }
+
+    public function notifiesOn(string $event): bool
+    {
+        return $this->hasWebhook() && \in_array($event, $this->webhookEvents, true);
     }
 }

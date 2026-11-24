@@ -11,6 +11,7 @@ use App\Enum\NodeType;
 use App\Graph\KnowledgeReader;
 use App\Llm\Chat;
 use App\Memory\MemoryStore;
+use App\Notification\WorkspaceNotifier;
 use App\Security\MemoryAccess;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -48,6 +49,7 @@ final class ShadowAreaDetector
         private readonly EntityManagerInterface $entityManager,
         private readonly MemoryStore $memoryStore,
         private readonly MemoryAccess $memoryAccess,
+        private readonly ?WorkspaceNotifier $notifier = null,
     ) {
     }
 
@@ -116,6 +118,11 @@ final class ShadowAreaDetector
 
         $rule->annotate(['shadow_areas' => $areas, 'shadow_checked_at' => (new \DateTimeImmutable())->format(\DATE_ATOM)] + $rule->getMetadata());
         $this->entityManager->flush();
+
+        $blockers = array_values(array_filter($areas, static fn (array $area): bool => 'blocker' === $area['severity']));
+        if ([] !== $blockers) {
+            $this->notifier?->notifyShadowBlockers($rule, $blockers);
+        }
 
         return $areas;
     }

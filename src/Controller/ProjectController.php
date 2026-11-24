@@ -9,10 +9,13 @@ use App\Form\ProjectType;
 use App\Llm\LlmSettings;
 use App\Llm\ModelCheck;
 use App\Message\ReindexNodes;
+use App\Notification\WorkspaceNotifier;
 use App\Project\ProjectRemover;
 use App\Project\ProjectResolver;
 use App\Security\OAuth\OAuthClient;
 use App\Security\ProjectScope;
+use App\Security\SafeUrl;
+use App\Security\SecretBox;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bridge\Doctrine\Attribute\MapEntity;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -40,6 +43,8 @@ final class ProjectController extends AbstractController
         private readonly ModelCheck $modelCheck,
         private readonly MessageBusInterface $bus,
         private readonly TranslatorInterface $translator,
+        private readonly SecretBox $secretBox,
+        private readonly WorkspaceNotifier $notifier,
     ) {
     }
 
@@ -72,7 +77,10 @@ final class ProjectController extends AbstractController
     #[Route('/projects/{slug}/settings', name: 'project_settings', methods: ['GET', 'POST'])]
     public function settings(#[MapEntity(mapping: ['slug' => 'slug'])] Project $project, Request $request): Response
     {
-        $form = $this->createForm(ProjectType::class, $project, ['groups' => $this->isGranted('ROLE_SUPER_ADMIN')]);
+        $form = $this->createForm(ProjectType::class, $project, [
+            'groups' => $this->isGranted('ROLE_SUPER_ADMIN'),
+            'has_webhook' => $project->hasWebhook(),
+        ]);
         if ($form->has('groups')) {
             $form->get('groups')->setData(array_filter(
                 $this->entityManager->getRepository(UserGroup::class)->findAll(),
@@ -89,6 +97,19 @@ final class ProjectController extends AbstractController
             }
             if ($embeddingModel !== $this->llmSettings->embeddingModel($project) && null !== $error = $this->modelCheck->embedding($this->llmSettings->embeddingModel($project))) {
                 $form->get('embeddingModel')->addError(new FormError($this->translator->trans('llm.refused_embedding', ['error' => $error])));
+            }
+        }
+        if ($form->isSubmitted() && $form->isValid()) {
+            $rawWebhook = trim((string) $form->get('webhookUrl')->getData());
+            if ($form->get('clearWebhook')->getData()) {
+                $project->setWebhookUrlEncrypted(null);
+            } elseif ('' !== $rawWebhook) {
+                try {
+                    $safe = SafeUrl::requireHttps($rawWebhook);
+                    $project->setWebhookUrlEncrypted($this->secretBox->encrypt($safe));
+                } catch (\RuntimeException $exception) {
+                    $form->get('webhookUrl')->addError(new FormError($exception->getMessage()));
+                }
             }
         }
         if ($form->isSubmitted() && $form->isValid()) {
@@ -115,6 +136,20 @@ final class ProjectController extends AbstractController
             'github_oauth' => isset($this->oauthClient->enabled()['github']),
             'scoped' => null !== $this->projectScope->slugs(),
         ], new Response(status: $form->isSubmitted() ? Response::HTTP_UNPROCESSABLE_ENTITY : Response::HTTP_OK));
+    }
+
+    #[Route('/projects/{slug}/settings/webhook-test', name: 'project_webhook_test', methods: ['POST'])]
+    public function testWebhook(#[MapEntity(mapping: ['slug' => 'slug'])] Project $project, Request $request): Response
+    {
+        $this->checkToken($project, $request);
+        try {
+            $this->notifier->test($project);
+            $this->addFlash('success', new TranslatableMessage('flash.project.webhook_sent'));
+        } catch (\RuntimeException $exception) {
+            $this->addFlash('error', new TranslatableMessage('flash.project.webhook_failed', ['error' => $exception->getMessage()]));
+        }
+
+        return $this->redirectToRoute('project_settings', ['slug' => $project->getSlug()]);
     }
 
     #[Route('/projects/{slug}/archive', name: 'project_archive', methods: ['POST'])]
