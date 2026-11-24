@@ -70,6 +70,48 @@ agent:
     new_long: 'New skill, command or subagent'
     propose: 'Propose AI updates'
     updated: Updated
+alignment:
+    action:
+        answer: Answer
+        link_code: 'Link code'
+        validate: Validate
+    cell:
+        blockers: '{count, plural, one {# blocker} other {# blockers}}'
+        clear: Clear
+        code_inferred: '{count} inferred'
+        code_verified: '{count} verified'
+        decisions: '{count, plural, one {# decision} other {# decisions}}'
+        missing: Missing
+        no_code: 'No code'
+        open_shadow: '{count, plural, one {# open} other {# open}}'
+        refuted: '{count, plural, one {# refuted memory} other {# refuted memories}}'
+        unchecked: Unchecked
+    col:
+        code: Code
+        health: 'PR / Health'
+        readiness: Score
+        rule: 'Business rule'
+        shadow: 'Blind spots'
+        source: Spec
+        validation: Validation
+    empty: 'No business rule recorded in this scope.'
+    empty_filtered: 'No business rule matches this filter.'
+    filter:
+        aligned: Aligned
+        drift: 'In drift'
+        label: 'Filter by alignment state'
+        to_clarify: 'To clarify'
+        unlinked: Unlinked
+    kpi:
+        aligned: 'Aligned rules'
+        blockers: 'Blocking questions'
+        code: 'Linked to code'
+        drift: 'Rules in drift'
+        refuted: '{count, plural, =0 {no refuted memory} one {# refuted memory} other {# refuted memories}}'
+        sources: '{count} with source document'
+        to_clarify: '{count, plural, =0 {none to clarify} one {# to clarify} other {# to clarify}}'
+        validated: '{validated} / {total} validated'
+    lede: 'Unified Spec ↔ Rule ↔ Blind spots ↔ Code ↔ PR view: spot immediately where the Business ↔ Dev chain breaks.'
 app:
     name: Mnemo
 appearance:
@@ -405,6 +447,7 @@ dashboard:
         no_shadow: 'No open blind spots: analyzed rules are clear.'
         rules: 'Business rules'
         rules_sub: '{validated} validated · {to_review} to review'
+        see_alignment: 'Open alignment matrix'
         see_documents: 'See documents'
         see_questions: 'Answer open questions'
         see_rules: 'See business rules'
@@ -1085,6 +1128,7 @@ memory:
 nav:
     activity: Activity
     agent_assets: 'Agent skills'
+    alignment: Alignment
     all_documents: 'All documents'
     all_memories: 'All memories'
     all_projects: 'All projects'

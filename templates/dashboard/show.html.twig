@@ -160,11 +160,12 @@
                                     <span class="bars__track"><span class="bars__fill" style="width: {{ (linked_rules / business.rules_total * 100)|round(1) }}%"></span></span>
                                 </li>
                             </ul>
-                            {% if project %}
-                                <div class="panel__foot">
-                                    <a class="link" href="{{ path('rule_index', {slug: project.slug}) }}">{{ 'dashboard.business.see_rules'|trans }}</a>
-                                </div>
-                            {% endif %}
+                            <div class="panel__foot">
+                                <a class="link" href="{{ project ? path('project_alignment', {slug: project.slug}) : path('alignment_index') }}">{{ 'dashboard.business.see_alignment'|trans }}</a>
+                                {% if project %}
+                                    · <a class="link" href="{{ path('rule_index', {slug: project.slug}) }}">{{ 'dashboard.business.see_rules'|trans }}</a>
+                                {% endif %}
+                            </div>
                         {% endif %}
                     </section>
                 {% endif %}

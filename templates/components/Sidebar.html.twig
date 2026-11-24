@@ -81,6 +81,10 @@
                 <twig:ux:icon name="lucide:triangle-alert" class="icon nav-item__icon" />
                 <span class="nav-item__label">{{ 'nav.questions'|trans }}</span>
             </a>
+            <a class="nav-item" href="{{ path('project_alignment', {slug: project.slug}) }}" {% if route == 'project_alignment' %}aria-current="page"{% endif %}>
+                <twig:ux:icon name="lucide:scale" class="icon nav-item__icon" />
+                <span class="nav-item__label">{{ 'nav.alignment'|trans }}</span>
+            </a>
             <a class="nav-item" href="{{ path('memory_index', {project: project.slug}) }}" {% if route in ['memory_index', 'memory_show'] %}aria-current="page"{% endif %}>
                 <twig:ux:icon name="lucide:lightbulb" class="icon nav-item__icon" />
                 <span class="nav-item__label">{{ 'nav.memories'|trans }}</span>
@@ -157,6 +161,10 @@
             <a class="nav-item" href="{{ path('question_index') }}" {% if route == 'question_index' %}aria-current="page"{% endif %}>
                 <twig:ux:icon name="lucide:triangle-alert" class="icon nav-item__icon" />
                 <span class="nav-item__label">{{ 'nav.questions'|trans }}</span>
+            </a>
+            <a class="nav-item" href="{{ path('alignment_index') }}" {% if route == 'alignment_index' %}aria-current="page"{% endif %}>
+                <twig:ux:icon name="lucide:scale" class="icon nav-item__icon" />
+                <span class="nav-item__label">{{ 'nav.alignment'|trans }}</span>
             </a>
             <a class="nav-item" href="{{ path('chat') }}" {% if route == 'chat' %}aria-current="page"{% endif %}>
                 <twig:ux:icon name="lucide:message-circle" class="icon nav-item__icon" />

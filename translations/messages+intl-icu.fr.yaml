@@ -70,6 +70,48 @@ agent:
     new_long: 'Nouveau skill, commande ou sous-agent'
     propose: 'Proposer des évolutions IA'
     updated: Modifié
+alignment:
+    action:
+        answer: Répondre
+        link_code: 'Lier le code'
+        validate: Valider
+    cell:
+        blockers: '{count, plural, one {# bloquant} other {# bloquants}}'
+        clear: Claire
+        code_inferred: '{count} inféré(s)'
+        code_verified: '{count} vérifié(s)'
+        decisions: '{count, plural, one {# décision} other {# décisions}}'
+        missing: Manquante
+        no_code: 'Aucun code'
+        open_shadow: '{count, plural, one {# ouverte} other {# ouvertes}}'
+        refuted: '{count, plural, one {# mémoire réfutée} other {# mémoires réfutées}}'
+        unchecked: 'Non analysée'
+    col:
+        code: Code
+        health: 'PR / Santé'
+        readiness: Score
+        rule: 'Règle métier'
+        shadow: "Zones d'ombre"
+        source: Spec
+        validation: Validation
+    empty: 'Aucune règle métier enregistrée sur ce périmètre.'
+    empty_filtered: 'Aucune règle métier ne correspond à ce filtre.'
+    filter:
+        aligned: Alignées
+        drift: 'En dérive'
+        label: "Filtrer par état d'alignement"
+        to_clarify: 'À clarifier'
+        unlinked: 'Non liées'
+    kpi:
+        aligned: 'Règles alignées'
+        blockers: 'Questions bloquantes'
+        code: 'Reliées au code'
+        drift: 'Règles en dérive'
+        refuted: '{count, plural, =0 {aucune mémoire réfutée} one {# mémoire réfutée} other {# mémoires réfutées}}'
+        sources: '{count} avec document source'
+        to_clarify: '{count, plural, =0 {aucune à clarifier} one {# à clarifier} other {# à clarifier}}'
+        validated: '{validated} / {total} validées'
+    lede: "Vue unifiée Spec ↔ Règle ↔ Zones d'ombre ↔ Code ↔ PR : repérez en un coup d'œil où la chaîne Métier ↔ Dev est rompue."
 app:
     name: Mnemo
 appearance:
@@ -405,6 +447,7 @@ dashboard:
         no_shadow: 'Aucune zone d’ombre en attente : les règles analysées sont claires.'
         rules: 'Règles métier'
         rules_sub: '{validated} validées · {to_review} à valider'
+        see_alignment: "Ouvrir la matrice d'alignement"
         see_documents: 'Voir les documents'
         see_questions: 'Répondre aux questions'
         see_rules: 'Voir les règles métier'
@@ -1085,6 +1128,7 @@ memory:
 nav:
     activity: Activité
     agent_assets: 'Skills des agents'
+    alignment: Alignement
     all_documents: 'Tous les documents'
     all_memories: 'Toutes les mémoires'
     all_projects: 'Tous les projets'

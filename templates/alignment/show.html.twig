@@ -1,0 +1,198 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ 'nav.alignment'|trans }}{{ project ? ' · ' ~ project.name }}{% endblock %}
+
+{% block crumbs %}
+    {% if project_mode and project %}
+        <a href="{{ path('project_show', {slug: project.slug}) }}">{{ project.name }}</a>
+        <span class="crumbs__sep" aria-hidden="true">/</span>
+    {% endif %}
+    <span class="crumbs__current">{{ 'nav.alignment'|trans }}</span>
+{% endblock %}
+
+{% block header_actions %}
+    {% if project_mode and project %}
+        <a class="button" href="{{ path('project_questions', {slug: project.slug}) }}"><twig:ux:icon name="lucide:triangle-alert" />{{ 'nav.questions'|trans }}</a>
+        <a class="button" href="{{ path('project_briefing', {slug: project.slug}) }}"><twig:ux:icon name="lucide:library" />{{ 'nav.briefing'|trans }}</a>
+    {% else %}
+        <a class="button" href="{{ path('question_index', project ? {project: project.slug} : {}) }}"><twig:ux:icon name="lucide:triangle-alert" />{{ 'nav.questions'|trans }}</a>
+    {% endif %}
+{% endblock %}
+
+{% block body %}
+    {% set route_name = project_mode ? 'project_alignment' : 'alignment_index' %}
+    {% set base_params = project_mode and project ? {slug: project.slug} : (project ? {project: project.slug} : {}) %}
+    {% set filter_labels = {
+        drift: 'alignment.filter.drift',
+        to_clarify: 'alignment.filter.to_clarify',
+        unlinked: 'alignment.filter.unlinked',
+        aligned: 'alignment.filter.aligned',
+    } %}
+    {% set filter_counts = {
+        drift: summary.drift,
+        to_clarify: summary.to_clarify,
+        unlinked: summary.unlinked,
+        aligned: summary.aligned,
+    } %}
+
+    <div class="view-head">
+        <h1><twig:ux:icon name="lucide:scale" />{{ 'nav.alignment'|trans }}</h1>
+        {% if summary.score is not null %}
+            <span class="alignment-score num">{{ summary.score }} %</span>
+        {% endif %}
+        <span class="view-head__meta">{{ project ? project.name : 'nav.all_projects'|trans }}</span>
+    </div>
+    <p class="page__lede">{{ 'alignment.lede'|trans }}</p>
+
+    <section class="kpis" aria-label="{{ 'dashboard.key_figures'|trans }}">
+        <div class="kpi">
+            <span class="kpi__label">{{ ux_icon('lucide:circle-check') }}{{ 'alignment.kpi.aligned'|trans }}</span>
+            <span class="kpi__value">{{ summary.aligned }} <span class="row__sub num">/ {{ summary.total }}</span></span>
+            <div class="kpi__foot"><span class="kpi__delta"><span>{{ 'alignment.kpi.validated'|trans({validated: summary.validated, total: summary.total}) }}</span></span></div>
+        </div>
+        <div class="kpi">
+            <span class="kpi__label">{{ ux_icon('lucide:code') }}{{ 'alignment.kpi.code'|trans }}</span>
+            <span class="kpi__value">{{ summary.with_code }} <span class="row__sub num">/ {{ summary.total }}</span></span>
+            <div class="kpi__foot"><span class="kpi__delta"><span>{{ 'alignment.kpi.sources'|trans({count: summary.with_source}) }}</span></span></div>
+        </div>
+        <div class="kpi">
+            <span class="kpi__label">{{ ux_icon('lucide:triangle-alert') }}{{ 'alignment.kpi.blockers'|trans }}</span>
+            <span class="kpi__value">{{ summary.blockers }}</span>
+            <div class="kpi__foot"><span class="kpi__delta"><span>{{ 'alignment.kpi.to_clarify'|trans({count: summary.to_clarify}) }}</span></span></div>
+        </div>
+        <div class="kpi">
+            <span class="kpi__label">{{ ux_icon('lucide:shield-alert') }}{{ 'alignment.kpi.drift'|trans }}</span>
+            <span class="kpi__value">{{ summary.drift }}</span>
+            <div class="kpi__foot"><span class="kpi__delta"><span>{{ 'alignment.kpi.refuted'|trans({count: summary.refuted}) }}</span></span></div>
+        </div>
+    </section>
+
+    <div class="filter-bar">
+        <nav class="tabs" aria-label="{{ 'alignment.filter.label'|trans }}">
+            <a href="{{ path(route_name, base_params) }}" {% if filter is null %}aria-current="page"{% endif %}>
+                {{ 'common.all'|trans }} <span class="tab__count num">{{ summary.total }}</span>
+            </a>
+            {% for item in filters %}
+                <a href="{{ path(route_name, base_params|merge({filter: item})) }}" {% if filter == item %}aria-current="page"{% endif %}>
+                    {{ filter_labels[item]|trans }}
+                    {% if filter_counts[item] > 0 %}<span class="tab__count num">{{ filter_counts[item] }}</span>{% endif %}
+                </a>
+            {% endfor %}
+        </nav>
+
+        {% if not project_mode and projects is not empty %}
+            <form method="get" action="{{ path('alignment_index') }}" data-controller="autosubmit">
+                {% if filter %}<input type="hidden" name="filter" value="{{ filter }}">{% endif %}
+                <select class="select" name="project" aria-label="{{ 'memory.index.project'|trans }}" data-action="autosubmit#submit">
+                    <option value="">{{ 'nav.all_projects'|trans }}</option>
+                    {% for item in projects %}
+                        <option value="{{ item.slug }}" {{ project and project.id == item.id ? 'selected' }}>{{ item.name }}</option>
+                    {% endfor %}
+                </select>
+            </form>
+        {% endif %}
+    </div>
+
+    {% if rows is empty %}
+        <p class="block__empty">{{ (filter ? 'alignment.empty_filtered' : 'alignment.empty')|trans }}</p>
+    {% else %}
+        <div class="table-wrap table-wrap--framed alignment-table">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th scope="col">{{ 'alignment.col.rule'|trans }}</th>
+                        <th scope="col">{{ 'alignment.col.source'|trans }}</th>
+                        <th scope="col">{{ 'alignment.col.validation'|trans }}</th>
+                        <th scope="col">{{ 'alignment.col.shadow'|trans }}</th>
+                        <th scope="col">{{ 'alignment.col.code'|trans }}</th>
+                        <th scope="col">{{ 'alignment.col.health'|trans }}</th>
+                        <th scope="col" class="num">{{ 'alignment.col.readiness'|trans }}</th>
+                        <th scope="col"><span class="visually-hidden">{{ 'project.index.col.action'|trans }}</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in rows %}
+                        <tr class="alignment-row alignment-row--{{ row.state }}">
+                            <td class="data-table__fill" data-label="{{ 'alignment.col.rule'|trans }}">
+                                <a class="alignment-rule" href="{{ path('rule_show', {slug: row.project_slug, code: row.code}) }}">
+                                    <span class="code-chip">{{ row.code }}</span>
+                                    <span class="alignment-rule__title">{{ row.title }}</span>
+                                </a>
+                                {% if not project_mode and not project %}
+                                    <div class="row__sub">{{ row.project_name }}</div>
+                                {% endif %}
+                            </td>
+                            <td class="data-table__nowrap" data-label="{{ 'alignment.col.source'|trans }}">
+                                {% if row.sources_count > 0 %}
+                                    <span class="pill pill--success">{{ 'document.docs_count'|trans({count: row.sources_count}) }}</span>
+                                {% else %}
+                                    <span class="pill pill--neutral">{{ 'alignment.cell.missing'|trans }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="data-table__nowrap" data-label="{{ 'alignment.col.validation'|trans }}">
+                                {% if row.status == 'validated' %}
+                                    <span class="pill pill--success">{{ 'rule.validated'|trans }}</span>
+                                {% else %}
+                                    <span class="pill pill--warning">{{ 'nav.to_review'|trans }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="data-table__nowrap" data-label="{{ 'alignment.col.shadow'|trans }}">
+                                {% if row.shadow_blockers > 0 %}
+                                    <span class="pill pill--danger">{{ 'alignment.cell.blockers'|trans({count: row.shadow_blockers}) }}</span>
+                                {% elseif row.shadow_open > 0 %}
+                                    <span class="pill pill--warning">{{ 'alignment.cell.open_shadow'|trans({count: row.shadow_open}) }}</span>
+                                {% elseif row.shadow_checked %}
+                                    <span class="pill pill--success">{{ 'alignment.cell.clear'|trans }}</span>
+                                {% else %}
+                                    <span class="pill pill--neutral">{{ 'alignment.cell.unchecked'|trans }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="data-table__nowrap" data-label="{{ 'alignment.col.code'|trans }}">
+                                {% if row.verified_code_count > 0 %}
+                                    <span class="pill pill--success">{{ 'alignment.cell.code_verified'|trans({count: row.code_count}) }}</span>
+                                {% elseif row.code_count > 0 %}
+                                    <span class="pill pill--accent">{{ 'alignment.cell.code_inferred'|trans({count: row.code_count}) }}</span>
+                                {% else %}
+                                    <span class="pill pill--danger">{{ 'alignment.cell.no_code'|trans }}</span>
+                                {% endif %}
+                            </td>
+                            <td data-label="{{ 'alignment.col.health'|trans }}">
+                                {% if row.refuted_memories > 0 %}
+                                    <span class="pill pill--danger">{{ 'alignment.cell.refuted'|trans({count: row.refuted_memories}) }}</span>
+                                {% elseif row.last_ticket_ref %}
+                                    {% if row.last_ticket_url %}
+                                        <a class="link mono" href="{{ row.last_ticket_url }}" target="_blank" rel="noopener noreferrer">{{ row.last_ticket_ref }}</a>
+                                    {% else %}
+                                        <span class="code-chip">{{ row.last_ticket_ref }}</span>
+                                    {% endif %}
+                                    <div class="row__sub data-table__clip" title="{{ row.last_ticket_label }}">{{ row.last_ticket_label }}</div>
+                                {% elseif row.decisions_count > 0 %}
+                                    <span class="row__sub">{{ 'alignment.cell.decisions'|trans({count: row.decisions_count}) }}</span>
+                                {% else %}
+                                    <span class="row__sub">—</span>
+                                {% endif %}
+                            </td>
+                            <td class="num data-table__nowrap" data-label="{{ 'alignment.col.readiness'|trans }}">
+                                <div class="alignment-meter" title="{{ row.readiness }} %">
+                                    <span class="alignment-meter__bar"><span class="alignment-meter__fill alignment-meter__fill--{{ row.state }}" style="width: {{ row.readiness }}%"></span></span>
+                                    <span class="num">{{ row.readiness }} %</span>
+                                </div>
+                            </td>
+                            <td class="num data-table__nowrap">
+                                {% if row.shadow_open > 0 %}
+                                    <a class="button" href="{{ path('rule_show', {slug: row.project_slug, code: row.code}) }}#shadow-title">{{ 'alignment.action.answer'|trans }}</a>
+                                {% elseif row.code_count == 0 %}
+                                    <a class="button" href="{{ path('rule_show', {slug: row.project_slug, code: row.code}) }}#impl-title">{{ 'alignment.action.link_code'|trans }}</a>
+                                {% elseif row.status != 'validated' %}
+                                    <a class="button" href="{{ path('rule_show', {slug: row.project_slug, code: row.code}) }}">{{ 'alignment.action.validate'|trans }}</a>
+                                {% else %}
+                                    <a class="button button--ghost" href="{{ path('rule_show', {slug: row.project_slug, code: row.code}) }}">{{ 'common.open'|trans }}</a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endif %}
+{% endblock %}
