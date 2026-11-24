@@ -14,6 +14,7 @@ use App\Form\FolderType;
 use App\Graph\KnowledgeReader;
 use App\Llm\LlmUnavailable;
 use App\Pagination\Page;
+use App\Repository\FolderRepository;
 use App\Rule\RuleExtractor;
 use App\Security\ProjectScope;
 use Doctrine\ORM\EntityManagerInterface;
@@ -42,6 +43,7 @@ final class DocumentController extends AbstractController
         private readonly DocumentStorage $documentStorage,
         private readonly DocumentTextExtractor $documentTextExtractor,
         private readonly RuleExtractor $ruleExtractor,
+        private readonly FolderRepository $folderRepository,
         private readonly EntityManagerInterface $entityManager,
         private readonly ProjectScope $projectScope,
         private readonly TranslatorInterface $translator,
@@ -64,11 +66,7 @@ final class DocumentController extends AbstractController
         $folderForm->handleRequest($request);
         if ($folderForm->isSubmitted() && $folderForm->isValid()) {
             $name = trim((string) $folderForm->get('name')->getData());
-            $exists = false !== $this->entityManager->getConnection()->fetchOne(
-                'SELECT 1 FROM folder WHERE lower(name) = lower(:name) AND '.(null === $current ? 'parent_id IS NULL' : 'parent_id = :parent').' LIMIT 1',
-                ['name' => $name] + (null === $current ? [] : ['parent' => $current->getId()]),
-            );
-            if ($exists) {
+            if ($this->folderRepository->existsWithNameInParent($name, $current)) {
                 $folderForm->get('name')->addError(new FormError($this->translator->trans('folder.duplicate', domain: 'validators')));
             } else {
                 $created = new Folder($name, $current);
