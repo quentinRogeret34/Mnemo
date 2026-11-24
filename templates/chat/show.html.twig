@@ -9,9 +9,5 @@
 {% endblock %}
 
 {% block body %}
-    <div class="view-head">
-        <h1><twig:ux:icon name="lucide:message-circle" />{{ 'nav.assistant'|trans }}</h1>
-    </div>
-    <p class="page__lede">{{ 'chat.lede'|trans }}</p>
     <twig:ProjectChat :project="project" />
 {% endblock %}

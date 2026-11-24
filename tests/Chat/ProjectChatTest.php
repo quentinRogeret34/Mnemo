@@ -4,10 +4,13 @@ namespace App\Tests\Chat;
 
 use App\Chat\ProjectAssistant;
 use App\Chat\ProjectTools;
+use App\Entity\ChatConversation;
 use App\Entity\Node;
 use App\Entity\Project;
+use App\Entity\User;
 use App\Enum\MemoryType;
 use App\Enum\NodeType;
+use App\Enum\UserStatus;
 use App\Llm\LlmSettings;
 use App\Memory\MemoryStore;
 use App\Twig\Components\ProjectChat;
@@ -37,7 +40,7 @@ final class ProjectChatTest extends WebTestCase
         $this->client = self::createClient();
         $this->client->disableReboot();
         $this->entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        $this->entityManager->getConnection()->executeStatement('TRUNCATE project, node, edge, folder RESTART IDENTITY CASCADE');
+        $this->entityManager->getConnection()->executeStatement('TRUNCATE project, node, edge, folder, chat_conversation, app_user RESTART IDENTITY CASCADE');
 
         $this->project = new Project('demo', 'Demo project', '/repos/demo');
         $this->entityManager->persist($this->project);
@@ -79,12 +82,107 @@ final class ProjectChatTest extends WebTestCase
         self::assertSame('/projects/demo/rules/RG-043', $crawler->filter('.chat__message--assistant a.tag')->attr('href'));
         $rule = $this->entityManager->getRepository(Node::class)->findOneBy(['project' => $this->project, 'externalId' => 'RG-043']);
         self::assertSame(['statement' => 'Une commande de plus de 500 € demande une validation.', 'status' => 'to_review', 'source' => 'chat'], $rule->getMetadata());
-        self::assertCount(0, $component->call('reset')->render()->crawler()->filter('.chat__message'));
+
+        // Starting a new conversation clears the active view while keeping the conversation in history.
+        $afterReset = $component->call('reset')->render()->crawler();
+        self::assertCount(0, $afterReset->filter('.chat__message'));
+        self::assertCount(1, $afterReset->filter('.chat-history__item'));
 
         $crawler = $this->client->request('GET', '/projects/demo/rules/RG-043');
         $this->client->submit($crawler->selectButton('Valider la règle')->form());
         $this->entityManager->clear();
         self::assertSame('validated', $this->entityManager->getRepository(Node::class)->findOneBy(['externalId' => 'RG-043'])->getMetadata()['status']);
+    }
+
+    public function testHistoryPersistenceSearchRegenerateFeedbackAndDeletion(): void
+    {
+        $this->scriptModel([
+            'Réponse initiale sur les remises.',
+            'Réponse régénérée sur les remises.',
+            'Réponse sur OAuth2 et sessions.',
+        ]);
+
+        $component = $this->createLiveComponent(ProjectChat::class, ['project' => $this->project], $this->client);
+        $crawler = $component->set('message', 'Explique les remises')->call('send')->render()->crawler();
+
+        self::assertCount(1, $crawler->filter('.chat-history__item'));
+        self::assertSame('1/50', trim($crawler->filter('.chat-history__count')->text()));
+        self::assertSame('Réponse initiale sur les remises.', $crawler->filter('.chat__message--assistant .prose')->text());
+
+        // Regenerate replaces the last assistant answer with a new call using the same prompt.
+        $crawler = $component->call('regenerate')->render()->crawler();
+        self::assertCount(2, $crawler->filter('.chat__message'));
+        self::assertSame('Réponse régénérée sur les remises.', $crawler->filter('.chat__message--assistant .prose')->text());
+
+        // Thumbs-up feedback persists and toggles off when clicked a second time.
+        $assistantId = $crawler->filter('.chat__message--assistant')->attr('data-message-id');
+        self::assertNotNull($assistantId);
+        $crawler = $component->call('rate', ['messageId' => $assistantId, 'value' => 'up'])->render()->crawler();
+        self::assertSame('true', $crawler->filter('.chat__tool[data-live-value-param="up"]')->attr('aria-pressed'));
+        $crawler = $component->call('rate', ['messageId' => $assistantId, 'value' => 'up'])->render()->crawler();
+        self::assertSame('false', $crawler->filter('.chat__tool[data-live-value-param="up"]')->attr('aria-pressed'));
+
+        // Start a second conversation.
+        $component->call('newConversation');
+        $crawler = $component->set('message', 'Comment fonctionne OAuth2 ?')->call('send')->render()->crawler();
+        self::assertCount(2, $crawler->filter('.chat-history__item'));
+        self::assertSame('2/50', trim($crawler->filter('.chat-history__count')->text()));
+
+        // Search filters the history list.
+        $filtered = $component->set('search', 'remises')->render()->crawler();
+        self::assertCount(1, $filtered->filter('.chat-history__item'));
+        self::assertStringContainsString('Explique les remises', $filtered->filter('.chat-history__title')->text());
+
+        // Switching back to the first conversation reloads its persisted messages.
+        $conversations = $this->entityManager->getRepository(ChatConversation::class)->findBy(['project' => $this->project], ['id' => 'ASC']);
+        self::assertCount(2, $conversations);
+        $firstId = $conversations[0]->getId();
+        $secondId = $conversations[1]->getId();
+        self::assertNotNull($firstId);
+        self::assertNotNull($secondId);
+
+        $switched = $component->set('search', '')->call('selectConversation', ['id' => $firstId])->render()->crawler();
+        self::assertSame('Réponse régénérée sur les remises.', $switched->filter('.chat__message--assistant .prose')->text());
+
+        // Batch delete removes selected conversations only.
+        $afterBatch = $component->set('selectedIds', [(string) $firstId])->call('deleteSelected')->render()->crawler();
+        self::assertCount(1, $afterBatch->filter('.chat-history__item'));
+        self::assertCount(0, $afterBatch->filter('.chat__message'));
+
+        // Clear history removes all remaining conversations for this project.
+        $afterClear = $component->call('clearHistory')->render()->crawler();
+        self::assertCount(0, $afterClear->filter('.chat-history__item'));
+        self::assertSame('0/50', trim($afterClear->filter('.chat-history__count')->text()));
+    }
+
+    public function testConversationsStayPrivatePerOwner(): void
+    {
+        $alice = new User('alice@example.test', 'Alice', 'github', 'alice-1');
+        $alice->setStatus(UserStatus::Active);
+        $alice->setSuperAdmin(true);
+        $bob = new User('bob@example.test', 'Bob', 'github', 'bob-1');
+        $bob->setStatus(UserStatus::Active);
+        $bob->setSuperAdmin(true);
+        $this->entityManager->persist($alice);
+        $this->entityManager->persist($bob);
+        $this->entityManager->flush();
+
+        $aliceConv = new ChatConversation($this->project, 'user:'.$alice->getId(), 'Secret d\'Alice');
+        $aliceConv->appendExchange('Secret d\'Alice', 'Réponse privée.', []);
+        $this->entityManager->persist($aliceConv);
+        $this->entityManager->flush();
+
+        $this->client->loginUser($bob);
+        $component = $this->createLiveComponent(ProjectChat::class, ['project' => $this->project], $this->client);
+        $crawler = $component->call('selectConversation', ['id' => (int) $aliceConv->getId()])->render()->crawler();
+
+        self::assertCount(0, $crawler->filter('.chat-history__item'));
+        self::assertCount(0, $crawler->filter('.chat__message'));
+
+        // Bob cannot delete Alice's conversation.
+        $component->call('deleteConversation', ['id' => (int) $aliceConv->getId()]);
+        $this->entityManager->clear();
+        self::assertNotNull($this->entityManager->find(ChatConversation::class, $aliceConv->getId()));
     }
 
     public function testTheToolsStayInsideTheProjectAndRecordWhatTheyWrite(): void
@@ -113,6 +211,7 @@ final class ProjectChatTest extends WebTestCase
 
         self::assertResponseIsSuccessful();
         self::assertCount(1, $crawler->filter('.chat textarea#chat-message'));
+        self::assertCount(1, $crawler->filter('.chat-history'));
         self::assertSame('Assistant', $crawler->filter('.sidebar a[aria-current="page"] .nav-item__label')->text());
     }
 

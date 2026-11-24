@@ -96,17 +96,49 @@ chat:
     action:
         memory: 'Memory #{id} saved'
         rule: 'Rule {code} created, to review'
+        view: View
+    capability:
+        memory: 'Saves decisions, conventions or facts to the project memory.'
+        read: 'Searches business rules, memories, documents and code files of the project.'
+        rule: 'Creates new business rules waiting for human validation.'
+    copy_response: 'Copy response'
     empty: 'Ask a question about the project, or ask to save a rule or a decision.'
+    empty_title: 'How can I help with {name}?'
     error: 'The assistant could not answer: {error}'
     example1: 'Which business rules are about discounts?'
     example2: 'What did we decide about authentication?'
     example3: 'Add a rule: an order over €500 needs an approval.'
+    example_tag:
+        create: 'Add a rule'
+        memories: Memories
+        rules: 'Business rules'
+    feedback_down: 'Not helpful'
+    feedback_up: 'Helpful response'
+    footnote: "Answers are grounded in the project's knowledge graph. Rules added here stay to review."
+    history:
+        clear: 'Clear history'
+        clear_confirm: 'Permanently delete all your conversations on this project?'
+        count_title: '{count} saved conversations out of {max} maximum'
+        delete_one: 'Delete conversation "{title}"'
+        delete_selected: 'Delete ({count})'
+        delete_selected_confirm: '{count, plural, one {Delete this conversation?} other {Delete these # conversations?}}'
+        empty: 'Your recent conversations will appear here.'
+        no_matches: 'No conversation matches this search.'
+        select_item: 'Select "{title}"'
+        title: History
+        toggle: 'Toggle history panel'
+    info_label: 'About the assistant'
+    info_title: 'Assistant · {name}'
     lede: "It answers from the project's rules, memories, documents and code, and saves a rule or a memory when asked to. A rule added here stays to review."
     message: Message
+    message_actions: 'Response actions'
     no_answer: 'No answer.'
     placeholder: 'Ask something about {name}'
+    regenerate: 'Regenerate response'
+    regenerating: 'Regenerating...'
     reset: 'New conversation'
     reset_confirm: 'Clear this conversation and start over?'
+    search_placeholder: 'Search…'
     send: Send
     thinking: Thinking...
     you: You
@@ -693,6 +725,8 @@ garden:
     to_tend: 'to tend'
     total: '{count, plural, one {# item to tend} other {# items to tend}}'
 js:
+    chat:
+        copy_code: 'Copy code'
     confirm: Confirm
     copied: Copied
     galaxy:

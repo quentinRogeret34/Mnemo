@@ -1,40 +1,424 @@
-<div{{ attributes.defaults({class: 'chat'}) }} data-controller="chat">
-    {% set messages = this.messages %}
-    {% if messages is empty %}
-        <div class="chat__empty">
-            <p>{{ 'chat.empty'|trans }}</p>
-            <ul class="chat__examples">
-                {% for key in ['chat.example1', 'chat.example2', 'chat.example3'] %}
-                    <li><button type="button" class="chat__example" data-action="chat#useExample" data-prompt="{{ key|trans }}">{{ key|trans }}</button></li>
-                {% endfor %}
-            </ul>
-        </div>
-    {% else %}
-        <ol class="chat__messages" aria-live="polite" data-chat-target="log">
-            {% for item in messages %}
-                <li class="chat__message chat__message--{{ item.role }}">
-                    <span class="chat__author">{{ (item.role == 'user' ? 'chat.you' : 'nav.assistant')|trans }}</span>
-                    {% if item.role == 'user' %}
-                        <p>{{ item.content }}</p>
-                    {% else %}
-                        <div class="prose">{{ item.content is empty ? 'chat.no_answer'|trans : item.content|markdown_to_html }}</div>
-                        {% for action in item.actions ?? [] %}
-                            <a class="tag" href="{{ action.url }}"><twig:ux:icon name="lucide:check" />{{ action.label|trans(action.parameters ?? {}) }}</a>
+{% set active = this.activeConversation %}
+{% set messages = this.messages %}
+{% set conversations = this.conversations %}
+{% set totalConversations = this.totalConversations %}
+{% set selectedCount = this.selectedCount %}
+{% set selectedLookup = selectedIds|map(id => '' ~ id) %}
+
+<div{{ attributes.defaults({class: 'chat chat-shell'}) }}
+    data-controller="chat"
+    data-chat-conversation-id-value="{{ active ? active.id : 0 }}"
+    data-chat-message-count-value="{{ messages|length }}"
+    data-action="keydown.esc@window->chat#handleEscape click@window->chat#handleOutsideClick"
+>
+    {# Center / Main chat column #}
+    <section class="chat-main" aria-label="{{ 'nav.assistant'|trans }}">
+        <header class="chat-main__head">
+            <div class="chat-main__identity">
+                <span class="chat-main__icon" aria-hidden="true"><twig:ux:icon name="lucide:wand-sparkles" /></span>
+                <div class="chat-main__titles">
+                    <h1 class="chat-main__title">{{ active ? active.title : 'nav.assistant'|trans }}</h1>
+                    <span class="chat-main__subtitle">{{ project.name }} · {{ this.modelLabel }}</span>
+                </div>
+            </div>
+
+            <div class="chat-main__controls">
+                <div class="chat-search">
+                    <twig:ux:icon name="lucide:search" class="icon chat-search__icon" />
+                    <label class="visually-hidden" for="chat-history-search">{{ 'chat.search_placeholder'|trans }}</label>
+                    <input
+                        class="chat-search__input"
+                        id="chat-history-search"
+                        type="search"
+                        data-model="debounce(220)|search"
+                        data-action="focus->chat#openHistoryForSearch"
+                        value="{{ search }}"
+                        placeholder="{{ 'chat.search_placeholder'|trans }}"
+                        autocomplete="off"
+                    >
+                </div>
+
+                <div class="chat-info-wrap" data-chat-target="infoWrap">
+                    <button
+                        class="button button--ghost chat-icon-btn"
+                        type="button"
+                        aria-expanded="false"
+                        aria-controls="chat-info-popover"
+                        aria-label="{{ 'chat.info_label'|trans }}"
+                        title="{{ 'chat.info_label'|trans }}"
+                        data-chat-target="infoButton"
+                        data-action="chat#toggleInfo"
+                    >
+                        <twig:ux:icon name="lucide:info" />
+                    </button>
+                    <div class="chat-info-popover" id="chat-info-popover" role="region" aria-label="{{ 'chat.info_label'|trans }}" data-chat-target="infoPopover" hidden>
+                        <p class="chat-info-popover__title">{{ 'chat.info_title'|trans({name: project.name}) }}</p>
+                        <p class="chat-info-popover__text">{{ 'chat.lede'|trans }}</p>
+                        <ul class="chat-info-popover__list">
+                            <li><twig:ux:icon name="lucide:search" /><span>{{ 'chat.capability.read'|trans }}</span></li>
+                            <li><twig:ux:icon name="lucide:scale" /><span>{{ 'chat.capability.rule'|trans }}</span></li>
+                            <li><twig:ux:icon name="lucide:brain" /><span>{{ 'chat.capability.memory'|trans }}</span></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <button
+                    class="button button--ghost chat-history-opener"
+                    type="button"
+                    aria-expanded="true"
+                    aria-controls="chat-history-panel"
+                    aria-label="{{ 'chat.history.toggle'|trans }}"
+                    title="{{ 'chat.history.toggle'|trans }}"
+                    data-chat-target="historyOpener"
+                    data-action="chat#toggleHistory"
+                >
+                    <twig:ux:icon name="lucide:history" />
+                    <span class="chat-history-opener__count num">{{ totalConversations }}</span>
+                </button>
+            </div>
+        </header>
+
+        <div class="chat-stream" data-chat-target="log">
+            {% if messages is empty %}
+                <div class="chat__empty">
+                    <div class="chat__hero">
+                        <span class="chat__hero-badge" aria-hidden="true"><twig:ux:icon name="lucide:wand-sparkles" /></span>
+                        <h2 class="chat__hero-title">{{ 'chat.empty_title'|trans({name: project.name}) }}</h2>
+                        <p class="chat__hero-text">{{ 'chat.empty'|trans }}</p>
+                    </div>
+                    <ul class="chat__examples">
+                        {% set examples = [
+                            {key: 'chat.example1', tag: 'chat.example_tag.rules', icon: 'lucide:scale'},
+                            {key: 'chat.example2', tag: 'chat.example_tag.memories', icon: 'lucide:brain'},
+                            {key: 'chat.example3', tag: 'chat.example_tag.create', icon: 'lucide:circle-plus'},
+                        ] %}
+                        {% for ex in examples %}
+                            <li>
+                                <button type="button" class="chat__example" data-action="chat#useExample" data-prompt="{{ ex.key|trans }}">
+                                    <span class="chat__example-head">
+                                        <twig:ux:icon name="{{ ex.icon }}" />
+                                        <span>{{ ex.tag|trans }}</span>
+                                    </span>
+                                    <span class="chat__example-text">{{ ex.key|trans }}</span>
+                                </button>
+                            </li>
                         {% endfor %}
-                    {% endif %}
-                </li>
-            {% endfor %}
-        </ol>
-    {% endif %}
+                    </ul>
+                </div>
+            {% else %}
+                <ol class="chat__messages" aria-live="polite">
+                    {% for item in messages %}
+                        {% set isUser = item.role == 'user' %}
+                        <li class="chat__message chat__message--{{ item.role }}" data-message-id="{{ item.id }}">
+                            {% if isUser %}
+                                <div class="chat__bubble">
+                                    <div class="chat__meta">
+                                        <span class="chat__author">{{ 'chat.you'|trans }}</span>
+                                        {% if item.created_at ?? null %}
+                                            <time class="chat__time" datetime="{{ item.created_at }}">{{ item.created_at|date('H:i') }}</time>
+                                        {% endif %}
+                                    </div>
+                                    <p>{{ item.content }}</p>
+                                </div>
+                            {% else %}
+                                <article class="chat__card">
+                                    <header class="chat__card-head">
+                                        <span class="chat__avatar" aria-hidden="true"><twig:ux:icon name="lucide:wand-sparkles" /></span>
+                                        <span class="chat__author">{{ 'nav.assistant'|trans }}</span>
+                                        {% if item.created_at ?? null %}
+                                            <time class="chat__time" datetime="{{ item.created_at }}">{{ item.created_at|date('H:i') }}</time>
+                                        {% endif %}
+                                    </header>
 
-    {% if error %}<p class="form-errors" role="alert">{{ 'chat.error'|trans({error: error}) }}</p>{% endif %}
+                                    <div class="prose">{{ item.content is empty ? 'chat.no_answer'|trans : item.content|markdown_to_html }}</div>
 
-    <form class="chat__form" data-action="live#action:prevent" data-live-action-param="send">
-        <label class="visually-hidden" for="chat-message">{{ 'chat.message'|trans }}</label>
-        <textarea class="input chat__input" id="chat-message" rows="1" data-model="norender|message" data-chat-target="input" data-action="keydown->chat#keydown" maxlength="4000" placeholder="{{ 'chat.placeholder'|trans({name: project.name}) }}" autocomplete="off" autofocus required>{{ message }}</textarea>
-        <button class="button button--primary" type="submit" data-loading="action(send)|addAttribute(disabled)"><twig:ux:icon name="lucide:message-circle" /><span data-loading="action(send)|hide">{{ 'chat.send'|trans }}</span><span data-loading="action(send)|show">{{ 'chat.thinking'|trans }}</span></button>
-        {% if messages is not empty %}
-            <button class="button" type="button" data-action="live#action" data-live-action-param="reset" data-loading="addAttribute(disabled)" data-confirm="{{ 'chat.reset_confirm'|trans }}" data-confirm-label="{{ 'chat.reset'|trans }}">{{ 'chat.reset'|trans }}</button>
+                                    {% if item.actions is defined and item.actions is not empty %}
+                                        <div class="chat__actions">
+                                            {% for action in item.actions %}
+                                                <div class="chat__action-card">
+                                                    <span class="chat__action-text">
+                                                        <twig:ux:icon name="lucide:circle-check" class="icon chat__action-icon" />
+                                                        <span>{{ action.label|trans(action.parameters ?? {}) }}</span>
+                                                    </span>
+                                                    <a class="tag chat__action-link" href="{{ action.url }}">
+                                                        <twig:ux:icon name="lucide:arrow-up-right" />
+                                                        <span>{{ 'chat.action.view'|trans }}</span>
+                                                    </a>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </article>
+
+                                <div class="chat__tools" role="toolbar" aria-label="{{ 'chat.message_actions'|trans }}">
+                                    <button
+                                        type="button"
+                                        class="chat__tool{{ (item.feedback ?? null) == 'up' ? ' is-active is-positive' }}"
+                                        aria-pressed="{{ (item.feedback ?? null) == 'up' ? 'true' : 'false' }}"
+                                        aria-label="{{ 'chat.feedback_up'|trans }}"
+                                        title="{{ 'chat.feedback_up'|trans }}"
+                                        data-action="live#action"
+                                        data-live-action-param="rate"
+                                        data-live-message-id-param="{{ item.id }}"
+                                        data-live-value-param="up"
+                                    >
+                                        <twig:ux:icon name="lucide:thumbs-up" />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="chat__tool{{ (item.feedback ?? null) == 'down' ? ' is-active is-negative' }}"
+                                        aria-pressed="{{ (item.feedback ?? null) == 'down' ? 'true' : 'false' }}"
+                                        aria-label="{{ 'chat.feedback_down'|trans }}"
+                                        title="{{ 'chat.feedback_down'|trans }}"
+                                        data-action="live#action"
+                                        data-live-action-param="rate"
+                                        data-live-message-id-param="{{ item.id }}"
+                                        data-live-value-param="down"
+                                    >
+                                        <twig:ux:icon name="lucide:thumbs-down" />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="chat__tool"
+                                        aria-label="{{ 'chat.copy_response'|trans }}"
+                                        title="{{ 'chat.copy_response'|trans }}"
+                                        data-action="chat#copyMessage"
+                                        data-copy-text="{{ item.content }}"
+                                    >
+                                        <twig:ux:icon name="lucide:copy" class="icon chat__tool-icon--copy" />
+                                        <twig:ux:icon name="lucide:check" class="icon chat__tool-icon--done" />
+                                    </button>
+                                </div>
+                            {% endif %}
+                        </li>
+                    {% endfor %}
+                </ol>
+            {% endif %}
+
+            <div class="chat__thinking" data-loading="action(send)|show" aria-live="polite" style="display: none;">
+                <span class="chat__avatar" aria-hidden="true"><twig:ux:icon name="lucide:wand-sparkles" /></span>
+                <span class="chat__thinking-dots" aria-hidden="true"><span></span><span></span><span></span></span>
+                <span>{{ 'chat.thinking'|trans }}</span>
+            </div>
+            <div class="chat__thinking" data-loading="action(regenerate)|show" aria-live="polite" style="display: none;">
+                <span class="chat__avatar" aria-hidden="true"><twig:ux:icon name="lucide:wand-sparkles" /></span>
+                <span class="chat__thinking-dots" aria-hidden="true"><span></span><span></span><span></span></span>
+                <span>{{ 'chat.regenerating'|trans }}</span>
+            </div>
+        </div>
+
+        <footer class="chat-composer-area">
+            {% if messages is not empty %}
+                <div class="chat-regenerate-bar">
+                    <button
+                        class="button chat-regenerate"
+                        type="button"
+                        data-action="live#action"
+                        data-live-action-param="regenerate"
+                        data-loading="addAttribute(disabled)"
+                    >
+                        <twig:ux:icon name="lucide:refresh-cw" />
+                        <span data-loading="action(regenerate)|hide">{{ 'chat.regenerate'|trans }}</span>
+                        <span data-loading="action(regenerate)|show" style="display: none;">{{ 'chat.regenerating'|trans }}</span>
+                    </button>
+                </div>
+            {% endif %}
+
+            {% if error %}
+                <p class="form-errors chat__error" role="alert">{{ 'chat.error'|trans({error: error}) }}</p>
+            {% endif %}
+
+            <form class="chat__form" data-action="live#action:prevent" data-live-action-param="send">
+                {% if active %}
+                    <button
+                        class="chat__new-inline"
+                        type="button"
+                        title="{{ 'chat.reset'|trans }}"
+                        aria-label="{{ 'chat.reset'|trans }}"
+                        data-action="live#action"
+                        data-live-action-param="newConversation"
+                        data-loading="addAttribute(disabled)"
+                    >
+                        <twig:ux:icon name="lucide:plus" />
+                    </button>
+                {% endif %}
+
+                <label class="visually-hidden" for="chat-message">{{ 'chat.message'|trans }}</label>
+                <textarea
+                    class="chat__input"
+                    id="chat-message"
+                    rows="1"
+                    data-model="norender|message"
+                    data-chat-target="input"
+                    data-action="keydown->chat#keydown"
+                    maxlength="4000"
+                    placeholder="{{ 'chat.placeholder'|trans({name: project.name}) }}"
+                    autocomplete="off"
+                    autofocus
+                    required
+                >{{ message }}</textarea>
+
+                <button
+                    class="chat__send"
+                    type="submit"
+                    aria-label="{{ 'chat.send'|trans }}"
+                    title="{{ 'chat.send'|trans }}"
+                    data-loading="action(send)|addAttribute(disabled)"
+                >
+                    <twig:ux:icon name="lucide:send-horizontal" />
+                </button>
+            </form>
+
+            <p class="chat__footnote">{{ 'chat.footnote'|trans }}</p>
+        </footer>
+    </section>
+
+    {# Mobile backdrop for slide-over history drawer #}
+    <div class="chat-history-backdrop" data-chat-target="backdrop" data-action="click->chat#closeHistoryMobile" hidden></div>
+
+    {# Right collapsible History panel #}
+    <aside class="chat-history" id="chat-history-panel" aria-label="{{ 'chat.history.title'|trans }}" data-chat-target="historyPanel">
+        <button
+            class="chat-history__rail-toggle"
+            type="button"
+            aria-expanded="true"
+            aria-controls="chat-history-panel"
+            aria-label="{{ 'chat.history.toggle'|trans }}"
+            title="{{ 'chat.history.toggle'|trans }}"
+            data-chat-target="railToggle"
+            data-action="chat#toggleHistory"
+        >
+            <twig:ux:icon name="lucide:panel-right-close" class="icon chat-history__icon-close" />
+            <twig:ux:icon name="lucide:panel-right-open" class="icon chat-history__icon-open" />
+        </button>
+
+        <header class="chat-history__head">
+            <h2 class="chat-history__heading">{{ 'chat.history.title'|trans }}</h2>
+            <span class="chat-history__count num" title="{{ 'chat.history.count_title'|trans({count: totalConversations, max: this.maxConversations}) }}">{{ totalConversations }}/{{ this.maxConversations }}</span>
+            <button
+                class="button button--ghost chat-history__new"
+                type="button"
+                title="{{ 'chat.reset'|trans }}"
+                aria-label="{{ 'chat.reset'|trans }}"
+                data-action="live#action chat#closeHistoryMobile"
+                data-live-action-param="newConversation"
+                data-loading="addAttribute(disabled)"
+            >
+                <twig:ux:icon name="lucide:plus" />
+            </button>
+            <button
+                class="button button--ghost chat-history__mobile-close"
+                type="button"
+                aria-label="{{ 'nav.close'|trans }}"
+                data-action="chat#closeHistoryMobile"
+            >
+                <twig:ux:icon name="lucide:x" />
+            </button>
+        </header>
+
+        <div class="chat-history__body">
+            {% if conversations is empty %}
+                <p class="chat-history__empty">
+                    {{ search is not empty ? 'chat.history.no_matches'|trans : 'chat.history.empty'|trans }}
+                </p>
+            {% else %}
+                <ul class="chat-history__list">
+                    {% for conv in conversations %}
+                        {% set isActive = active and active.id == conv.id %}
+                        {% set isChecked = ('' ~ conv.id) in selectedLookup %}
+                        <li class="chat-history__item{{ isActive ? ' is-active' }}{{ isChecked ? ' is-selected' }}">
+                            <label class="chat-history__check-wrap" aria-label="{{ 'chat.history.select_item'|trans({title: conv.title}) }}">
+                                <input
+                                    class="chat-history__check"
+                                    type="checkbox"
+                                    value="{{ conv.id }}"
+                                    data-model="selectedIds[]"
+                                    {{ isChecked ? 'checked' }}
+                                >
+                            </label>
+                            <button
+                                type="button"
+                                class="chat-history__pick"
+                                aria-current="{{ isActive ? 'true' : 'false' }}"
+                                data-action="live#action chat#closeHistoryMobile"
+                                data-live-action-param="selectConversation"
+                                data-live-id-param="{{ conv.id }}"
+                            >
+                                <span class="chat-history__title">{{ conv.title }}</span>
+                                {% if conv.preview %}
+                                    <span class="chat-history__preview">{{ conv.preview }}</span>
+                                {% endif %}
+                                <time class="chat-history__date" datetime="{{ conv.updatedAt|date('c') }}">{{ conv.updatedAt|format_datetime('short', 'short') }}</time>
+                            </button>
+                            <button
+                                type="button"
+                                class="chat-history__delete"
+                                aria-label="{{ 'chat.history.delete_one'|trans({title: conv.title}) }}"
+                                title="{{ 'common.delete'|trans }}"
+                                data-action="live#action"
+                                data-live-action-param="deleteConversation"
+                                data-live-id-param="{{ conv.id }}"
+                                data-loading="addAttribute(disabled)"
+                            >
+                                <twig:ux:icon name="lucide:trash-2" />
+                            </button>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        </div>
+
+        {% if totalConversations > 0 %}
+            <footer class="chat-history__foot">
+                {% if selectedCount > 0 %}
+                    <div class="chat-history__bulk">
+                        <button
+                            class="button button--danger chat-history__bulk-delete"
+                            type="button"
+                            data-action="chat#askConfirm"
+                            data-confirm-target="deleteSelected"
+                            data-confirm-title="{{ 'chat.history.delete_selected_confirm'|trans({count: selectedCount}) }}"
+                            data-confirm-label="{{ 'common.delete'|trans }}"
+                            data-loading="addAttribute(disabled)"
+                        >
+                            <twig:ux:icon name="lucide:trash-2" />
+                            <span>{{ 'chat.history.delete_selected'|trans({count: selectedCount}) }}</span>
+                        </button>
+                        <button
+                            class="button button--ghost"
+                            type="button"
+                            data-action="live#action"
+                            data-live-action-param="clearSelection"
+                        >{{ 'common.cancel'|trans }}</button>
+                    </div>
+                {% else %}
+                    <button
+                        class="button chat-history__clear"
+                        type="button"
+                        data-action="chat#askConfirm"
+                        data-confirm-target="clearHistory"
+                        data-confirm-title="{{ 'chat.history.clear_confirm'|trans }}"
+                        data-confirm-label="{{ 'chat.history.clear'|trans }}"
+                        data-loading="addAttribute(disabled)"
+                    >
+                        <twig:ux:icon name="lucide:trash-2" />
+                        <span>{{ 'chat.history.clear'|trans }}</span>
+                    </button>
+                {% endif %}
+            </footer>
         {% endif %}
-    </form>
+    </aside>
+
+    {# Hidden triggers invoked after user confirms in the modal dialog #}
+    <button type="button" hidden data-action="live#action" data-live-action-param="clearHistory" data-chat-target="clearHistoryTrigger"></button>
+    <button type="button" hidden data-action="live#action" data-live-action-param="deleteSelected" data-chat-target="deleteSelectedTrigger"></button>
+
+    {# Confirmation modal matching Mnemo's .dialog design #}
+    <dialog class="dialog" closedby="any" aria-labelledby="chat-confirm-title" data-chat-target="confirmDialog">
+        <h2 class="dialog__title" id="chat-confirm-title" data-chat-target="confirmTitle">{{ 'confirm.title'|trans }}</h2>
+        <div class="dialog__actions">
+            <button class="button" type="button" data-action="chat#cancelConfirm" autofocus>{{ 'common.cancel'|trans }}</button>
+            <button class="button button--danger" type="button" data-chat-target="confirmAccept" data-action="chat#acceptConfirm">{{ 'confirm.accept'|trans }}</button>
+        </div>
+    </dialog>
 </div>

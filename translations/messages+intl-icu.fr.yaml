@@ -96,17 +96,49 @@ chat:
     action:
         memory: 'Mémoire #{id} enregistrée'
         rule: 'Règle {code} créée, à valider'
+        view: Voir
+    capability:
+        memory: 'Enregistre des décisions, conventions ou faits dans la mémoire projet.'
+        read: 'Interroge les règles métier, mémoires, documents et fichiers du projet.'
+        rule: 'Crée de nouvelles règles métier en attente de validation humaine.'
+    copy_response: 'Copier la réponse'
     empty: "Poser une question sur le projet, ou demander d'enregistrer une règle ou une décision."
+    empty_title: 'Comment puis-je vous aider sur {name} ?'
     error: "L'assistant n'a pas pu répondre : {error}"
     example1: 'Quelles règles métier concernent les remises ?'
     example2: "Qu'a-t-on décidé sur l'authentification ?"
     example3: 'Ajoute une règle : une commande de plus de 500 € demande une validation.'
+    example_tag:
+        create: 'Ajouter une règle'
+        memories: Mémoires
+        rules: 'Règles métier'
+    feedback_down: 'Réponse peu utile'
+    feedback_up: 'Réponse utile'
+    footnote: "L'assistant s'appuie sur le graphe de connaissances du projet. Les règles ajoutées ici restent à valider."
+    history:
+        clear: "Effacer l'historique"
+        clear_confirm: 'Supprimer définitivement toutes vos conversations sur ce projet ?'
+        count_title: '{count} conversations enregistrées sur {max} maximum'
+        delete_one: 'Supprimer la conversation « {title} »'
+        delete_selected: 'Supprimer ({count})'
+        delete_selected_confirm: '{count, plural, one {Supprimer cette conversation ?} other {Supprimer ces # conversations ?}}'
+        empty: 'Vos conversations récentes apparaîtront ici.'
+        no_matches: 'Aucune conversation ne correspond à cette recherche.'
+        select_item: 'Sélectionner « {title} »'
+        title: Historique
+        toggle: "Afficher ou masquer l'historique"
+    info_label: "À propos de l'assistant"
+    info_title: 'Assistant · {name}'
     lede: 'Il répond à partir des règles, mémoires, documents et code du projet, et enregistre une règle ou une mémoire quand on le lui demande. Une règle ajoutée ici reste à valider.'
     message: Message
+    message_actions: 'Actions sur la réponse'
     no_answer: 'Pas de réponse.'
     placeholder: 'Demander quelque chose sur {name}'
+    regenerate: 'Régénérer la réponse'
+    regenerating: 'Régénération...'
     reset: 'Nouvelle conversation'
     reset_confirm: 'Effacer cette conversation et repartir de zéro ?'
+    search_placeholder: 'Rechercher…'
     send: Envoyer
     thinking: Réflexion...
     you: Vous
@@ -693,6 +725,8 @@ garden:
     to_tend: 'à entretenir'
     total: '{count, plural, one {# élément à entretenir} other {# éléments à entretenir}}'
 js:
+    chat:
+        copy_code: 'Copier le code'
     confirm: Confirmer
     copied: Copiée
     galaxy:
