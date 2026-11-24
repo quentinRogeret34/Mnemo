@@ -5,11 +5,13 @@ namespace App\Dashboard;
 use App\Entity\Project;
 use App\Enum\NodeType;
 use App\Security\MemoryAccess;
+use App\Security\ProjectScope;
+use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Types\Types;
 
 /**
- * Figures of the dashboard: memories stored, and what agents asked the MCP server.
+ * Figures of the dashboard: memories stored, business alignment signals, and what agents asked the MCP server.
  */
 final class DashboardReader
 {
@@ -21,6 +23,7 @@ final class DashboardReader
     public function __construct(
         private readonly Connection $connection,
         private readonly MemoryAccess $memoryAccess,
+        private readonly ProjectScope $projectScope,
     ) {
     }
 
@@ -249,6 +252,145 @@ final class DashboardReader
             'thumbs_down' => $down,
             'satisfaction_rate' => $rated > 0 ? round($up / $rated * 100, 1) : null,
         ];
+    }
+
+    /**
+     * Business-facing overview: rule coverage, validation progress, documents, and open shadow-area questions.
+     *
+     * @return array{rules_total: int, rules_validated: int, rules_to_review: int, rules_without_code: int, documents_total: int, documents_added: int, shadow_open: int, shadow_blockers: int, alignment_score: ?int}
+     */
+    public function businessSummary(?Project $project, ?\DateTimeImmutable $from): array
+    {
+        $slugs = null === $project ? $this->projectScope->slugs() : null;
+        if ([] === $slugs) {
+            return [
+                'rules_total' => 0, 'rules_validated' => 0, 'rules_to_review' => 0, 'rules_without_code' => 0,
+                'documents_total' => 0, 'documents_added' => 0, 'shadow_open' => 0, 'shadow_blockers' => 0, 'alignment_score' => null,
+            ];
+        }
+
+        $ruleScope = null === $slugs ? '' : ' AND p.slug IN (:slugs)';
+        $docScope = null === $slugs ? '' : ' AND EXISTS (SELECT 1 FROM node_project np2 JOIN project p2 ON p2.id = np2.project_id WHERE np2.node_id = d.id AND p2.slug IN (:slugs))';
+        $scopeParams = null === $slugs ? [] : ['slugs' => $slugs];
+        $scopeTypes = null === $slugs ? [] : ['slugs' => ArrayParameterType::STRING];
+
+        $rulesRow = $this->connection->fetchAssociative(
+            <<<SQL
+                SELECT COUNT(*) AS total,
+                       COUNT(*) FILTER (WHERE r.metadata->>'status' = 'validated') AS validated,
+                       COUNT(*) FILTER (WHERE r.metadata->>'status' = 'to_review') AS to_review,
+                       COUNT(*) FILTER (WHERE NOT EXISTS (SELECT 1 FROM edge e WHERE e.source_id = r.id AND e.relation = 'implemented_by' AND e.status = 'active')) AS without_code,
+                       COALESCE(SUM(CASE WHEN jsonb_typeof(r.metadata->'shadow_areas') = 'array' THEN jsonb_array_length(r.metadata->'shadow_areas') ELSE 0 END), 0) AS shadow_open,
+                       COALESCE(SUM(CASE WHEN jsonb_typeof(r.metadata->'shadow_areas') = 'array'
+                           THEN (SELECT COUNT(*) FROM jsonb_array_elements(r.metadata->'shadow_areas') sa WHERE sa->>'severity' = 'blocker')
+                           ELSE 0 END), 0) AS shadow_blockers
+                FROM node r
+                JOIN project p ON p.id = r.project_id
+                WHERE r.type = 'business_rule'
+                  AND (CAST(:project AS int) IS NULL OR r.project_id = :project){$ruleScope}
+                SQL,
+            ['project' => $project?->getId()] + $scopeParams,
+            $scopeTypes,
+        );
+
+        $docsRow = $this->connection->fetchAssociative(
+            <<<SQL
+                SELECT COUNT(*) AS total,
+                       COUNT(*) FILTER (WHERE CAST(:from AS timestamp) IS NULL OR d.created_at >= :from) AS added
+                FROM node d
+                WHERE d.type = 'document'
+                  AND (CAST(:project AS int) IS NULL OR EXISTS (SELECT 1 FROM node_project np WHERE np.node_id = d.id AND np.project_id = :project)){$docScope}
+                SQL,
+            ['project' => $project?->getId(), 'from' => $from] + $scopeParams,
+            ['from' => Types::DATETIME_IMMUTABLE] + $scopeTypes,
+        );
+
+        $total = (int) ($rulesRow['total'] ?? 0);
+        $validated = (int) ($rulesRow['validated'] ?? 0);
+        $withoutCode = (int) ($rulesRow['without_code'] ?? 0);
+        $shadowBlockers = (int) ($rulesRow['shadow_blockers'] ?? 0);
+
+        $alignmentScore = null;
+        if ($total > 0) {
+            $validatedRatio = $validated / $total;
+            $linkedRatio = ($total - $withoutCode) / $total;
+            $blockerPenalty = min(0.3, $shadowBlockers * 0.08);
+            $alignmentScore = (int) max(0, min(100, round(($validatedRatio * 0.5 + $linkedRatio * 0.5 - $blockerPenalty) * 100)));
+        }
+
+        return [
+            'rules_total' => $total,
+            'rules_validated' => $validated,
+            'rules_to_review' => (int) ($rulesRow['to_review'] ?? 0),
+            'rules_without_code' => $withoutCode,
+            'documents_total' => (int) ($docsRow['total'] ?? 0),
+            'documents_added' => (int) ($docsRow['added'] ?? 0),
+            'shadow_open' => (int) ($rulesRow['shadow_open'] ?? 0),
+            'shadow_blockers' => $shadowBlockers,
+            'alignment_score' => $alignmentScore,
+        ];
+    }
+
+    /**
+     * Open shadow-area questions awaiting a business answer, ordered by severity (blocker first).
+     *
+     * @return list<array{rule_code: string, rule_title: string, project_slug: string, project_name: string, severity: string, category: string, gap: string, question: string}>
+     */
+    public function openShadowQuestions(?Project $project, int $limit = 6): array
+    {
+        $slugs = null === $project ? $this->projectScope->slugs() : null;
+        if ([] === $slugs) {
+            return [];
+        }
+        $scopeSql = null === $slugs ? '' : ' AND p.slug IN (:slugs)';
+
+        return $this->connection->fetchAllAssociative(
+            <<<SQL
+                SELECT r.external_id AS rule_code, r.label AS rule_title, p.slug AS project_slug, p.name AS project_name,
+                       sa->>'severity' AS severity, sa->>'category' AS category, sa->>'gap' AS gap, sa->>'question' AS question
+                FROM node r
+                JOIN project p ON p.id = r.project_id
+                CROSS JOIN LATERAL jsonb_array_elements(r.metadata->'shadow_areas') AS sa
+                WHERE r.type = 'business_rule'
+                  AND jsonb_typeof(r.metadata->'shadow_areas') = 'array'
+                  AND (CAST(:project AS int) IS NULL OR r.project_id = :project){$scopeSql}
+                ORDER BY CASE sa->>'severity' WHEN 'blocker' THEN 0 WHEN 'major' THEN 1 ELSE 2 END, r.external_id
+                LIMIT $limit
+                SQL,
+            ['project' => $project?->getId()] + (null === $slugs ? [] : ['slugs' => $slugs]),
+            null === $slugs ? [] : ['slugs' => ArrayParameterType::STRING],
+        );
+    }
+
+    /**
+     * Most recently added business documents with their linked rule count.
+     *
+     * @return list<array{id: int, label: string, format: string, created_at: string, rules_count: int}>
+     */
+    public function recentDocuments(?Project $project, int $limit = 6): array
+    {
+        $slugs = null === $project ? $this->projectScope->slugs() : null;
+        if ([] === $slugs) {
+            return [];
+        }
+        $scopeSql = null === $slugs ? '' : ' AND EXISTS (SELECT 1 FROM node_project np2 JOIN project p2 ON p2.id = np2.project_id WHERE np2.node_id = d.id AND p2.slug IN (:slugs))';
+
+        return array_map(
+            static fn (array $row): array => ['id' => (int) $row['id'], 'rules_count' => (int) $row['rules_count']] + $row,
+            $this->connection->fetchAllAssociative(
+                <<<SQL
+                    SELECT d.id, d.label, COALESCE(d.metadata->>'format', 'md') AS format, d.created_at,
+                           (SELECT COUNT(*) FROM edge e JOIN node r ON r.id = e.target_id WHERE e.source_id = d.id AND r.type = 'business_rule' AND e.status = 'active') AS rules_count
+                    FROM node d
+                    WHERE d.type = 'document'
+                      AND (CAST(:project AS int) IS NULL OR EXISTS (SELECT 1 FROM node_project np WHERE np.node_id = d.id AND np.project_id = :project)){$scopeSql}
+                    ORDER BY d.created_at DESC, d.id DESC
+                    LIMIT $limit
+                    SQL,
+                ['project' => $project?->getId()] + (null === $slugs ? [] : ['slugs' => $slugs]),
+                null === $slugs ? [] : ['slugs' => ArrayParameterType::STRING],
+            ),
+        );
     }
 
     /**

@@ -349,6 +349,51 @@ dashboard:
     attention: 'À traiter'
     attention_empty: 'Rien à traiter : aucune proposition en attente, aucun connecteur en échec.'
     average: '{value} en moyenne'
+    business:
+        doc_rules: '{count, plural, =0 {aucune règle} one {# règle} other {# règles}}'
+        linked_code: 'Règles reliées au code'
+        no_documents: 'Aucun document métier rattaché pour le moment.'
+        no_rules: 'Aucune règle métier enregistrée sur ce périmètre.'
+        no_shadow: 'Aucune zone d’ombre en attente : les règles analysées sont claires.'
+        rules: 'Règles métier'
+        rules_sub: '{validated} validées · {to_review} à valider'
+        see_documents: 'Voir les documents'
+        see_rules: 'Voir les règles métier'
+        shadow_blockers: '{count, plural, =0 {aucun bloquant} one {# bloquant} other {# bloquants}}'
+        shadow_open: 'Zones d’ombre'
+        validated_rules: 'Règles validées par le métier'
+    customize: Personnaliser
+    customize_reset: 'Réinitialiser le rôle'
+    customize_text: 'Choisissez les blocs visibles sur votre tableau de bord. Vos préférences sont propres à votre compte.'
+    customize_title: 'Personnaliser le tableau de bord'
+    role:
+        label: 'Vue par rôle'
+    widget:
+        activity_chart: 'Requêtes et rappels MCP'
+        activity_chart_desc: 'Évolution des appels agents et mémoires rappelées.'
+        ai_quality: 'Qualité IA'
+        ai_quality_desc: 'Taux d’acceptation des propositions et satisfaction assistant.'
+        attention: 'À traiter'
+        attention_desc: 'Propositions en attente, connecteurs en échec et mémoires réfutées.'
+        business_overview: 'Alignement Métier ↔ Dev'
+        business_overview_desc: 'Couverture des règles validées et reliées au code.'
+        group_shared: Transversal
+        mcp_tools: 'Outils MCP'
+        mcp_tools_desc: 'Répartition des outils interrogés par les agents.'
+        memories_chart: 'Mémoires créées'
+        memories_chart_desc: 'Rythme d’enrichissement du graphe de connaissance.'
+        memory_types: 'Types de mémoires'
+        memory_types_desc: 'Décisions, conventions, apprentissages et faits actifs.'
+        recent_calls: 'Dernières requêtes MCP'
+        recent_calls_desc: 'Journal détaillé des appels d’outils des agents.'
+        recent_documents: 'Documents métier récents'
+        recent_documents_desc: 'Dernières spécifications importées et leurs règles associées.'
+        search_breakdown: 'Recherche (types et modes)'
+        search_breakdown_desc: 'Répartition mots-clés vs hybride et types demandés.'
+        shadow_questions: 'Questions ouvertes (zones d’ombre)'
+        shadow_questions_desc: 'Ambiguïtés détectées sur les règles en attente de réponse métier.'
+        timeline: 'Activité récente'
+        timeline_desc: 'Derniers commits, documents, règles et mémoires entrés dans le graphe.'
     chart_daily: '{title} par jour'
     chart_hourly: '{title} par heure'
     client: Client
@@ -466,6 +511,10 @@ enum:
         agent: Sous-agent
         command: Commande
         skill: Skill
+    dashboard_role:
+        all: Complet
+        business: Métier
+        dev: Dev
     capability:
         api: 'API HTTP'
         auth: Authentification
@@ -559,6 +608,8 @@ file:
     unused: "Aucun autre fichier ne l'utilise."
     used_by: 'Utilisé par'
 flash:
+    dashboard:
+        saved: 'Préférences du tableau de bord enregistrées.'
     admin:
         group_created: 'Groupe « {name} » créé.'
         group_deleted: 'Groupe « {name} » supprimé. Ses mémoires de groupe ne sont plus visibles que des super admins.'

@@ -349,6 +349,51 @@ dashboard:
     attention: 'Needs attention'
     attention_empty: 'Nothing to handle: no pending proposal, no failing connector.'
     average: '{value} on average'
+    business:
+        doc_rules: '{count, plural, =0 {no rule} one {# rule} other {# rules}}'
+        linked_code: 'Rules linked to code'
+        no_documents: 'No business document attached yet.'
+        no_rules: 'No business rule recorded in this scope.'
+        no_shadow: 'No open blind spots: analyzed rules are clear.'
+        rules: 'Business rules'
+        rules_sub: '{validated} validated · {to_review} to review'
+        see_documents: 'See documents'
+        see_rules: 'See business rules'
+        shadow_blockers: '{count, plural, =0 {no blocker} one {# blocker} other {# blockers}}'
+        shadow_open: 'Open blind spots'
+        validated_rules: 'Business-validated rules'
+    customize: Customize
+    customize_reset: 'Reset to role defaults'
+    customize_text: 'Choose which widgets appear on your dashboard. Preferences are saved per user.'
+    customize_title: 'Customize dashboard'
+    role:
+        label: 'Role view'
+    widget:
+        activity_chart: 'MCP requests and recalls'
+        activity_chart_desc: 'Agent calls and recalled memories over time.'
+        ai_quality: 'AI quality'
+        ai_quality_desc: 'Proposal acceptance rate and assistant satisfaction.'
+        attention: 'Needs attention'
+        attention_desc: 'Pending proposals, failing connectors and refuted memories.'
+        business_overview: 'Business ↔ Dev alignment'
+        business_overview_desc: 'Share of validated rules linked to implementing code.'
+        group_shared: Shared
+        mcp_tools: 'MCP tools'
+        mcp_tools_desc: 'Breakdown of tools called by connected agents.'
+        memories_chart: 'Memories created'
+        memories_chart_desc: 'Pace at which the knowledge graph grows.'
+        memory_types: 'Memory types'
+        memory_types_desc: 'Active decisions, conventions, learnings and facts.'
+        recent_calls: 'Latest MCP requests'
+        recent_calls_desc: 'Detailed log of agent tool calls.'
+        recent_documents: 'Recent business documents'
+        recent_documents_desc: 'Latest imported specs and their linked rules.'
+        search_breakdown: 'Search (types & modes)'
+        search_breakdown_desc: 'Keyword vs hybrid ratio and requested node types.'
+        shadow_questions: 'Open questions (blind spots)'
+        shadow_questions_desc: 'Ambiguities detected on rules awaiting business clarification.'
+        timeline: 'Recent activity'
+        timeline_desc: 'Latest commits, documents, rules and memories added to the graph.'
     chart_daily: '{title} per day'
     chart_hourly: '{title} per hour'
     client: Client
@@ -466,6 +511,10 @@ enum:
         agent: Subagent
         command: Command
         skill: Skill
+    dashboard_role:
+        all: Full
+        business: Business
+        dev: Dev
     capability:
         api: 'HTTP API'
         auth: Authentication
@@ -559,6 +608,8 @@ file:
     unused: 'No other file uses it.'
     used_by: 'Used by'
 flash:
+    dashboard:
+        saved: 'Dashboard preferences saved.'
     admin:
         group_created: 'Group “{name}” created.'
         group_deleted: 'Group “{name}” deleted. Its group memories are now visible to super admins only.'

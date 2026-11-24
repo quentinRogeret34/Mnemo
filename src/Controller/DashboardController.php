@@ -3,13 +3,19 @@
 namespace App\Controller;
 
 use App\Dashboard\ActivityReader;
+use App\Dashboard\DashboardPreferences;
 use App\Dashboard\DashboardReader;
+use App\Enum\DashboardRole;
 use App\Pagination\Page;
 use App\Security\ProjectScope;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\RedirectResponse;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Http\Attribute\IsCsrfTokenValid;
+use Symfony\Component\Translation\TranslatableMessage;
 
 final class DashboardController extends AbstractController
 {
@@ -21,6 +27,7 @@ final class DashboardController extends AbstractController
     public function __construct(
         private readonly DashboardReader $reader,
         private readonly ActivityReader $activityReader,
+        private readonly DashboardPreferences $preferences,
         private readonly ProjectScope $projectScope,
     ) {
     }
@@ -36,14 +43,23 @@ final class DashboardController extends AbstractController
         $page = max(1, $page);
         $now = new \DateTimeImmutable();
         $previousFrom = null === $from ? null : $from->sub($from->diff($now));
+        $prefs = $this->preferences->current();
 
         return $this->render('dashboard/show.html.twig', [
             'project' => $projectEntity,
             'period' => $period,
             'periods' => array_keys(self::PERIODS),
             'hourly' => $hourly,
+            'role' => $prefs['role'],
+            'roles' => DashboardRole::cases(),
+            'widgets' => $prefs['widgets'],
+            'custom_widgets' => $prefs['custom'],
+            'widget_catalog' => DashboardPreferences::WIDGETS,
             'summary' => $this->reader->summary($projectEntity, $from),
             'previous' => null === $previousFrom ? null : $this->reader->summary($projectEntity, $previousFrom, $from),
+            'business' => $this->reader->businessSummary($projectEntity, $from),
+            'shadow_questions' => $this->reader->openShadowQuestions($projectEntity),
+            'recent_documents' => $this->reader->recentDocuments($projectEntity),
             'requests' => $this->reader->requestSeries($projectEntity, $seriesFrom, $hourly),
             'recalls' => $this->reader->recallSeries($projectEntity, $seriesFrom, $hourly),
             'memories' => $this->reader->memorySeries($projectEntity, $seriesFrom, $hourly),
@@ -59,5 +75,30 @@ final class DashboardController extends AbstractController
             'timeline' => $this->activityReader->feed($projectEntity, new \DateTimeImmutable('@0'), self::TIMELINE_SIZE),
             'recent' => Page::ofRows($this->reader->recentCalls($projectEntity, self::CALLS_SIZE, Page::offset($page, self::CALLS_SIZE)), $page, self::CALLS_SIZE),
         ]);
+    }
+
+    #[Route('/dashboard/preferences', name: 'dashboard_preferences', methods: ['POST'])]
+    #[IsCsrfTokenValid('dashboard-prefs')]
+    public function savePreferences(Request $request): RedirectResponse
+    {
+        $payload = $request->getPayload();
+        $role = DashboardRole::tryFrom($payload->getString('role')) ?? DashboardRole::All;
+        $mode = $payload->getString('mode', 'role');
+
+        if ('custom' === $mode) {
+            /** @var list<string> $widgets */
+            $widgets = array_map('strval', $payload->all('widgets'));
+            $this->preferences->saveCustom($role, $widgets);
+            $this->addFlash('success', new TranslatableMessage('flash.dashboard.saved'));
+        } else {
+            $this->preferences->selectRole($role);
+        }
+
+        $query = array_filter([
+            'project' => $request->query->getString('project') ?: null,
+            'period' => $request->query->getString('period') ?: null,
+        ]);
+
+        return $this->redirectToRoute('dashboard', $query);
     }
 }
