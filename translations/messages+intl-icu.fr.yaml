@@ -630,6 +630,26 @@ enum:
         running: 'En cours'
         succeeded: Réussie
         waiting_human: 'Attente humaine'
+    swarm_message_kind:
+        brief: Brief
+        handoff: Passation
+        human: Humain
+        plan: Plan
+        progress: Avancement
+        review: Revue
+        system: Système
+    swarm_status:
+        awaiting_approval: 'Plan à valider'
+        cancelled: Annulée
+        completed: Terminée
+        failed: 'En échec'
+        paused: 'En pause'
+        planning: Planification
+        reviewing: 'Revue finale'
+        running: 'Workers actifs'
+    swarm_strategy:
+        parallel: 'Parallèle (worktrees)'
+        pipeline: 'Pipeline (étapes)'
     dashboard_role:
         all: Complet
         business: Métier
@@ -805,6 +825,45 @@ factory:
         summary: Résumé
         timeline: Timeline
     stats_label: 'Indicateurs de la Software Factory'
+    swarm:
+        approve_and_run: 'Approuver le plan et lancer les workers'
+        available: prêt
+        base_branch: 'Branche de base'
+        board_reply_label: 'Intervenir sur le board de la ruche'
+        board_reply_placeholder: 'Préciser une contrainte, réorienter un worker ou répondre à une question…'
+        board_reply_submit: 'Publier sur le board'
+        board_title: 'Board partagé de la ruche'
+        coordinator_session: 'Session coordinateur'
+        empty: 'Aucune ruche lancée pour le moment. Lance une ruche sur un projet pour orchestrer Plan → Workers isolés → Revue.'
+        flash:
+            approved: 'Plan approuvé : les workers ont été lancés.'
+            launched: 'Ruche créée et planification déclenchée.'
+            message_posted: 'Message publié sur le board de la ruche.'
+            title_goal_required: 'Donner un titre et un objectif à la ruche.'
+            updated: 'État de la ruche mis à jour.'
+        label: Ruche
+        launch_button: 'Lancer une ruche'
+        launch_help: 'Mnemo injecte automatiquement les règles métier et décisions du projet dans le Plan, crée un git worktree isolé par worker CLI, puis lance une revue finale.'
+        launch_submit: 'Créer la ruche'
+        pause: Pause
+        plan_pending: 'Planification en cours (ou clique sur « Exécuter l’étape maintenant » si aucun worker Messenger ne tourne).'
+        plan_title: 'Plan découpé par l’architecte'
+        require_approval: 'Valider le plan humainement avant de lancer les workers'
+        resume: Reprendre
+        review_title: 'Revue finale & alignement métier'
+        run_plan_sync: 'Exécuter la planification immédiatement (sans attendre messenger:consume)'
+        run_step_now: 'Exécuter l’étape maintenant (sync)'
+        runner_unavailable_text: 'Le runner « {runner} » n’est pas détecté sur cette machine. Les workers basculeront en erreur tant que le binaire ou la clé API n’est pas disponible.'
+        runner_unavailable_title: 'Runner non détecté sur cet hôte'
+        section_title: 'Ruches (orchestrateur multi-agents)'
+        strategy: Stratégie
+        tasks_unit: 'tâche(s)'
+        unavailable: absent
+        worker_runner: 'Runner des workers'
+        workers_pending: 'Aucun worker lancé tant que le plan n’est pas approuvé.'
+        workers_title: 'Workers de la ruche'
+        worktree_no_git: 'Aucun dépôt git local configuré (mode analyse)'
+        worktree_ready: 'Isolation par branche active'
     title: 'Software Factory'
 flash:
     dashboard:

@@ -4,12 +4,17 @@ namespace App\Mcp;
 
 use App\Entity\AgentSession;
 use App\Entity\Project;
+use App\Entity\SwarmMessage;
+use App\Entity\SwarmRun;
 use App\Enum\AgentRunnerKind;
 use App\Enum\AgentSessionEventKind;
 use App\Enum\AgentSessionStatus;
+use App\Enum\SwarmMessageKind;
 use App\Factory\AgentSessionRecorder;
 use App\Factory\FactoryGuard;
+use App\Factory\Swarm\SwarmOrchestrator;
 use App\Repository\AgentSessionRepository;
+use App\Repository\SwarmRunRepository;
 use App\Security\ProjectScope;
 use Doctrine\ORM\EntityManagerInterface;
 use Mcp\Capability\Attribute\McpTool;
@@ -28,6 +33,8 @@ final class FactoryTools
         private readonly FactoryGuard $factoryGuard,
         private readonly AgentSessionRecorder $recorder,
         private readonly AgentSessionRepository $sessionRepository,
+        private readonly SwarmRunRepository $swarmRepository,
+        private readonly SwarmOrchestrator $swarmOrchestrator,
         private readonly EntityManagerInterface $entityManager,
         private readonly ProjectScope $projectScope,
         private readonly UrlGeneratorInterface $urlGenerator,
@@ -210,11 +217,99 @@ final class FactoryTools
         ];
     }
 
+    /**
+     * @return array<string, mixed>
+     */
+    #[McpTool(
+        name: 'get_swarm_board',
+        description: 'Read a Software Factory swarm plan, worker statuses and shared board messages to coordinate with sibling agents.',
+        annotations: new ToolAnnotations(readOnlyHint: true, destructiveHint: false),
+    )]
+    public function getSwarmBoard(string $swarmId): array
+    {
+        $this->assertEnabled();
+        $swarm = $this->swarm($swarmId);
+        $coordinator = $swarm->getCoordinatorSession();
+        $workers = null !== $coordinator ? $this->sessionRepository->childrenOf($coordinator) : [];
+        $messages = $this->swarmRepository->messagesFor($swarm);
+
+        return [
+            'swarm_id' => $swarm->getPublicId(),
+            'project' => $swarm->getProject()->getSlug(),
+            'title' => $swarm->getTitle(),
+            'status' => $swarm->getStatus()->value,
+            'strategy' => $swarm->getStrategy()->value,
+            'plan' => $swarm->getPlan(),
+            'workers' => array_map(static fn (AgentSession $s): array => [
+                'session_id' => $s->getPublicId(),
+                'title' => $s->getTitle(),
+                'role' => $s->getRole(),
+                'status' => $s->getStatus()->value,
+                'branch' => $s->getBranch(),
+                'files_touched' => $s->getFilesTouched(),
+            ], $workers),
+            'messages' => array_map(static fn (SwarmMessage $m): array => [
+                'author' => $m->getAuthor(),
+                'kind' => $m->getKind()->value,
+                'body' => $m->getBody(),
+                'created_at' => $m->getCreatedAt()->format(\DATE_ATOM),
+            ], $messages),
+            'url' => $this->urlGenerator->generate('factory_swarm_show', ['publicId' => $swarm->getPublicId()], UrlGeneratorInterface::ABSOLUTE_URL),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    #[McpTool(
+        name: 'post_swarm_message',
+        description: 'Post a progress update, handoff note or blocker onto a Software Factory swarm shared message board.',
+        annotations: new ToolAnnotations(readOnlyHint: false, destructiveHint: false),
+    )]
+    public function postSwarmMessage(
+        string $swarmId,
+        #[Schema(minLength: 1)]
+        string $message,
+        string $author = 'agent',
+        #[Schema(enum: ['progress', 'handoff', 'review', 'system'])]
+        string $kind = 'progress',
+        ?string $sessionId = null,
+    ): array {
+        $this->assertEnabled();
+        $swarm = $this->swarm($swarmId);
+        $message = trim($message);
+        if ('' === $message) {
+            throw new ToolCallException('Message body must not be blank.');
+        }
+
+        $kindEnum = SwarmMessageKind::tryFrom($kind) ?? SwarmMessageKind::Progress;
+        $session = null !== $sessionId && '' !== trim($sessionId) ? $this->session($sessionId) : null;
+
+        $posted = $this->swarmOrchestrator->postMessage($swarm, $author, $kindEnum, $message, $session);
+
+        return [
+            'message_id' => $posted->getId(),
+            'swarm_id' => $swarm->getPublicId(),
+            'author' => $posted->getAuthor(),
+            'kind' => $posted->getKind()->value,
+        ];
+    }
+
     private function assertEnabled(): void
     {
         if (!$this->factoryGuard->isEnabled()) {
             throw new ToolCallException('Software Factory is disabled in this environment.');
         }
+    }
+
+    private function swarm(string $publicId): SwarmRun
+    {
+        $swarm = $this->swarmRepository->findByPublicId($publicId);
+        if (null === $swarm || !$this->projectScope->allows($swarm->getProject())) {
+            throw new ToolCallException(\sprintf('Unknown swarm "%s".', $publicId));
+        }
+
+        return $swarm;
     }
 
     private function project(string $slug): Project

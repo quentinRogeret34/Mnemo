@@ -22,9 +22,13 @@
         </div>
         {% if project %}
             <div class="view-head__actions">
-                <button class="button button--primary" type="button" commandfor="factory-new-session" command="show-modal">
+                <button class="button" type="button" commandfor="factory-new-session" command="show-modal">
                     <twig:ux:icon name="lucide:plus" />
                     {{ 'factory.new_session'|trans }}
+                </button>
+                <button class="button button--primary" type="button" commandfor="factory-new-swarm" command="show-modal">
+                    <twig:ux:icon name="lucide:network" />
+                    {{ 'factory.swarm.launch_button'|trans }}
                 </button>
             </div>
         {% endif %}
@@ -52,6 +56,46 @@
             <strong class="kpi__value">{{ stats.total }}</strong>
         </div>
     </div>
+
+    <section class="panel swarm-section">
+        <div class="swarm-section__head">
+            <h2>
+                <twig:ux:icon name="lucide:network" />
+                {{ 'factory.swarm.section_title'|trans }} ({{ swarms|length }})
+            </h2>
+            <div class="swarm-runners">
+                {% for runner in runners %}
+                    {% if runner.value != 'external_mcp' %}
+                        <span class="tag{% if runner_availability[runner.value] ?? false %} tag--accent{% endif %}">
+                            {{ runner|trans }} : {{ (runner_availability[runner.value] ?? false) ? 'factory.swarm.available'|trans : 'factory.swarm.unavailable'|trans }}
+                        </span>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+        {% if swarms is empty %}
+            <p class="help-text">{{ 'factory.swarm.empty'|trans }}</p>
+        {% else %}
+            <ul class="list">
+                {% for swarm in swarms %}
+                    <li>
+                        <a class="row" href="{{ path('factory_swarm_show', {publicId: swarm.publicId}) }}">
+                            <span class="row__title">
+                                <strong>{{ swarm.title }}</strong>
+                                <span class="row__sub">
+                                    <code>{{ swarm.publicId }}</code>
+                                    {% if not project %}· {{ swarm.project.name }}{% endif %}
+                                    · {{ swarm.strategy|trans }} · {{ swarm.workerRunner|trans }}
+                                    · {{ swarm.plan|length }} {{ 'factory.swarm.tasks_unit'|trans }}
+                                </span>
+                            </span>
+                            <span class="factory-status factory-status--{{ swarm.status.value }}">{{ swarm.status|trans }}</span>
+                        </a>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    </section>
 
     <div class="filter-bar" role="navigation" aria-label="{{ 'factory.filter_status'|trans }}">
         {% set base_route = project ? 'project_factory' : 'factory_index' %}
@@ -152,6 +196,8 @@
                 <code class="code-chip">log_session_event</code>
                 <code class="code-chip">end_session</code>
                 <code class="code-chip">list_sessions</code>
+                <code class="code-chip">get_swarm_board</code>
+                <code class="code-chip">post_swarm_message</code>
             </div>
             <p class="help-text">{{ 'factory.hooks.claude_hint'|trans({url: hook_url}) }}</p>
             <pre class="factory-code"><code>{{ hook_snippet }}</code></pre>
@@ -202,6 +248,64 @@
                 <div class="dialog__actions">
                     <button class="button" type="button" commandfor="factory-new-session" command="close">{{ 'common.cancel'|trans }}</button>
                     <button class="button button--primary" type="submit">{{ 'factory.form.start_submit'|trans }}</button>
+                </div>
+            </form>
+        </dialog>
+
+        <dialog id="factory-new-swarm" class="dialog">
+            <form method="post" action="{{ path('factory_swarm_launch', {slug: project.slug}) }}" class="form-stack">
+                <input type="hidden" name="_token" value="{{ csrf_token('factory_swarm_launch_' ~ project.slug) }}">
+                <h2>{{ 'factory.swarm.launch_button'|trans }}</h2>
+                <p class="help-text">{{ 'factory.swarm.launch_help'|trans }}</p>
+                <label>
+                    {{ 'factory.form.title'|trans }}
+                    <input class="input" type="text" name="title" required maxlength="255" placeholder="{{ 'factory.form.title_placeholder'|trans }}">
+                </label>
+                <label>
+                    {{ 'factory.form.goal'|trans }}
+                    <textarea class="input" name="goal" rows="4" required placeholder="{{ 'factory.form.goal_placeholder'|trans }}"></textarea>
+                </label>
+                <div class="factory-form-row">
+                    <label>
+                        {{ 'factory.swarm.strategy'|trans }}
+                        <select class="select" name="strategy">
+                            {% for strategy in strategies %}
+                                <option value="{{ strategy.value }}">{{ strategy|trans }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                    <label>
+                        {{ 'factory.swarm.worker_runner'|trans }}
+                        <select class="select" name="worker_runner">
+                            {% for runner in runners %}
+                                {% if runner.value != 'external_mcp' %}
+                                    <option value="{{ runner.value }}"{% if runner.value == 'internal_llm' %} selected{% endif %}>{{ runner|trans }}</option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                    </label>
+                </div>
+                <div class="factory-form-row">
+                    <label>
+                        {{ 'factory.form.rule_code'|trans }}
+                        <input class="input" type="text" name="rule_code" maxlength="50" placeholder="RG-001">
+                    </label>
+                    <label>
+                        {{ 'factory.swarm.base_branch'|trans }}
+                        <input class="input" type="text" name="base_branch" maxlength="200" placeholder="main">
+                    </label>
+                </div>
+                <label class="checkbox-field__label">
+                    <input type="checkbox" name="require_plan_approval" value="1" checked>
+                    {{ 'factory.swarm.require_approval'|trans }}
+                </label>
+                <label class="checkbox-field__label">
+                    <input type="checkbox" name="run_sync" value="1" checked>
+                    {{ 'factory.swarm.run_plan_sync'|trans }}
+                </label>
+                <div class="dialog__actions">
+                    <button class="button" type="button" commandfor="factory-new-swarm" command="close">{{ 'common.cancel'|trans }}</button>
+                    <button class="button button--primary" type="submit">{{ 'factory.swarm.launch_submit'|trans }}</button>
                 </div>
             </form>
         </dialog>

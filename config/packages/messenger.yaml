@@ -10,6 +10,9 @@ framework:
             App\Message\IndexNode: async
             App\Message\ReindexNodes: async
             App\Message\GardenProject: async
+            App\Message\PlanSwarm: async
+            App\Message\RunSwarmWorker: async
+            App\Message\ReviewSwarm: async
 
 when@test:
     framework:

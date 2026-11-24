@@ -630,6 +630,26 @@ enum:
         running: Running
         succeeded: Succeeded
         waiting_human: 'Waiting human'
+    swarm_message_kind:
+        brief: Brief
+        handoff: Handoff
+        human: Human
+        plan: Plan
+        progress: Progress
+        review: Review
+        system: System
+    swarm_status:
+        awaiting_approval: 'Awaiting plan approval'
+        cancelled: Cancelled
+        completed: Completed
+        failed: Failed
+        paused: Paused
+        planning: Planning
+        reviewing: 'Final review'
+        running: 'Workers running'
+    swarm_strategy:
+        parallel: 'Parallel (worktrees)'
+        pipeline: 'Pipeline (staged)'
     dashboard_role:
         all: Full
         business: Business
@@ -805,6 +825,45 @@ factory:
         summary: Summary
         timeline: Timeline
     stats_label: 'Software Factory metrics'
+    swarm:
+        approve_and_run: 'Approve plan & run workers'
+        available: ready
+        base_branch: 'Base branch'
+        board_reply_label: 'Post to the swarm board'
+        board_reply_placeholder: 'Clarify a constraint, guide a worker or answer a question…'
+        board_reply_submit: 'Post to board'
+        board_title: 'Shared swarm board'
+        coordinator_session: 'Coordinator session'
+        empty: 'No swarm run yet. Launch a swarm on a project to orchestrate Plan → Isolated workers → Review.'
+        flash:
+            approved: 'Plan approved: workers have been dispatched.'
+            launched: 'Swarm created and planning triggered.'
+            message_posted: 'Message posted on the swarm board.'
+            title_goal_required: 'Provide a title and goal for the swarm.'
+            updated: 'Swarm status updated.'
+        label: Swarm
+        launch_button: 'Launch a swarm'
+        launch_help: 'Mnemo automatically injects validated business rules and decisions into the plan, creates an isolated git worktree per CLI worker, then runs a final review.'
+        launch_submit: 'Create swarm'
+        pause: Pause
+        plan_pending: 'Planning queued (or click “Run step now” if no Messenger worker is running).'
+        plan_title: 'Architect plan breakdown'
+        require_approval: 'Require human plan approval before launching workers'
+        resume: Resume
+        review_title: 'Final review & business alignment'
+        run_plan_sync: 'Run planning immediately (without waiting for messenger:consume)'
+        run_step_now: 'Run step now (sync)'
+        runner_unavailable_text: 'Runner “{runner}” is not detected on this host. Workers will report unavailable until the CLI binary or API key is configured.'
+        runner_unavailable_title: 'Runner not detected on this host'
+        section_title: 'Swarms (multi-agent orchestrator)'
+        strategy: Strategy
+        tasks_unit: 'task(s)'
+        unavailable: missing
+        worker_runner: 'Worker runner'
+        workers_pending: 'No worker launched until the plan is approved.'
+        workers_title: 'Swarm workers'
+        worktree_no_git: 'No local git repository configured (analysis mode)'
+        worktree_ready: 'Per-branch isolation active'
     title: 'Software Factory'
 flash:
     dashboard:

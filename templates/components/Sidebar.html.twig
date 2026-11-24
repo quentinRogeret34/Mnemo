@@ -115,7 +115,7 @@
                 <span class="nav-item__label">{{ 'nav.agent_assets'|trans }}</span>
             </a>
             {% if this.factoryAvailable %}
-            <a class="nav-item" href="{{ path('project_factory', {slug: project.slug}) }}" {% if route in ['project_factory', 'factory_session_show'] %}aria-current="page"{% endif %}>
+            <a class="nav-item" href="{{ path('project_factory', {slug: project.slug}) }}" {% if route in ['project_factory', 'factory_session_show', 'factory_swarm_show'] %}aria-current="page"{% endif %}>
                 <twig:ux:icon name="lucide:kanban" class="icon nav-item__icon" />
                 <span class="nav-item__label">{{ 'nav.factory'|trans }}</span>
             </a>
@@ -177,7 +177,7 @@
                 <span class="nav-item__label">{{ 'nav.assistant'|trans }}</span>
             </a>
             {% if this.factoryAvailable %}
-            <a class="nav-item" href="{{ path('factory_index') }}" {% if route in ['factory_index', 'factory_session_show'] %}aria-current="page"{% endif %}>
+            <a class="nav-item" href="{{ path('factory_index') }}" {% if route in ['factory_index', 'factory_session_show', 'factory_swarm_show'] %}aria-current="page"{% endif %}>
                 <twig:ux:icon name="lucide:kanban" class="icon nav-item__icon" />
                 <span class="nav-item__label">{{ 'nav.factory'|trans }}</span>
             </a>
