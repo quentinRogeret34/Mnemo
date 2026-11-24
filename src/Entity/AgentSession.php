@@ -46,9 +46,9 @@ class AgentSession
     #[ORM\Column(length: 150, nullable: true)]
     private ?string $startedBy = null;
 
-    #[ORM\ManyToOne]
+    #[ORM\ManyToOne(targetEntity: AgentSession::class)]
     #[ORM\JoinColumn(onDelete: 'SET NULL')]
-    private ?self $parentSession = null;
+    private ?AgentSession $parentSession = null;
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $summary = null;
@@ -197,12 +197,12 @@ class AgentSession
         $this->startedBy = '' === $trimmed ? null : $trimmed;
     }
 
-    public function getParentSession(): ?self
+    public function getParentSession(): ?AgentSession
     {
         return $this->parentSession;
     }
 
-    public function setParentSession(?self $parentSession): void
+    public function setParentSession(?AgentSession $parentSession): void
     {
         $this->parentSession = $parentSession;
     }
