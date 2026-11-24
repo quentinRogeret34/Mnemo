@@ -1,0 +1,793 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Parameter \#2 \$model of class Symfony\\AI\\Agent\\Agent constructor expects non\-empty\-string, string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Chat/ProjectAssistant.php
+
+		-
+			message: '#^Parameter \#1 \$model of method Symfony\\AI\\Platform\\PlatformInterface\:\:invoke\(\) expects non\-empty\-string\|Symfony\\AI\\Platform\\Model, string given\.$#'
+			identifier: argument.type
+			count: 2
+			path: src/Command/LlmCheckCommand.php
+
+		-
+			message: '#^Method App\\Connector\\ConnectorRunner\:\:inspect\(\) should return array\{server\: string, tools\: list\<array\{name\: string, description\: string\|null, fields\: list\<array\{name\: string, type\: string, description\: string, required\: bool, enum\: list\<string\>\}\>\}\>, resources\: list\<array\{uri\: string, name\: string, mime_type\: string\|null\}\>\} but returns array\{server\: non\-falsy\-string, tools\: array\<array\{name\: string, description\: string\|null, fields\: list\<array\{name\: string, type\: string, description\: string, required\: bool, enum\: list\<string\>\}\>\}\>, resources\: list\<array\{uri\: string, name\: string, mime_type\: string\|null\}\>\}\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Connector/ConnectorRunner.php
+
+		-
+			message: '#^Method App\\Connector\\ConnectorRunner\:\:resources\(\) should return list\<Mcp\\Schema\\ResourceDefinition\> but returns array\<Mcp\\Schema\\ResourceDefinition\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Connector/ConnectorRunner.php
+
+		-
+			message: '#^Method App\\Dashboard\\ActivityReader\:\:feed\(\) should return array\{days\: array\<string, list\<array\{id\: int, type\: string, label\: string, ref\: string, kind\: string\|null, author\: string\|null, url\: string\|null, project_slug\: string\|null, \.\.\.\}\>\>, total\: int\} but returns array\{days\: array\<string, non\-empty\-list\<non\-empty\-array\<string, mixed\>\>\>, total\: int\}\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Dashboard/ActivityReader.php
+
+		-
+			message: '#^Method App\\Dashboard\\ActivityReader\:\:runs\(\) should return list\<array\{connector_id\: int, connector\: string, trigger\: string, started_at\: string, finished_at\: string, report\: array\<string, mixed\>, total\: int\}\> but returns list\<non\-empty\-array\<string, mixed\>\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Dashboard/ActivityReader.php
+
+		-
+			message: '#^Method App\\Dashboard\\DashboardReader\:\:failingConnectors\(\) should return list\<array\{id\: int, name\: string, error\: string, last_run_at\: string\}\> but returns list\<non\-empty\-array\<string, mixed\>\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Dashboard/DashboardReader.php
+
+		-
+			message: '#^Method App\\Dashboard\\DashboardReader\:\:latestProposals\(\) should return list\<array\{id\: int, kind\: string, text\: string\|null, created_at\: string\}\> but returns list\<non\-empty\-array\<string, mixed\>\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Dashboard/DashboardReader.php
+
+		-
+			message: '#^Method App\\Dashboard\\DashboardReader\:\:openShadowQuestions\(\) should return list\<array\{rule_code\: string, rule_title\: string, project_slug\: string, project_name\: string, severity\: string, category\: string, gap\: string, question\: string\}\> but returns list\<array\<string, mixed\>\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Dashboard/DashboardReader.php
+
+		-
+			message: '#^Method App\\Dashboard\\DashboardReader\:\:recentCalls\(\) should return list\<array\{created_at\: string, tool\: string, project\: string\|null, query\: string\|null, results\: int, memories\: int, failed\: bool, duration_ms\: int, \.\.\.\}\> but returns list\<non\-empty\-array\<string, mixed\>\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Dashboard/DashboardReader.php
+
+		-
+			message: '#^Method App\\Dashboard\\DashboardReader\:\:recentDocuments\(\) should return list\<array\{id\: int, label\: string, format\: string, created_at\: string, rules_count\: int\}\> but returns list\<non\-empty\-array\<string, mixed\>\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Dashboard/DashboardReader.php
+
+		-
+			message: '#^Method App\\Dashboard\\DashboardReader\:\:summary\(\) should return array\{memories\: int, memories_added\: int, recalled\: int, lookups\: int, requests\: int, failed\: int, pending\: int\} but returns array\<int\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Dashboard/DashboardReader.php
+
+		-
+			message: '#^Parameter \#2 \$array of function array_map expects array, array\<string, mixed\>\|false given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Dashboard/DashboardReader.php
+
+		-
+			message: '#^Access to an undefined property DOMNameSpaceNode\|DOMNode\:\:\$textContent\.$#'
+			identifier: property.notFound
+			count: 1
+			path: src/Document/DocumentTextExtractor.php
+
+		-
+			message: '#^Method App\\Entity\\ApiKey\:\:getUserIdentifier\(\) should return non\-empty\-string but returns ''''\|decimal\-int\-string\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Entity/ApiKey.php
+
+		-
+			message: '#^Method App\\Entity\\User\:\:getUserIdentifier\(\) should return non\-empty\-string but returns string\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Entity/User.php
+
+		-
+			message: '#^Method App\\Export\\MemoryBlockExporter\:\:memories\(\) should return list\<array\{label\: string, decision\: string\|null\}\> but returns list\<array\<string, mixed\>\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Export/MemoryBlockExporter.php
+
+		-
+			message: '#^Method App\\Export\\MemoryBlockExporter\:\:rules\(\) should return list\<array\{code\: string, label\: string, statement\: string\|null\}\> but returns list\<array\<string, mixed\>\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Export/MemoryBlockExporter.php
+
+		-
+			message: '#^Method App\\Forge\\GitHubAccount\:\:repositories\(\) should return list\<array\<string, mixed\>\> but returns array\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Forge/GitHubAccount.php
+
+		-
+			message: '#^Method App\\Forge\\GitHubClient\:\:batched\(\) should return list\<array\<mixed\>\> but returns array\<array\<mixed\>\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Forge/GitHubClient.php
+
+		-
+			message: '#^Method App\\Forge\\GitHubClient\:\:pages\(\) should return list\<array\<string, mixed\>\> but returns array\<mixed\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Forge/GitHubClient.php
+
+		-
+			message: '#^Method App\\Forge\\GitLabClient\:\:batched\(\) should return list\<array\<mixed\>\> but returns array\<array\<mixed\>\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Forge/GitLabClient.php
+
+		-
+			message: '#^Method App\\Forge\\GitLabClient\:\:pages\(\) should return list\<array\<string, mixed\>\> but returns array\<mixed\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Forge/GitLabClient.php
+
+		-
+			message: '#^Anonymous function should return string but returns string\|false\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Form/ConnectorType.php
+
+		-
+			message: '#^Argument of an invalid type list\<string\>\|false supplied for foreach, only iterables are supported\.$#'
+			identifier: foreach.nonIterable
+			count: 1
+			path: src/Form/ConnectorType.php
+
+		-
+			message: '#^Method App\\Garden\\GardenChecker\:\:check\(\) should return list\<array\{key\: string, group\: string, title\: string, hint\: string, count\: int, items\: list\<array\{type\: string, id\: int, label\: string, code\: string\|null, path\: string\|null\}\>\}\> but returns list\<array\{key\: ''inferred_edges'', group\: ''links'', title\: ''Liens inférés…'', hint\: ''Proposés par le LLM…'', count\: int, items\: non\-empty\-list\<array\{type\: ''relation'', id\: 0, label\: non\-falsy\-string, code\: null, path\: null\}\>\}\|array\{key\: ''isolated_documents''\|''orphan_memories''\|''rules_not_analyzed''\|''rules_to_review''\|''rules_without_code''\|''rules_without_source''\|''stale_memories''\|''unlinked_memories''\|''unverified_memories'', group\: ''documents''\|''memories''\|''rules'', title\: ''Documents reliés à…''\|''Mémoires dont le…''\|''Mémoires dont tous…''\|''Mémoires jamais…''\|''Mémoires sans…''\|''Règles jamais…''\|''Règles sans code…''\|''Règles sans…''\|''Règles à valider'', hint\: ''Lancer l\\''analyse …''\|''Lancer la…''\|''Le sujet de la…''\|''Les rattacher à un…''\|''Lier le code qui…''\|''Ni règle, ni code,…''\|''Relire l\\''énoncé…''\|''Retrouver le…''\|''Un commit a touché…'', count\: int\<min, \-1\>\|int\<1, max\>, items\: list\<non\-empty\-array\<string, mixed\>\>\}\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Garden/GardenChecker.php
+
+		-
+			message: '#^Method App\\Graph\\GraphReader\:\:fileHistory\(\) should return list\<array\{sha\: string, label\: string, author\: string\|null, date\: string\|null, url\: string\|null, tickets\: list\<array\{ref\: string, title\: string, url\: string\|null\}\>\}\> but returns list\<non\-empty\-array\<string, mixed\>\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Graph/GraphReader.php
+
+		-
+			message: '#^Method App\\Graph\\GraphReader\:\:fileLinks\(\) should return list\<array\{source_path\: string, target_path\: string, relation\: string, count\: int, inferred\: int\}\> but returns list\<non\-empty\-array\<string, mixed\>\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Graph/GraphReader.php
+
+		-
+			message: '#^Method App\\Graph\\GraphReader\:\:findFile\(\) should return array\{id\: int, label\: string, path\: string, metadata\: array\<string, mixed\>, updated_at\: string\}\|null but returns non\-empty\-array\<string, mixed\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Graph/GraphReader.php
+
+		-
+			message: '#^Method App\\Graph\\GraphReader\:\:projectSummaries\(\) should return list\<array\{id\: int, slug\: string, name\: string, repository_path\: string, archived_at\: string\|null, files\: int, symbols\: int, edges\: int, \.\.\.\}\> but returns list\<array\<string, mixed\>\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Graph/GraphReader.php
+
+		-
+			message: '#^Method App\\Graph\\GraphReader\:\:searchFiles\(\) should return array\{total\: int, files\: list\<array\{path\: string, symbols\: int, matched_symbols\: string\|null\}\>\} but returns array\{total\: int, files\: list\<array\<string, mixed\>\>\}\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Graph/GraphReader.php
+
+		-
+			message: '#^Method App\\Graph\\GraphReader\:\:symbols\(\) should return list\<array\{label\: string, line\: int\|null\}\> but returns list\<array\<string, mixed\>\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Graph/GraphReader.php
+
+		-
+			message: '#^Offset int\|null might not exist on array\<int, array\{documents\: int, memories\: int, rules\: int, rules_to_review\: int, files\: int\}\>\.$#'
+			identifier: offsetAccess.notFound
+			count: 1
+			path: src/Graph/KnowledgeReader.php
+
+		-
+			message: '#^Offset ''weight'' might not exist on array\{id\: ''none'', kind\: ''none'', label\: ''Sans projet ni lien'', url\: null, weight\: 0\}\|array\{id\: non\-falsy\-string, kind\: string, type\?\: string, label\: string, url\: string\|null, weight\?\: int\<1, max\>\}\.$#'
+			identifier: offsetAccess.notFound
+			count: 1
+			path: src/Graph/MemoryGalaxy.php
+
+		-
+			message: '#^Offset ''weight'' might not exist on array\{id\: non\-falsy\-string, kind\: ''project'', label\: string, url\: string, weight\: 0\}\|array\{id\: non\-falsy\-string, kind\: string, type\?\: string, label\: string, url\: string\|null, weight\?\: int\<1, max\>\}\.$#'
+			identifier: offsetAccess.notFound
+			count: 1
+			path: src/Graph/MemoryGalaxy.php
+
+		-
+			message: '#^Offset ''weight'' might not exist on array\{id\: non\-falsy\-string, kind\: string, label\: string, url\: string\|null, weight\: 0\}\|array\{id\: non\-falsy\-string, kind\: string, type\?\: string, label\: string, url\: string\|null, weight\?\: int\<1, max\>\}\.$#'
+			identifier: offsetAccess.notFound
+			count: 1
+			path: src/Graph/MemoryGalaxy.php
+
+		-
+			message: '#^Parameter \#1 \$json of function json_decode expects string, string\|false given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Ingest/GraphifyImporter.php
+
+		-
+			message: '#^Argument of an invalid type list\<string\>\|false supplied for foreach, only iterables are supported\.$#'
+			identifier: foreach.nonIterable
+			count: 3
+			path: src/Ingest/RepoContextImporter.php
+
+		-
+			message: '#^Parameter \#1 \$string of function strlen expects string, string\|false given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Ingest/RepoContextImporter.php
+
+		-
+			message: '#^Parameter \#1 \$string of function trim expects string, string\|false given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Ingest/RepoContextImporter.php
+
+		-
+			message: '#^Parameter \#2 \$origins of method App\\Ingest\\RepoContextImporter\:\:missingDocuments\(\) expects list\<string\>, array\<int\<0, max\>, non\-falsy\-string\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Ingest/RepoContextImporter.php
+
+		-
+			message: '#^Parameter \#1 \$model of method Symfony\\AI\\Platform\\PlatformInterface\:\:invoke\(\) expects non\-empty\-string\|Symfony\\AI\\Platform\\Model, string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Llm/Chat.php
+
+		-
+			message: '#^Parameter \#1 \$model of method Symfony\\AI\\Platform\\PlatformInterface\:\:invoke\(\) expects non\-empty\-string\|Symfony\\AI\\Platform\\Model, string given\.$#'
+			identifier: argument.type
+			count: 2
+			path: src/Llm/ModelCheck.php
+
+		-
+			message: '#^Parameter \#1 \$richText of method App\\Notion\\NotionClient\:\:richText\(\) expects list\<array\<string, mixed\>\>, array given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Notion/NotionClient.php
+
+		-
+			message: '#^Method App\\Repository\\BriefingRepository\:\:answeredQuestionsSince\(\) should return list\<array\{rule_code\: string, rule_title\: string, question\: string, answer\: string, resolved_by\: string\|null, resolved_at\: string\}\> but returns list\<array\<string, mixed\>\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Repository/BriefingRepository.php
+
+		-
+			message: '#^Method App\\Repository\\BriefingRepository\:\:recentCommitsSince\(\) should return list\<array\{ref\: string, label\: string, author\: string\|null, created_at\: string\}\> but returns list\<array\<string, mixed\>\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Repository/BriefingRepository.php
+
+		-
+			message: '#^Method App\\Repository\\BriefingRepository\:\:rulesTouchedSince\(\) should return list\<array\{code\: string, title\: string, status\: string, statement\: string\}\> but returns list\<array\<string, mixed\>\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Repository/BriefingRepository.php
+
+		-
+			message: '#^Method App\\Repository\\BriefingRepository\:\:ticketsSince\(\) should return list\<array\{ref\: string, label\: string, kind\: string\|null, state\: string\|null, author\: string\|null, url\: string\|null, created_at\: string\}\> but returns list\<array\<string, mixed\>\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Repository/BriefingRepository.php
+
+		-
+			message: '#^Method App\\Repository\\DocumentRepository\:\:codeLinks\(\) should return list\<array\{edge_id\: int, path\: string, project_slug\: string, project_name\: string, confidence\: string, origin\: string\}\> but returns list\<array\<string, mixed\>\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Repository/DocumentRepository.php
+
+		-
+			message: '#^Method App\\Repository\\DocumentRepository\:\:documentTree\(\) should return list\<array\{id\: int, title\: string, format\: string, folder_id\: int\|null\}\> but returns list\<non\-empty\-array\<string, mixed\>\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Repository/DocumentRepository.php
+
+		-
+			message: '#^Method App\\Repository\\DocumentRepository\:\:findPaginated\(\) should return list\<array\{id\: int, title\: string, filename\: string, format\: string, size\: int, demo\: bool, created_at\: string, rules\: int, \.\.\.\}\> but returns list\<non\-empty\-array\<string, mixed\>\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Repository/DocumentRepository.php
+
+		-
+			message: '#^Method App\\Repository\\DocumentRepository\:\:folderTree\(\) should return list\<array\{id\: int, name\: string, parent_id\: int\|null, depth\: int, documents\: int\}\> but returns list\<non\-empty\-array\<string, mixed\>\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Repository/DocumentRepository.php
+
+		-
+			message: '#^Method App\\Repository\\DocumentRepository\:\:forFile\(\) should return list\<array\{id\: int, title\: string, format\: string, confidence\: string, origin\: string\}\> but returns list\<array\<string, mixed\>\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Repository/DocumentRepository.php
+
+		-
+			message: '#^Method App\\Repository\\DocumentRepository\:\:linkableFiles\(\) should return list\<array\{id\: int, path\: string, project_name\: string\}\> but returns list\<array\<string, mixed\>\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Repository/DocumentRepository.php
+
+		-
+			message: '#^Method App\\Repository\\KnowledgeSearchRepository\:\:countsByProject\(\) should return array\<int, array\{documents\: int, memories\: int, rules\: int, rules_to_review\: int, files\: int\}\> but returns non\-empty\-array\<int, array\{documents\: int, memories\: int, rules\: int, rules_to_review\: int, files\: int\}\|array\{documents\: int, memories\: int\}\|array\{rules\: int, rules_to_review\: int, files\: int\}\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Repository/KnowledgeSearchRepository.php
+
+		-
+			message: '#^Method App\\Repository\\KnowledgeSearchRepository\:\:related\(\) should return list\<array\{id\: int, type\: string, label\: string, code\: string, path\: string\|null, statement\: string\|null\}\> but returns list\<non\-empty\-array\<string, mixed\>\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Repository/KnowledgeSearchRepository.php
+
+		-
+			message: '#^Method App\\Repository\\KnowledgeSearchRepository\:\:search\(\) should return list\<array\{id\: int, type\: string, label\: string, path\: string\|null, code\: string, project_slug\: string\|null, snippet\: string\|null\}\> but returns list\<non\-empty\-array\<string, mixed\>\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Repository/KnowledgeSearchRepository.php
+
+		-
+			message: '#^Method App\\Repository\\MemoryRepository\:\:aboutNode\(\) should return list\<array\{id\: int, text\: string, type\: string, demo\: bool, verdict\: string\|null, adr\: array\<string, string\>\|null\}\> but returns list\<non\-empty\-array\<string, mixed\>\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Repository/MemoryRepository.php
+
+		-
+			message: '#^Method App\\Repository\\MemoryRepository\:\:findFiltered\(\) should return list\<array\{id\: int, text\: string, type\: string, source\: string\|null, status\: string, verdict\: string\|null, demo\: bool, created_at\: string, \.\.\.\}\> but returns list\<non\-empty\-array\<string, mixed\>\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Repository/MemoryRepository.php
+
+		-
+			message: '#^Method App\\Repository\\MemoryRepository\:\:galaxy\(\) should return array\{memories\: list\<array\{id\: int, text\: string, type\: string\|null\}\>, links\: list\<array\{memory_id\: int, id\: int, type\: string, label\: string, path\: string\|null, code\: string, project_slug\: string\|null\}\>, projects\: list\<array\{memory_id\: int, slug\: string, name\: string\}\>\} but returns array\{memories\: list\<array\<string, mixed\>\>, links\: list\<array\<string, mixed\>\>, projects\: list\<array\<string, mixed\>\>\}\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Repository/MemoryRepository.php
+
+		-
+			message: '#^Method App\\Repository\\MemoryRepository\:\:linkables\(\) should return list\<array\{id\: int, type\: string, label\: string, path\: string\|null, code\: string, project_name\: string\|null\}\> but returns list\<array\<string, mixed\>\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Repository/MemoryRepository.php
+
+		-
+			message: '#^Method App\\Repository\\MemoryRepository\:\:links\(\) should return list\<array\{edge_id\: int, id\: int, type\: string, label\: string, path\: string\|null, code\: string, format\: string\|null, project_slug\: string\|null, \.\.\.\}\> but returns list\<array\<string, mixed\>\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Repository/MemoryRepository.php
+
+		-
+			message: '#^Method App\\Repository\\MemoryRepository\:\:supersession\(\) should return array\{replaces\: list\<array\{id\: int, text\: string, status\: string\}\>, replaced_by\: list\<array\{id\: int, text\: string, status\: string\}\>\} but returns non\-empty\-array\<list\<array\{id\: int, text\: mixed, status\: mixed\}\>\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Repository/MemoryRepository.php
+
+		-
+			message: '#^Method App\\Repository\\RuleRepository\:\:definedBy\(\) should return list\<array\{code\: string, title\: string, statement\: string\|null, status\: string\|null, confidence\: string, origin\: string, project_slug\: string\}\> but returns list\<array\<string, mixed\>\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Repository/RuleRepository.php
+
+		-
+			message: '#^Method App\\Repository\\RuleRepository\:\:forFile\(\) should return list\<array\{code\: string, title\: string, status\: string\|null, confidence\: string, origin\: string\}\> but returns list\<array\<string, mixed\>\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Repository/RuleRepository.php
+
+		-
+			message: '#^Method App\\Repository\\RuleRepository\:\:implementations\(\) should return list\<array\{edge_id\: int, id\: int, path\: string, origin\: string, confidence\: string\}\> but returns list\<non\-empty\-array\<string, mixed\>\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Repository/RuleRepository.php
+
+		-
+			message: '#^Method App\\Repository\\RuleRepository\:\:mentions\(\) should return list\<array\{type\: string, ref\: string, label\: string, author\: string\|null, date\: string\|null, url\: string\|null, state\: string\|null\}\> but returns list\<array\<string, mixed\>\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Repository/RuleRepository.php
+
+		-
+			message: '#^Method App\\Repository\\RuleRepository\:\:openQuestions\(\) should return list\<array\{rule_id\: int, rule_code\: string, rule_title\: string, rule_statement\: string\|null, project_slug\: string, project_name\: string, area_index\: int, severity\: string, \.\.\.\}\> but returns list\<non\-empty\-array\<string, mixed\>\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Repository/RuleRepository.php
+
+		-
+			message: '#^Method App\\Repository\\RuleRepository\:\:ruleImplementations\(\) should return list\<array\{path\: string, label\: string, type\: string, confidence\: string, origin\: string\}\> but returns list\<array\<string, mixed\>\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Repository/RuleRepository.php
+
+		-
+			message: '#^Method App\\Repository\\RuleRepository\:\:ruleSources\(\) should return list\<array\{id\: int, title\: string, filename\: string, format\: string, confidence\: string, origin\: string\}\> but returns list\<array\<string, mixed\>\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Repository/RuleRepository.php
+
+		-
+			message: '#^Method App\\Repository\\RuleRepository\:\:rules\(\) should return list\<array\{code\: string, title\: string, statement\: string\|null, status\: string\|null, demo\: bool, documents\: int, files\: int, verified_files\: int, \.\.\.\}\> but returns list\<non\-empty\-array\<string, mixed\>\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Repository/RuleRepository.php
+
+		-
+			message: '#^Method App\\Repository\\RuleRepository\:\:sources\(\) should return list\<array\{edge_id\: int, id\: int, title\: string, format\: string, origin\: string, confidence\: string\}\> but returns list\<non\-empty\-array\<string, mixed\>\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Repository/RuleRepository.php
+
+		-
+			message: '#^Method App\\Review\\PullRequestReviewer\:\:openPullRequests\(\) should return list\<array\{number\: int, title\: string, author\: string, draft\: bool, url\: string, updated_at\: string\}\> but returns array\<array\{number\: int, title\: string, author\: string, draft\: bool, url\: string, updated_at\: string\}\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Review/PullRequestReviewer.php
+
+		-
+			message: '#^Method App\\Review\\PullRequestReviewer\:\:pages\(\) should return list\<array\<string, mixed\>\> but returns array\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Review/PullRequestReviewer.php
+
+		-
+			message: '#^Method App\\Review\\ReviewKnowledge\:\:linkedMemories\(\) should return list\<array\{id\: int, text\: string, type\: string, about\: list\<string\>\}\> but returns list\<non\-empty\-array\<string, mixed\>\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Review/ReviewKnowledge.php
+
+		-
+			message: '#^Method App\\Review\\ReviewKnowledge\:\:projectMemories\(\) should return list\<array\{id\: int, text\: string, type\: string\}\> but returns list\<non\-empty\-array\<string, mixed\>\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Review/ReviewKnowledge.php
+
+		-
+			message: '#^Method App\\Review\\ReviewKnowledge\:\:rules\(\) should return list\<array\{code\: string, title\: string, statement\: string\|null, status\: string\|null, shadow_areas\: list\<array\{gap\: string, question\: string, severity\: string\}\>, paths\: list\<string\>\}\> but returns list\<non\-empty\-array\<string, mixed\>\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Review/ReviewKnowledge.php
+
+		-
+			message: '#^Parameter \#1 \$model of method Symfony\\AI\\Platform\\PlatformInterface\:\:invoke\(\) expects non\-empty\-string\|Symfony\\AI\\Platform\\Model, string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Search/Embedder.php
+
+		-
+			message: '#^Method App\\Search\\HybridSearch\:\:search\(\) should return array\{mode\: string, results\: list\<array\{id\: int, type\: string, label\: string, path\: string\|null, code\: string, project_slug\: string\|null, snippet\: string\|null\}\>\} but returns array\{mode\: ''hybrid'', results\: list\<array\<string, mixed\>\>\}\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Search/HybridSearch.php
+
+		-
+			message: '#^Method App\\Twig\\Components\\MemoryEditor\:\:getHistory\(\) should return list\<array\{event\: string, text\: string, previous\?\: string, at\: string\}\> but returns array\<mixed, mixed\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Twig/Components/MemoryEditor.php
+
+		-
+			message: '#^Method App\\Verify\\MemoryVerifier\:\:verifyProject\(\) should return array\{checked\: int, verified\: int, refuted\: int, conflict\: int, unverified\: int\} but returns non\-empty\-array\<string, int\<0, max\>\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Verify/MemoryVerifier.php
+
+		-
+			message: '#^Method App\\Verify\\MemoryVerifier\:\:verifyStale\(\) should return array\{checked\: int, verified\: int, refuted\: int, conflict\: int, unverified\: int\} but returns non\-empty\-array\<string, int\<0, max\>\>\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Verify/MemoryVerifier.php
+
+		-
+			message: '#^Cannot access offset ''messages'' on array\|object\|string\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 2
+			path: tests/Agent/SkillEvolutionAdvisorTest.php
+
+		-
+			message: '#^Parameter \#1 \$objectOrClass of class ReflectionClass constructor expects class\-string\<T of object\>\|T of object, string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/Architecture/ArchitectureTest.php
+
+		-
+			message: '#^Cannot access offset ''messages'' on array\|object\|string\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 2
+			path: tests/Briefing/BriefingAndNotifierTest.php
+
+		-
+			message: '#^Binary operation "\." between ''/connectors…'' and array\<mixed\>\|string results in an error\.$#'
+			identifier: binaryOp.invalid
+			count: 2
+			path: tests/Connector/ConnectorControllerTest.php
+
+		-
+			message: '#^Binary operation "\." between ''/oauth/github/check…'' and array\<mixed\>\|string results in an error\.$#'
+			identifier: binaryOp.invalid
+			count: 4
+			path: tests/Connector/ConnectorControllerTest.php
+
+		-
+			message: '#^Cannot access offset 2 on array\{string, string, mixed\}\|false\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 2
+			path: tests/Connector/ConnectorControllerTest.php
+
+		-
+			message: '#^Parameter \#1 \$key of function openssl_pkey_export expects array\|OpenSSLAsymmetricKey\|OpenSSLCertificate\|string, OpenSSLAsymmetricKey\|false given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/Connector/ConnectorControllerTest.php
+
+		-
+			message: '#^Parameter \#1 \$value of method App\\Security\\SecretBox\:\:encrypt\(\) expects string, string\|false given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/Connector/ConnectorControllerTest.php
+
+		-
+			message: '#^Parameter \#2 \$data of function hash expects string, array\<mixed\>\|string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/Connector/ConnectorControllerTest.php
+
+		-
+			message: '#^Parameter \#1 \$message of callable App\\MessageHandler\\SyncConnectorHandler expects App\\Message\\SyncConnector, object given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/Connector/ScheduledSyncTest.php
+
+		-
+			message: '#^Parameter \#1 \$json of function json_decode expects string, string\|false given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/Controller/AgentAssetTest.php
+
+		-
+			message: '#^Parameter \#2 \$haystack of static method PHPUnit\\Framework\\Assert\:\:assertStringContainsString\(\) expects string, string\|false given\.$#'
+			identifier: argument.type
+			count: 2
+			path: tests/Controller/AgentAssetTest.php
+
+		-
+			message: '#^Cannot access offset ''messages'' on array\|object\|string\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 2
+			path: tests/Controller/ClientHookControllerTest.php
+
+		-
+			message: '#^Cannot cast array\|string\|null to string\.$#'
+			identifier: cast.string
+			count: 1
+			path: tests/Controller/DashboardTest.php
+
+		-
+			message: '#^Cannot access offset 0 on array\<array\<Symfony\\Component\\DomCrawler\\Field\\FormField\>\|Symfony\\Component\\DomCrawler\\Field\\FormField\>\|Symfony\\Component\\DomCrawler\\Field\\FormField\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 2
+			path: tests/Controller/DocumentWorkspaceTest.php
+
+		-
+			message: '#^Method App\\Tests\\Controller\\GitHubWebhookControllerTest\:\:queued\(\) should return list\<object\> but returns array\<object\>\.$#'
+			identifier: return.type
+			count: 1
+			path: tests/Controller/GitHubWebhookControllerTest.php
+
+		-
+			message: '#^Parameter \#1 \$json of function json_decode expects string, string\|false given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/Controller/GraphControllerTest.php
+
+		-
+			message: '#^Cannot access offset 0 on array\<array\<Symfony\\Component\\DomCrawler\\Field\\FormField\>\|Symfony\\Component\\DomCrawler\\Field\\FormField\>\|Symfony\\Component\\DomCrawler\\Field\\FormField\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 2
+			path: tests/Controller/KnowledgeControllerTest.php
+
+		-
+			message: '#^Parameter \#1 \$json of function json_decode expects string, string\|false given\.$#'
+			identifier: argument.type
+			count: 2
+			path: tests/Controller/LlmSettingsTest.php
+
+		-
+			message: '#^Parameter \#2 \$array of function implode expects array, array\|false given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/Controller/LlmSettingsTest.php
+
+		-
+			message: '#^Parameter \#2 \$haystack of static method PHPUnit\\Framework\\Assert\:\:assertStringNotContainsString\(\) expects string, string\|false given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/Controller/LlmSettingsTest.php
+
+		-
+			message: '#^Parameter \#1 \$json of function json_decode expects string, string\|false given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/Controller/MemoryTest.php
+
+		-
+			message: '#^Parameter \#1 \$json of function json_decode expects string, string\|false given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/Controller/PaletteTest.php
+
+		-
+			message: '#^Cannot access offset 0 on array\<array\<Symfony\\Component\\DomCrawler\\Field\\FormField\>\|Symfony\\Component\\DomCrawler\\Field\\FormField\>\|Symfony\\Component\\DomCrawler\\Field\\FormField\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: tests/Controller/ProjectControllerTest.php
+
+		-
+			message: '#^Cannot access offset 1 on array\<array\<Symfony\\Component\\DomCrawler\\Field\\FormField\>\|Symfony\\Component\\DomCrawler\\Field\\FormField\>\|Symfony\\Component\\DomCrawler\\Field\\FormField\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 2
+			path: tests/Controller/ProjectControllerTest.php
+
+		-
+			message: '#^Parameter \#1 \$json of function json_decode expects string, string\|false given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/Controller/ProjectControllerTest.php
+
+		-
+			message: '#^Anonymous function should return non\-empty\-string but returns non\-empty\-string\|false\.$#'
+			identifier: return.type
+			count: 1
+			path: tests/Fixtures/mcp/server.php
+
+		-
+			message: '#^Cannot access offset ''messages'' on array\|object\|string\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 2
+			path: tests/Forge/ForgeImporterTest.php
+
+		-
+			message: '#^Parameter \#1 \$haystack of function str_ends_with expects string, string\|false\|null given\.$#'
+			identifier: argument.type
+			count: 3
+			path: tests/Forge/ForgeImporterTest.php
+
+		-
+			message: '#^Parameter \#2 \$haystack of static method PHPUnit\\Framework\\Assert\:\:assertStringContainsString\(\) expects string, string\|false given\.$#'
+			identifier: argument.type
+			count: 2
+			path: tests/Forge/ForgeImporterTest.php
+
+		-
+			message: '#^Cannot access offset ''key'' on array\|false\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 1
+			path: tests/Forge/GitHubAppTest.php
+
+		-
+			message: '#^Parameter \#1 \$key of function openssl_pkey_export expects array\|OpenSSLAsymmetricKey\|OpenSSLCertificate\|string, OpenSSLAsymmetricKey\|false given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/Forge/GitHubAppTest.php
+
+		-
+			message: '#^Parameter \#1 \$key of function openssl_pkey_get_details expects OpenSSLAsymmetricKey, OpenSSLAsymmetricKey\|false given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/Forge/GitHubAppTest.php
+
+		-
+			message: '#^Parameter \#2 \$array of function implode expects array, array\|false given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/Forge/GitHubAppTest.php
+
+		-
+			message: '#^Cannot access offset ''messages'' on array\|object\|string\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 2
+			path: tests/Garden/GardenTest.php
+
+		-
+			message: '#^Cannot access offset ''messages'' on array\|object\|string\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 2
+			path: tests/Learn/LearnerTest.php
+
+		-
+			message: '#^Cannot access offset ''messages'' on array\|object\|string\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 2
+			path: tests/Mcp/McpServerTest.php
+
+		-
+			message: '#^Parameter \#1 \$json of function json_decode expects string, string\|false given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/Mcp/McpServerTest.php
+
+		-
+			message: '#^Parameter \$content of method Symfony\\Component\\BrowserKit\\AbstractBrowser\<Symfony\\Component\\HttpFoundation\\Request,Symfony\\Component\\HttpFoundation\\Response\>\:\:request\(\) expects string\|null, string\|false given\.$#'
+			identifier: argument.type
+			count: 3
+			path: tests/Mcp/McpServerTest.php
+
+		-
+			message: '#^Cannot access offset ''messages'' on array\|object\|string\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 2
+			path: tests/Review/PullRequestReviewerTest.php
+
+		-
+			message: '#^Parameter \#1 \$haystack of function str_contains expects string, string\|false\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/Review/PullRequestReviewerTest.php
+
+		-
+			message: '#^Parameter \#1 \$key of function openssl_pkey_export expects array\|OpenSSLAsymmetricKey\|OpenSSLCertificate\|string, OpenSSLAsymmetricKey\|false given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/Review/PullRequestReviewerTest.php
+
+		-
+			message: '#^Property App\\Tests\\Review\\PullRequestReviewerTest\:\:\$writes \(list\<array\{string, string, array\<string, mixed\>\}\>\) does not accept non\-empty\-list\<array\{string, string\|false\|null, mixed\}\>\.$#'
+			identifier: assign.propertyType
+			count: 1
+			path: tests/Review/PullRequestReviewerTest.php
+
+		-
+			message: '#^Cannot access offset ''messages'' on array\|object\|string\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 2
+			path: tests/Rule/RuleExtractorTest.php
+
+		-
+			message: '#^Cannot access offset ''messages'' on array\|object\|string\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 2
+			path: tests/Rule/ShadowAreaDetectorTest.php
+
+		-
+			message: '#^Parameter \#1 \$callback of function array_map expects \(callable\(object\)\: mixed\)\|null, App\\MessageHandler\\IndexNodeHandler given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/Search/HybridSearchTest.php
+
+		-
+			message: '#^Parameter \#1 \$json of function json_decode expects string, string\|false given\.$#'
+			identifier: argument.type
+			count: 3
+			path: tests/Security/AccessTest.php
+
+		-
+			message: '#^Binary operation "\." between ''/oauth/github/check…'' and array\<mixed\>\|string results in an error\.$#'
+			identifier: binaryOp.invalid
+			count: 1
+			path: tests/Security/AccountsTest.php
+
+		-
+			message: '#^Parameter \#1 \$json of function json_decode expects string, string\|false given\.$#'
+			identifier: argument.type
+			count: 1
+			path: tests/Security/AccountsTest.php
+
+		-
+			message: '#^Cannot access offset ''messages'' on array\|object\|string\.$#'
+			identifier: offsetAccess.nonOffsetAccessible
+			count: 2
+			path: tests/Verify/MemoryVerifierTest.php

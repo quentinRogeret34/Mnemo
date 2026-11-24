@@ -1,0 +1,56 @@
+name: CI
+
+on:
+    push:
+        branches: [main]
+    pull_request:
+
+concurrency:
+    group: ci-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    quality:
+        runs-on: ubuntu-latest
+
+        services:
+            database:
+                image: pgvector/pgvector:pg18
+                env:
+                    POSTGRES_DB: app_test
+                    POSTGRES_USER: app
+                    POSTGRES_PASSWORD: '!ChangeMe!'
+                ports:
+                    - 5432:5432
+                options: >-
+                    --health-cmd="pg_isready -U app -d app_test"
+                    --health-interval=5s
+                    --health-timeout=5s
+                    --health-retries=10
+
+        env:
+            APP_ENV: test
+            DATABASE_URL: postgresql://app:!ChangeMe!@127.0.0.1:5432/app?serverVersion=18&charset=utf8
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Setup PHP
+              uses: shivammathur/setup-php@v2
+              with:
+                  php-version: '8.4'
+                  extensions: pdo_pgsql, intl, sodium, zip, mbstring, xml
+                  coverage: none
+
+            - name: Install Composer dependencies
+              run: composer install --no-interaction --prefer-dist --no-progress
+
+            - name: Prepare test database and cache
+              run: |
+                  php bin/console doctrine:database:create --env=test --if-not-exists
+                  php bin/console doctrine:migrations:migrate --env=test --no-interaction
+                  php bin/console cache:warmup --env=test
+
+            - name: Run full quality suite (lint, PHPStan, CS Fixer, PHPUnit + Architecture)
+              run: composer check
