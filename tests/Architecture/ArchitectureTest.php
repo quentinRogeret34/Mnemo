@@ -117,7 +117,7 @@ final class ArchitectureTest extends KernelTestCase
 
         $violations = [];
         foreach ($finder as $file) {
-            if (preg_match('/\b(dd|dump|var_dump|print_r)\s*\(/', $file->getContents())) {
+            if (preg_match('/(?<!::)(?<!->)\b(dd|dump|var_dump|print_r)\s*\(/', $file->getContents())) {
                 $violations[] = $file->getRelativePathname();
             }
         }

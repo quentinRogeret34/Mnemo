@@ -61,75 +61,91 @@
             </a>
         </nav>
 
-        <nav class="nav-group" aria-label="{{ project.name }}">
-            <span class="nav-group__label">{{ project.name }}{% if project.archived %} <span class="tag tag--demo">{{ 'project.archived'|trans }}</span>{% endif %}</span>
-            <a class="nav-item" href="{{ path('project_show', {slug: project.slug}) }}" {% if route == 'project_show' %}aria-current="page"{% endif %}>
-                <twig:ux:icon name="lucide:file-text" class="icon nav-item__icon" />
-                <span class="nav-item__label">{{ 'nav.documents'|trans }}</span>
-                <span class="nav-item__count">{{ counts.documents }}</span>
-            </a>
-            <a class="nav-item" href="{{ path('rule_index', {slug: project.slug}) }}" {% if route in ['rule_index', 'rule_show'] %}aria-current="page"{% endif %}>
-                <twig:ux:icon name="lucide:clipboard-check" class="icon nav-item__icon" />
-                <span class="nav-item__label">{{ 'nav.rules'|trans }}</span>
-                {% if counts.rules_to_review > 0 %}
-                    <span class="nav-item__count nav-item__count--alert" title="{{ 'nav.count_to_review'|trans({count: counts.rules_to_review}) }}">{{ 'nav.count_to_review'|trans({count: counts.rules_to_review}) }}</span>
-                {% else %}
-                    <span class="nav-item__count">{{ counts.rules }}</span>
-                {% endif %}
-            </a>
-            <a class="nav-item" href="{{ path('project_questions', {slug: project.slug}) }}" {% if route == 'project_questions' %}aria-current="page"{% endif %}>
-                <twig:ux:icon name="lucide:triangle-alert" class="icon nav-item__icon" />
-                <span class="nav-item__label">{{ 'nav.questions'|trans }}</span>
-            </a>
-            <a class="nav-item" href="{{ path('project_alignment', {slug: project.slug}) }}" {% if route == 'project_alignment' %}aria-current="page"{% endif %}>
-                <twig:ux:icon name="lucide:scale" class="icon nav-item__icon" />
-                <span class="nav-item__label">{{ 'nav.alignment'|trans }}</span>
-            </a>
-            <a class="nav-item" href="{{ path('memory_index', {project: project.slug}) }}" {% if route in ['memory_index', 'memory_show'] %}aria-current="page"{% endif %}>
-                <twig:ux:icon name="lucide:lightbulb" class="icon nav-item__icon" />
-                <span class="nav-item__label">{{ 'nav.memories'|trans }}</span>
-                <span class="nav-item__count">{{ counts.memories }}</span>
-            </a>
-            <a class="nav-item" href="{{ path('memory_graph', scope) }}" {% if route == 'memory_graph' %}aria-current="page"{% endif %}>
-                <twig:ux:icon name="lucide:network" class="icon nav-item__icon" />
-                <span class="nav-item__label">{{ 'nav.memory_graph'|trans }}</span>
-            </a>
-            <a class="nav-item" href="{{ path('project_code', {slug: project.slug}) }}" {% if route in ['project_code', 'file_show'] %}aria-current="page"{% endif %}>
-                <twig:ux:icon name="lucide:code" class="icon nav-item__icon" />
-                <span class="nav-item__label">{{ 'nav.code'|trans }}</span>
-                <span class="nav-item__count">{{ counts.files }}</span>
-            </a>
-        </nav>
+        <details class="nav-accordion" open data-controller="nav-group" data-nav-group-key-value="project-knowledge" data-action="toggle->nav-group#remember">
+            <summary class="nav-accordion__trigger">
+                <span class="nav-group__label">{{ 'nav.knowledge'|trans }}{% if project.archived %} <span class="tag tag--demo">{{ 'project.archived'|trans }}</span>{% endif %}</span>
+                <twig:ux:icon name="lucide:chevron-down" class="icon nav-accordion__chevron" />
+            </summary>
+            <nav class="nav-group" aria-label="{{ project.name }}">
+                <a class="nav-item" href="{{ path('project_show', {slug: project.slug}) }}" {% if route == 'project_show' %}aria-current="page"{% endif %}>
+                    <twig:ux:icon name="lucide:file-text" class="icon nav-item__icon" />
+                    <span class="nav-item__label">{{ 'nav.documents'|trans }}</span>
+                    <span class="nav-item__count">{{ counts.documents }}</span>
+                </a>
+                <a class="nav-item" href="{{ path('rule_index', {slug: project.slug}) }}" {% if route in ['rule_index', 'rule_show'] %}aria-current="page"{% endif %}>
+                    <twig:ux:icon name="lucide:clipboard-check" class="icon nav-item__icon" />
+                    <span class="nav-item__label">{{ 'nav.rules'|trans }}</span>
+                    {% if counts.rules_to_review > 0 %}
+                        <span class="nav-item__count nav-item__count--alert" title="{{ 'nav.count_to_review'|trans({count: counts.rules_to_review}) }}">{{ 'nav.count_to_review'|trans({count: counts.rules_to_review}) }}</span>
+                    {% else %}
+                        <span class="nav-item__count">{{ counts.rules }}</span>
+                    {% endif %}
+                </a>
+                <a class="nav-item" href="{{ path('project_questions', {slug: project.slug}) }}" {% if route == 'project_questions' %}aria-current="page"{% endif %}>
+                    <twig:ux:icon name="lucide:triangle-alert" class="icon nav-item__icon" />
+                    <span class="nav-item__label">{{ 'nav.questions'|trans }}</span>
+                </a>
+                <a class="nav-item" href="{{ path('project_alignment', {slug: project.slug}) }}" {% if route == 'project_alignment' %}aria-current="page"{% endif %}>
+                    <twig:ux:icon name="lucide:scale" class="icon nav-item__icon" />
+                    <span class="nav-item__label">{{ 'nav.alignment'|trans }}</span>
+                </a>
+                <a class="nav-item" href="{{ path('memory_index', {project: project.slug}) }}" {% if route in ['memory_index', 'memory_show'] %}aria-current="page"{% endif %}>
+                    <twig:ux:icon name="lucide:lightbulb" class="icon nav-item__icon" />
+                    <span class="nav-item__label">{{ 'nav.memories'|trans }}</span>
+                    <span class="nav-item__count">{{ counts.memories }}</span>
+                </a>
+                <a class="nav-item" href="{{ path('memory_graph', scope) }}" {% if route == 'memory_graph' %}aria-current="page"{% endif %}>
+                    <twig:ux:icon name="lucide:network" class="icon nav-item__icon" />
+                    <span class="nav-item__label">{{ 'nav.memory_graph'|trans }}</span>
+                </a>
+                <a class="nav-item" href="{{ path('project_code', {slug: project.slug}) }}" {% if route in ['project_code', 'file_show'] %}aria-current="page"{% endif %}>
+                    <twig:ux:icon name="lucide:code" class="icon nav-item__icon" />
+                    <span class="nav-item__label">{{ 'nav.code'|trans }}</span>
+                    <span class="nav-item__count">{{ counts.files }}</span>
+                </a>
+            </nav>
+        </details>
 
-        <nav class="nav-group" aria-label="{{ 'nav.tools'|trans }}">
-            <a class="nav-item" href="{{ path('project_chat', {slug: project.slug}) }}" {% if route == 'project_chat' %}aria-current="page"{% endif %}>
-                <twig:ux:icon name="lucide:message-circle" class="icon nav-item__icon" />
-                <span class="nav-item__label">{{ 'nav.assistant'|trans }}</span>
-            </a>
-            <a class="nav-item" href="{{ path('project_briefing', {slug: project.slug}) }}" {% if route == 'project_briefing' %}aria-current="page"{% endif %}>
-                <twig:ux:icon name="lucide:library" class="icon nav-item__icon" />
-                <span class="nav-item__label">{{ 'nav.briefing'|trans }}</span>
-            </a>
-            <a class="nav-item" href="{{ path('agent_asset_index', {slug: project.slug}) }}" {% if route starts with 'agent_asset_' %}aria-current="page"{% endif %}>
-                <twig:ux:icon name="lucide:graduation-cap" class="icon nav-item__icon" />
-                <span class="nav-item__label">{{ 'nav.agent_assets'|trans }}</span>
-            </a>
-            {% if this.factoryAvailable %}
-            <a class="nav-item" href="{{ path('project_factory', {slug: project.slug}) }}" {% if route in ['project_factory', 'factory_session_show', 'factory_swarm_show'] %}aria-current="page"{% endif %}>
-                <twig:ux:icon name="lucide:kanban" class="icon nav-item__icon" />
-                <span class="nav-item__label">{{ 'nav.factory'|trans }}</span>
-            </a>
-            {% endif %}
-            <a class="nav-item" href="{{ path('garden_show', {slug: project.slug}) }}" {% if route == 'garden_show' %}aria-current="page"{% endif %}>
-                <twig:ux:icon name="lucide:sprout" class="icon nav-item__icon" />
-                <span class="nav-item__label">{{ 'nav.garden'|trans }}</span>
-            </a>
-            <a class="nav-item" href="{{ path('project_settings', {slug: project.slug}) }}" {% if route == 'project_settings' %}aria-current="page"{% endif %}>
-                <twig:ux:icon name="lucide:sliders-horizontal" class="icon nav-item__icon" />
-                <span class="nav-item__label">{{ 'nav.project_settings'|trans }}</span>
-            </a>
-        </nav>
+        <details class="nav-accordion" open data-controller="nav-group" data-nav-group-key-value="project-studio" data-action="toggle->nav-group#remember">
+            <summary class="nav-accordion__trigger">
+                <span class="nav-group__label">{{ 'nav.studio_agents'|trans }}</span>
+                <twig:ux:icon name="lucide:chevron-down" class="icon nav-accordion__chevron" />
+            </summary>
+            <nav class="nav-group" aria-label="{{ 'nav.tools'|trans }}">
+                <a class="nav-item" href="{{ path('project_studio', {slug: project.slug}) }}" {% if route == 'project_studio' %}aria-current="page"{% endif %}>
+                    <twig:ux:icon name="lucide:file-code" class="icon nav-item__icon" />
+                    <span class="nav-item__label">{{ 'nav.studio'|trans }}</span>
+                </a>
+                <a class="nav-item" href="{{ path('project_chat', {slug: project.slug}) }}" {% if route == 'project_chat' %}aria-current="page"{% endif %}>
+                    <twig:ux:icon name="lucide:message-circle" class="icon nav-item__icon" />
+                    <span class="nav-item__label">{{ 'nav.assistant'|trans }}</span>
+                </a>
+                <a class="nav-item" href="{{ path('project_briefing', {slug: project.slug}) }}" {% if route == 'project_briefing' %}aria-current="page"{% endif %}>
+                    <twig:ux:icon name="lucide:library" class="icon nav-item__icon" />
+                    <span class="nav-item__label">{{ 'nav.briefing'|trans }}</span>
+                </a>
+                <a class="nav-item" href="{{ path('agent_asset_index', {slug: project.slug}) }}" {% if route starts with 'agent_asset_' %}aria-current="page"{% endif %}>
+                    <twig:ux:icon name="lucide:graduation-cap" class="icon nav-item__icon" />
+                    <span class="nav-item__label">{{ 'nav.agent_assets'|trans }}</span>
+                </a>
+                {% if this.factoryAvailable %}
+                <a class="nav-item" href="{{ path('project_factory', {slug: project.slug}) }}" {% if route in ['project_factory', 'factory_session_show', 'factory_swarm_show'] %}aria-current="page"{% endif %}>
+                    <twig:ux:icon name="lucide:kanban" class="icon nav-item__icon" />
+                    <span class="nav-item__label">{{ 'nav.factory'|trans }}</span>
+                </a>
+                {% endif %}
+                <a class="nav-item" href="{{ path('garden_show', {slug: project.slug}) }}" {% if route == 'garden_show' %}aria-current="page"{% endif %}>
+                    <twig:ux:icon name="lucide:sprout" class="icon nav-item__icon" />
+                    <span class="nav-item__label">{{ 'nav.garden'|trans }}</span>
+                </a>
+                <a class="nav-item" href="{{ path('project_settings', {slug: project.slug}) }}" {% if route == 'project_settings' %}aria-current="page"{% endif %}>
+                    <twig:ux:icon name="lucide:sliders-horizontal" class="icon nav-item__icon" />
+                    <span class="nav-item__label">{{ 'nav.project_settings'|trans }}</span>
+                </a>
+            </nav>
+        </details>
     {% else %}
+        {% set pending = this.scoped ? 0 : this.pendingProposals %}
         <nav class="nav-group" aria-label="{{ 'nav.workspace'|trans }}">
             <a class="nav-item" href="{{ path('dashboard') }}" {% if route == 'dashboard' %}aria-current="page"{% endif %}>
                 <twig:ux:icon name="lucide:layout-dashboard" class="icon nav-item__icon" />
@@ -143,52 +159,69 @@
                 <twig:ux:icon name="lucide:layout-grid" class="icon nav-item__icon" />
                 <span class="nav-item__label">{{ 'nav.projects'|trans }}</span>
             </a>
-            {% if not this.scoped %}
-            <a class="nav-item" href="{{ path('document_index') }}" {% if route in ['document_index', 'document_show'] %}aria-current="page"{% endif %}>
-                <twig:ux:icon name="lucide:file" class="icon nav-item__icon" />
-                <span class="nav-item__label">{{ 'nav.all_documents'|trans }}</span>
-            </a>
-            {% endif %}
-            <a class="nav-item" href="{{ path('memory_index') }}" {% if route in ['memory_index', 'memory_show'] %}aria-current="page"{% endif %}>
-                <twig:ux:icon name="lucide:lightbulb" class="icon nav-item__icon" />
-                <span class="nav-item__label">{{ (this.scoped ? 'nav.memories' : 'nav.all_memories')|trans }}</span>
-                {% if not this.scoped %}<span class="nav-item__count">{{ this.memoryCount }}</span>{% endif %}
-            </a>
-            <a class="nav-item" href="{{ path('memory_graph') }}" {% if route == 'memory_graph' %}aria-current="page"{% endif %}>
-                <twig:ux:icon name="lucide:network" class="icon nav-item__icon" />
-                <span class="nav-item__label">{{ 'nav.memory_graph'|trans }}</span>
-            </a>
-            {% set pending = this.scoped ? 0 : this.pendingProposals %}
             <a class="nav-item" href="{{ path('proposal_index') }}" {% if route == 'proposal_index' %}aria-current="page"{% endif %}>
                 <twig:ux:icon name="lucide:check" class="icon nav-item__icon" />
                 <span class="nav-item__label">{{ 'nav.to_review'|trans }}</span>
                 {% if pending > 0 %}<span class="nav-item__count nav-item__count--alert">{{ pending }}</span>{% endif %}
             </a>
-            <a class="nav-item" href="{{ path('question_index') }}" {% if route == 'question_index' %}aria-current="page"{% endif %}>
-                <twig:ux:icon name="lucide:triangle-alert" class="icon nav-item__icon" />
-                <span class="nav-item__label">{{ 'nav.questions'|trans }}</span>
-            </a>
-            <a class="nav-item" href="{{ path('alignment_index') }}" {% if route == 'alignment_index' %}aria-current="page"{% endif %}>
-                <twig:ux:icon name="lucide:scale" class="icon nav-item__icon" />
-                <span class="nav-item__label">{{ 'nav.alignment'|trans }}</span>
-            </a>
-            <a class="nav-item" href="{{ path('chat') }}" {% if route == 'chat' %}aria-current="page"{% endif %}>
-                <twig:ux:icon name="lucide:message-circle" class="icon nav-item__icon" />
-                <span class="nav-item__label">{{ 'nav.assistant'|trans }}</span>
-            </a>
-            {% if this.factoryAvailable %}
-            <a class="nav-item" href="{{ path('factory_index') }}" {% if route in ['factory_index', 'factory_session_show', 'factory_swarm_show'] %}aria-current="page"{% endif %}>
-                <twig:ux:icon name="lucide:kanban" class="icon nav-item__icon" />
-                <span class="nav-item__label">{{ 'nav.factory'|trans }}</span>
-            </a>
-            {% endif %}
-            {% if not this.scoped %}
-            <a class="nav-item" href="{{ path('connector_index') }}" {% if route starts with 'connector_' %}aria-current="page"{% endif %}>
-                <twig:ux:icon name="lucide:plug" class="icon nav-item__icon" />
-                <span class="nav-item__label">{{ 'nav.connectors'|trans }}</span>
-            </a>
-            {% endif %}
         </nav>
+
+        <details class="nav-accordion" open data-controller="nav-group" data-nav-group-key-value="workspace-knowledge" data-action="toggle->nav-group#remember">
+            <summary class="nav-accordion__trigger">
+                <span class="nav-group__label">{{ 'nav.knowledge'|trans }}</span>
+                <twig:ux:icon name="lucide:chevron-down" class="icon nav-accordion__chevron" />
+            </summary>
+            <nav class="nav-group" aria-label="{{ 'nav.knowledge'|trans }}">
+                {% if not this.scoped %}
+                <a class="nav-item" href="{{ path('document_index') }}" {% if route in ['document_index', 'document_show'] %}aria-current="page"{% endif %}>
+                    <twig:ux:icon name="lucide:file" class="icon nav-item__icon" />
+                    <span class="nav-item__label">{{ 'nav.all_documents'|trans }}</span>
+                </a>
+                {% endif %}
+                <a class="nav-item" href="{{ path('memory_index') }}" {% if route in ['memory_index', 'memory_show'] %}aria-current="page"{% endif %}>
+                    <twig:ux:icon name="lucide:lightbulb" class="icon nav-item__icon" />
+                    <span class="nav-item__label">{{ (this.scoped ? 'nav.memories' : 'nav.all_memories')|trans }}</span>
+                    {% if not this.scoped %}<span class="nav-item__count">{{ this.memoryCount }}</span>{% endif %}
+                </a>
+                <a class="nav-item" href="{{ path('memory_graph') }}" {% if route == 'memory_graph' %}aria-current="page"{% endif %}>
+                    <twig:ux:icon name="lucide:network" class="icon nav-item__icon" />
+                    <span class="nav-item__label">{{ 'nav.memory_graph'|trans }}</span>
+                </a>
+                <a class="nav-item" href="{{ path('question_index') }}" {% if route == 'question_index' %}aria-current="page"{% endif %}>
+                    <twig:ux:icon name="lucide:triangle-alert" class="icon nav-item__icon" />
+                    <span class="nav-item__label">{{ 'nav.questions'|trans }}</span>
+                </a>
+                <a class="nav-item" href="{{ path('alignment_index') }}" {% if route == 'alignment_index' %}aria-current="page"{% endif %}>
+                    <twig:ux:icon name="lucide:scale" class="icon nav-item__icon" />
+                    <span class="nav-item__label">{{ 'nav.alignment'|trans }}</span>
+                </a>
+            </nav>
+        </details>
+
+        <details class="nav-accordion" open data-controller="nav-group" data-nav-group-key-value="workspace-tools" data-action="toggle->nav-group#remember">
+            <summary class="nav-accordion__trigger">
+                <span class="nav-group__label">{{ 'nav.studio_agents'|trans }}</span>
+                <twig:ux:icon name="lucide:chevron-down" class="icon nav-accordion__chevron" />
+            </summary>
+            <nav class="nav-group" aria-label="{{ 'nav.studio_agents'|trans }}">
+                <a class="nav-item" href="{{ path('chat') }}" {% if route == 'chat' %}aria-current="page"{% endif %}>
+                    <twig:ux:icon name="lucide:message-circle" class="icon nav-item__icon" />
+                    <span class="nav-item__label">{{ 'nav.assistant'|trans }}</span>
+                </a>
+                {% if this.factoryAvailable %}
+                <a class="nav-item" href="{{ path('factory_index') }}" {% if route in ['factory_index', 'factory_session_show', 'factory_swarm_show'] %}aria-current="page"{% endif %}>
+                    <twig:ux:icon name="lucide:kanban" class="icon nav-item__icon" />
+                    <span class="nav-item__label">{{ 'nav.factory'|trans }}</span>
+                </a>
+                {% endif %}
+                {% if not this.scoped %}
+                <a class="nav-item" href="{{ path('connector_index') }}" {% if route starts with 'connector_' %}aria-current="page"{% endif %}>
+                    <twig:ux:icon name="lucide:plug" class="icon nav-item__icon" />
+                    <span class="nav-item__label">{{ 'nav.connectors'|trans }}</span>
+                </a>
+                {% endif %}
+            </nav>
+        </details>
     {% endif %}
 
     <nav class="nav-group nav-group--foot" aria-label="{{ 'layout.help'|trans }}">

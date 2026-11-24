@@ -1343,6 +1343,7 @@ nav:
     garden: Jardinage
     hint_code: code
     hint_commands: commandes
+    knowledge: Connaissance
     llm: 'Modèles de langage'
     logout: 'Se déconnecter'
     memories: Mémoires
@@ -1357,6 +1358,8 @@ nav:
     settings: Réglages
     sidebar: 'Navigation principale'
     source: 'Code source sur GitHub'
+    studio: 'Éditeur (Studio)'
+    studio_agents: 'Studio & Agents'
     switch_project: 'Changer de projet'
     to_review: 'À valider'
     tools: Outils
@@ -1579,3 +1582,35 @@ verdict:
     title: 'Vérification contre le graphe'
     unverified: 'Non vérifiable'
     verified: Vérifiée
+
+studio:
+    flash:
+        created: 'Fichier « {name} » créé dans le Studio.'
+        empty_content: 'Le contenu ne peut pas être vide.'
+        invalid_kind: 'Type de fichier non reconnu.'
+        name_required: 'Donner un nom au fichier.'
+        saved: 'Fichier « {name} » enregistré.'
+    form:
+        create_submit: 'Créer le fichier'
+        description: 'Description (optionnel)'
+        description_placeholder: 'Ce que fait ce skill ou résumé du document…'
+        document_md: 'Document Markdown (.md)'
+        folder: 'Dossier (pour les documents uniquement)'
+        kind: 'Type de fichier'
+        name: Nom
+        name_placeholder: 'ex. revue-pr ou Architecture API'
+    group:
+        agents: agents
+        commands: commands
+        documents: documents
+        skills: skills
+    group_empty: 'Aucun fichier'
+    mode_edit: Éditeur
+    mode_preview: Aperçu
+    new_file: 'Nouveau fichier'
+    open_document: 'Ouvrir la fiche document'
+    search_placeholder: 'Rechercher un fichier…'
+    title: Studio
+    tree_label: 'Arborescence des fichiers du projet'
+    unsaved: '• Modifié'
+    view_mode: 'Mode d’édition'

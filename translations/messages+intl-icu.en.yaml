@@ -1343,6 +1343,7 @@ nav:
     garden: Gardening
     hint_code: code
     hint_commands: commands
+    knowledge: Knowledge
     llm: 'Language models'
     logout: 'Log out'
     memories: Memories
@@ -1357,6 +1358,8 @@ nav:
     settings: Settings
     sidebar: 'Primary navigation'
     source: 'Source code on GitHub'
+    studio: 'Editor (Studio)'
+    studio_agents: 'Studio & Agents'
     switch_project: 'Switch project'
     to_review: 'To review'
     tools: Tools
@@ -1579,3 +1582,35 @@ verdict:
     title: 'Checked against the graph'
     unverified: 'Cannot be verified'
     verified: Verified
+
+studio:
+    flash:
+        created: 'File “{name}” created in Studio.'
+        empty_content: 'Content cannot be empty.'
+        invalid_kind: 'Unsupported file type.'
+        name_required: 'Provide a file name.'
+        saved: 'File “{name}” saved.'
+    form:
+        create_submit: 'Create file'
+        description: 'Description (optional)'
+        description_placeholder: 'What this skill does or document summary…'
+        document_md: 'Markdown document (.md)'
+        folder: 'Folder (for documents only)'
+        kind: 'File type'
+        name: Name
+        name_placeholder: 'e.g. pr-review or API Architecture'
+    group:
+        agents: agents
+        commands: commands
+        documents: documents
+        skills: skills
+    group_empty: 'No files'
+    mode_edit: Editor
+    mode_preview: Preview
+    new_file: 'New file'
+    open_document: 'Open document page'
+    search_placeholder: 'Search files…'
+    title: Studio
+    tree_label: 'Project files tree'
+    unsaved: '• Unsaved'
+    view_mode: 'Editor view mode'

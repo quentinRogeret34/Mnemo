@@ -1,0 +1,169 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ 'studio.title'|trans }} · {{ project.name }}{% endblock %}
+
+{% block crumbs %}
+    <a href="{{ path('project_show', {slug: project.slug}) }}">{{ project.name }}</a>
+    <span class="crumbs__sep" aria-hidden="true">/</span>
+    <span class="crumbs__current">{{ 'studio.title'|trans }}</span>
+{% endblock %}
+
+{% block body %}
+    <div class="studio-shell" data-controller="studio-editor">
+        <div class="studio-topbar">
+            <div class="studio-topbar__path">
+                <span class="studio-topbar__project">{{ project.name }}</span>
+                <span class="crumbs__sep" aria-hidden="true">/</span>
+                <strong class="studio-topbar__file">{{ active.path }}</strong>
+                <span class="tag">{{ active.language|upper }}</span>
+                <span class="studio-dirty" data-studio-editor-target="dirty" hidden>{{ 'studio.unsaved'|trans }}</span>
+            </div>
+            <div class="studio-topbar__actions">
+                {% if active.editable and active.language == 'markdown' %}
+                    <div class="density-switch" role="group" aria-label="{{ 'studio.view_mode'|trans }}">
+                        <button class="density-switch__btn is-active" type="button" aria-pressed="true" data-studio-editor-target="modeBtn" data-mode="edit" data-action="studio-editor#switchMode">{{ 'studio.mode_edit'|trans }}</button>
+                        <button class="density-switch__btn" type="button" aria-pressed="false" data-studio-editor-target="modeBtn" data-mode="preview" data-action="studio-editor#switchMode">{{ 'studio.mode_preview'|trans }}</button>
+                    </div>
+                {% endif %}
+                <a class="button" href="{{ path('project_settings', {slug: project.slug}) }}">
+                    <twig:ux:icon name="lucide:sliders-horizontal" />
+                    {{ 'nav.settings'|trans }}
+                </a>
+                {% if active.editable %}
+                    <button class="button button--primary" type="submit" form="studio-editor-form" data-studio-editor-target="saveButton">
+                        <twig:ux:icon name="lucide:check" />
+                        {{ 'common.save'|trans }}
+                    </button>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="studio-workspace">
+            <aside class="studio-tree" aria-label="{{ 'studio.tree_label'|trans }}">
+                <div class="studio-tree__head">
+                    <label class="filetree__search studio-tree__search">
+                        {{ ux_icon('lucide:search') }}
+                        <input class="input" type="search" placeholder="{{ 'studio.search_placeholder'|trans }}" aria-label="{{ 'studio.search_placeholder'|trans }}" data-studio-editor-target="search" data-action="input->studio-editor#filterTree">
+                    </label>
+                    <button class="button studio-tree__new" type="button" commandfor="studio-new-file" command="show-modal" title="{{ 'studio.new_file'|trans }}" aria-label="{{ 'studio.new_file'|trans }}">
+                        <twig:ux:icon name="lucide:plus" />
+                    </button>
+                </div>
+
+                <div class="studio-tree__body">
+                    <a class="studio-tree__file{{ active.ref == definition.ref ? ' is-active' }}" href="{{ path('project_studio', {slug: project.slug, file: definition.ref}) }}" data-studio-editor-target="treeItem" data-search-text="project.yaml definition">
+                        <twig:ux:icon name="lucide:file-code" class="icon studio-tree__icon" />
+                        <span class="studio-tree__name">{{ definition.name }}</span>
+                    </a>
+
+                    {% set folder_labels = {
+                        agents: 'studio.group.agents',
+                        skills: 'studio.group.skills',
+                        commands: 'studio.group.commands',
+                        documents: 'studio.group.documents'
+                    } %}
+                    {% for group_key, files in groups %}
+                        <details class="studio-tree__group" data-studio-editor-target="treeGroup" open>
+                            <summary class="studio-tree__folder">
+                                <twig:ux:icon name="lucide:chevron-down" class="icon studio-tree__chevron" />
+                                <twig:ux:icon name="lucide:folder" class="icon studio-tree__icon" />
+                                <span class="studio-tree__name">{{ folder_labels[group_key]|trans }}</span>
+                                <span class="studio-tree__count">{{ files|length }}</span>
+                            </summary>
+                            <ul class="studio-tree__list">
+                                {% for item in files %}
+                                    <li data-studio-editor-target="treeItem" data-search-text="{{ item.name }} {{ item.path }} {{ item.description }}">
+                                        <a class="studio-tree__file{{ active.ref == item.ref ? ' is-active' }}" href="{{ path('project_studio', {slug: project.slug, file: item.ref}) }}" title="{{ item.path }}">
+                                            <span class="studio-md-badge" aria-hidden="true">M↓</span>
+                                            <span class="studio-tree__name">{{ item.name }}</span>
+                                        </a>
+                                    </li>
+                                {% else %}
+                                    <li class="studio-tree__empty">{{ 'studio.group_empty'|trans }}</li>
+                                {% endfor %}
+                            </ul>
+                        </details>
+                    {% endfor %}
+                </div>
+            </aside>
+
+            <section class="studio-editor">
+                {% if active.editable %}
+                    <form id="studio-editor-form" class="studio-editor__form" method="post" action="{{ path('project_studio_save', {slug: project.slug}) }}" data-studio-editor-target="form">
+                        <input type="hidden" name="_token" value="{{ csrf_token('studio-save-' ~ project.slug ~ '-' ~ active.ref) }}">
+                        <input type="hidden" name="ref" value="{{ active.ref }}">
+
+                        {% if active.kind != 'document' %}
+                            <div class="studio-editor__meta">
+                                <label for="studio-description">{{ 'form.agent_asset.description'|trans }}</label>
+                                <input class="input studio-editor__desc" id="studio-description" type="text" name="description" value="{{ active.description }}" maxlength="500" data-action="input->studio-editor#updateDirty">
+                            </div>
+                        {% elseif active.description %}
+                            <div class="studio-editor__meta studio-editor__meta--readonly">
+                                <span class="row__sub">{{ active.description }}</span>
+                                <a class="link" href="{{ path('document_show', {id: active.entityId}) }}">{{ 'studio.open_document'|trans }}</a>
+                            </div>
+                        {% endif %}
+
+                        <div class="studio-code-wrap" data-studio-editor-target="editorPane">
+                            <pre class="studio-gutter" aria-hidden="true" data-studio-editor-target="gutter">1</pre>
+                            <textarea
+                                class="studio-textarea"
+                                name="content"
+                                spellcheck="false"
+                                aria-label="{{ active.path }}"
+                                data-studio-editor-target="textarea"
+                                data-action="input->studio-editor#onInput scroll->studio-editor#syncScroll keydown->studio-editor#onKeydown"
+                            >{{ active.content }}</textarea>
+                        </div>
+
+                        <div class="studio-preview prose" data-studio-editor-target="previewPane" hidden></div>
+                    </form>
+                {% else %}
+                    <div class="studio-editor__form">
+                        <div class="studio-editor__meta studio-editor__meta--readonly">
+                            <span class="row__sub">{{ active.description }}</span>
+                            <a class="link" href="{{ path('project_settings', {slug: project.slug}) }}">{{ 'nav.project_settings'|trans }}</a>
+                        </div>
+                        <div class="studio-code-wrap">
+                            <pre class="studio-gutter" aria-hidden="true" data-studio-editor-target="gutter">1</pre>
+                            <textarea class="studio-textarea" readonly spellcheck="false" aria-label="{{ active.path }}" data-studio-editor-target="textarea" data-action="scroll->studio-editor#syncScroll">{{ active.content }}</textarea>
+                        </div>
+                    </div>
+                {% endif %}
+            </section>
+        </div>
+    </div>
+
+    <dialog id="studio-new-file" class="dialog">
+        <form method="post" action="{{ path('project_studio_create', {slug: project.slug}) }}" class="form-stack">
+            <input type="hidden" name="_token" value="{{ csrf_token('studio-create-' ~ project.slug) }}">
+            <h2>{{ 'studio.new_file'|trans }}</h2>
+            <label>
+                {{ 'studio.form.kind'|trans }}
+                <select class="select" name="kind">
+                    <option value="skill">{{ 'enum.agent_asset_kind.skill'|trans }} (.claude/skills/...)</option>
+                    <option value="agent">{{ 'enum.agent_asset_kind.agent'|trans }} (.claude/agents/...)</option>
+                    <option value="command">{{ 'enum.agent_asset_kind.command'|trans }} (.claude/commands/...)</option>
+                    <option value="document">{{ 'studio.form.document_md'|trans }}</option>
+                </select>
+            </label>
+            <label>
+                {{ 'studio.form.name'|trans }}
+                <input class="input" type="text" name="name" required maxlength="120" placeholder="{{ 'studio.form.name_placeholder'|trans }}">
+            </label>
+            <label>
+                {{ 'studio.form.description'|trans }}
+                <input class="input" type="text" name="description" maxlength="500" placeholder="{{ 'studio.form.description_placeholder'|trans }}">
+            </label>
+            <label>
+                {{ 'studio.form.folder'|trans }}
+                <input class="input" type="text" name="folder" maxlength="150" placeholder="Spécifications/Facturation">
+            </label>
+            <div class="dialog__actions">
+                <button class="button" type="button" commandfor="studio-new-file" command="close">{{ 'common.cancel'|trans }}</button>
+                <button class="button button--primary" type="submit">{{ 'studio.form.create_submit'|trans }}</button>
+            </div>
+        </form>
+    </dialog>
+{% endblock %}
