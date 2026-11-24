@@ -1213,14 +1213,19 @@ memory:
         active: Actives
         active_filters: 'Filtres actifs'
         add: 'Ajouter la mémoire'
+        all_groups: Toutes
         all_sources: 'Toutes les sources'
         all_types: 'Tous les types'
         any_verification: 'Toute vérification'
         archived: Archivées
         attached_to: 'Rattachée à {name}'
         count_project: '{count} rattachées à {name}'
+        density: 'Densité d’affichage'
+        density_comfortable: Confort
+        density_compact: Compacte
         empty: 'Aucune mémoire'
         empty_text: 'En ajouter une ci-dessus ; les agents (Claude Code, MCP) les envoient aussi automatiquement.'
+        filters: 'Filtres des mémoires'
         links: Liens
         no_match: 'Aucune mémoire ne correspond.'
         no_project: 'Sans projet, à rattacher ensuite'

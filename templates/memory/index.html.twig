@@ -17,134 +17,187 @@
 {% block body %}
     {% set scoped = app.user and not is_granted('ROLE_SUPER_ADMIN') %}
     {% set verdicts = {verified: 'verdict.verified', refuted: 'verdict.refuted', conflict: 'verdict.conflict', unverified: 'verdict.unverified', none: 'verdict.never'} %}
+    {% set type_labels = enum('App\\Enum\\MemoryType') %}
+    {% set type_icons = {decision: 'lucide:gavel', convention: 'lucide:ruler', task_learning: 'lucide:graduation-cap', preference: 'lucide:sliders-horizontal', fact: 'lucide:info'} %}
     {% set filtered = q or type or archived or verdict or source %}
-    <div class="explorer explorer--memories">
-        <div class="explorer__tree" data-controller="disclosure">
-            <button class="button explorer__tree-toggle" type="button" aria-expanded="false" aria-controls="memory-tree-panel" data-disclosure-target="button" data-action="disclosure#toggle">
-                <twig:ux:icon name="lucide:lightbulb" />
-                <span>{{ 'memory.tree.label'|trans }}</span>
-                <twig:ux:icon name="lucide:chevron-down" class="icon explorer__tree-chevron" />
-            </button>
-            <div class="explorer__tree-panel" id="memory-tree-panel" data-disclosure-target="panel">
-                {{ include('memory/_tree.html.twig') }}
+    {% set state = {project: project ? project.slug : null, q: q ?: null, type: type ? type.value : null, verdict: verdict, source: source, archived: archived ? 1 : null, group: group}|filter(v => v is not null) %}
+    {% set scope = {project: project ? project.slug : null, archived: archived ? 1 : null}|filter(v => v is not null) %}
+    {% set keys = tree|map(memory => group == 'type' ? (memory.type ?? 'fact') : (memory.source ?? '')) %}
+    {% set groups = group == 'type' ? types|map(item => item.value)|filter(value => value in keys) : keys|reduce((unique, key) => key in unique ? unique : unique|merge([key]), [])|sort %}
+    {% set selected_group = group == 'type' ? (type ? type.value : null) : source %}
+
+    <div class="memories-page" data-controller="table-density" data-table-density-storage-key-value="mnemo.memories.density" data-table-density-default-value="comfortable">
+        <div class="view-head view-head--split">
+            <div class="view-head__title">
+                <h1><twig:ux:icon name="lucide:lightbulb" />{{ 'nav.memories'|trans }}</h1>
+                <span class="view-head__meta">{{ project ? 'memory.index.count_project'|trans({count: memories.total, name: project.name}) : memories.total }}</span>
             </div>
-        </div>
-        <div class="explorer__content">
-            {% set state = {project: project ? project.slug : null, q: q ?: null, type: type ? type.value : null, verdict: verdict, source: source, archived: archived ? 1 : null, group: group}|filter(v => v is not null) %}
-            <div class="view-head view-head--split">
-                <div class="view-head__title">
-                    <h1><twig:ux:icon name="lucide:lightbulb" />{{ 'nav.memories'|trans }}</h1>
-                    <span class="view-head__meta">{{ project ? 'memory.index.count_project'|trans({count: memories.total, name: project.name}) : memories.total }}</span>
+            <div class="view-head__actions">
+                <div class="density-switch" role="group" aria-label="{{ 'memory.index.density'|trans }}">
+                    <button class="density-switch__btn is-active" type="button" aria-pressed="true" data-table-density-target="button" data-density-value="comfortable" data-action="table-density#choose" title="{{ 'memory.index.density_comfortable'|trans }}">
+                        <twig:ux:icon name="lucide:unfold-vertical" />
+                        <span>{{ 'memory.index.density_comfortable'|trans }}</span>
+                    </button>
+                    <button class="density-switch__btn" type="button" aria-pressed="false" data-table-density-target="button" data-density-value="compact" data-action="table-density#choose" title="{{ 'memory.index.density_compact'|trans }}">
+                        <twig:ux:icon name="lucide:fold-vertical" />
+                        <span>{{ 'memory.index.density_compact'|trans }}</span>
+                    </button>
                 </div>
                 <button class="button button--primary" type="button" commandfor="memory-new" command="show-modal"><twig:ux:icon name="lucide:plus" />{{ 'memory.new'|trans }}</button>
             </div>
+        </div>
 
-            <dialog class="dialog dialog--form" id="memory-new" closedby="any" aria-labelledby="memory-new-title" data-controller="dialog" {{ form.vars.submitted ? 'open' }}>
-                <h2 class="dialog__title" id="memory-new-title">{{ 'memory.new'|trans }}</h2>
-                {{ form_start(form, {attr: {class: 'form-stack', novalidate: 'novalidate'}}) }}
-                    {{ form_label(form.text, null, {label_attr: {class: 'visually-hidden'}}) }}
-                    {{ form_widget(form.text, {attr: {class: 'input memory-new__text', rows: 4}|merge(form.text.vars.errors|length > 0 ? {'aria-invalid': 'true', 'aria-describedby': 'memory-new-text-error'} : {})}) }}
-                    {% if form.text.vars.errors|length > 0 %}
-                        <div id="memory-new-text-error" role="alert">{% for error in form.text.vars.errors %}<p class="form-errors">{{ error.message }}</p>{% endfor %}</div>
-                    {% endif %}
-                    <div class="memory-new__actions">
-                        {{ form_label(form.type, null, {label_attr: {class: 'visually-hidden'}}) }}
-                        {{ form_widget(form.type, {attr: {class: 'select'}}) }}
-                        {{ form_label(form.visibility, null, {label_attr: {class: 'visually-hidden'}}) }}
-                        {{ form_widget(form.visibility, {attr: {class: 'select'}}) }}
-                    </div>
-                    <p class="row__sub">{{ project ? 'memory.index.attached_to'|trans({name: project.name}) : 'memory.index.no_project'|trans }}</p>
-                    <div class="dialog__actions">
-                        <button class="button" type="button" commandfor="memory-new" command="close">{{ 'common.cancel'|trans }}</button>
-                        <button class="button button--primary" type="submit"><twig:ux:icon name="lucide:plus" />{{ 'memory.index.add'|trans }}</button>
-                    </div>
-                {{ form_end(form) }}
-            </dialog>
+        <dialog class="dialog dialog--form" id="memory-new" closedby="any" aria-labelledby="memory-new-title" data-controller="dialog" {{ form.vars.submitted ? 'open' }}>
+            <h2 class="dialog__title" id="memory-new-title">{{ 'memory.new'|trans }}</h2>
+            {{ form_start(form, {attr: {class: 'form-stack', novalidate: 'novalidate'}}) }}
+                {{ form_label(form.text, null, {label_attr: {class: 'visually-hidden'}}) }}
+                {{ form_widget(form.text, {attr: {class: 'input memory-new__text', rows: 4}|merge(form.text.vars.errors|length > 0 ? {'aria-invalid': 'true', 'aria-describedby': 'memory-new-text-error'} : {})}) }}
+                {% if form.text.vars.errors|length > 0 %}
+                    <div id="memory-new-text-error" role="alert">{% for error in form.text.vars.errors %}<p class="form-errors">{{ error.message }}</p>{% endfor %}</div>
+                {% endif %}
+                <div class="memory-new__actions">
+                    {{ form_label(form.type, null, {label_attr: {class: 'visually-hidden'}}) }}
+                    {{ form_widget(form.type, {attr: {class: 'select'}}) }}
+                    {{ form_label(form.visibility, null, {label_attr: {class: 'visually-hidden'}}) }}
+                    {{ form_widget(form.visibility, {attr: {class: 'select'}}) }}
+                </div>
+                <p class="row__sub">{{ project ? 'memory.index.attached_to'|trans({name: project.name}) : 'memory.index.no_project'|trans }}</p>
+                <div class="dialog__actions">
+                    <button class="button" type="button" commandfor="memory-new" command="close">{{ 'common.cancel'|trans }}</button>
+                    <button class="button button--primary" type="submit"><twig:ux:icon name="lucide:plus" />{{ 'memory.index.add'|trans }}</button>
+                </div>
+            {{ form_end(form) }}
+        </dialog>
 
-            <form class="list-toolbar" method="get" action="{{ path('memory_index') }}" role="search" data-controller="autosubmit">
+        <section class="memory-filters" aria-label="{{ 'memory.index.filters'|trans }}">
+            <form class="memory-filters__bar" method="get" action="{{ path('memory_index') }}" role="search" data-controller="autosubmit">
                 <nav class="tabs" aria-label="{{ 'memory.index.status'|trans }}">
                     <a href="{{ path('memory_index', state|filter((v, k) => k != 'archived')) }}" {% if not archived %}aria-current="page"{% endif %}>{{ 'memory.index.active'|trans }}</a>
                     <a href="{{ path('memory_index', state|merge({archived: 1})) }}" {% if archived %}aria-current="page"{% endif %}><twig:ux:icon name="lucide:archive" />{{ 'memory.index.archived'|trans }}</a>
                 </nav>
-                {% for key in ['type', 'source', 'archived', 'group'] %}
-                    {% if state[key] is defined %}<input type="hidden" name="{{ key }}" value="{{ state[key] }}">{% endif %}
-                {% endfor %}
-                <select class="select list-toolbar__sort" name="project" aria-label="{{ 'memory.index.project'|trans }}" data-action="autosubmit#submit">
-                    {% if not scoped %}<option value="">{{ 'nav.all_projects'|trans }}</option>{% endif %}
-                    {% for item in projects %}<option value="{{ item.slug }}" {{ project and project.id == item.id ? 'selected' }}>{{ item.name }}</option>{% endfor %}
-                </select>
-                <select class="select" name="verdict" aria-label="{{ 'memory.verification'|trans }}" data-action="autosubmit#submit">
-                    <option value="">{{ 'memory.index.any_verification'|trans }}</option>
-                    {% for value, label in verdicts %}<option value="{{ value }}" {{ verdict == value ? 'selected' }}>{{ label|trans }}</option>{% endfor %}
-                </select>
-                <div class="list-toolbar__search">
+                {% if archived %}<input type="hidden" name="archived" value="1">{% endif %}
+                <input type="hidden" name="group" value="{{ group }}">
+
+                <div class="list-toolbar__search memory-filters__search">
                     <input class="input" type="search" name="q" value="{{ q }}" placeholder="{{ 'memory.index.search'|trans }}" aria-label="{{ 'memory.index.search_label'|trans }}">
                     <button class="list-toolbar__go" type="submit" aria-label="{{ 'common.filter'|trans }}">{{ ux_icon('lucide:search') }}</button>
                 </div>
+
+                <div class="memory-filters__selects">
+                    <select class="select" name="project" aria-label="{{ 'memory.index.project'|trans }}" data-action="autosubmit#submit">
+                        {% if not scoped %}<option value="">{{ 'nav.all_projects'|trans }}</option>{% endif %}
+                        {% for item in projects %}<option value="{{ item.slug }}" {{ project and project.id == item.id ? 'selected' }}>{{ item.name }}</option>{% endfor %}
+                    </select>
+                    <select class="select" name="type" aria-label="{{ 'form.memory.type'|trans }}" data-action="autosubmit#submit">
+                        <option value="">{{ 'memory.index.all_types'|trans }}</option>
+                        {% for item in types %}<option value="{{ item.value }}" {{ type and type == item ? 'selected' }}>{{ item|trans }}</option>{% endfor %}
+                    </select>
+                    <select class="select" name="source" aria-label="{{ 'memory.index.source'|trans }}" data-action="autosubmit#submit">
+                        <option value="">{{ 'memory.index.all_sources'|trans }}</option>
+                        {% for item in sources %}<option value="{{ item }}" {{ source == item ? 'selected' }}>{{ item }}</option>{% endfor %}
+                    </select>
+                    <select class="select" name="verdict" aria-label="{{ 'memory.verification'|trans }}" data-action="autosubmit#submit">
+                        <option value="">{{ 'memory.index.any_verification'|trans }}</option>
+                        {% for value, label in verdicts %}<option value="{{ value }}" {{ verdict == value ? 'selected' }}>{{ label|trans }}</option>{% endfor %}
+                    </select>
+                </div>
             </form>
 
-            {% set chips = [] %}
-            {% if type %}{% set chips = chips|merge([{label: 'form.memory.type'|trans ~ ' : ' ~ type|trans, key: 'type'}]) %}{% endif %}
-            {% if source %}{% set chips = chips|merge([{label: 'memory.index.source'|trans ~ ' : ' ~ source, key: 'source'}]) %}{% endif %}
-            {% if verdict %}{% set chips = chips|merge([{label: 'memory.verification'|trans ~ ' : ' ~ verdicts[verdict]|trans, key: 'verdict'}]) %}{% endif %}
-            {% if q %}{% set chips = chips|merge([{label: '« ' ~ q ~ ' »', key: 'q'}]) %}{% endif %}
-            {% if chips is not empty %}
-                <ul class="filter-chips" aria-label="{{ 'memory.index.active_filters'|trans }}">
-                    {% for chip in chips %}
-                        <li><a class="filter-chip" href="{{ path('memory_index', state|filter((v, k) => k != chip.key)) }}" title="{{ 'common.reset'|trans }}">{{ chip.label }}{{ ux_icon('lucide:x') }}</a></li>
-                    {% endfor %}
-                    <li><a class="filter-chips__reset" href="{{ path('memory_index', state|filter((v, k) => k in ['project', 'group', 'archived'])) }}">{{ 'common.reset'|trans }}</a></li>
-                </ul>
-            {% endif %}
-
-            {% if memories.items is empty %}
-                {% if filtered %}
-                    <p class="block__empty">{{ 'memory.index.no_match'|trans }}</p>
-                {% else %}
-                    <twig:EmptyState :title="'memory.index.empty'|trans" :text="'memory.index.empty_text'|trans">
-                        <twig:block name="icon"><twig:ux:icon name="lucide:lightbulb" /></twig:block>
-                        <twig:block name="actions"><button class="button button--primary" type="button" commandfor="memory-new" command="show-modal"><twig:ux:icon name="lucide:plus" />{{ 'memory.new'|trans }}</button></twig:block>
-                    </twig:EmptyState>
-                {% endif %}
-            {% else %}
-                {% set type_labels = enum('App\\Enum\\MemoryType') %}
-                {% set verdict_tones = {verified: 'success', refuted: 'danger', conflict: 'danger'} %}
-                {% set type_icons = {decision: 'lucide:gavel', convention: 'lucide:ruler', task_learning: 'lucide:graduation-cap', preference: 'lucide:sliders-horizontal', fact: 'lucide:info'} %}
-                <div class="table-wrap table-wrap--framed memory-table">
-                    <table class="data-table">
-                        <thead>
-                            <tr><th scope="col">{{ 'form.memory.text'|trans }}</th><th scope="col">{{ 'nav.projects'|trans }}</th><th scope="col">{{ 'memory.verification'|trans }}</th><th scope="col" class="num">{{ 'memory.index.links'|trans }}</th><th scope="col" class="num">{{ 'memory.index.updated'|trans }}</th></tr>
-                        </thead>
-                        <tbody>
-                            {% for memory in memories.items %}
-                                {% set memory_type = memory.type ?? 'fact' %}
-                                <tr class="row--memory{{ memory.status != 'active' ? ' row--archived' }}">
-                                    <td>
-                                        <div class="memory-cell">
-                                            <span class="memory-cell__icon memory-cell__icon--{{ memory_type }}" aria-hidden="true">{{ ux_icon(type_icons[memory_type] ?? 'lucide:info') }}</span>
-                                            <div class="memory-cell__main">
-                                                <a class="memory-text" href="{{ path('memory_show', {id: memory.id}) }}">{{ memory.text }}</a>
-                                                <span class="memory-cell__meta">
-                                                    <span>{{ type_labels.tryFrom(memory_type) ? type_labels.tryFrom(memory_type)|trans : memory_type }}</span>
-                                                    {% if memory.source %}<span>{{ memory.source }}</span>{% endif %}
-                                                    {% if memory.demo %}<span class="tag tag--demo">{{ 'common.demo'|trans }}</span>{% endif %}
-                                                    {% if memory.visibility != 'project' %}<span class="tag">{{ (memory.visibility == 'private' ? 'memory.tag.private' : 'memory.tag.group')|trans }}</span>{% endif %}
-                                                    {% if memory.status != 'active' %}<span class="tag">{{ (memory.status == 'superseded' ? 'memory.tag.superseded' : 'memory.tag.retired')|trans }}</span>{% endif %}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td data-label="{{ 'nav.projects'|trans }}"><span class="memory-cell__projects">{{ memory.projects ?? '-' }}</span></td>
-                                    <td data-label="{{ 'memory.verification'|trans }}">{% if memory.verdict %}<span class="pill pill--{{ verdict_tones[memory.verdict] ?? 'neutral' }}">{{ verdicts[memory.verdict]|trans }}</span>{% else %}<span class="row__sub">{{ 'verdict.never'|trans }}</span>{% endif %}</td>
-                                    <td class="num" data-label="{{ 'memory.index.links'|trans }}">{% if memory.links > 0 %}<span class="count-badge">{{ ux_icon('lucide:link') }}{{ memory.links }}</span>{% else %}<span class="row__sub">0</span>{% endif %}</td>
-                                    <td class="num row__sub" data-label="{{ 'memory.index.updated'|trans }}">{{ memory.updated_at|format_date('medium') }}</td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+            {% if groups is not empty %}
+                <div class="memory-filters__groups">
+                    <div class="segmented-links memory-groups__mode" role="group" aria-label="{{ 'memory.tree.group_by'|trans }}">
+                        <a href="{{ path('memory_index', scope|merge({group: 'type'})) }}" {% if group == 'type' %}aria-current="page"{% endif %}>{{ 'memory.tree.by_type'|trans }}</a>
+                        <a href="{{ path('memory_index', scope|merge({group: 'source'})) }}" {% if group == 'source' %}aria-current="page"{% endif %}>{{ 'memory.tree.by_source'|trans }}</a>
+                    </div>
+                    <nav class="memory-groups" aria-label="{{ 'memory.tree.label'|trans }}">
+                        <a class="memory-group-pill{{ selected_group is null ? ' is-current' }}" href="{{ path('memory_index', scope|merge({group: group})) }}" {% if selected_group is null %}aria-current="page"{% endif %}>
+                            <span>{{ 'memory.index.all_groups'|trans }}</span>
+                            <span class="memory-group-pill__count">{{ tree|length }}</span>
+                        </a>
+                        {% for key in groups %}
+                            {% set items_count = tree|filter(memory => (group == 'type' ? (memory.type ?? 'fact') : (memory.source ?? '')) == key)|length %}
+                            {% set label = group == 'type' ? (type_labels.tryFrom(key) ? type_labels.tryFrom(key)|trans : key) : (key ?: 'memory.tree.no_source'|trans) %}
+                            {% set filter = group == 'type' ? {type: key} : {source: key} %}
+                            {% if key != '' %}
+                                <a class="memory-group-pill{{ selected_group == key ? ' is-current' }}" href="{{ path('memory_index', scope|merge(filter)|merge({group: group})) }}" {% if selected_group == key %}aria-current="page"{% endif %}>
+                                    {{ ux_icon(group == 'type' ? (type_icons[key] ?? 'lucide:info') : 'lucide:plug', {class: 'icon memtree-nav__icon memtree-nav__icon--' ~ (group == 'type' ? key : 'source')}) }}
+                                    <span>{{ label }}</span>
+                                    <span class="memory-group-pill__count">{{ items_count }}</span>
+                                </a>
+                            {% endif %}
+                        {% endfor %}
+                    </nav>
                 </div>
             {% endif %}
-            {{ include('_pager.html.twig', {page: memories}) }}
-        </div>
+        </section>
+
+        {% set chips = [] %}
+        {% if type %}{% set chips = chips|merge([{label: 'form.memory.type'|trans ~ ' : ' ~ type|trans, key: 'type'}]) %}{% endif %}
+        {% if source %}{% set chips = chips|merge([{label: 'memory.index.source'|trans ~ ' : ' ~ source, key: 'source'}]) %}{% endif %}
+        {% if verdict %}{% set chips = chips|merge([{label: 'memory.verification'|trans ~ ' : ' ~ verdicts[verdict]|trans, key: 'verdict'}]) %}{% endif %}
+        {% if q %}{% set chips = chips|merge([{label: '« ' ~ q ~ ' »', key: 'q'}]) %}{% endif %}
+        {% if chips is not empty %}
+            <ul class="filter-chips" aria-label="{{ 'memory.index.active_filters'|trans }}">
+                {% for chip in chips %}
+                    <li><a class="filter-chip" href="{{ path('memory_index', state|filter((v, k) => k != chip.key)) }}" title="{{ 'common.reset'|trans }}">{{ chip.label }}{{ ux_icon('lucide:x') }}</a></li>
+                {% endfor %}
+                <li><a class="filter-chips__reset" href="{{ path('memory_index', state|filter((v, k) => k in ['project', 'group', 'archived'])) }}">{{ 'common.reset'|trans }}</a></li>
+            </ul>
+        {% endif %}
+
+        {% if memories.items is empty %}
+            {% if filtered %}
+                <p class="block__empty">{{ 'memory.index.no_match'|trans }}</p>
+            {% else %}
+                <twig:EmptyState :title="'memory.index.empty'|trans" :text="'memory.index.empty_text'|trans">
+                    <twig:block name="icon"><twig:ux:icon name="lucide:lightbulb" /></twig:block>
+                    <twig:block name="actions"><button class="button button--primary" type="button" commandfor="memory-new" command="show-modal"><twig:ux:icon name="lucide:plus" />{{ 'memory.new'|trans }}</button></twig:block>
+                </twig:EmptyState>
+            {% endif %}
+        {% else %}
+            {% set verdict_tones = {verified: 'success', refuted: 'danger', conflict: 'danger'} %}
+            <div class="table-wrap table-wrap--framed memory-table" data-table-density-target="table" data-density="comfortable">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">{{ 'form.memory.text'|trans }}</th>
+                            <th scope="col">{{ 'nav.projects'|trans }}</th>
+                            <th scope="col">{{ 'memory.verification'|trans }}</th>
+                            <th scope="col" class="num">{{ 'memory.index.links'|trans }}</th>
+                            <th scope="col" class="num">{{ 'memory.index.updated'|trans }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for memory in memories.items %}
+                            {% set memory_type = memory.type ?? 'fact' %}
+                            {% set memory_type_label = type_labels.tryFrom(memory_type) ? type_labels.tryFrom(memory_type)|trans : memory_type %}
+                            <tr class="row--memory{{ memory.status != 'active' ? ' row--archived' }}">
+                                <td>
+                                    <div class="memory-cell">
+                                        <span class="memory-cell__icon memory-cell__icon--{{ memory_type }}" aria-hidden="true">{{ ux_icon(type_icons[memory_type] ?? 'lucide:info') }}</span>
+                                        <span class="proposal__dot proposal__dot--{{ memory_type }} memory-cell__dot" aria-hidden="true"></span>
+                                        <div class="memory-cell__main">
+                                            <a class="memory-text" href="{{ path('memory_show', {id: memory.id}) }}" title="{{ memory.text }}">{{ memory.text }}</a>
+                                            <span class="memory-cell__meta">
+                                                <span>{{ memory_type_label }}</span>
+                                                {% if memory.source %}<span>{{ memory.source }}</span>{% endif %}
+                                                {% if memory.demo %}<span class="tag tag--demo">{{ 'common.demo'|trans }}</span>{% endif %}
+                                                {% if memory.visibility != 'project' %}<span class="tag">{{ (memory.visibility == 'private' ? 'memory.tag.private' : 'memory.tag.group')|trans }}</span>{% endif %}
+                                                {% if memory.status != 'active' %}<span class="tag">{{ (memory.status == 'superseded' ? 'memory.tag.superseded' : 'memory.tag.retired')|trans }}</span>{% endif %}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td data-label="{{ 'nav.projects'|trans }}"><span class="memory-cell__projects">{{ memory.projects ?? '-' }}</span></td>
+                                <td data-label="{{ 'memory.verification'|trans }}">{% if memory.verdict %}<span class="pill pill--{{ verdict_tones[memory.verdict] ?? 'neutral' }}">{{ verdicts[memory.verdict]|trans }}</span>{% else %}<span class="row__sub">{{ 'verdict.never'|trans }}</span>{% endif %}</td>
+                                <td class="num" data-label="{{ 'memory.index.links'|trans }}">{% if memory.links > 0 %}<span class="count-badge">{{ ux_icon('lucide:link') }}{{ memory.links }}</span>{% else %}<span class="row__sub">0</span>{% endif %}</td>
+                                <td class="num row__sub" data-label="{{ 'memory.index.updated'|trans }}">{{ memory.updated_at|format_date('medium') }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+        {{ include('_pager.html.twig', {page: memories}) }}
     </div>
 {% endblock %}

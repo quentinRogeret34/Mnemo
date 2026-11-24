@@ -73,11 +73,16 @@ final class MemoryTest extends WebTestCase
         self::assertSame(['Les remises passent par catalog.ts.'], $crawler->filter('.content .row--memory .memory-text')->each(static fn ($text): string => $text->text()));
         self::assertCount(0, $this->client->request('GET', '/memories?verdict=verified')->filter('.content .row--memory'));
 
-        $summaries = static fn ($crawler): array => $crawler->filter('.memtree-nav summary')->each(static fn ($row): string => trim(preg_replace('/\s+/', ' ', $row->text())));
-        self::assertSame(['Convention 1', 'Fait 1'], $summaries($this->client->request('GET', '/memories?project=demo')));
+        $pills = static fn ($crawler): array => $crawler->filter('.memory-groups .memory-group-pill')->each(static fn ($row): string => trim(preg_replace('/\s+/', ' ', $row->text())));
+        $typeCrawler = $this->client->request('GET', '/memories?project=demo');
+        self::assertSame(['Toutes 2', 'Convention 1', 'Fait 1'], $pills($typeCrawler));
+        self::assertCount(2, $typeCrawler->filter('.density-switch__btn'));
+        self::assertCount(1, $typeCrawler->filter('.memory-filters select[name="type"]'));
+        self::assertCount(1, $typeCrawler->filter('.memory-filters select[name="source"]'));
+
         $crawler = $this->client->request('GET', '/memories?project=demo&group=source&source=mcp');
-        self::assertSame(['manual 1', 'mcp 1'], $summaries($crawler));
-        self::assertSame('page', $crawler->filter('.memtree-nav a.filetree__overlay-link[href*="source=mcp"]')->attr('aria-current'));
+        self::assertSame(['Toutes 2', 'manual 1', 'mcp 1'], $pills($crawler));
+        self::assertSame('page', $crawler->filter('.memory-groups a[href*="source=mcp"]')->attr('aria-current'));
 
         $this->client->request('GET', '/memories/graph?project=demo');
         self::assertResponseIsSuccessful();
