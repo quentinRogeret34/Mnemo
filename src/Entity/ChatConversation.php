@@ -54,8 +54,8 @@ class ChatConversation
 
     public function __construct(
         #[ORM\ManyToOne]
-        #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
-        private Project $project,
+        #[ORM\JoinColumn(nullable: true, onDelete: 'CASCADE')]
+        private ?Project $project,
         #[ORM\Column(length: 64)]
         private string $ownerKey,
         string $firstPrompt,
@@ -81,7 +81,7 @@ class ChatConversation
         return $uuid instanceof UuidV7 ? $uuid : Uuid::v7();
     }
 
-    public function getProject(): Project
+    public function getProject(): ?Project
     {
         return $this->project;
     }

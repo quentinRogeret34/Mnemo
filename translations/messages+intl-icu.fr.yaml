@@ -115,6 +115,19 @@ chat:
     feedback_down: 'Réponse peu utile'
     feedback_up: 'Réponse utile'
     footnote: "L'assistant s'appuie sur le graphe de connaissances du projet. Les règles ajoutées ici restent à valider."
+    global:
+        capability:
+            read: 'Interroge les projets accessibles, leurs règles métier, mémoires, documents et fichiers.'
+        clear_confirm: "Supprimer définitivement toutes vos conversations globales dans l'espace de travail ?"
+        empty: "Posez une question transversale sur vos projets, comparez des règles ou enregistrez une décision."
+        empty_title: 'Comment puis-je vous aider sur vos projets ?'
+        example1: 'Quels projets sont dans mon espace de travail et que contiennent-ils ?'
+        example2: "Quelles décisions d'architecture récentes ont été enregistrées ?"
+        example3: 'Quelles règles métier concernent les remises ou la facturation ?'
+        example_tag:
+            projects: Projets
+        lede: "Il répond à partir du graphe de connaissances de tous les projets auxquels vous avez accès, et peut enregistrer une règle ou une mémoire à votre demande."
+        placeholder: 'Demander quelque chose sur vos projets…'
     history:
         clear: "Effacer l'historique"
         clear_confirm: 'Supprimer définitivement toutes vos conversations sur ce projet ?'

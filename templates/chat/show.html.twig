@@ -1,10 +1,12 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}{{ 'nav.assistant'|trans }} · {{ project.name }}{% endblock %}
+{% block title %}{{ 'nav.assistant'|trans }}{{ project ? ' · ' ~ project.name : '' }}{% endblock %}
 
 {% block crumbs %}
-    <a href="{{ path('project_show', {slug: project.slug}) }}">{{ project.name }}</a>
-    <span class="crumbs__sep" aria-hidden="true">/</span>
+    {% if project %}
+        <a href="{{ path('project_show', {slug: project.slug}) }}">{{ project.name }}</a>
+        <span class="crumbs__sep" aria-hidden="true">/</span>
+    {% endif %}
     <span class="crumbs__current">{{ 'nav.assistant'|trans }}</span>
 {% endblock %}
 

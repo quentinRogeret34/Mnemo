@@ -37,6 +37,9 @@
             <a class="palette__option" role="option" tabindex="-1" href="{{ path('memory_index', scope) }}" data-palette-target="option"><twig:ux:icon name="lucide:lightbulb" />{{ 'nav.memories'|trans }}</a>
             <a class="palette__option" role="option" tabindex="-1" href="{{ path('memory_graph', scope) }}" data-palette-target="option"><twig:ux:icon name="lucide:network" />{{ 'nav.memory_graph'|trans }}</a>
             <a class="palette__option" role="option" tabindex="-1" href="{{ path('proposal_index', scope) }}" data-palette-target="option"><twig:ux:icon name="lucide:check" />{{ 'nav.to_review'|trans }}</a>
+            {% if not project %}
+                <a class="palette__option" role="option" tabindex="-1" href="{{ path('chat') }}" data-palette-target="option"><twig:ux:icon name="lucide:message-circle" />{{ 'nav.assistant'|trans }}</a>
+            {% endif %}
             {% if not this.scoped %}
                 <a class="palette__option" role="option" tabindex="-1" href="{{ path('document_index') }}" data-palette-target="option"><twig:ux:icon name="lucide:file" />{{ 'nav.all_documents'|trans }}</a>
                 <a class="palette__option" role="option" tabindex="-1" href="{{ path('connector_index') }}" data-palette-target="option"><twig:ux:icon name="lucide:plug" />{{ 'nav.connectors'|trans }}</a>

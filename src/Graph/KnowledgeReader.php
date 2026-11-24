@@ -585,6 +585,14 @@ final class KnowledgeReader
             return [];
         }
 
+        $slugs = null === $project ? $this->projectScope->slugs() : null;
+        if ([] === $slugs) {
+            return [];
+        }
+        $scopeSql = null === $slugs
+            ? ''
+            : ' AND (p.slug IN (:slugs) OR EXISTS (SELECT 1 FROM node_project np JOIN project p2 ON p2.id = np.project_id WHERE np.node_id = n.id AND p2.slug IN (:slugs)))';
+
         return array_map(
             static fn (array $row): array => ['id' => (int) $row['id']] + $row,
             $this->connection->fetchAllAssociative(
@@ -606,7 +614,7 @@ final class KnowledgeReader
                           CAST(:project AS int) IS NULL
                           OR n.project_id = :project
                           OR EXISTS (SELECT 1 FROM node_project np WHERE np.node_id = n.id AND np.project_id = :project)
-                      )
+                      ){$scopeSql}
                     ORDER BY n.id
                     ) matches
                     ORDER BY rank, length(COALESCE(path, label)), label
@@ -621,8 +629,8 @@ final class KnowledgeReader
                     'document' => NodeType::Document->value,
                     'file' => NodeType::CodeFile->value,
                     'symbol' => NodeType::Symbol->value,
-                ],
-                ['types' => ArrayParameterType::STRING],
+                ] + (null === $slugs ? [] : ['slugs' => $slugs]),
+                ['types' => ArrayParameterType::STRING] + (null === $slugs ? [] : ['slugs' => ArrayParameterType::STRING]),
             ),
         );
     }

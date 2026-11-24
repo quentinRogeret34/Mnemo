@@ -29,7 +29,7 @@ final class ProjectChat
     use DefaultActionTrait;
 
     #[LiveProp]
-    public Project $project;
+    public ?Project $project = null;
 
     #[LiveProp(url: new UrlMapping(as: 'c'))]
     public ?int $conversationId = null;
@@ -64,7 +64,7 @@ final class ProjectChat
     #[PostHydrate]
     public function guard(): void
     {
-        if (!$this->projectScope->allows($this->project)) {
+        if (null !== $this->project && !$this->projectScope->allows($this->project)) {
             throw new NotFoundHttpException('Project not found.');
         }
         $this->activeResolved = false;

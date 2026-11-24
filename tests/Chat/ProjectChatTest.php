@@ -4,10 +4,12 @@ namespace App\Tests\Chat;
 
 use App\Chat\ProjectAssistant;
 use App\Chat\ProjectTools;
+use App\Chat\WorkspaceTools;
 use App\Entity\ChatConversation;
 use App\Entity\Node;
 use App\Entity\Project;
 use App\Entity\User;
+use App\Entity\UserGroup;
 use App\Enum\MemoryType;
 use App\Enum\NodeType;
 use App\Enum\UserStatus;
@@ -40,7 +42,7 @@ final class ProjectChatTest extends WebTestCase
         $this->client = self::createClient();
         $this->client->disableReboot();
         $this->entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        $this->entityManager->getConnection()->executeStatement('TRUNCATE project, node, edge, folder, chat_conversation, app_user RESTART IDENTITY CASCADE');
+        $this->entityManager->getConnection()->executeStatement('TRUNCATE project, node, edge, folder, chat_conversation, app_user, user_group RESTART IDENTITY CASCADE');
 
         $this->project = new Project('demo', 'Demo project', '/repos/demo');
         $this->entityManager->persist($this->project);
@@ -213,6 +215,73 @@ final class ProjectChatTest extends WebTestCase
         self::assertCount(1, $crawler->filter('.chat textarea#chat-message'));
         self::assertCount(1, $crawler->filter('.chat-history'));
         self::assertSame('Assistant', $crawler->filter('.sidebar a[aria-current="page"] .nav-item__label')->text());
+    }
+
+    public function testTheGlobalAssistantWorksAcrossProjectsAndKeepsSeparateHistory(): void
+    {
+        $other = new Project('billing', 'Billing', '/repos/billing');
+        $this->entityManager->persist($other);
+        $this->entityManager->persist(new Node($other, NodeType::BusinessRule, 'RG-001', 'TVA standard', null, null, ['statement' => 'TVA fixée à 20 %.', 'status' => 'validated']));
+        $this->entityManager->flush();
+
+        $this->scriptModel([
+            new ToolCallResult([new ToolCall('call-1', 'list_projects', [])]),
+            'Il y a deux projets : billing et demo.',
+        ]);
+
+        $crawler = $this->client->request('GET', '/chat');
+        self::assertResponseIsSuccessful();
+        self::assertCount(1, $crawler->filter('.chat textarea#chat-message'));
+        self::assertSame('Assistant', $crawler->filter('.sidebar a[aria-current="page"] .nav-item__label')->text());
+
+        $globalComponent = $this->createLiveComponent(ProjectChat::class, ['project' => null], $this->client);
+        $rendered = $globalComponent->set('message', 'Quels projets existent ?')->call('send')->render()->crawler();
+
+        self::assertSame('Il y a deux projets : billing et demo.', $rendered->filter('.chat__message--assistant .prose')->text());
+        self::assertCount(1, $rendered->filter('.chat-history__item'));
+        self::assertStringContainsString('"name":"list_projects"', $this->tools[0]);
+        self::assertStringContainsString('billing', $this->requests[1]);
+        self::assertStringContainsString('demo', $this->requests[1]);
+
+        // Project chat history stays completely separate from global chat history.
+        $projectComponent = $this->createLiveComponent(ProjectChat::class, ['project' => $this->project], $this->client);
+        self::assertCount(0, $projectComponent->render()->crawler()->filter('.chat-history__item'));
+    }
+
+    public function testGlobalWorkspaceToolsRespectProjectScope(): void
+    {
+        $secret = new Project('secret', 'Secret', '/repos/secret');
+        $this->entityManager->persist($secret);
+        $this->entityManager->persist(new Node($secret, NodeType::BusinessRule, 'RG-009', 'Règle secrète', null, null, ['statement' => 'Confidentiel remises.', 'status' => 'validated']));
+
+        $user = new User('scoped@example.test', 'Scoped', 'github', 'scoped-1');
+        $user->setStatus(UserStatus::Active);
+        $group = new UserGroup('Demo team');
+        $group->setUsers([$user]);
+        $group->setProjects([$this->project]);
+        $this->entityManager->persist($user);
+        $this->entityManager->persist($group);
+        $this->entityManager->flush();
+        $this->entityManager->refresh($user);
+
+        $this->client->loginUser($user);
+        $tools = self::getContainer()->get(WorkspaceTools::class)->fresh();
+
+        self::assertSame(['demo'], array_column($tools->listProjects(), 'slug'));
+        self::assertArrayHasKey('error', $tools->listRules('secret'));
+        self::assertArrayHasKey('error', $tools->getRule('secret', 'RG-009'));
+        self::assertArrayHasKey('error', $tools->search('Confidentiel', 'secret'));
+        self::assertArrayHasKey('error', $tools->addRule('secret', 'Titre', 'Énoncé'));
+        self::assertArrayHasKey('error', $tools->addMemory('Mémoire globale non autorisée', 'fact', null));
+
+        // Cross-project search must not leak nodes from the inaccessible "secret" project.
+        $results = $tools->search('remises');
+        self::assertNotContains('secret', array_column($results, 'project'));
+        self::assertNotContains('RG-009', array_column($results, 'code'));
+
+        // Scoped user CAN still save a memory to an allowed project.
+        self::assertSame('ADD', $tools->addMemory('Décision sur le projet demo.', 'decision', 'demo')['event']);
+        self::assertCount(1, $tools->actions());
     }
 
     /**

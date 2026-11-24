@@ -10,6 +10,12 @@ use Symfony\Component\Routing\Attribute\Route;
 
 final class ChatController extends AbstractController
 {
+    #[Route('/chat', name: 'chat', methods: ['GET'])]
+    public function workspace(): Response
+    {
+        return $this->render('chat/show.html.twig', ['project' => null]);
+    }
+
     #[Route('/projects/{slug}/chat', name: 'project_chat', methods: ['GET'])]
     public function show(#[MapEntity(mapping: ['slug' => 'slug'])] Project $project): Response
     {

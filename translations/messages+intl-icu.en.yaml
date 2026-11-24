@@ -115,6 +115,19 @@ chat:
     feedback_down: 'Not helpful'
     feedback_up: 'Helpful response'
     footnote: "Answers are grounded in the project's knowledge graph. Rules added here stay to review."
+    global:
+        capability:
+            read: 'Searches across all accessible projects: business rules, memories, documents and code files.'
+        clear_confirm: 'Permanently delete all your global workspace conversations?'
+        empty: 'Ask a cross-project question, compare business rules, or save a decision.'
+        empty_title: 'How can I help across your projects?'
+        example1: 'Which projects are in my workspace and what do they contain?'
+        example2: 'What recent architecture decisions have been recorded?'
+        example3: 'Which business rules cover discounts or billing across projects?'
+        example_tag:
+            projects: Projects
+        lede: 'It answers from the knowledge graph of every project you can access, and saves a rule or memory when asked to.'
+        placeholder: 'Ask something across your projects…'
     history:
         clear: 'Clear history'
         clear_confirm: 'Permanently delete all your conversations on this project?'

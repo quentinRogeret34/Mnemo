@@ -146,6 +146,10 @@
                 <span class="nav-item__label">{{ 'nav.to_review'|trans }}</span>
                 {% if pending > 0 %}<span class="nav-item__count nav-item__count--alert">{{ pending }}</span>{% endif %}
             </a>
+            <a class="nav-item" href="{{ path('chat') }}" {% if route == 'chat' %}aria-current="page"{% endif %}>
+                <twig:ux:icon name="lucide:message-circle" class="icon nav-item__icon" />
+                <span class="nav-item__label">{{ 'nav.assistant'|trans }}</span>
+            </a>
             {% if not this.scoped %}
             <a class="nav-item" href="{{ path('connector_index') }}" {% if route starts with 'connector_' %}aria-current="page"{% endif %}>
                 <twig:ux:icon name="lucide:plug" class="icon nav-item__icon" />

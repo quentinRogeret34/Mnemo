@@ -4,6 +4,7 @@
 {% set totalConversations = this.totalConversations %}
 {% set selectedCount = this.selectedCount %}
 {% set selectedLookup = selectedIds|map(id => '' ~ id) %}
+{% set scopeLabel = project ? project.name : 'nav.all_projects'|trans %}
 
 <div{{ attributes.defaults({class: 'chat chat-shell'}) }}
     data-controller="chat"
@@ -18,7 +19,7 @@
                 <span class="chat-main__icon" aria-hidden="true"><twig:ux:icon name="lucide:wand-sparkles" /></span>
                 <div class="chat-main__titles">
                     <h1 class="chat-main__title">{{ active ? active.title : 'nav.assistant'|trans }}</h1>
-                    <span class="chat-main__subtitle">{{ project.name }} · {{ this.modelLabel }}</span>
+                    <span class="chat-main__subtitle">{{ scopeLabel }} · {{ this.modelLabel }}</span>
                 </div>
             </div>
 
@@ -52,10 +53,10 @@
                         <twig:ux:icon name="lucide:info" />
                     </button>
                     <div class="chat-info-popover" id="chat-info-popover" role="region" aria-label="{{ 'chat.info_label'|trans }}" data-chat-target="infoPopover" hidden>
-                        <p class="chat-info-popover__title">{{ 'chat.info_title'|trans({name: project.name}) }}</p>
-                        <p class="chat-info-popover__text">{{ 'chat.lede'|trans }}</p>
+                        <p class="chat-info-popover__title">{{ 'chat.info_title'|trans({name: scopeLabel}) }}</p>
+                        <p class="chat-info-popover__text">{{ (project ? 'chat.lede' : 'chat.global.lede')|trans }}</p>
                         <ul class="chat-info-popover__list">
-                            <li><twig:ux:icon name="lucide:search" /><span>{{ 'chat.capability.read'|trans }}</span></li>
+                            <li><twig:ux:icon name="lucide:search" /><span>{{ (project ? 'chat.capability.read' : 'chat.global.capability.read')|trans }}</span></li>
                             <li><twig:ux:icon name="lucide:scale" /><span>{{ 'chat.capability.rule'|trans }}</span></li>
                             <li><twig:ux:icon name="lucide:brain" /><span>{{ 'chat.capability.memory'|trans }}</span></li>
                         </ul>
@@ -83,14 +84,18 @@
                 <div class="chat__empty">
                     <div class="chat__hero">
                         <span class="chat__hero-badge" aria-hidden="true"><twig:ux:icon name="lucide:wand-sparkles" /></span>
-                        <h2 class="chat__hero-title">{{ 'chat.empty_title'|trans({name: project.name}) }}</h2>
-                        <p class="chat__hero-text">{{ 'chat.empty'|trans }}</p>
+                        <h2 class="chat__hero-title">{{ project ? 'chat.empty_title'|trans({name: project.name}) : 'chat.global.empty_title'|trans }}</h2>
+                        <p class="chat__hero-text">{{ (project ? 'chat.empty' : 'chat.global.empty')|trans }}</p>
                     </div>
                     <ul class="chat__examples">
-                        {% set examples = [
+                        {% set examples = project ? [
                             {key: 'chat.example1', tag: 'chat.example_tag.rules', icon: 'lucide:scale'},
                             {key: 'chat.example2', tag: 'chat.example_tag.memories', icon: 'lucide:brain'},
                             {key: 'chat.example3', tag: 'chat.example_tag.create', icon: 'lucide:circle-plus'},
+                        ] : [
+                            {key: 'chat.global.example1', tag: 'chat.global.example_tag.projects', icon: 'lucide:layout-grid'},
+                            {key: 'chat.global.example2', tag: 'chat.example_tag.memories', icon: 'lucide:brain'},
+                            {key: 'chat.global.example3', tag: 'chat.example_tag.rules', icon: 'lucide:scale'},
                         ] %}
                         {% for ex in examples %}
                             <li>
@@ -252,7 +257,7 @@
                     data-chat-target="input"
                     data-action="keydown->chat#keydown"
                     maxlength="4000"
-                    placeholder="{{ 'chat.placeholder'|trans({name: project.name}) }}"
+                    placeholder="{{ project ? 'chat.placeholder'|trans({name: project.name}) : 'chat.global.placeholder'|trans }}"
                     autocomplete="off"
                     autofocus
                     required
@@ -397,7 +402,7 @@
                         type="button"
                         data-action="chat#askConfirm"
                         data-confirm-target="clearHistory"
-                        data-confirm-title="{{ 'chat.history.clear_confirm'|trans }}"
+                        data-confirm-title="{{ (project ? 'chat.history.clear_confirm' : 'chat.global.clear_confirm')|trans }}"
                         data-confirm-label="{{ 'chat.history.clear'|trans }}"
                         data-loading="addAttribute(disabled)"
                     >
