@@ -11,6 +11,7 @@ use App\Forge\GitHubAccount;
 use App\Message\SyncConnector;
 use App\Project\ProjectResolver;
 use App\Security\OAuth\OAuthClient;
+use App\Security\OAuth\OAuthTokenBundle;
 use App\Security\ProjectScope;
 use App\Security\SecretBox;
 use Doctrine\ORM\EntityManagerInterface;
@@ -58,7 +59,8 @@ final class GitHubRepositoryController extends AbstractController
         $repositories = null;
         if (\is_string($token)) {
             try {
-                $repositories = $this->account->repositories($this->secretBox->decrypt($token));
+                $bundle = OAuthTokenBundle::fromStoragePayload($this->secretBox->decrypt($token));
+                $repositories = $this->account->repositories($bundle->accessToken);
             } catch (\Throwable) {
                 $request->getSession()->remove(self::TOKEN);
                 $this->addFlash('error', new TranslatableMessage('flash.github.token_refused'));
@@ -107,7 +109,8 @@ final class GitHubRepositoryController extends AbstractController
         }
 
         try {
-            $request->getSession()->set(self::TOKEN, $this->secretBox->encrypt($this->oauthClient->accessToken('github', $request->query->getString('code'), $this->callbackUrl())));
+            $bundle = $this->oauthClient->accessTokenBundle('github', $request->query->getString('code'), $this->callbackUrl());
+            $request->getSession()->set(self::TOKEN, $this->secretBox->encrypt($bundle->toStoragePayload()));
         } catch (\Throwable) {
             $this->addFlash('error', new TranslatableMessage('flash.github.refused'));
         }

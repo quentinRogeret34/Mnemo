@@ -8,6 +8,11 @@ framework:
     #esi: true
     #fragments: true
 
+when@prod:
+    framework:
+        session:
+            save_path: '%kernel.project_dir%/var/sessions'
+
 when@test:
     framework:
         test: true

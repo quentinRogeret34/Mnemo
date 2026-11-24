@@ -55,20 +55,28 @@ final class GitHubApp
      */
     public function client(string $repository): HttpClientInterface
     {
+        $token = $this->installationToken($repository);
+
+        return $this->httpClient->withOptions(['base_uri' => self::API, 'headers' => self::HEADERS + ['Authorization' => 'Bearer '.$token], 'timeout' => 30]);
+    }
+
+    /**
+     * Mints (or returns from cache) a short-lived GitHub App installation token for the given "owner/repo".
+     */
+    public function installationToken(string $repository): string
+    {
         if (!$this->isConfigured()) {
             throw new \RuntimeException('L\'application GitHub n\'est pas configurée (GITHUB_APP_ID, GITHUB_APP_PRIVATE_KEY, GITHUB_APP_WEBHOOK_SECRET).');
         }
 
         // An installation token lives one hour.
-        $token = $this->cache->get('github_app_token_'.hash('xxh128', strtolower($repository)), function (ItemInterface $item) use ($repository): string {
+        return $this->cache->get('github_app_token_'.hash('xxh128', strtolower($repository)), function (ItemInterface $item) use ($repository): string {
             $item->expiresAfter(3000);
             $app = $this->httpClient->withOptions(['base_uri' => self::API, 'headers' => self::HEADERS + ['Authorization' => 'Bearer '.$this->jwt()], 'timeout' => 30]);
             $installation = $app->request('GET', 'repos/'.$repository.'/installation')->toArray();
 
             return $app->request('POST', 'app/installations/'.$installation['id'].'/access_tokens')->toArray()['token'];
         });
-
-        return $this->httpClient->withOptions(['base_uri' => self::API, 'headers' => self::HEADERS + ['Authorization' => 'Bearer '.$token], 'timeout' => 30]);
     }
 
     private function jwt(): string
@@ -78,7 +86,8 @@ final class GitHubApp
         $encode = static fn (string $bytes): string => rtrim(strtr(base64_encode($bytes), '+/', '-_'), '=');
         // Issued a minute ago: GitHub refuses a token from the future when the clocks drift.
         $unsigned = $encode('{"alg":"RS256","typ":"JWT"}').'.'.$encode(json_encode(['iat' => time() - 60, 'exp' => time() + 540, 'iss' => $this->appId], \JSON_THROW_ON_ERROR));
-        if (!openssl_sign($unsigned, $signature, $pem, \OPENSSL_ALGO_SHA256)) {
+        $key = @openssl_pkey_get_private($pem);
+        if (false === $key || !openssl_sign($unsigned, $signature, $key, \OPENSSL_ALGO_SHA256)) {
             throw new \RuntimeException('Clé privée de l\'application GitHub illisible (GITHUB_APP_PRIVATE_KEY).');
         }
 

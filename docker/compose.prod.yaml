@@ -81,6 +81,7 @@ services:
       - repos:/app/var/repos
       - locks:/app/var/lock
       - worktrees:/app/var/worktrees
+      - sessions:/app/var/sessions
       - caddy_data:/data
       - caddy_config:/config
 
@@ -117,6 +118,7 @@ volumes:
   repos:
   locks:
   worktrees:
+  sessions:
   caddy_data:
   caddy_config:
   database_data:

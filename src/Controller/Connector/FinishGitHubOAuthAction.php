@@ -36,7 +36,8 @@ final class FinishGitHubOAuthAction extends AbstractController
         }
 
         try {
-            $connector->setOauthToken($this->secretBox->encrypt($this->oauthClient->accessToken('github', $request->query->getString('code'), $this->generateUrl('connector_oauth_check', [], UrlGeneratorInterface::ABSOLUTE_URL))));
+            $bundle = $this->oauthClient->accessTokenBundle('github', $request->query->getString('code'), $this->generateUrl('connector_oauth_check', [], UrlGeneratorInterface::ABSOLUTE_URL));
+            $connector->setOauthToken($this->secretBox->encrypt($bundle->toStoragePayload()));
             $this->entityManager->flush();
             $this->addFlash('success', new TranslatableMessage('flash.connector.github_connected'));
         } catch (\Throwable $exception) {

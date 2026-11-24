@@ -61,17 +61,55 @@ final class OAuthClient
 
     public function accessToken(string $provider, string $code, string $redirectUri, ?string $codeVerifier = null): string
     {
+        return $this->accessTokenBundle($provider, $code, $redirectUri, $codeVerifier)->accessToken;
+    }
+
+    public function accessTokenBundle(string $provider, string $code, string $redirectUri, ?string $codeVerifier = null): OAuthTokenBundle
+    {
         $config = $this->provider($provider);
         $body = ['client_id' => $config['id'], 'client_secret' => $config['secret'], 'code' => $code, 'redirect_uri' => $redirectUri, 'grant_type' => 'authorization_code'];
         if (null !== $codeVerifier) {
             $body['code_verifier'] = $codeVerifier;
         }
 
-        return $this->httpClient->request('POST', $config['token'], [
+        return $this->exchangeToken($config['token'], $body);
+    }
+
+    public function refreshAccessToken(string $provider, #[\SensitiveParameter] string $refreshToken): OAuthTokenBundle
+    {
+        $config = $this->provider($provider);
+
+        return $this->exchangeToken($config['token'], [
+            'client_id' => $config['id'],
+            'client_secret' => $config['secret'],
+            'grant_type' => 'refresh_token',
+            'refresh_token' => $refreshToken,
+        ]);
+    }
+
+    /**
+     * @param array<string, string> $body
+     */
+    private function exchangeToken(string $endpoint, array $body): OAuthTokenBundle
+    {
+        $data = $this->httpClient->request('POST', $endpoint, [
             'timeout' => self::TIMEOUT,
             'headers' => ['Accept' => 'application/json'],
             'body' => $body,
-        ])->toArray()['access_token'] ?? throw new \RuntimeException('Le fournisseur n\'a pas délivré de jeton.');
+        ])->toArray();
+
+        $accessToken = \is_string($data['access_token'] ?? null) && '' !== $data['access_token']
+            ? $data['access_token']
+            : throw new \RuntimeException('Le fournisseur n\'a pas délivré de jeton.');
+
+        $refreshToken = \is_string($data['refresh_token'] ?? null) && '' !== $data['refresh_token']
+            ? $data['refresh_token']
+            : null;
+        $expiresAt = is_numeric($data['expires_in'] ?? null) && (int) $data['expires_in'] > 0
+            ? time() + (int) $data['expires_in']
+            : null;
+
+        return new OAuthTokenBundle($accessToken, $refreshToken, $expiresAt);
     }
 
     public function profile(string $provider, string $code, string $redirectUri, ?string $codeVerifier = null): OAuthProfile

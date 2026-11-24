@@ -128,7 +128,12 @@ class RepositoryCheckout
         $process = new Process(['git', ...$arguments], null, $environment, null, self::TIMEOUT);
         $process->run();
         if (!$process->isSuccessful()) {
-            throw new \RuntimeException(\sprintf('git %s a échoué : %s', '-C' === $arguments[0] ? $arguments[2] : $arguments[0], trim($process->getErrorOutput()) ?: 'code '.$process->getExitCode()));
+            $stderr = trim($process->getErrorOutput()) ?: 'code '.$process->getExitCode();
+            if (str_contains($stderr, 'could not read Username')) {
+                $stderr .= ' — Jeton GitHub expiré, révoqué ou absent : reconnecter le compte GitHub sur la page du connecteur ou configurer une GitHub App / un PAT durable.';
+            }
+
+            throw new \RuntimeException(\sprintf('git %s a échoué : %s', '-C' === $arguments[0] ? $arguments[2] : $arguments[0], $stderr));
         }
 
         return $process->getOutput();
