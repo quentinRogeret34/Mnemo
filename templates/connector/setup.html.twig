@@ -1,0 +1,173 @@
+{% extends 'base.html.twig' %}
+
+{% set token = csrf_token('connector-' ~ connector.id) %}
+
+{% block title %}{{ 'connector.setup.title'|trans }} · {{ connector.name }}{% endblock %}
+
+{% block crumbs %}
+    <a href="{{ path('connector_index') }}">{{ 'nav.connectors'|trans }}</a>
+    <span class="crumbs__sep" aria-hidden="true">/</span>
+    <a href="{{ path('connector_show', {id: connector.id}) }}">{{ connector.name }}</a>
+    <span class="crumbs__sep" aria-hidden="true">/</span>
+    <span class="crumbs__current">{{ 'connector.setup.crumb'|trans }}</span>
+{% endblock %}
+
+{% block body %}
+    <article class="page">
+        <div class="view-head">
+            <h1><twig:ux:icon name="lucide:wand-sparkles" />{{ 'connector.setup.heading'|trans({name: connector.name}) }}</h1>
+            {% if inspection %}<span class="status status--validated">{{ inspection.server }}</span>{% endif %}
+        </div>
+        <p class="page__lede">{{ 'connector.setup.lede'|trans }}</p>
+
+        {% if inspection_error %}
+            <p class="form-errors block" role="alert">{{ 'connector.show.connection_failed'|trans({error: inspection_error}) }}</p>
+            <div class="upload__actions">
+                {% if connector.transport.value == 'http' and not connector.mcpAuthorization %}
+                    <form method="post" action="{{ path('connector_authorize', {id: connector.id}) }}">
+                        <input type="hidden" name="_token" value="{{ token }}">
+                        <button class="button button--primary" type="submit"><twig:ux:icon name="lucide:key-round" />{{ 'connector.show.authorize'|trans }}</button>
+                    </form>
+                {% endif %}
+                <a class="button" href="{{ path('connector_edit', {id: connector.id}) }}"><twig:ux:icon name="lucide:pencil" />{{ 'common.edit'|trans }}</a>
+            </div>
+        {% elseif inspection %}
+            {% if inspection.resources is not empty %}
+                <section class="block" aria-labelledby="setup-resources-title">
+                    <div class="block__head">
+                        <h2 id="setup-resources-title">{{ 'connector.setup.resources_title'|trans }}</h2>
+                        <span class="block__count num">{{ inspection.resources|length }}</span>
+                    </div>
+                    <p class="row__sub">{{ 'connector.setup.resources_text'|trans }}</p>
+                    <form class="form-stack setup-card" method="post" action="{{ path('connector_setup', {id: connector.id}) }}">
+                        <input type="hidden" name="_token" value="{{ token }}">
+                        <input type="hidden" name="mode" value="resources">
+                        <div class="setup-dest">
+                            <div>
+                                <label for="res-project">{{ 'memory.index.project'|trans }}</label>
+                                <select class="select" id="res-project" name="project">
+                                    <option value="0">{{ 'connector.show.none'|trans }}</option>
+                                    {% for item in projects %}<option value="{{ item.id }}" {{ connector.project and connector.project.id == item.id ? 'selected' }}>{{ item.name }}</option>{% endfor %}
+                                </select>
+                            </div>
+                            <div>
+                                <label for="res-folder">{{ 'document.props.folder'|trans }}</label>
+                                <select class="select" id="res-folder" name="folder">
+                                    <option value="0">{{ 'connector.show.root_folder'|trans }}</option>
+                                    {% for item in folders %}<option value="{{ item.id }}" {{ connector.folder and connector.folder.id == item.id ? 'selected' }}>{{ item.name }}</option>{% endfor %}
+                                </select>
+                            </div>
+                            <div>
+                                <label for="res-schedule">{{ 'form.connector.schedule'|trans }}</label>
+                                <select class="select" id="res-schedule" name="schedule">
+                                    {% for item in schedules %}<option value="{{ item.value }}" {{ connector.schedule == item ? 'selected' }}>{{ item|trans }}</option>{% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="upload__actions">
+                            <button class="button button--primary" type="submit" name="sync_now" value="1"><twig:ux:icon name="lucide:refresh-cw" />{{ 'connector.setup.use_resources'|trans }}</button>
+                        </div>
+                    </form>
+                </section>
+            {% endif %}
+
+            <section class="block" aria-labelledby="setup-tools-title">
+                <div class="block__head">
+                    <h2 id="setup-tools-title">{{ 'connector.setup.tools_title'|trans }}</h2>
+                    <span class="block__count num">{{ inspection.tools|length }}</span>
+                </div>
+                {% if inspection.tools is empty %}
+                    <p class="block__empty">{{ 'connector.show.no_tool'|trans }}</p>
+                {% else %}
+                    <p class="row__sub">{{ 'connector.setup.tools_text'|trans }}</p>
+                    <div class="setup-tools">
+                        {% for tool in inspection.tools %}
+                            {% set isCurrent = connector.tool == tool.name %}
+                            <details class="setup-tool"{{ isCurrent or loop.first ? ' open' }}>
+                                <summary class="setup-tool__head">
+                                    <span class="code-chip">{{ tool.name }}</span>
+                                    {% if tool.description %}<span class="setup-tool__desc">{{ tool.description }}</span>{% endif %}
+                                    {% if isCurrent %}<span class="pill pill--success">{{ 'connector.setup.current'|trans }}</span>{% endif %}
+                                </summary>
+                                <form class="form-stack setup-tool__form" method="post" action="{{ path('connector_setup', {id: connector.id}) }}">
+                                    <input type="hidden" name="_token" value="{{ token }}">
+                                    <input type="hidden" name="tool" value="{{ tool.name }}">
+
+                                    {% if tool.fields is not empty %}
+                                        <div class="setup-fields">
+                                            {% for field in tool.fields %}
+                                                {% set existing = isCurrent ? (connector.arguments[field.name] ?? '') : '' %}
+                                                {% set inputId = 'tool-' ~ loop.parent.loop.index ~ '-' ~ field.name %}
+                                                <div>
+                                                    <label for="{{ inputId }}">
+                                                        <span class="mono">{{ field.name }}</span>
+                                                        {% if field.required %}<span class="tag">{{ 'connector.setup.required'|trans }}</span>{% endif %}
+                                                    </label>
+                                                    {% if field.enum is not empty %}
+                                                        <select class="select" id="{{ inputId }}" name="args[{{ field.name }}]"{{ field.required ? ' required' }}>
+                                                            <option value=""></option>
+                                                            {% for choice in field.enum %}
+                                                                <option value="{{ choice }}" {{ existing == choice ? 'selected' }}>{{ choice }}</option>
+                                                            {% endfor %}
+                                                        </select>
+                                                    {% elseif field.type == 'boolean' %}
+                                                        <select class="select" id="{{ inputId }}" name="args[{{ field.name }}]">
+                                                            <option value=""></option>
+                                                            <option value="true" {{ existing is same as(true) ? 'selected' }}>true</option>
+                                                            <option value="false" {{ existing is same as(false) ? 'selected' }}>false</option>
+                                                        </select>
+                                                    {% else %}
+                                                        <input
+                                                            class="input{{ field.type in ['array', 'object'] ? ' mono' }}"
+                                                            id="{{ inputId }}"
+                                                            type="{{ field.type in ['integer', 'number'] ? 'number' : 'text' }}"
+                                                            name="args[{{ field.name }}]"
+                                                            value="{{ existing is iterable ? existing|json_encode : existing }}"
+                                                            {{ field.required ? 'required' }}
+                                                            autocomplete="off"
+                                                        >
+                                                    {% endif %}
+                                                    {% if field.description %}<p class="help-text">{{ field.description }}</p>{% endif %}
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    {% else %}
+                                        <p class="row__sub">{{ 'connector.setup.no_args'|trans }}</p>
+                                    {% endif %}
+
+                                    <div class="setup-dest">
+                                        <div>
+                                            <label for="mode-{{ loop.index }}">{{ 'connector.setup.import_as'|trans }}</label>
+                                            <select class="select" id="mode-{{ loop.index }}" name="mode">
+                                                <option value="tool_document" {{ connector.mode.value != 'tool_memories' ? 'selected' }}>{{ 'enum.connector_mode.tool_document'|trans }}</option>
+                                                <option value="tool_memories" {{ connector.mode.value == 'tool_memories' ? 'selected' }}>{{ 'enum.connector_mode.tool_memories'|trans }}</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label for="proj-{{ loop.index }}">{{ 'memory.index.project'|trans }}</label>
+                                            <select class="select" id="proj-{{ loop.index }}" name="project">
+                                                <option value="0">{{ 'connector.show.none'|trans }}</option>
+                                                {% for item in projects %}<option value="{{ item.id }}" {{ connector.project and connector.project.id == item.id ? 'selected' }}>{{ item.name }}</option>{% endfor %}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label for="sched-{{ loop.index }}">{{ 'form.connector.schedule'|trans }}</label>
+                                            <select class="select" id="sched-{{ loop.index }}" name="schedule">
+                                                {% for item in schedules %}<option value="{{ item.value }}" {{ connector.schedule == item ? 'selected' }}>{{ item|trans }}</option>{% endfor %}
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div class="upload__actions">
+                                        <button class="button button--primary" type="submit" name="sync_now" value="1"><twig:ux:icon name="lucide:refresh-cw" />{{ 'connector.setup.save_and_sync'|trans }}</button>
+                                        <button class="button" type="submit" name="sync_now" value="0">{{ 'common.save'|trans }}</button>
+                                    </div>
+                                </form>
+                            </details>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </section>
+        {% endif %}
+    </article>
+{% endblock %}

@@ -53,7 +53,11 @@ final class ConnectorRunner
     }
 
     /**
-     * @return array{server: string, tools: list<array{name: string, description: ?string}>, resources: list<array{uri: string, name: string, mime_type: ?string}>}
+     * @return array{
+     *     server: string,
+     *     tools: list<array{name: string, description: ?string, fields: list<array{name: string, type: string, description: string, required: bool, enum: list<string>}>}>,
+     *     resources: list<array{uri: string, name: string, mime_type: ?string}>,
+     * }
      */
     public function inspect(Connector $connector): array
     {
@@ -79,7 +83,11 @@ final class ConnectorRunner
             return [
                 'server' => null === $server ? 'inconnu' : $server->name.' '.$server->version,
                 'tools' => false === $capabilities?->tools ? [] : array_map(
-                    static fn ($tool): array => ['name' => $tool->name, 'description' => $tool->description],
+                    static fn ($tool): array => [
+                        'name' => $tool->name,
+                        'description' => $tool->description,
+                        'fields' => self::schemaFields($tool->inputSchema),
+                    ],
                     $client->listTools()->tools,
                 ),
                 'resources' => false === $capabilities?->resources ? [] : array_map(
@@ -90,6 +98,57 @@ final class ConnectorRunner
         } finally {
             $client->disconnect();
         }
+    }
+
+    /**
+     * Turns an MCP tool JSON Schema into flat form fields for the interactive setup screen.
+     *
+     * @param array<string, mixed> $schema
+     *
+     * @return list<array{name: string, type: string, description: string, required: bool, enum: list<string>}>
+     */
+    private static function schemaFields(array $schema): array
+    {
+        $rawProperties = $schema['properties'] ?? [];
+        if ($rawProperties instanceof \stdClass) {
+            $rawProperties = (array) $rawProperties;
+        }
+        if (!\is_array($rawProperties)) {
+            return [];
+        }
+        $required = array_values(array_filter(
+            \is_array($schema['required'] ?? null) ? $schema['required'] : [],
+            'is_string',
+        ));
+
+        $fields = [];
+        foreach ($rawProperties as $name => $spec) {
+            if (!\is_string($name) || '' === $name) {
+                continue;
+            }
+            if ($spec instanceof \stdClass) {
+                $spec = (array) $spec;
+            }
+            if (!\is_array($spec)) {
+                $spec = [];
+            }
+            $type = $spec['type'] ?? 'string';
+            if (\is_array($type)) {
+                $type = (string) (array_values(array_filter($type, static fn (mixed $t): bool => 'null' !== $t))[0] ?? 'string');
+            }
+            $enum = \is_array($spec['enum'] ?? null)
+                ? array_values(array_map('strval', array_filter($spec['enum'], static fn (mixed $v): bool => is_scalar($v))))
+                : [];
+            $fields[] = [
+                'name' => $name,
+                'type' => \is_string($type) ? $type : 'string',
+                'description' => \is_string($spec['description'] ?? null) ? trim($spec['description']) : '',
+                'required' => \in_array($name, $required, true),
+                'enum' => $enum,
+            ];
+        }
+
+        return $fields;
     }
 
     /**

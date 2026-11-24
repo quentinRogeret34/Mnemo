@@ -175,13 +175,15 @@ confirm:
     accept: Confirm
     title: 'Confirm this action?'
 connector:
+    advanced_config: 'Advanced manual configuration'
     auth: 'Authentication: {auth}'
     configure: Configure
+    custom: 'Custom connector'
     destination: Destination
     docs: '{name} documentation'
     edit: 'Edit the connector'
     empty: 'No connector'
-    empty_text: 'A connector reads the history of a GitHub or GitLab repository (commits, pull and merge requests, issues), or plugs into an external MCP server (mem0, DeepWiki...) and imports its resources as documents or memories.'
+    empty_text: 'Connect your tools (GitHub, Jira/Confluence, Linear, Notion) in a few clicks to feed the knowledge graph.'
     github:
         already: 'already connected'
         choose_project: 'Choose a project'
@@ -202,6 +204,29 @@ connector:
     key_set: set
     llm_help: 'Key and models are set in {link}, or by the environment ({env}). Check with {command}.'
     new: 'New connector'
+    notion_dialog:
+        text: 'Paste your Notion internal integration token (notion.so/profile/integrations): it is stored encrypted with no manual HTTP headers to write.'
+        title: 'Connect Notion'
+        token: 'Notion integration token'
+        token_help: 'Then share the Notion pages you want to import with your integration (… → Connections).'
+    presets_lede: 'Guided one-click setup — no JSON or .env editing required.'
+    quick_connect: Connect
+    setup:
+        crumb: 'Interactive setup'
+        current: Active
+        heading: 'Configure {name}'
+        import_as: 'Import as'
+        lede: 'Pick the resources or an MCP tool discovered on the server and fill its parameters directly.'
+        no_args: 'This tool requires no parameters.'
+        open: 'Configure tools'
+        required: required
+        resources_text: 'This server exposes resources ready to be imported as documents automatically.'
+        resources_title: 'Available resources'
+        save_and_sync: 'Save and sync'
+        title: 'Interactive setup'
+        tools_text: 'Expand a tool below: fields are generated automatically from its MCP schema.'
+        tools_title: 'Discovered MCP tools'
+        use_resources: 'Import these resources'
     pr:
         draft: draft
         error: 'Cannot read the pull requests: {error}'
@@ -626,6 +651,10 @@ flash:
         deleted: 'Connector deleted. The imported documents and memories are kept.'
         github_connected: 'GitHub account connected: this connector reads the repository with its token.'
         github_disconnected: 'GitHub account disconnected. The token stays valid on GitHub until it is revoked there.'
+        guided_created: 'Connector “{name}” created. You can now test the connection or run a sync.'
+        notion_token_required: 'Paste a Notion integration token to create the connector.'
+        setup_choose_tool: 'Choose an MCP tool to call.'
+        setup_saved: 'Configuration of “{name}” saved.'
         imported: 'Import done: {created} created, {updated} updated, {unchanged} unchanged, {skipped} skipped.'
         model_too_long: 'identifier too long.'
         oauth_authorized: 'Connector authorized: it calls the MCP server with the OAuth token.'

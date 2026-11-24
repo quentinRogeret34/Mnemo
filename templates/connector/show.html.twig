@@ -64,6 +64,9 @@
         <div class="upload__actions upload__actions--grid">
             <form method="post" action="{{ path('connector_sync', {id: connector.id}) }}"><input type="hidden" name="_token" value="{{ token }}"><button class="button button--primary" type="submit"><twig:ux:icon name="lucide:refresh-cw" />{{ 'connector.show.sync'|trans }}</button></form>
             <form method="post" action="{{ path('connector_inspect', {id: connector.id}) }}"><input type="hidden" name="_token" value="{{ token }}"><button class="button" type="submit"><twig:ux:icon name="lucide:plug" />{{ 'connector.show.test'|trans }}</button></form>
+            {% if not connector.mode.api %}
+                <a class="button" href="{{ path('connector_setup', {id: connector.id}) }}"><twig:ux:icon name="lucide:wand-sparkles" />{{ 'connector.setup.open'|trans }}</a>
+            {% endif %}
             {% if connector.mode.value == 'github' %}
                 <form method="post" action="{{ path('connector_review', {id: connector.id}) }}"><input type="hidden" name="_token" value="{{ token }}"><button class="button" type="submit"><twig:ux:icon name="lucide:clipboard-check" />{{ (connector.arguments.review ?? false ? 'connector.show.review_disable' : 'connector.show.review_enable')|trans }}</button></form>
                 {% if github_app.configured %}<a class="button" href="{{ path('connector_pull_requests', {id: connector.id}) }}"><twig:ux:icon name="lucide:git-pull-request" />{{ 'connector.pr.open'|trans }}</a>{% endif %}

@@ -8,179 +8,93 @@ use App\Enum\ConnectorTransport;
 use App\Enum\MemoryType;
 
 /**
- * Ready-made settings for well-known MCP providers. They only prefill the connector form: everything stays editable.
- * Tool names marked "checked" were listed live on 2026-11-08; the others come from the providers' documentation.
+ * Curated guided integrations shown on /connectors: each offers either a one-click OAuth flow
+ * (GitHub, Atlassian, Linear) or a guided single-token setup (Notion) with zero manual JSON.
+ * Advanced custom MCP connectors remain available via /connectors/new.
  */
 final class ConnectorPresets
 {
+    public const FLOW_GITHUB_OAUTH = 'github_oauth';
+    public const FLOW_MCP_OAUTH = 'mcp_oauth';
+    public const FLOW_NOTION_TOKEN = 'notion_token';
+
     /**
-     * @var array<string, array{label: string, description: string, docs: string, auth: string, checked: bool, endpoint: string, credentials: array<string, string>, mode: ConnectorMode, tool: ?string, arguments: array<string, mixed>, items_path?: string, text_field?: string, memory_type?: MemoryType, notes: list<string>}>
+     * @var array<string, array{label: string, description: string, docs: string, auth: string, flow: string, checked: bool, endpoint: string, credentials: array<string, string>, mode: ConnectorMode, tool: ?string, arguments: array<string, mixed>, items_path?: string, text_field?: string, memory_type?: MemoryType, notes: list<string>}>
      */
     private const AVAILABLE = [
-        'deepwiki' => [
-            'label' => 'DeepWiki',
-            'description' => 'Wiki généré pour un dépôt GitHub public, importé en document.',
-            'docs' => 'https://docs.devin.ai/work-with-devin/deepwiki-mcp',
-            'auth' => 'Aucune',
-            'checked' => true,
-            'endpoint' => 'https://mcp.deepwiki.com/mcp',
-            'credentials' => [],
-            'mode' => ConnectorMode::ToolDocument,
-            'tool' => 'read_wiki_contents',
-            'arguments' => ['repoName' => 'owner/repo'],
-            'notes' => [
-                'Remplacer « owner/repo » par le dépôt, ex. symfony/ai.',
-                'Dépôts publics uniquement, déjà indexés sur deepwiki.com. Le wiki peut être long.',
-                'Autres outils : read_wiki_structure (plan des pages), ask_wiki_question.',
-            ],
-        ],
-        'context7' => [
-            'label' => 'Context7',
-            'description' => 'Documentation à jour d\'une bibliothèque (Symfony, Doctrine...), importée en document.',
-            'docs' => 'https://context7.com/docs/resources/all-clients',
-            'auth' => 'Aucune ; clé facultative',
-            'checked' => true,
-            'endpoint' => 'https://mcp.context7.com/mcp',
-            'credentials' => [],
-            'mode' => ConnectorMode::ToolDocument,
-            'tool' => 'query-docs',
-            'arguments' => ['libraryId' => '/org/project', 'query' => 'Sujet à documenter'],
-            'notes' => [
-                'libraryId s\'obtient avec l\'outil resolve-library-id (format /org/project).',
-                'Avec une clé (context7.com/dashboard) : ajouter « CONTEXT7_API_KEY: env:CONTEXT7_API_KEY » et la variable dans .env.local.',
-            ],
-        ],
-        'mem0' => [
-            'label' => 'mem0',
-            'description' => 'Mémoires existantes de mem0, importées en mémoires sans doublon.',
-            'docs' => 'https://docs.mem0.ai',
-            'auth' => 'Clé API mem0',
-            'checked' => true,
-            'endpoint' => 'https://mcp.mem0.ai/mcp/',
-            'credentials' => ['Authorization' => 'Token env:MEM0_API_KEY'],
-            'mode' => ConnectorMode::ToolMemories,
-            'tool' => 'get_memories',
-            'arguments' => ['page' => 1, 'page_size' => 100],
-            'items_path' => 'results',
-            'text_field' => 'memory',
-            'memory_type' => MemoryType::Fact,
-            'notes' => [
-                'Définir MEM0_API_KEY dans .env.local.',
-                'Une page par import : augmenter « page » pour les suivantes. Filtrer avec {"filters": {"AND": [{"app_id": "mon-app"}]}}.',
-                'Toutes les mémoires reçoivent le même type ; le type mem0 d\'origine n\'est pas repris.',
-            ],
-        ],
         'github-api' => [
-            'label' => 'GitHub (code et historique)',
-            'description' => 'Graphe du code, docs, commits, pull requests et issues d\'un dépôt, reliés aux règles du projet.',
+            'label' => 'GitHub',
+            'description' => 'Graphe du code, docs, commits, pull requests et issues de vos dépôts, reliés aux règles du projet.',
             'docs' => 'https://docs.github.com/en/rest',
-            'auth' => 'Personal access token (lecture seule)',
-            'checked' => false,
+            'auth' => 'OAuth GitHub (1 clic)',
+            'flow' => self::FLOW_GITHUB_OAUTH,
+            'checked' => true,
             'endpoint' => 'https://api.github.com',
-            'credentials' => ['Authorization' => 'Bearer env:GITHUB_TOKEN'],
+            'credentials' => [],
             'mode' => ConnectorMode::GitHub,
             'tool' => null,
             'arguments' => ['repository' => 'owner/repo', 'code_graph' => true, 'learn_reviews' => false, 'review' => false],
             'notes' => [
-                'Remplacer « owner/repo » et choisir le projet : c\'est son graphe de code qui reçoit l\'historique.',
-                'Définir GITHUB_TOKEN dans .env.local et l\'ajouter à MCP_CONNECTORS_ENV. Un dépôt public se lit sans jeton : vider le champ des en-têtes.',
-                '« code_graph: true » clone le dépôt sur le serveur (branche par défaut, ou « branch »), calcule son graphe avec graphify sans LLM et importe README, docs/ et conventions d\'agents. Le jeton doit pouvoir lire le contenu.',
-                'Premier passage : 200 commits, 100 pull requests et 100 issues les plus récents. Les suivants ne lisent que le delta.',
-                '« learn_reviews: true » envoie les revues des pull requests fusionnées au LLM ; les apprentissages arrivent dans À valider.',
-                '« review: true » fait commenter chaque pull request par le bot (application GitHub installée sur le dépôt) : règles métier touchées, décisions liées, ce que le diff contredit. « review_llm: false » retire la lecture du diff par le LLM, « review_check: "fail" » fait échouer le check mnemo/rules au lieu d\'avertir.',
+                'Choisissez vos dépôts directement après la connexion OAuth GitHub, sans créer de jeton à la main.',
+                '« code_graph: true » clone le dépôt sur le serveur, calcule son graphe avec graphify sans LLM et importe README, docs/ et conventions d\'agents.',
+                'Vous pouvez activer la revue automatique des pull requests depuis la fiche du connecteur.',
             ],
         ],
-        'gitlab-api' => [
-            'label' => 'GitLab (code et historique)',
-            'description' => 'Graphe du code, docs, commits, merge requests et issues d\'un projet GitLab, reliés aux règles.',
-            'docs' => 'https://docs.gitlab.com/api/rest/',
-            'auth' => 'Access token (read_api)',
-            'checked' => false,
-            'endpoint' => 'https://gitlab.com/api/v4',
-            'credentials' => ['PRIVATE-TOKEN' => 'env:GITLAB_TOKEN'],
-            'mode' => ConnectorMode::GitLab,
+        'atlassian' => [
+            'label' => 'Jira / Confluence',
+            'description' => 'Tickets Jira et pages Confluence via le serveur MCP officiel Atlassian, configuré interactivement après OAuth.',
+            'docs' => 'https://support.atlassian.com/rovo/docs/getting-started-with-the-atlassian-remote-mcp-server/',
+            'auth' => 'OAuth Atlassian (1 clic)',
+            'flow' => self::FLOW_MCP_OAUTH,
+            'checked' => true,
+            'endpoint' => 'https://mcp.atlassian.com/v1/mcp',
+            'credentials' => [],
+            'mode' => ConnectorMode::Resources,
             'tool' => null,
-            'arguments' => ['repository' => 'groupe/projet', 'code_graph' => true, 'learn_reviews' => false],
+            'arguments' => [],
             'notes' => [
-                'Remplacer « groupe/projet » par le chemin du projet. Instance auto-hébergée : changer l\'URL en https://gitlab.exemple.com/api/v4.',
-                'Définir GITLAB_TOKEN dans .env.local et l\'ajouter à MCP_CONNECTORS_ENV.',
-                '« code_graph: true » clone le dépôt sur le serveur et calcule son graphe avec graphify ; le jeton a alors besoin de read_repository.',
-                'Premier passage : 200 commits, 100 merge requests et 100 issues les plus récents. Les suivants ne lisent que le delta.',
+                'Cliquez sur « Connecter » pour autoriser votre site Atlassian par OAuth, puis choisissez vos outils et paramètres sans JSON.',
+                'Un administrateur du site Atlassian peut devoir autoriser le domaine de l\'application.',
             ],
         ],
-        'github' => [
-            'label' => 'GitHub',
-            'description' => 'Issues d\'un dépôt, importées en document.',
-            'docs' => 'https://github.com/github/github-mcp-server',
-            'auth' => 'Personal access token',
-            'checked' => false,
-            'endpoint' => 'https://api.githubcopilot.com/mcp/',
-            'credentials' => ['Authorization' => 'Bearer env:GITHUB_MCP_TOKEN'],
-            'mode' => ConnectorMode::ToolDocument,
-            'tool' => 'list_issues',
-            'arguments' => ['owner' => 'owner', 'repo' => 'repo'],
+        'linear' => [
+            'label' => 'Linear',
+            'description' => 'Tickets, cycles et projets Linear via le serveur MCP officiel Linear, configuré interactivement après OAuth.',
+            'docs' => 'https://linear.app/docs/mcp',
+            'auth' => 'OAuth Linear (1 clic)',
+            'flow' => self::FLOW_MCP_OAUTH,
+            'checked' => true,
+            'endpoint' => 'https://mcp.linear.app/mcp',
+            'credentials' => [],
+            'mode' => ConnectorMode::Resources,
+            'tool' => null,
+            'arguments' => [],
             'notes' => [
-                'Définir GITHUB_MCP_TOKEN dans .env.local (token avec accès en lecture au dépôt).',
-                'Nom et arguments de l\'outil non vérifiés sans token : utiliser « Tester la connexion » puis ajuster.',
+                'Cliquez sur « Connecter » pour autoriser votre espace Linear par OAuth, puis sélectionnez les ressources ou outils à synchroniser.',
             ],
         ],
         'notion' => [
             'label' => 'Notion',
-            'description' => 'Pages partagées avec une intégration Notion, importées en un document chacune.',
+            'description' => 'Pages partagées avec votre intégration Notion, importées automatiquement en documents Markdown.',
             'docs' => 'https://developers.notion.com/docs/create-a-notion-integration',
-            'auth' => 'Jeton d\'intégration interne',
-            'checked' => false,
+            'auth' => 'Jeton d\'intégration (guidé)',
+            'flow' => self::FLOW_NOTION_TOKEN,
+            'checked' => true,
             'endpoint' => 'https://api.notion.com/v1',
             'credentials' => ['Authorization' => 'Bearer COLLER_LE_JETON'],
             'mode' => ConnectorMode::Notion,
             'tool' => null,
             'arguments' => [],
             'notes' => [
-                'Créer une intégration interne sur notion.so/profile/integrations (capacité « Lire le contenu ») et coller son jeton à la place de « COLLER_LE_JETON » : il est chiffré en base et n\'est plus affiché.',
-                'Dans Notion, partager avec l\'intégration les pages à importer (… → Connexions) : leurs sous-pages suivent.',
-                'Chaque page devient un document, avec son titre Notion. Les passages suivants ne relisent que les pages modifiées ; une page supprimée dans Notion reste ici.',
-                'Les images et fichiers hébergés par Notion ne sont pas importés, seulement leur légende.',
-            ],
-        ],
-        'atlassian' => [
-            'label' => 'Jira / Confluence',
-            'description' => 'Tickets Jira (JQL) ou pages Confluence, importés en document.',
-            'docs' => 'https://support.atlassian.com/rovo/docs/getting-started-with-the-atlassian-remote-mcp-server/',
-            'auth' => 'OAuth',
-            'checked' => false,
-            'endpoint' => 'https://mcp.atlassian.com/v1/mcp',
-            'credentials' => [],
-            'mode' => ConnectorMode::ToolDocument,
-            'tool' => 'searchJiraIssuesUsingJql',
-            'arguments' => ['cloudId' => 'exemple.atlassian.net', 'jql' => 'project = ABC ORDER BY updated DESC'],
-            'notes' => [
-                'Enregistrer, puis « Connecter par OAuth » sur la page du connecteur avec un compte du site Atlassian.',
-                'cloudId : le site (exemple.atlassian.net) ou l\'identifiant donné par l\'outil getAccessibleAtlassianResources.',
-                'Confluence : outil getConfluencePage ({"cloudId": "...", "pageId": "..."}). Vérifier les noms avec « Tester la connexion ».',
-                'Un administrateur du site peut devoir autoriser le domaine de l\'application.',
-            ],
-        ],
-        'linear' => [
-            'label' => 'Linear',
-            'description' => 'Tickets et projets Linear.',
-            'docs' => 'https://linear.app/docs/mcp',
-            'auth' => 'Clé API Linear',
-            'checked' => false,
-            'endpoint' => 'https://mcp.linear.app/mcp',
-            'credentials' => ['Authorization' => 'Bearer env:LINEAR_API_KEY'],
-            'mode' => ConnectorMode::Resources,
-            'tool' => null,
-            'arguments' => [],
-            'notes' => [
-                'Définir LINEAR_API_KEY dans .env.local (Settings → Security & access).',
-                'Ou sans clé : vider les en-têtes, enregistrer, puis « Connecter par OAuth » sur la page du connecteur.',
-                'Tester la connexion, puis choisir l\'outil à appeler.',
+                'Créez une intégration interne sur notion.so/profile/integrations (capacité « Lire le contenu ») et collez son jeton : il est chiffré en base.',
+                'Partagez dans Notion les pages à importer (… → Connexions) : leurs sous-pages suivent automatiquement.',
+                'Chaque page devient un document Markdown mis à jour de façon incrémentale.',
             ],
         ],
     ];
 
     /**
-     * @return array<string, array<string, mixed>>
+     * @return array<string, array{label: string, description: string, docs: string, auth: string, flow: string, checked: bool, endpoint: string, credentials: array<string, string>, mode: ConnectorMode, tool: ?string, arguments: array<string, mixed>, items_path?: string, text_field?: string, memory_type?: MemoryType, notes: list<string>}>
      */
     public function available(): array
     {
@@ -188,7 +102,7 @@ final class ConnectorPresets
     }
 
     /**
-     * @return array<string, mixed>|null
+     * @return array{label: string, description: string, docs: string, auth: string, flow: string, checked: bool, endpoint: string, credentials: array<string, string>, mode: ConnectorMode, tool: ?string, arguments: array<string, mixed>, items_path?: string, text_field?: string, memory_type?: MemoryType, notes: list<string>}|null
      */
     public function get(string $key): ?array
     {
@@ -206,8 +120,8 @@ final class ConnectorPresets
         $connector->setMode($preset['mode']);
         $connector->setTool($preset['tool']);
         $connector->setArguments($preset['arguments']);
-        $connector->setItemsPath($preset['items_path'] ?? null);
-        $connector->setTextField($preset['text_field'] ?? null);
-        $connector->setMemoryType($preset['memory_type'] ?? MemoryType::Fact);
+        $connector->setItemsPath(null);
+        $connector->setTextField(null);
+        $connector->setMemoryType(MemoryType::Fact);
     }
 }

@@ -9,8 +9,12 @@ use App\Connector\McpAuthorization;
 use App\Connector\McpClientFactory;
 use App\Entity\Connector;
 use App\Entity\ConnectorRun;
+use App\Entity\Folder;
+use App\Entity\Project;
 use App\Enum\ConnectorMode;
+use App\Enum\ConnectorSchedule;
 use App\Enum\ConnectorTransport;
+use App\Enum\MemoryType;
 use App\Forge\GitHubApp;
 use App\Forge\RepositoryCheckout;
 use App\Form\ConnectorType;
@@ -69,6 +73,165 @@ final class ConnectorController extends AbstractController
             'llm' => $this->llmSettings,
             'presets' => $this->presets->available(),
             'github_oauth' => isset($this->oauthClient->enabled()['github']),
+            'projects' => $this->entityManager->getRepository(Project::class)->findBy(['archivedAt' => null], ['name' => 'ASC']),
+            'folders' => $this->entityManager->getRepository(Folder::class)->findBy([], ['name' => 'ASC']),
+        ]);
+    }
+
+    /**
+     * One-click guided connection for curated integrations:
+     * - mcp_oauth (Atlassian, Linear): creates the connector and jumps straight into OAuth authorization,
+     *   then lands on the interactive tool-discovery wizard (/connectors/{id}/setup);
+     * - notion_token (Notion): stores the pasted integration token encrypted without manual headers.
+     */
+    #[Route('/connectors/connect/{preset}', name: 'connector_connect', methods: ['POST'])]
+    public function connect(string $preset, Request $request): Response
+    {
+        $presetData = $this->presets->get($preset) ?? throw $this->createNotFoundException(\sprintf('Unknown preset "%s".', $preset));
+        if (!$this->isCsrfTokenValid('connector-connect-'.$preset, $request->getPayload()->getString('_token'))) {
+            throw new AccessDeniedHttpException('Invalid CSRF token.');
+        }
+
+        $payload = $request->getPayload();
+        $connector = new Connector();
+        $this->presets->apply($preset, $connector);
+
+        $customName = trim($payload->getString('name'));
+        if ('' !== $customName) {
+            $connector->setName(mb_substr($customName, 0, 120));
+        }
+        $projectId = $payload->getInt('project');
+        if ($projectId > 0) {
+            $connector->setProject($this->entityManager->find(Project::class, $projectId));
+        }
+        $folderId = $payload->getInt('folder');
+        if ($folderId > 0) {
+            $connector->setFolder($this->entityManager->find(Folder::class, $folderId));
+        }
+
+        if (ConnectorPresets::FLOW_NOTION_TOKEN === $presetData['flow']) {
+            $token = trim($payload->getString('token'));
+            if ('' === $token) {
+                $this->addFlash('error', new TranslatableMessage('flash.connector.notion_token_required'));
+
+                return $this->redirectToRoute('connector_index');
+            }
+            $connector->setCredentials($this->credentials->seal(['Authorization' => 'Bearer '.$token], []));
+            $this->entityManager->persist($connector);
+            $this->entityManager->flush();
+            $this->addFlash('success', new TranslatableMessage('flash.connector.guided_created', ['name' => $connector->getName()]));
+
+            return $this->redirectToRoute('connector_show', ['id' => $connector->getId()]);
+        }
+
+        if (ConnectorPresets::FLOW_MCP_OAUTH === $presetData['flow']) {
+            $connector->setCredentials([]);
+            $this->entityManager->persist($connector);
+            $this->entityManager->flush();
+
+            $state = bin2hex(random_bytes(16));
+            try {
+                $flow = $this->authorization->start($connector, $this->generateUrl('connector_authorize_check', [], UrlGeneratorInterface::ABSOLUTE_URL), $state);
+            } catch (\Throwable $exception) {
+                $this->addFlash('error', new TranslatableMessage('flash.connector.oauth_impossible', ['error' => $exception->getMessage()]));
+
+                return $this->redirectToRoute('connector_show', ['id' => $connector->getId()]);
+            }
+            $request->getSession()->set(self::AUTHORIZATION_STATE, [
+                'state' => $state,
+                'connector' => $connector->getId(),
+                'flow' => $flow['pending'],
+                'setup' => true,
+            ]);
+
+            return $this->redirect($flow['url']);
+        }
+
+        return $this->redirectToRoute('connector_new', ['preset' => $preset]);
+    }
+
+    /**
+     * Interactive MCP setup wizard: discovers live tools and resources from the connected MCP server
+     * and generates typed form fields from each tool's inputSchema so no manual JSON is required.
+     */
+    #[Route('/connectors/{id}/setup', name: 'connector_setup', requirements: ['id' => '\d+'], methods: ['GET', 'POST'])]
+    public function setup(Connector $connector, Request $request): Response
+    {
+        if ($connector->getMode()->isApi()) {
+            return $this->redirectToRoute('connector_show', ['id' => $connector->getId()]);
+        }
+
+        try {
+            $inspection = $this->runner->inspect($connector);
+            $inspectionError = null;
+        } catch (\Throwable $exception) {
+            $inspection = null;
+            $inspectionError = $exception->getMessage();
+        }
+
+        if ($request->isMethod('POST')) {
+            $this->checkToken($connector, $request);
+            $payload = $request->getPayload();
+            $mode = ConnectorMode::tryFrom($payload->getString('mode')) ?? ConnectorMode::Resources;
+            if ($mode->isApi()) {
+                $mode = ConnectorMode::Resources;
+            }
+            $connector->setMode($mode);
+
+            if (ConnectorMode::Resources === $mode) {
+                $connector->setTool(null);
+                $connector->setArguments([]);
+            } else {
+                $toolName = trim($payload->getString('tool'));
+                if ('' === $toolName) {
+                    $this->addFlash('error', new TranslatableMessage('flash.connector.setup_choose_tool'));
+
+                    return $this->redirectToRoute('connector_setup', ['id' => $connector->getId()]);
+                }
+                $connector->setTool($toolName);
+                $toolMeta = null;
+                foreach ($inspection['tools'] ?? [] as $discovered) {
+                    if ($discovered['name'] === $toolName) {
+                        $toolMeta = $discovered;
+                        break;
+                    }
+                }
+                $rawArgs = $payload->all('args');
+                $connector->setArguments($this->coerceArguments($rawArgs, $toolMeta['fields'] ?? []));
+                if (ConnectorMode::ToolMemories === $mode) {
+                    $connector->setItemsPath(trim($payload->getString('items_path')) ?: null);
+                    $connector->setTextField(trim($payload->getString('text_field')) ?: null);
+                    $connector->setMemoryType(MemoryType::tryFrom($payload->getString('memory_type')) ?? MemoryType::Fact);
+                }
+            }
+
+            $projectId = $payload->getInt('project');
+            $connector->setProject($projectId > 0 ? $this->entityManager->find(Project::class, $projectId) : null);
+            $folderId = $payload->getInt('folder');
+            $connector->setFolder($folderId > 0 ? $this->entityManager->find(Folder::class, $folderId) : null);
+            $connector->setSchedule(ConnectorSchedule::tryFrom($payload->getString('schedule')) ?? $connector->getSchedule());
+            $this->entityManager->flush();
+
+            if ($payload->getBoolean('sync_now')) {
+                $report = $this->runner->sync($connector);
+                if (null === $report['error']) {
+                    $this->addFlash('success', new TranslatableMessage('flash.connector.imported', ['created' => $report['created'], 'updated' => $report['updated'], 'unchanged' => $report['unchanged'], 'skipped' => \count($report['skipped'])]));
+                }
+            } else {
+                $this->addFlash('success', new TranslatableMessage('flash.connector.setup_saved', ['name' => $connector->getName()]));
+            }
+
+            return $this->redirectToRoute('connector_show', ['id' => $connector->getId()]);
+        }
+
+        return $this->render('connector/setup.html.twig', [
+            'connector' => $connector,
+            'inspection' => $inspection,
+            'inspection_error' => $inspectionError,
+            'projects' => $this->entityManager->getRepository(Project::class)->findBy(['archivedAt' => null], ['name' => 'ASC']),
+            'folders' => $this->entityManager->getRepository(Folder::class)->findBy([], ['name' => 'ASC']),
+            'schedules' => ConnectorSchedule::cases(),
+            'memory_types' => MemoryType::cases(),
         ]);
     }
 
@@ -204,6 +367,9 @@ final class ConnectorController extends AbstractController
                 $this->authorization->finish($connector, $pending['flow'], $request->query->getString('code'));
                 $this->entityManager->flush();
                 $this->addFlash('success', new TranslatableMessage('flash.connector.oauth_authorized'));
+                if (true === ($pending['setup'] ?? false)) {
+                    return $this->redirectToRoute('connector_setup', ['id' => $connector->getId()]);
+                }
             } catch (\Throwable $exception) {
                 $this->addFlash('error', new TranslatableMessage('flash.connector.oauth_refused', ['error' => $exception->getMessage()]));
             }
@@ -344,6 +510,55 @@ final class ConnectorController extends AbstractController
         $this->addFlash('success', new TranslatableMessage('flash.connector.deleted'));
 
         return $this->redirectToRoute('connector_index');
+    }
+
+    /**
+     * Converts submitted form values into typed JSON arguments matching the discovered tool schema.
+     *
+     * @param array<int|string, mixed>                                                                         $rawArgs
+     * @param list<array{name: string, type: string, description: string, required: bool, enum: list<string>}> $fields
+     *
+     * @return array<string, mixed>
+     */
+    private function coerceArguments(array $rawArgs, array $fields): array
+    {
+        $byName = [];
+        foreach ($fields as $field) {
+            $byName[$field['name']] = $field['type'];
+        }
+
+        $result = [];
+        foreach ($rawArgs as $name => $value) {
+            if (!\is_string($name) || '' === $name) {
+                continue;
+            }
+            $str = is_scalar($value) ? trim((string) $value) : '';
+            $type = $byName[$name] ?? 'string';
+
+            if ('boolean' === $type) {
+                if ('true' === $str || '1' === $str) {
+                    $result[$name] = true;
+                } elseif ('false' === $str || '0' === $str) {
+                    $result[$name] = false;
+                }
+                continue;
+            }
+            if ('' === $str) {
+                continue;
+            }
+            if ('integer' === $type && is_numeric($str)) {
+                $result[$name] = (int) $str;
+            } elseif ('number' === $type && is_numeric($str)) {
+                $result[$name] = (float) $str;
+            } elseif (\in_array($type, ['array', 'object'], true)) {
+                $decoded = json_decode($str, true);
+                $result[$name] = \JSON_ERROR_NONE === json_last_error() ? $decoded : $str;
+            } else {
+                $result[$name] = $str;
+            }
+        }
+
+        return $result;
     }
 
     private function oauthAvailable(Connector $connector): bool

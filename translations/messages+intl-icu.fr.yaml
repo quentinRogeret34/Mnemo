@@ -175,13 +175,15 @@ confirm:
     accept: Confirmer
     title: 'Confirmer cette action ?'
 connector:
+    advanced_config: 'Configuration manuelle avancée'
     auth: 'Authentification : {auth}'
     configure: Configurer
+    custom: 'Connecteur personnalisé'
     destination: Destination
     docs: 'Documentation {name}'
     edit: 'Modifier le connecteur'
     empty: 'Aucun connecteur'
-    empty_text: "Un connecteur lit l'historique d'un dépôt GitHub ou GitLab (commits, pull et merge requests, issues), ou se branche sur un serveur MCP externe (mem0, DeepWiki...) et importe ses ressources en documents ou en mémoires."
+    empty_text: "Branchez vos outils (GitHub, Jira/Confluence, Linear, Notion) en quelques clics pour alimenter le graphe de connaissance."
     github:
         already: 'déjà branché'
         choose_project: 'Choisir un projet'
@@ -202,6 +204,29 @@ connector:
     key_set: configurée
     llm_help: "Clé et modèles se règlent dans {link}, ou par l'environnement ({env}). Vérifier avec {command}."
     new: 'Nouveau connecteur'
+    notion_dialog:
+        text: "Collez le jeton de votre intégration interne Notion (notion.so/profile/integrations) : il est chiffré en base et vous n'avez aucun en-tête HTTP à saisir."
+        title: 'Connecter Notion'
+        token: "Jeton d'intégration Notion"
+        token_help: "Partagez ensuite les pages Notion voulues avec votre intégration (… → Connexions)."
+    presets_lede: 'Connexion guidée en 1 clic — aucun JSON ni fichier .env à éditer.'
+    quick_connect: Connecter
+    setup:
+        crumb: 'Configuration interactive'
+        current: Actif
+        heading: 'Configurer {name}'
+        import_as: 'Importer comme'
+        lede: 'Sélectionnez les ressources ou un outil MCP découvert sur le serveur et remplissez ses paramètres directement.'
+        no_args: 'Cet outil ne demande aucun paramètre.'
+        open: 'Configurer les outils'
+        required: requis
+        resources_text: 'Ce serveur expose des ressources prêtes à importer automatiquement en documents.'
+        resources_title: 'Ressources disponibles'
+        save_and_sync: 'Enregistrer et synchroniser'
+        title: 'Configuration interactive'
+        tools_text: 'Ouvrez un outil ci-dessous : les champs sont générés automatiquement depuis son schéma MCP.'
+        tools_title: 'Outils MCP découverts'
+        use_resources: 'Importer ces ressources'
     pr:
         draft: brouillon
         error: 'Lecture des pull requests impossible : {error}'
@@ -626,6 +651,10 @@ flash:
         deleted: 'Connecteur supprimé. Les documents et mémoires importés sont conservés.'
         github_connected: 'Compte GitHub connecté : ce connecteur lit le dépôt avec son jeton.'
         github_disconnected: "Compte GitHub déconnecté. Le jeton reste valide chez GitHub tant qu'il n'y est pas révoqué."
+        guided_created: 'Connecteur « {name} » créé. Vous pouvez maintenant tester la connexion ou synchroniser.'
+        notion_token_required: "Coller un jeton d'intégration Notion pour créer le connecteur."
+        setup_choose_tool: 'Choisir un outil MCP à appeler.'
+        setup_saved: 'Configuration de « {name} » enregistrée.'
         imported: 'Import terminé : {created} créés, {updated} mis à jour, {unchanged} inchangés, {skipped} ignorés.'
         model_too_long: 'identifiant trop long.'
         oauth_authorized: "Connecteur autorisé : il s'adresse au serveur MCP avec le jeton OAuth."

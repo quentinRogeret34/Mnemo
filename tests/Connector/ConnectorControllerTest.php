@@ -554,21 +554,91 @@ final class ConnectorControllerTest extends WebTestCase
     public function testPresetPrefillsTheForm(): void
     {
         $crawler = $this->client->request('GET', '/connectors');
-        self::assertSame(['DeepWiki', 'Context7', 'mem0', 'GitHub (code et historique)', 'GitLab (code et historique)', 'GitHub', 'Notion', 'Jira / Confluence', 'Linear'], $crawler->filter('.preset__name')->each(static fn ($name): string => $name->text()));
+        self::assertSame(['GitHub (code et historique)', 'Jira / Confluence', 'Linear', 'Notion'], $crawler->filter('.preset__name')->each(static fn ($name): string => $name->text()));
 
-        $crawler = $this->client->request('GET', '/connectors/new?preset=mem0');
-        self::assertSelectorTextContains('.callout--info', 'Définir MEM0_API_KEY dans .env.local.');
+        $crawler = $this->client->request('GET', '/connectors/new?preset=atlassian');
+        self::assertSelectorTextContains('.callout--info', 'Atlassian');
         $this->client->submit($crawler->selectButton('Enregistrer')->form());
         self::assertResponseRedirects();
 
-        $connector = $this->entityManager->getRepository(Connector::class)->findOneBy(['name' => 'mem0']);
-        self::assertSame('https://mcp.mem0.ai/mcp/', $connector->getEndpoint());
-        self::assertSame(['Authorization' => 'Token env:MEM0_API_KEY'], $connector->getCredentials());
-        self::assertSame(['get_memories', 'results', 'memory'], [$connector->getTool(), $connector->getItemsPath(), $connector->getTextField()]);
-        self::assertSame(['page' => 1, 'page_size' => 100], $connector->getArguments());
+        $connector = $this->entityManager->getRepository(Connector::class)->findOneBy(['name' => 'Jira / Confluence']);
+        self::assertSame('https://mcp.atlassian.com/v1/mcp', $connector->getEndpoint());
+        self::assertSame(ConnectorMode::Resources, $connector->getMode());
 
         $this->client->request('GET', '/connectors/new?preset=unknown');
         self::assertResponseStatusCodeSame(404);
+    }
+
+    public function testGuidedNotionAndOneClickMcpOAuthAndInteractiveSetupWorkWithoutManualJson(): void
+    {
+        $this->client->disableReboot();
+
+        $http = new MockHttpClient(static function (string $method, string $url): MockResponse {
+            return match ($method.' '.$url) {
+                'POST https://mcp.atlassian.com/v1/mcp' => new MockResponse('', ['http_code' => 401, 'response_headers' => ['WWW-Authenticate: Bearer resource_metadata="https://mcp.atlassian.com/.well-known/oauth-protected-resource"']]),
+                'GET https://mcp.atlassian.com/.well-known/oauth-protected-resource' => new JsonMockResponse(['resource' => 'https://mcp.atlassian.com/v1/mcp', 'authorization_servers' => ['https://auth.atlassian.com']]),
+                'GET https://auth.atlassian.com/.well-known/oauth-authorization-server' => new JsonMockResponse(['authorization_endpoint' => 'https://auth.atlassian.com/authorize', 'token_endpoint' => 'https://auth.atlassian.com/token', 'registration_endpoint' => 'https://auth.atlassian.com/register', 'code_challenge_methods_supported' => ['S256']]),
+                'POST https://auth.atlassian.com/register' => new JsonMockResponse(['client_id' => 'atl-1']),
+                'POST https://auth.atlassian.com/token' => new JsonMockResponse(['access_token' => 'atl-token', 'token_type' => 'Bearer', 'expires_in' => 3600]),
+                default => new MockResponse('', ['http_code' => 404]),
+            };
+        });
+        $container = self::getContainer();
+        $container->set(McpAuthorization::class, new McpAuthorization($http, $container->get(SecretBox::class), $container->get(Connection::class), $container->get(LockFactory::class)));
+
+        // 1. Guided Notion connection: pastes plain token, encrypted automatically without manual headers.
+        $crawler = $this->client->request('GET', '/connectors');
+        $notionForm = $crawler->filter('#notion-connect form')->form([
+            'name' => 'Notion Produit',
+            'token' => 'ntn_guided_secret',
+            'project' => (string) $this->entityManager->getRepository(Project::class)->findOneBy(['slug' => 'demo'])->getId(),
+        ]);
+        $this->client->submit($notionForm);
+        self::assertResponseRedirects();
+        $notion = $this->entityManager->getRepository(Connector::class)->findOneBy(['name' => 'Notion Produit']);
+        self::assertNotNull($notion);
+        self::assertSame(ConnectorMode::Notion, $notion->getMode());
+        self::assertStringStartsWith('secret:', $notion->getCredentials()['Authorization']);
+        self::assertSame('Bearer ntn_guided_secret', self::getContainer()->get(CredentialResolver::class)->resolve($notion->getCredentials())['Authorization']);
+
+        // 2. One-click Atlassian OAuth: creates connector, starts OAuth, and redirects to /setup after callback.
+        $crawler = $this->client->request('GET', '/connectors');
+        $this->client->submit($crawler->filter('form[action="/connectors/connect/atlassian"]')->form());
+        $location = (string) $this->client->getResponse()->headers->get('Location');
+        self::assertStringStartsWith('https://auth.atlassian.com/authorize?', $location);
+        parse_str((string) parse_url($location, \PHP_URL_QUERY), $query);
+
+        $atlassian = $this->entityManager->getRepository(Connector::class)->findOneBy(['name' => 'Jira / Confluence']);
+        self::assertNotNull($atlassian);
+        $this->client->request('GET', '/connectors/authorize/check?code=xyz&state='.$query['state']);
+        self::assertResponseRedirects('/connectors/'.$atlassian->getId().'/setup');
+
+        // 3. Interactive MCP setup wizard on the live STDIO fixture server: generates typed fields from inputSchema.
+        $stdio = new Connector();
+        $stdio->setName('Fixture MCP');
+        $stdio->setTransport(ConnectorTransport::Stdio);
+        $stdio->setEndpoint('php tests/Fixtures/mcp/server.php');
+        $stdio->setMode(ConnectorMode::Resources);
+        $this->entityManager->persist($stdio);
+        $this->entityManager->flush();
+
+        $setupCrawler = $this->client->request('GET', '/connectors/'.$stdio->getId().'/setup');
+        self::assertResponseIsSuccessful();
+        self::assertCount(1, $setupCrawler->filter('input[name="args[user_id]"]'));
+
+        $toolForm = $setupCrawler->filter('input[name="args[user_id]"]')->closest('form')->form([
+            'args[user_id]' => 'alice',
+            'mode' => 'tool_document',
+            'project' => (string) $this->entityManager->getRepository(Project::class)->findOneBy(['slug' => 'demo'])->getId(),
+        ]);
+        $this->client->submit($toolForm);
+        self::assertResponseRedirects('/connectors/'.$stdio->getId());
+
+        $this->entityManager->clear();
+        $configured = $this->entityManager->find(Connector::class, $stdio->getId());
+        self::assertSame(ConnectorMode::ToolDocument, $configured->getMode());
+        self::assertSame('get_memories', $configured->getTool());
+        self::assertSame(['user_id' => 'alice'], $configured->getArguments());
     }
 
     public function testStdioCanBeDisabled(): void
