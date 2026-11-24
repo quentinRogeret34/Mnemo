@@ -15,7 +15,7 @@
 {% block body %}
     <article class="page">
         <div class="view-head">
-            <h1><twig:ux:icon name="lucide:wand-sparkles" />{{ 'connector.setup.heading'|trans({name: connector.name}) }}</h1>
+            <h1><twig:ux:icon name="lucide:sliders-horizontal" />{{ 'connector.setup.heading'|trans({name: connector.name}) }}</h1>
             {% if inspection %}<span class="status status--validated">{{ inspection.server }}</span>{% endif %}
         </div>
         <p class="page__lede">{{ 'connector.setup.lede'|trans }}</p>

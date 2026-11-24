@@ -1,7 +1,7 @@
 import { Controller } from '@hotwired/stimulus';
 import { option, setOption, setScheme, storedScheme, systemScheme } from '../appearance.js';
 
-const DEFAULTS = { accent: 'violet', 'text-size': 'normal' };
+const DEFAULTS = { accent: 'encre', 'text-size': 'normal' };
 
 export default class extends Controller {
     static targets = ['system'];

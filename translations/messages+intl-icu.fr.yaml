@@ -125,11 +125,13 @@ appearance:
     currently_light: '(actuellement clair)'
     dark: Sombre
     green: Vert
+    ink: 'Bleu encre'
     language: Langue
     language_help: "Enregistrée pour cette session. Sans choix, la langue du navigateur s'applique."
     language_submit: 'Changer de langue'
     lede: "Ces réglages sont enregistrés dans ce navigateur et s'appliquent tout de suite. Sans JavaScript, l'interface suit les préférences du système."
     light: Clair
+    slate: Ardoise
     system: Système
     text_large: Grande
     text_normal: Normale

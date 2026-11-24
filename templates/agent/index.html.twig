@@ -11,21 +11,21 @@
 {% block header_actions %}
     <form method="post" action="{{ path('agent_asset_propose', {slug: project.slug}) }}">
         <input type="hidden" name="_token" value="{{ csrf_token('agent-asset-propose-' ~ project.id) }}">
-        <button class="button" type="submit"><twig:ux:icon name="lucide:wand-sparkles" />{{ 'agent.propose'|trans }}</button>
+        <button class="button" type="submit"><twig:ux:icon name="lucide:refresh-cw" />{{ 'agent.propose'|trans }}</button>
     </form>
     <a class="button button--primary" href="{{ path('agent_asset_new', {slug: project.slug}) }}"><twig:ux:icon name="lucide:plus" />{{ 'common.add'|trans }}</a>
 {% endblock %}
 
 {% block body %}
     <div class="view-head">
-        <h1><twig:ux:icon name="lucide:wand-sparkles" />{{ 'nav.agent_assets'|trans }}</h1>
+        <h1><twig:ux:icon name="lucide:graduation-cap" />{{ 'nav.agent_assets'|trans }}</h1>
         <span class="view-head__meta">{{ assets|length }}</span>
     </div>
     <p class="page__lede">{{ 'agent.lede'|trans({folder: '<span class="mono">.claude/</span>'})|raw }}</p>
 
     {% if assets is empty %}
         <twig:EmptyState :title="'agent.empty'|trans" :text="'agent.empty_text'|trans">
-            <twig:block name="icon"><twig:ux:icon name="lucide:wand-sparkles" /></twig:block>
+            <twig:block name="icon"><twig:ux:icon name="lucide:graduation-cap" /></twig:block>
             <twig:block name="actions"><a class="button button--primary" href="{{ path('agent_asset_new', {slug: project.slug}) }}"><twig:ux:icon name="lucide:plus" />{{ 'common.add'|trans }}</a></twig:block>
         </twig:EmptyState>
     {% else %}

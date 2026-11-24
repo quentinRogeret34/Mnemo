@@ -16,7 +16,7 @@
     <section class="chat-main" aria-label="{{ 'nav.assistant'|trans }}">
         <header class="chat-main__head">
             <div class="chat-main__identity">
-                <span class="chat-main__icon" aria-hidden="true"><twig:ux:icon name="lucide:wand-sparkles" /></span>
+                <span class="chat-main__icon" aria-hidden="true"><twig:ux:icon name="lucide:message-circle" /></span>
                 <div class="chat-main__titles">
                     <h1 class="chat-main__title">{{ active ? active.title : 'nav.assistant'|trans }}</h1>
                     <span class="chat-main__subtitle">{{ scopeLabel }} · {{ this.modelLabel }}</span>
@@ -83,7 +83,7 @@
             {% if messages is empty %}
                 <div class="chat__empty">
                     <div class="chat__hero">
-                        <span class="chat__hero-badge" aria-hidden="true"><twig:ux:icon name="lucide:wand-sparkles" /></span>
+                        <span class="chat__hero-badge" aria-hidden="true"><twig:ux:icon name="lucide:message-circle" /></span>
                         <h2 class="chat__hero-title">{{ project ? 'chat.empty_title'|trans({name: project.name}) : 'chat.global.empty_title'|trans }}</h2>
                         <p class="chat__hero-text">{{ (project ? 'chat.empty' : 'chat.global.empty')|trans }}</p>
                     </div>
@@ -128,7 +128,7 @@
                             {% else %}
                                 <article class="chat__card">
                                     <header class="chat__card-head">
-                                        <span class="chat__avatar" aria-hidden="true"><twig:ux:icon name="lucide:wand-sparkles" /></span>
+                                        <span class="chat__avatar" aria-hidden="true"><twig:ux:icon name="lucide:message-circle" /></span>
                                         <span class="chat__author">{{ 'nav.assistant'|trans }}</span>
                                         {% if item.created_at ?? null %}
                                             <time class="chat__time" datetime="{{ item.created_at }}">{{ item.created_at|date('H:i') }}</time>
@@ -201,12 +201,12 @@
             {% endif %}
 
             <div class="chat__thinking" data-loading="action(send)|show" aria-live="polite" style="display: none;">
-                <span class="chat__avatar" aria-hidden="true"><twig:ux:icon name="lucide:wand-sparkles" /></span>
+                <span class="chat__avatar" aria-hidden="true"><twig:ux:icon name="lucide:message-circle" /></span>
                 <span class="chat__thinking-dots" aria-hidden="true"><span></span><span></span><span></span></span>
                 <span>{{ 'chat.thinking'|trans }}</span>
             </div>
             <div class="chat__thinking" data-loading="action(regenerate)|show" aria-live="polite" style="display: none;">
-                <span class="chat__avatar" aria-hidden="true"><twig:ux:icon name="lucide:wand-sparkles" /></span>
+                <span class="chat__avatar" aria-hidden="true"><twig:ux:icon name="lucide:message-circle" /></span>
                 <span class="chat__thinking-dots" aria-hidden="true"><span></span><span></span><span></span></span>
                 <span>{{ 'chat.regenerating'|trans }}</span>
             </div>

@@ -1,8 +1,7 @@
-/* Hallmark tokens · theme: custom (vibe: "memory console, near-black panels, lilac signal") · light paper oklch(98.6% 0.003 285) · dark paper oklch(13.5% 0.004 285) · accent violet oklch(50% 0.19 285) / oklch(70% 0.14 288) · Inter + JetBrains Mono
- * axes: light and dark / neutral-sans / cool
- * Chart and graph series are the hex steps validated with the dataviz palette script, one set per theme.
+/* Encre & Ardoise tokens · calm B2B SaaS design system (slate neutrals hue 250, deep ink blue default accent)
+ * Light & dark themes via light-dark() · WCAG AA contrast (>= 4.5:1 text, >= 3:1 controls) on every surface and accent.
+ * Fonts: Plus Jakarta Sans (display/headings) · Inter (body) · JetBrains Mono (code & rule codes).
  */
-/* Text tokens hold 4.5:1 and --color-control 3:1 on paper, card, sidebar, hover and selected, in both schemes and for every accent. */
 :root {
     color-scheme: light dark;
     accent-color: var(--color-accent);
@@ -10,42 +9,61 @@
     &:has(> head > meta[name="color-scheme"][content="dark"]) { color-scheme: dark; }
     &:has(> head > meta[name="color-scheme"][content="light"]) { color-scheme: light; }
 
-    --color-paper: light-dark(oklch(98.6% 0.003 285), oklch(13.5% 0.004 285));
-    --color-card: light-dark(oklch(100% 0 0), oklch(17% 0.006 285));
-    --color-sidebar: light-dark(oklch(97.2% 0.004 285), oklch(15.5% 0.005 285));
-    --color-hover: light-dark(oklch(95.2% 0.006 285), oklch(21% 0.008 285));
-    --color-ink: light-dark(oklch(21% 0.014 285), oklch(96% 0.004 285));
-    --color-ink-2: light-dark(oklch(37% 0.012 285), oklch(84% 0.008 285));
-    --color-muted: light-dark(oklch(46% 0.012 285), oklch(72% 0.012 285));
-    --color-faint: light-dark(oklch(51% 0.01 285), oklch(64% 0.012 285));
-    --color-control: light-dark(oklch(60% 0.012 285), oklch(55% 0.012 285));
-    --color-rule: light-dark(oklch(91.6% 0.006 285), oklch(24% 0.008 285));
-    --color-rule-2: light-dark(oklch(82% 0.008 285), oklch(36% 0.01 285));
-    --color-success: light-dark(oklch(48% 0.115 155), oklch(72% 0.15 155));
-    --color-success-soft: light-dark(oklch(96% 0.03 155), oklch(24% 0.05 155));
-    --color-warning: light-dark(oklch(50% 0.11 65), oklch(78% 0.14 75));
-    --color-warning-soft: light-dark(oklch(96.5% 0.03 80), oklch(26% 0.05 75));
-    --color-danger: light-dark(oklch(50% 0.18 25), oklch(72% 0.16 25));
-    --color-danger-soft: light-dark(oklch(96% 0.018 25), oklch(25% 0.06 25));
-    --color-format-md: light-dark(oklch(45% 0.012 285), oklch(42% 0.012 285));
-    --color-format-pdf: oklch(52% 0.17 25);
-    --color-format-docx: oklch(50% 0.15 255);
-    --color-format-ink: oklch(99% 0.004 285);
-    --color-on-solid: light-dark(oklch(99% 0.004 285), oklch(16% 0.01 285));
-    --color-graphite: light-dark(oklch(19% 0.008 285), oklch(10.5% 0.004 285));
-    --color-graphite-2: light-dark(oklch(27% 0.012 285), oklch(21% 0.01 285));
-    --color-graphite-rule: light-dark(oklch(33% 0.012 285), oklch(27% 0.01 285));
-    --color-graphite-ink: oklch(93% 0.006 285);
-    --color-graphite-muted: oklch(66% 0.012 285);
-    --color-focus: var(--color-accent);
-    --color-series: light-dark(#6250d6, #9085e9);
-    --color-series-wash: color-mix(in oklch, var(--color-series) 10%, transparent);
-    --color-hub-file: light-dark(#2a78d6, #3987e5);
-    --color-hub-rule: light-dark(#eb6834, #d95926);
-    --color-hub-document: light-dark(#158a5f, #199e70);
-    --color-hub-project: var(--color-ink-2);
-    --shadow-pop: 0 8px 24px light-dark(oklch(21% 0.014 285 / 0.12), oklch(0% 0 0 / 0.5));
+    /* Surfaces: clean alabaster canvas + crisp white cards in light; deep neutral slate in dark (no purple cast) */
+    --color-paper: light-dark(oklch(97.8% 0.004 250), oklch(14% 0.008 255));
+    --color-paper-2: light-dark(oklch(96.6% 0.005 250), oklch(16.5% 0.009 255));
+    --color-card: light-dark(oklch(100% 0 0), oklch(18% 0.01 255));
+    --color-sidebar: light-dark(oklch(96.4% 0.005 250), oklch(15.5% 0.009 255));
+    --color-hover: light-dark(oklch(94.4% 0.007 250), oklch(22.5% 0.012 255));
 
+    /* Typography & rules */
+    --color-ink: light-dark(oklch(19.5% 0.018 255), oklch(95.5% 0.005 250));
+    --color-ink-2: light-dark(oklch(35% 0.015 255), oklch(84% 0.009 250));
+    --color-muted: light-dark(oklch(46.5% 0.014 255), oklch(71% 0.011 250));
+    --color-faint: light-dark(oklch(53% 0.012 255), oklch(63% 0.011 250));
+    --color-control: light-dark(oklch(62% 0.013 250), oklch(54% 0.012 250));
+    --color-rule: light-dark(oklch(90.5% 0.008 250), oklch(25% 0.01 255));
+    --color-rule-2: light-dark(oklch(82% 0.011 250), oklch(36% 0.012 255));
+
+    /* Semantic statuses: calm forest green, warm amber, restrained crimson */
+    --color-success: light-dark(oklch(45% 0.115 158), oklch(72% 0.14 158));
+    --color-success-soft: light-dark(oklch(95.8% 0.025 158), oklch(24% 0.045 158));
+    --color-warning: light-dark(oklch(49% 0.115 68), oklch(77% 0.135 75));
+    --color-warning-soft: light-dark(oklch(96.4% 0.028 78), oklch(26% 0.045 75));
+    --color-danger: light-dark(oklch(49% 0.175 24), oklch(71% 0.155 24));
+    --color-danger-soft: light-dark(oklch(96% 0.018 24), oklch(25% 0.055 24));
+
+    /* File formats & solid badges */
+    --color-format-md: light-dark(oklch(43% 0.015 250), oklch(44% 0.014 250));
+    --color-format-pdf: oklch(50% 0.165 24);
+    --color-format-docx: oklch(46% 0.145 252);
+    --color-format-ink: oklch(99% 0.003 250);
+    --color-on-solid: light-dark(oklch(99% 0.003 250), oklch(15% 0.01 255));
+
+    /* Code blocks & dark chrome */
+    --color-graphite: light-dark(oklch(19% 0.014 255), oklch(11% 0.008 255));
+    --color-graphite-2: light-dark(oklch(26% 0.015 255), oklch(20% 0.011 255));
+    --color-graphite-rule: light-dark(oklch(33% 0.015 255), oklch(27% 0.012 255));
+    --color-graphite-ink: oklch(93% 0.006 250);
+    --color-graphite-muted: oklch(66% 0.012 250);
+    --color-focus: var(--color-accent);
+
+    /* Data visualization: institutional steel/ink blue series */
+    --color-series: light-dark(#2457a8, #6ea0f5);
+    --color-series-wash: color-mix(in oklch, var(--color-series) 10%, transparent);
+    --color-hub-file: light-dark(#2563ab, #5a9be8);
+    --color-hub-rule: light-dark(#c95826, #e07b4f);
+    --color-hub-document: light-dark(#187a58, #2aa377);
+    --color-hub-project: var(--color-ink-2);
+
+    /* Subtle hairline elevation for enterprise clarity */
+    --shadow-card: 0 1px 2px light-dark(oklch(20% 0.018 255 / 0.05), oklch(0% 0 0 / 0.28)),
+                   0 1px 1px light-dark(oklch(20% 0.018 255 / 0.03), transparent);
+    --shadow-btn: 0 1px 1px light-dark(oklch(20% 0.018 255 / 0.06), oklch(0% 0 0 / 0.22));
+    --shadow-pop: 0 10px 28px light-dark(oklch(20% 0.018 255 / 0.12), oklch(0% 0 0 / 0.5)),
+                  0 2px 6px light-dark(oklch(20% 0.018 255 / 0.06), oklch(0% 0 0 / 0.3));
+
+    --font-display: "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, sans-serif;
     --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
     --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 
@@ -54,8 +72,8 @@
     --text-sm: 0.875rem;
     --text-base: 0.9375rem;
     --text-md: 1rem;
-    --text-lg: 1.125rem;
-    --text-xl: 1.375rem;
+    --text-lg: 1.1875rem;
+    --text-xl: 1.4375rem;
     --text-2xl: clamp(1.5rem, 1.3rem + 0.8vw, 1.875rem);
 
     --space-3xs: 0.125rem;
@@ -76,53 +94,61 @@
     --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
     --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
     --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
-    --dur-fast: 100ms;
+    --dur-fast: 110ms;
     --dur-base: 180ms;
 
-    --sidebar-width: 15rem;
+    --sidebar-width: 15.25rem;
     --page-measure: 46rem;
     --gutter: clamp(1rem, 0.6rem + 1.4vw, 2rem);
 }
 
-/* Accents never touch --color-series or --color-hub-*: data colours stay fixed. The attribute also scopes a swatch. */
-:root, [data-accent="violet"] {
-    --color-accent: light-dark(oklch(50% 0.19 285), oklch(70% 0.14 288));
-    --color-accent-hover: light-dark(oklch(44% 0.19 285), oklch(77% 0.12 288));
-    --color-accent-ink: light-dark(oklch(99% 0.004 285), oklch(16% 0.03 288));
-    --color-accent-soft: light-dark(oklch(95% 0.024 288), oklch(27% 0.07 288));
-    --color-selected: light-dark(oklch(93% 0.02 288), oklch(25% 0.03 288));
+/* Default accent: Encre (deep institutional blue). Accents never touch --color-series or --color-hub-*. */
+:root, [data-accent="encre"], [data-accent="cobalt"] {
+    --color-accent: light-dark(oklch(44% 0.145 255), oklch(71% 0.125 250));
+    --color-accent-hover: light-dark(oklch(38% 0.14 255), oklch(78% 0.105 250));
+    --color-accent-ink: light-dark(oklch(99% 0.003 250), oklch(15% 0.025 255));
+    --color-accent-soft: light-dark(oklch(94.8% 0.022 252), oklch(26% 0.055 255));
+    --color-selected: light-dark(oklch(92.8% 0.018 252), oklch(24.5% 0.028 255));
 }
 
-[data-accent="cobalt"] {
-    --color-accent: light-dark(oklch(48% 0.155 255), oklch(72% 0.13 255));
-    --color-accent-hover: light-dark(oklch(42% 0.135 255), oklch(79% 0.1 255));
-    --color-accent-ink: light-dark(oklch(99% 0.004 255), oklch(16% 0.03 255));
-    --color-accent-soft: light-dark(oklch(95% 0.022 255), oklch(27% 0.06 255));
-    --color-selected: light-dark(oklch(93% 0.02 255), oklch(25% 0.03 255));
+[data-accent="ardoise"] {
+    --color-accent: light-dark(oklch(24% 0.016 255), oklch(90% 0.008 250));
+    --color-accent-hover: light-dark(oklch(17% 0.014 255), oklch(96% 0.004 250));
+    --color-accent-ink: light-dark(oklch(99% 0.002 250), oklch(16% 0.01 255));
+    --color-accent-soft: light-dark(oklch(93.5% 0.008 250), oklch(26% 0.012 255));
+    --color-selected: light-dark(oklch(92% 0.009 250), oklch(24.5% 0.012 255));
 }
 
 [data-accent="vert"] {
-    --color-accent: light-dark(oklch(45% 0.11 155), oklch(74% 0.15 155));
-    --color-accent-hover: light-dark(oklch(39% 0.095 155), oklch(81% 0.13 155));
-    --color-accent-ink: light-dark(oklch(99% 0.004 155), oklch(16% 0.03 155));
-    --color-accent-soft: light-dark(oklch(95% 0.03 155), oklch(27% 0.05 155));
-    --color-selected: light-dark(oklch(93% 0.02 155), oklch(25% 0.03 155));
+    --color-accent: light-dark(oklch(43% 0.105 158), oklch(73% 0.135 158));
+    --color-accent-hover: light-dark(oklch(37% 0.095 158), oklch(80% 0.12 158));
+    --color-accent-ink: light-dark(oklch(99% 0.004 158), oklch(16% 0.03 158));
+    --color-accent-soft: light-dark(oklch(95% 0.026 158), oklch(26% 0.048 158));
+    --color-selected: light-dark(oklch(93% 0.018 158), oklch(24.5% 0.028 158));
 }
 
 [data-accent="ambre"] {
-    --color-accent: light-dark(oklch(48% 0.1 70), oklch(78% 0.14 75));
-    --color-accent-hover: light-dark(oklch(42% 0.088 70), oklch(84% 0.12 75));
+    --color-accent: light-dark(oklch(47% 0.105 68), oklch(77% 0.135 75));
+    --color-accent-hover: light-dark(oklch(41% 0.092 68), oklch(83% 0.115 75));
     --color-accent-ink: light-dark(oklch(99% 0.004 75), oklch(16% 0.03 75));
-    --color-accent-soft: light-dark(oklch(95% 0.03 75), oklch(27% 0.05 75));
-    --color-selected: light-dark(oklch(93% 0.02 75), oklch(25% 0.03 75));
+    --color-accent-soft: light-dark(oklch(95% 0.028 75), oklch(26% 0.048 75));
+    --color-selected: light-dark(oklch(93% 0.02 75), oklch(24.5% 0.028 75));
+}
+
+[data-accent="violet"] {
+    --color-accent: light-dark(oklch(48% 0.17 282), oklch(70% 0.135 285));
+    --color-accent-hover: light-dark(oklch(42% 0.17 282), oklch(77% 0.115 285));
+    --color-accent-ink: light-dark(oklch(99% 0.004 282), oklch(16% 0.03 285));
+    --color-accent-soft: light-dark(oklch(95% 0.022 285), oklch(26% 0.06 285));
+    --color-selected: light-dark(oklch(93% 0.018 285), oklch(24.5% 0.028 285));
 }
 
 [data-accent="rose"] {
-    --color-accent: light-dark(oklch(50% 0.19 0), oklch(72% 0.15 0));
-    --color-accent-hover: light-dark(oklch(44% 0.175 0), oklch(79% 0.11 0));
+    --color-accent: light-dark(oklch(49% 0.175 0), oklch(72% 0.145 0));
+    --color-accent-hover: light-dark(oklch(43% 0.165 0), oklch(79% 0.11 0));
     --color-accent-ink: light-dark(oklch(99% 0.004 0), oklch(16% 0.03 0));
-    --color-accent-soft: light-dark(oklch(95% 0.024 0), oklch(27% 0.06 0));
-    --color-selected: light-dark(oklch(93% 0.02 0), oklch(25% 0.03 0));
+    --color-accent-soft: light-dark(oklch(95% 0.022 0), oklch(26% 0.055 0));
+    --color-selected: light-dark(oklch(93% 0.018 0), oklch(24.5% 0.028 0));
 }
 
 :root[data-text-size="large"] { font-size: 112.5%; }
@@ -130,7 +156,7 @@
 /* Written twice so the system preference works without the stored setting, and the reverse. */
 :root[data-contrast="more"] {
     --color-muted: var(--color-ink-2);
-    --color-faint: light-dark(oklch(46% 0.012 285), oklch(72% 0.012 285));
+    --color-faint: light-dark(oklch(45% 0.014 255), oklch(72% 0.012 250));
     --color-control: var(--color-ink-2);
     --color-rule-2: var(--color-faint);
     --rule-width: 1.5px;
@@ -141,7 +167,7 @@
 @media (prefers-contrast: more) {
     :root {
         --color-muted: var(--color-ink-2);
-        --color-faint: light-dark(oklch(46% 0.012 285), oklch(72% 0.012 285));
+        --color-faint: light-dark(oklch(45% 0.014 255), oklch(72% 0.012 250));
         --color-control: var(--color-ink-2);
         --color-rule-2: var(--color-faint);
         --rule-width: 1.5px;

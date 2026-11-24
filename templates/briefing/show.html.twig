@@ -13,7 +13,7 @@
     <form method="post" action="{{ path('project_briefing_generate', {slug: project.slug}) }}">
         <input type="hidden" name="_token" value="{{ briefing_token }}">
         <input type="hidden" name="period" value="{{ period }}">
-        <button class="button button--primary" type="submit"><twig:ux:icon name="lucide:wand-sparkles" />{{ 'briefing.generate'|trans }}</button>
+        <button class="button button--primary" type="submit"><twig:ux:icon name="lucide:file-text" />{{ 'briefing.generate'|trans }}</button>
     </form>
     {% if project.hasWebhook %}
         <form method="post" action="{{ path('project_briefing_send', {slug: project.slug}) }}">
@@ -71,7 +71,7 @@
     {% if narrative %}
         <section class="panel briefing-narrative" aria-labelledby="briefing-ai-title">
             <div class="panel__head">
-                <h2 id="briefing-ai-title"><twig:ux:icon name="lucide:wand-sparkles" />{{ 'briefing.ai_summary'|trans }}</h2>
+                <h2 id="briefing-ai-title"><twig:ux:icon name="lucide:file-text" />{{ 'briefing.ai_summary'|trans }}</h2>
             </div>
             <div class="prose">{{ narrative|markdown_to_html }}</div>
         </section>

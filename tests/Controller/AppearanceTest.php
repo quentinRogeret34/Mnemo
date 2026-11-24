@@ -17,7 +17,8 @@ final class AppearanceTest extends WebTestCase
 
         self::assertResponseIsSuccessful();
         self::assertCount(3, $crawler->filter('input[type="radio"][name="theme"]'));
-        self::assertCount(5, $crawler->filter('input[type="radio"][name="accent"]'));
+        self::assertCount(6, $crawler->filter('input[type="radio"][name="accent"]'));
+        self::assertSelectorExists('input[type="radio"][name="accent"][value="encre"][checked]');
         self::assertCount(1, $crawler->filter('input[type="checkbox"][name="contrast"]'));
         self::assertCount(2, $crawler->filter('input[type="radio"][name="text-size"]'));
         self::assertSelectorExists('.sidebar a[href="/settings/appearance"][aria-current="page"]');

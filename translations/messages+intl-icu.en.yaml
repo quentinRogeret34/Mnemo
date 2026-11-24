@@ -125,11 +125,13 @@ appearance:
     currently_light: '(currently light)'
     dark: Dark
     green: Green
+    ink: 'Ink blue'
     language: Language
     language_help: 'Saved for this session. Without a choice, the language of the browser is used.'
     language_submit: 'Change the language'
     lede: 'These settings are saved in this browser and apply at once. Without JavaScript, the interface follows the system preferences.'
     light: Light
+    slate: Slate
     system: System
     text_large: Large
     text_normal: Normal
