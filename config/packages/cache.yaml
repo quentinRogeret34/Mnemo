@@ -1,8 +1,8 @@
 framework:
     cache:
         # Share the application cache across web, worker and deployments inside PostgreSQL (table "cache_items").
-        app: cache.adapter.pdo
-        default_pdo_provider: doctrine.dbal.default_connection
+        app: cache.adapter.doctrine_dbal
+        default_doctrine_dbal_provider: doctrine.dbal.default_connection
 
 when@test:
     framework:
