@@ -5,9 +5,13 @@ namespace App\Rule;
 use App\Document\DocumentStorage;
 use App\Entity\Node;
 use App\Entity\Project;
+use App\Enum\MemoryType;
+use App\Enum\MemoryVisibility;
 use App\Enum\NodeType;
 use App\Graph\KnowledgeReader;
 use App\Llm\Chat;
+use App\Memory\MemoryStore;
+use App\Security\MemoryAccess;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
@@ -42,6 +46,8 @@ final class ShadowAreaDetector
         private readonly KnowledgeReader $knowledgeReader,
         private readonly DocumentStorage $documentStorage,
         private readonly EntityManagerInterface $entityManager,
+        private readonly MemoryStore $memoryStore,
+        private readonly MemoryAccess $memoryAccess,
     ) {
     }
 
@@ -111,18 +117,70 @@ final class ShadowAreaDetector
     }
 
     /**
-     * Removes one shadow area once the business answered it. Flushes.
+     * Resolves one shadow area. When a business answer is provided, archives the Q&A on the rule,
+     * optionally records a linked Decision memory (for AI agents via file_context) and enriches the statement. Flushes.
      */
-    public function resolve(Node $rule, int $index): void
-    {
+    public function resolve(
+        Node $rule,
+        int $index,
+        ?string $answer = null,
+        bool $saveDecision = false,
+        bool $appendStatement = false,
+        ?string $author = null,
+    ): ?Node {
         $metadata = $rule->getMetadata();
         if (!isset($metadata['shadow_areas'][$index])) {
-            return;
+            return null;
         }
 
+        $area = $metadata['shadow_areas'][$index];
         array_splice($metadata['shadow_areas'], $index, 1);
+
+        $answer = null === $answer ? '' : trim($answer);
+        $decisionMemory = null;
+
+        if ('' !== $answer) {
+            $answer = mb_substr($answer, 0, 1500);
+            $resolved = \is_array($metadata['resolved_shadow_areas'] ?? null) ? $metadata['resolved_shadow_areas'] : [];
+            $resolved[] = [
+                'category' => (string) ($area['category'] ?? 'other'),
+                'gap' => (string) ($area['gap'] ?? ''),
+                'question' => (string) ($area['question'] ?? ''),
+                'severity' => (string) ($area['severity'] ?? 'minor'),
+                'answer' => $answer,
+                'resolved_at' => (new \DateTimeImmutable())->format(\DATE_ATOM),
+                'resolved_by' => $author,
+            ];
+            $metadata['resolved_shadow_areas'] = $resolved;
+
+            if ($appendStatement) {
+                $currentStatement = trim((string) ($metadata['statement'] ?? ''));
+                $metadata['statement'] = '' === $currentStatement ? $answer : $currentStatement."\n".$answer;
+            }
+
+            if ($saveDecision) {
+                $text = mb_substr(\sprintf('%s (%s) : %s', $rule->getExternalId(), $rule->getLabel(), $answer), 0, 1000);
+                $project = $rule->getProject();
+                $projects = null === $project ? [] : [$project];
+                $decisionMemory = $this->memoryStore->findByText($text, $projects, MemoryVisibility::Project)
+                    ?? $this->memoryStore->add($text, MemoryType::Decision, 'shadow_answer', $this->memoryAccess->metadataFor(MemoryVisibility::Project));
+                if (null !== $project) {
+                    $decisionMemory->addProject($project);
+                }
+                $this->memoryStore->setAdr($decisionMemory, [
+                    'context' => trim(\sprintf('%s %s', (string) ($area['gap'] ?? ''), (string) ($area['question'] ?? ''))),
+                    'decision' => $answer,
+                    'alternatives' => '',
+                    'consequences' => '',
+                ]);
+                $this->memoryStore->link($decisionMemory, $rule);
+            }
+        }
+
         $rule->annotate($metadata);
         $this->entityManager->flush();
+
+        return $decisionMemory;
     }
 
     /**

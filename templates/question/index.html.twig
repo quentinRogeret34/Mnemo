@@ -1,0 +1,73 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ 'nav.questions'|trans }}{{ project ? ' · ' ~ project.name }}{% endblock %}
+
+{% block crumbs %}
+    {% if project %}
+        <a href="{{ path('project_show', {slug: project.slug}) }}">{{ project.name }}</a>
+        <span class="crumbs__sep" aria-hidden="true">/</span>
+    {% endif %}
+    <span class="crumbs__current">{{ 'nav.questions'|trans }}</span>
+{% endblock %}
+
+{% block body %}
+    {% set sev_labels = {blocker: 'rule.show.blocker', major: 'rule.show.major', minor: 'rule.show.minor'} %}
+    {% set route_name = project and return_to == 'project_questions' ? 'project_questions' : 'question_index' %}
+    {% set base_params = project ? (return_to == 'project_questions' ? {slug: project.slug} : {project: project.slug}) : {} %}
+
+    <div class="view-head">
+        <h1><twig:ux:icon name="lucide:triangle-alert" />{{ 'nav.questions'|trans }}</h1>
+        <span class="view-head__meta num">{{ questions|length }}</span>
+    </div>
+    <p class="page__lede">{{ 'question.lede'|trans }}</p>
+
+    <div class="filter-bar">
+        <nav class="tabs" aria-label="{{ 'question.filter_severity'|trans }}">
+            <a href="{{ path(route_name, base_params) }}" {% if severity is null %}aria-current="page"{% endif %}>{{ 'common.all'|trans }}</a>
+            {% for sev in severities %}
+                <a href="{{ path(route_name, base_params|merge({severity: sev})) }}" {% if severity == sev %}aria-current="page"{% endif %}>{{ sev_labels[sev]|trans }}</a>
+            {% endfor %}
+        </nav>
+        {% if return_to == 'questions' and projects is not empty %}
+            <form method="get" action="{{ path('question_index') }}" data-controller="autosubmit">
+                {% if severity %}<input type="hidden" name="severity" value="{{ severity }}">{% endif %}
+                <select class="select" name="project" aria-label="{{ 'memory.index.project'|trans }}" data-action="autosubmit#submit">
+                    <option value="">{{ 'nav.all_projects'|trans }}</option>
+                    {% for item in projects %}<option value="{{ item.slug }}" {{ project and project.id == item.id ? 'selected' }}>{{ item.name }}</option>{% endfor %}
+                </select>
+            </form>
+        {% endif %}
+    </div>
+
+    {% if questions is empty %}
+        <p class="block__empty">{{ 'question.empty'|trans }}</p>
+    {% else %}
+        <ul class="shadow-areas">
+            {% for item in questions %}
+                <li class="shadow-area shadow-area--{{ item.severity }}">
+                    <div class="shadow-area__head">
+                        <a class="code-chip" href="{{ path('rule_show', {slug: item.project_slug, code: item.rule_code}) }}">{{ item.rule_code }}</a>
+                        <strong>{{ item.rule_title }}</strong>
+                        {% if not project %}<span class="tag">{{ item.project_name }}</span>{% endif %}
+                        <span class="code-chip">{{ (categories[item.category] ?? item.category)|trans }}</span>
+                        <span class="shadow-area__severity">{{ (sev_labels[item.severity] ?? item.severity)|trans }}</span>
+                    </div>
+                    <p class="shadow-area__gap">{{ item.gap }}</p>
+                    {% if item.question %}<p class="shadow-area__question">{{ item.question }}</p>{% endif %}
+
+                    <form class="shadow-answer-form" method="post" action="{{ path('rule_shadow_resolve', {slug: item.project_slug, code: item.rule_code, index: item.area_index}) }}">
+                        <input type="hidden" name="_token" value="{{ csrf_token('rule-shadow-' ~ item.rule_id) }}">
+                        <input type="hidden" name="return_to" value="{{ return_to }}">
+                        <label class="visually-hidden" for="answer-{{ item.rule_id }}-{{ item.area_index }}">{{ 'rule.show.answer_label'|trans }}</label>
+                        <textarea class="input shadow-answer-form__input" id="answer-{{ item.rule_id }}-{{ item.area_index }}" name="answer" rows="2" maxlength="1500" placeholder="{{ 'rule.show.answer_placeholder'|trans }}" required></textarea>
+                        <div class="shadow-answer-form__foot">
+                            <label class="checkbox-field__label"><input type="checkbox" name="save_decision" value="1" checked><span>{{ 'rule.show.save_decision'|trans }}</span></label>
+                            <label class="checkbox-field__label"><input type="checkbox" name="append_statement" value="1"><span>{{ 'rule.show.append_statement'|trans }}</span></label>
+                            <button class="button button--primary" type="submit"><twig:ux:icon name="lucide:check" />{{ 'rule.show.answer_submit'|trans }}</button>
+                        </div>
+                    </form>
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+{% endblock %}

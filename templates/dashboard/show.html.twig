@@ -197,6 +197,9 @@
                                 {% endfor %}
                             </ul>
                         {% endif %}
+                        <div class="panel__foot">
+                            <a class="link" href="{{ project ? path('project_questions', {slug: project.slug}) : path('question_index') }}">{{ 'dashboard.business.see_questions'|trans }}</a>
+                        </div>
                     </section>
                 {% endif %}
 

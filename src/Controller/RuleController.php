@@ -4,10 +4,12 @@ namespace App\Controller;
 
 use App\Entity\Node;
 use App\Entity\Project;
+use App\Entity\User;
 use App\Enum\NodeType;
 use App\Graph\KnowledgeReader;
 use App\Llm\LlmUnavailable;
 use App\Pagination\Page;
+use App\Rule\RuleStore;
 use App\Rule\ShadowAreaDetector;
 use App\Rule\ShadowCategory;
 use Doctrine\ORM\EntityManagerInterface;
@@ -29,6 +31,7 @@ final class RuleController extends AbstractController
         private readonly KnowledgeReader $knowledgeReader,
         private readonly EntityManagerInterface $entityManager,
         private readonly ShadowAreaDetector $shadowAreaDetector,
+        private readonly RuleStore $ruleStore,
         private readonly LoggerInterface $logger,
     ) {
     }
@@ -46,6 +49,30 @@ final class RuleController extends AbstractController
             'status' => $status,
             'rules' => Page::ofRows($this->knowledgeReader->rules($project, $status, self::PAGE_SIZE, Page::offset($page, self::PAGE_SIZE)), $page, self::PAGE_SIZE),
         ]);
+    }
+
+    #[Route('/projects/{slug}/rules', name: 'rule_create', methods: ['POST'])]
+    public function create(#[MapEntity(mapping: ['slug' => 'slug'])] Project $project, Request $request): Response
+    {
+        if (!$this->isCsrfTokenValid('rule-new-'.$project->getId(), $request->getPayload()->getString('_token'))) {
+            throw new AccessDeniedHttpException('Invalid CSRF token.');
+        }
+        $payload = $request->getPayload();
+        $title = trim($payload->getString('title'));
+        $statement = trim($payload->getString('statement'));
+        $status = 'validated' === $payload->getString('status') ? 'validated' : 'to_review';
+
+        try {
+            $rule = $this->ruleStore->create($project, $title, $statement, $status, 'manual');
+        } catch (\InvalidArgumentException $exception) {
+            $this->addFlash('error', $exception->getMessage());
+
+            return $this->redirectToRoute('rule_index', ['slug' => $project->getSlug()]);
+        }
+
+        $this->addFlash('success', new TranslatableMessage('flash.rule.created', ['code' => $rule->getExternalId()]));
+
+        return $this->redirectToRoute('rule_show', ['slug' => $project->getSlug(), 'code' => $rule->getExternalId()]);
     }
 
     #[Route('/projects/{slug}/rules/{code}', name: 'rule_show', methods: ['GET'])]
@@ -88,7 +115,33 @@ final class RuleController extends AbstractController
     {
         $rule = $this->findRule($project, $code);
         $this->checkToken($rule, $request);
-        $this->shadowAreaDetector->resolve($rule, $index);
+        $payload = $request->getPayload();
+        $answer = trim($payload->getString('answer'));
+        $user = $this->getUser();
+        $author = $user instanceof User ? $user->getName() : ($user?->getUserIdentifier());
+
+        $decision = $this->shadowAreaDetector->resolve(
+            $rule,
+            $index,
+            '' === $answer ? null : $answer,
+            saveDecision: '' !== $answer && $payload->getBoolean('save_decision', true),
+            appendStatement: '' !== $answer && $payload->getBoolean('append_statement', false),
+            author: $author,
+        );
+
+        if (null !== $decision) {
+            $this->addFlash('success', new TranslatableMessage('flash.rule.shadow_answered_decision', ['id' => $decision->getId()]));
+        } elseif ('' !== $answer) {
+            $this->addFlash('success', new TranslatableMessage('flash.rule.shadow_answered'));
+        }
+
+        $returnTo = $payload->getString('return_to');
+        if ('questions' === $returnTo) {
+            return $this->redirectToRoute('question_index');
+        }
+        if ('project_questions' === $returnTo) {
+            return $this->redirectToRoute('project_questions', ['slug' => $project->getSlug()]);
+        }
 
         return $this->redirectToRoute('rule_show', ['slug' => $project->getSlug(), 'code' => $code, '_fragment' => 'shadow-title']);
     }

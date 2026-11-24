@@ -14,7 +14,7 @@
 {% block body %}
     <article class="page">
         <div class="page__icon"><span class="code-chip">{{ rule.externalId }}</span></div>
-        <h1 class="page__title">{{ rule.label }}</h1>
+        <h1 class="visually-hidden">{{ rule.label }}</h1>
 
         <dl class="props">
             <dt>{{ 'memory.index.status'|trans }}</dt>
@@ -26,60 +26,10 @@
                     <button class="button" type="submit">{{ ((meta.status ?? '') == 'validated' ? 'rule.show.unvalidate' : 'rule.show.validate')|trans }}</button>
                 </form>
             </dd>
-            <dt>{{ 'rule.show.sources'|trans }}</dt>
-            <dd>{% for source in sources %}<a class="tag" href="{{ path('document_show', {id: source.id}) }}"><span class="format format--{{ source.format }}">{{ source.format }}</span>{{ source.title }}</a>{% else %}<span class="row__sub">{{ 'document.props.none'|trans }}</span>{% endfor %}</dd>
-            <dt>{{ 'document.props.linked_code'|trans }}</dt><dd>{{ 'project.index.files'|trans({count: implementations|length}) }}</dd>
             {% if meta.demo ?? false %}<dt>{{ 'document.props.origin'|trans }}</dt><dd><span class="tag tag--demo">{{ 'common.demo'|trans }}</span></dd>{% endif %}
         </dl>
 
-        {% if meta.statement ?? null %}
-            <blockquote class="callout"><span class="callout__mark" aria-hidden="true"></span><p>{{ meta.statement }}</p></blockquote>
-        {% endif %}
-
-        <section class="block" aria-labelledby="impl-title">
-            <div class="block__head"><h2 id="impl-title">{{ 'rule.show.implemented_by'|trans }}</h2><span class="block__count">{{ implementations|length }}</span></div>
-            {% if implementations is empty %}
-                <p class="block__empty">{{ 'rule.show.no_file'|trans }}</p>
-            {% else %}
-                <ul class="list">
-                    {% for impl in implementations %}
-                        {% set parts = impl.path|split('/') %}
-                        <li>
-                            <a class="row" href="{{ path('file_show', {slug: project.slug, path: impl.path}) }}">
-                                <twig:ux:icon name="lucide:code" class="icon nav-item__icon" />
-                                <span class="row__title mono"><span>{{ parts|last }}</span><span class="row__sub">{{ parts|slice(0, -1)|join('/') }}</span></span>
-                                <span class="row__meta">
-                                    <span>{{ origins[impl.origin] ?? impl.origin }}</span>
-                                    <span class="conf conf--{{ impl.confidence|lower }}">{{ impl.confidence }}</span>
-                                </span>
-                            </a>
-                        </li>
-                    {% endfor %}
-                </ul>
-            {% endif %}
-        </section>
-
-        <section class="block" aria-labelledby="sources-title">
-            <div class="block__head"><h2 id="sources-title">{{ 'rule.source_documents'|trans }}</h2><span class="block__count">{{ sources|length }}</span></div>
-            {% if sources is empty %}
-                <p class="block__empty">{{ 'rule.show.no_document'|trans }}</p>
-            {% else %}
-                <ul class="list">
-                    {% for source in sources %}
-                        <li>
-                            <a class="row" href="{{ path('document_show', {id: source.id}) }}">
-                                <span class="format format--{{ source.format }}">{{ source.format }}</span>
-                                <span class="row__title"><span>{{ source.title }}</span></span>
-                                <span class="row__meta">
-                                    <span>{{ origins[source.origin] ?? source.origin }}</span>
-                                    <span class="conf conf--{{ source.confidence|lower }}">{{ source.confidence }}</span>
-                                </span>
-                            </a>
-                        </li>
-                    {% endfor %}
-                </ul>
-            {% endif %}
-        </section>
+        <twig:RuleEditor :rule="rule" />
 
         {% if mentions is not empty %}
             <section class="block" aria-labelledby="mentions-title">
@@ -97,6 +47,7 @@
         {% endif %}
 
         {% set areas = meta.shadow_areas ?? [] %}
+        {% set resolved_areas = meta.resolved_shadow_areas ?? [] %}
         <section class="block" aria-labelledby="shadow-title">
             <div class="block__head"><h2 id="shadow-title">{{ 'rule.show.shadow'|trans }}</h2><span class="block__count">{{ areas|length }}</span></div>
             {% if meta.shadow_checked_at is not defined %}
@@ -113,9 +64,15 @@
                             </div>
                             <p class="shadow-area__gap">{{ area.gap }}</p>
                             {% if area.question %}<p class="shadow-area__question">{{ area.question }}</p>{% endif %}
-                            <form method="post" action="{{ path('rule_shadow_resolve', {slug: project.slug, code: rule.externalId, index: loop.index0}) }}">
+                            <form class="shadow-answer-form" method="post" action="{{ path('rule_shadow_resolve', {slug: project.slug, code: rule.externalId, index: loop.index0}) }}">
                                 <input type="hidden" name="_token" value="{{ csrf_token('rule-shadow-' ~ rule.id) }}">
-                                <button class="button" type="submit">{{ 'rule.show.resolved'|trans }}</button>
+                                <label class="visually-hidden" for="shadow-answer-{{ loop.index0 }}">{{ 'rule.show.answer_label'|trans }}</label>
+                                <textarea class="input shadow-answer-form__input" id="shadow-answer-{{ loop.index0 }}" name="answer" rows="2" maxlength="1500" placeholder="{{ 'rule.show.answer_optional_placeholder'|trans }}"></textarea>
+                                <div class="shadow-answer-form__foot">
+                                    <label class="checkbox-field__label"><input type="checkbox" name="save_decision" value="1" checked><span>{{ 'rule.show.save_decision'|trans }}</span></label>
+                                    <label class="checkbox-field__label"><input type="checkbox" name="append_statement" value="1"><span>{{ 'rule.show.append_statement'|trans }}</span></label>
+                                    <button class="button" type="submit">{{ 'rule.show.resolved'|trans }}</button>
+                                </div>
                             </form>
                         </li>
                     {% endfor %}
@@ -126,6 +83,24 @@
                 <button class="button" type="submit">{{ (meta.shadow_checked_at is defined ? 'rule.show.reanalyse' : 'rule.show.analyse')|trans }}</button>
                 {% if meta.shadow_checked_at is defined %}<span class="row__sub">{{ 'rule.show.last_analysis'|trans({date: meta.shadow_checked_at|format_datetime('short', 'short')}) }}</span>{% endif %}
             </form>
+
+            {% if resolved_areas is not empty %}
+                <details class="shadow-resolved">
+                    <summary><twig:ux:icon name="lucide:history" />{{ 'rule.show.resolved_history'|trans({count: resolved_areas|length}) }}</summary>
+                    <ul class="shadow-resolved__list">
+                        {% for item in resolved_areas|reverse %}
+                            <li class="shadow-resolved__item">
+                                <p class="shadow-area__question">{{ item.question ?: item.gap }}</p>
+                                <p class="shadow-resolved__answer">{{ item.answer }}</p>
+                                <span class="row__sub">
+                                    {% if item.resolved_by ?? null %}{{ item.resolved_by }} · {% endif %}
+                                    {% if item.resolved_at ?? null %}<span class="num">{{ item.resolved_at|format_datetime('short', 'short') }}</span>{% endif %}
+                                </span>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </details>
+            {% endif %}
         </section>
 
         {{ include('memory/_about.html.twig', {memories: memories}) }}

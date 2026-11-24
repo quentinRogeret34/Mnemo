@@ -26,6 +26,7 @@
             {% if project %}
                 <a class="palette__option" role="option" tabindex="-1" href="{{ path('project_show', {slug: project.slug}) }}" data-palette-target="option"><twig:ux:icon name="lucide:file-text" />{{ 'nav.documents'|trans }}<span class="palette__hint">{{ project.name }}</span></a>
                 <a class="palette__option" role="option" tabindex="-1" href="{{ path('rule_index', {slug: project.slug}) }}" data-palette-target="option"><twig:ux:icon name="lucide:clipboard-check" />{{ 'nav.rules'|trans }}<span class="palette__hint">{{ project.name }}</span></a>
+                <a class="palette__option" role="option" tabindex="-1" href="{{ path('project_questions', {slug: project.slug}) }}" data-palette-target="option"><twig:ux:icon name="lucide:triangle-alert" />{{ 'nav.questions'|trans }}<span class="palette__hint">{{ project.name }}</span></a>
                 <a class="palette__option" role="option" tabindex="-1" href="{{ path('project_code', {slug: project.slug}) }}" data-palette-target="option"><twig:ux:icon name="lucide:code" />{{ 'nav.code'|trans }}<span class="palette__hint">{{ project.name }}</span></a>
                 <a class="palette__option" role="option" tabindex="-1" href="{{ path('project_chat', {slug: project.slug}) }}" data-palette-target="option"><twig:ux:icon name="lucide:message-circle" />{{ 'nav.assistant'|trans }}<span class="palette__hint">{{ project.name }}</span></a>
                 <a class="palette__option" role="option" tabindex="-1" href="{{ path('agent_asset_index', {slug: project.slug}) }}" data-palette-target="option"><twig:ux:icon name="lucide:wand-sparkles" />{{ 'nav.agent_assets'|trans }}<span class="palette__hint">{{ project.name }}</span></a>
@@ -37,6 +38,7 @@
             <a class="palette__option" role="option" tabindex="-1" href="{{ path('memory_index', scope) }}" data-palette-target="option"><twig:ux:icon name="lucide:lightbulb" />{{ 'nav.memories'|trans }}</a>
             <a class="palette__option" role="option" tabindex="-1" href="{{ path('memory_graph', scope) }}" data-palette-target="option"><twig:ux:icon name="lucide:network" />{{ 'nav.memory_graph'|trans }}</a>
             <a class="palette__option" role="option" tabindex="-1" href="{{ path('proposal_index', scope) }}" data-palette-target="option"><twig:ux:icon name="lucide:check" />{{ 'nav.to_review'|trans }}</a>
+            <a class="palette__option" role="option" tabindex="-1" href="{{ path('question_index', scope) }}" data-palette-target="option"><twig:ux:icon name="lucide:triangle-alert" />{{ 'nav.questions'|trans }}</a>
             {% if not project %}
                 <a class="palette__option" role="option" tabindex="-1" href="{{ path('chat') }}" data-palette-target="option"><twig:ux:icon name="lucide:message-circle" />{{ 'nav.assistant'|trans }}</a>
             {% endif %}

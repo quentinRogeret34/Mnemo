@@ -95,7 +95,7 @@
                 <h2 class="doc-aside__title" id="props-title">{{ ux_icon('lucide:info') }}{{ 'document.properties'|trans }}</h2>
                 <dl class="kv">
                     <div class="kv__group">
-                        <div class="kv__row"><dt>{{ 'memory.index.source'|trans }}</dt><dd>{{ meta.source in ['manual', 'demo', 'learn', 'aidd', 'mcp', 'connector', 'chat'] ? ('memory.source.' ~ meta.source)|trans : meta.source }}{% if (meta.demo ?? false) and meta.source != 'demo' %} <span class="tag tag--demo">{{ 'common.demo'|trans }}</span>{% endif %}</dd></div>
+                        <div class="kv__row"><dt>{{ 'memory.index.source'|trans }}</dt><dd>{{ meta.source in ['manual', 'demo', 'learn', 'aidd', 'mcp', 'connector', 'chat', 'shadow_answer'] ? ('memory.source.' ~ meta.source)|trans : meta.source }}{% if (meta.demo ?? false) and meta.source != 'demo' %} <span class="tag tag--demo">{{ 'common.demo'|trans }}</span>{% endif %}</dd></div>
                         {% if meta.learned_from is defined %}<div class="kv__row"><dt>{{ 'memory.show.learned_from'|trans }}</dt><dd>{{ meta.learned_from.kind }} « {{ meta.learned_from.label }} »</dd></div>{% endif %}
                     </div>
                     {% if meta.evidence is defined %}

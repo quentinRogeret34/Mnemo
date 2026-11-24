@@ -383,6 +383,7 @@ dashboard:
         rules: 'Business rules'
         rules_sub: '{validated} validated · {to_review} to review'
         see_documents: 'See documents'
+        see_questions: 'Answer open questions'
         see_rules: 'See business rules'
         shadow_blockers: '{count, plural, =0 {no blocker} one {# blocker} other {# blockers}}'
         shadow_open: 'Open blind spots'
@@ -705,6 +706,9 @@ flash:
         applied_memory: 'Proposal applied: “{memory}”.'
         rejected: 'Proposal rejected.'
     rule:
+        created: 'Rule {code} created.'
+        shadow_answered: 'Business answer saved and archived on the rule.'
+        shadow_answered_decision: 'Answer saved: decision #{id} recorded for AI agents.'
         shadow_areas: '{count, plural, =0 {No blind spot found.} one {# blind spot found.} other {# blind spots found.}}'
         unvalidated: 'Rule back to review.'
         validated: 'Rule validated: it joins the project memory given to the agents.'
@@ -1004,6 +1008,7 @@ memory:
         learn: 'extracted by an LLM'
         manual: 'entered by hand'
         mcp: 'agent (MCP)'
+        shadow_answer: 'business answer'
     tag:
         group: group
         private: private
@@ -1051,6 +1056,7 @@ nav:
     overview: Overview
     project_settings: 'Project settings'
     projects: Projects
+    questions: 'Business questions'
     rules: 'Business rules'
     settings: Settings
     sidebar: 'Primary navigation'
@@ -1202,13 +1208,29 @@ proposal:
     updates: Updates
     verdict_label: Verdict
     why: Why
+question:
+    empty: 'No open business question. Questions appear whenever a blind-spot analysis detects an ambiguity on a rule.'
+    filter_severity: 'Filter by severity'
+    lede: 'Ambiguities detected on your business rules awaiting clarification. Every answer is archived and can become a decision shared with developers and their AI agents.'
 rule:
+    editor:
+        link_code: 'Link a code file…'
+        link_doc: 'Link a source document…'
+        saved: 'Rule saved.'
+        statement: 'Rule statement'
+        statement_placeholder: 'Describe the expected business rule, its thresholds and exceptions…'
+        title: 'Rule title'
     index:
         drop_documents: 'Drop documents'
         empty: 'No business rule'
         empty_text: "Rules come from extracting the project's business documents."
         files_title: 'Linked files, verified ones included'
         filter_status: 'Filter by status'
+        new: 'New rule'
+        new_submit: 'Create rule'
+        new_text: 'Add a business rule to the project: it gets an automatic RG code and can be linked to code files and documents.'
+        new_title: 'New business rule'
+        new_title_placeholder: 'e.g. Discount capped at 10%'
         none_in_status: 'No rule in this status.'
         shadow_count: '{count, plural, one {# blind spot} other {# blind spots}}'
         shadow_title: 'Blind spots to clear with the business'
@@ -1216,6 +1238,11 @@ rule:
         verified_count: '{count} verified'
     show:
         analyse: Analyse
+        answer_label: 'Business answer'
+        answer_optional_placeholder: 'Business answer (optional): clarify the expected behaviour…'
+        answer_placeholder: 'Enter the expected business answer…'
+        answer_submit: 'Save answer'
+        append_statement: 'Append to rule statement'
         blocker: Blocker
         implemented_by: 'Implemented by'
         last_analysis: 'Last analysis on {date}; analysing again replaces the list.'
@@ -1227,6 +1254,8 @@ rule:
         no_file: 'No code file linked to this rule.'
         reanalyse: 'Analyse again'
         resolved: Resolved
+        resolved_history: '{count, plural, one {# archived business answer} other {# archived business answers}}'
+        save_decision: 'Save as decision for AI agents'
         shadow: 'Blind spots'
         sources: Sources
         unvalidate: 'Back to review'

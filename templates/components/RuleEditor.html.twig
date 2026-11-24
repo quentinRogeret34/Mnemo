@@ -1,0 +1,117 @@
+{% set project = rule.project %}
+{% set origins = {human: 'document.props.human'|trans, llm: 'LLM', ast: 'AST', git: 'git', api: 'API'} %}
+
+<div{{ attributes.defaults({class: 'rule-editor'}) }}>
+    <div class="rule-editor__fields">
+        <label class="visually-hidden" for="rule-title-input">{{ 'rule.editor.title'|trans }}</label>
+        <input
+            id="rule-title-input"
+            class="rule-editor__title"
+            type="text"
+            maxlength="255"
+            data-model="on(input)|debounce(200)|title"
+            value="{{ title }}"
+            aria-label="{{ 'rule.editor.title'|trans }}"
+        >
+
+        <label class="visually-hidden" for="rule-statement-input">{{ 'rule.editor.statement'|trans }}</label>
+        <textarea
+            id="rule-statement-input"
+            class="rule-editor__statement"
+            rows="3"
+            maxlength="2000"
+            placeholder="{{ 'rule.editor.statement_placeholder'|trans }}"
+            data-model="on(input)|debounce(200)|statement"
+        >{{ statement }}</textarea>
+
+        {% if error %}<p class="form-errors" role="alert">{{ error }}</p>{% endif %}
+
+        {% if this.dirty %}
+            <div class="memory-editor__save">
+                <button type="button" class="button button--primary" data-action="live#action" data-live-action-param="save" data-loading="action(save)|addAttribute(disabled)">{{ 'common.save'|trans }}</button>
+                <button type="button" class="button" data-action="live#action" data-live-action-param="reset" data-loading="action(save)|addAttribute(disabled)">{{ 'common.cancel'|trans }}</button>
+            </div>
+        {% elseif saved %}
+            <p class="row__sub memory-editor__saved" role="status">{{ ux_icon('lucide:check') }}{{ 'rule.editor.saved'|trans }}</p>
+        {% endif %}
+    </div>
+
+    <section class="block" aria-labelledby="impl-title">
+        <div class="block__head"><h2 id="impl-title">{{ 'rule.show.implemented_by'|trans }}</h2><span class="block__count">{{ this.implementations|length }}</span></div>
+        {% if this.implementations is empty %}
+            <p class="block__empty">{{ 'rule.show.no_file'|trans }}</p>
+        {% else %}
+            <ul class="list">
+                {% for impl in this.implementations %}
+                    {% set parts = impl.path|split('/') %}
+                    <li class="row rule-link-row">
+                        <a class="rule-link-row__main" href="{{ path('file_show', {slug: project.slug, path: impl.path}) }}">
+                            <twig:ux:icon name="lucide:code" class="icon nav-item__icon" />
+                            <span class="row__title mono"><span>{{ parts|last }}</span><span class="row__sub">{{ parts|slice(0, -1)|join('/') }}</span></span>
+                        </a>
+                        <span class="row__meta">
+                            <span>{{ origins[impl.origin] ?? impl.origin }}</span>
+                            <span class="conf conf--{{ impl.confidence|lower }}">{{ impl.confidence }}</span>
+                            <button type="button" class="icon-button" aria-label="{{ 'document.props.unlink'|trans({path: impl.path}) }}"
+                                    data-action="live#action" data-live-action-param="unlinkCode" data-live-edge-id-param="{{ impl.edge_id }}">×</button>
+                        </span>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+        <span class="link-search rule-editor__search">
+            <input class="input" type="search" data-model="debounce(150)|codeQuery" value="{{ codeQuery }}"
+                   placeholder="{{ 'rule.editor.link_code'|trans }}" aria-label="{{ 'rule.editor.link_code'|trans }}" autocomplete="off" spellcheck="false">
+            {% if this.codeCandidates is not empty %}
+                <ul class="link-search__results">
+                    {% for item in this.codeCandidates %}
+                        <li>
+                            <button type="button" class="link-search__item" data-action="live#action" data-live-action-param="linkCode" data-live-node-id-param="{{ item.id }}">
+                                <span class="mono">{{ item.path }}</span>
+                            </button>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        </span>
+    </section>
+
+    <section class="block" aria-labelledby="sources-title">
+        <div class="block__head"><h2 id="sources-title">{{ 'rule.source_documents'|trans }}</h2><span class="block__count">{{ this.sources|length }}</span></div>
+        {% if this.sources is empty %}
+            <p class="block__empty">{{ 'rule.show.no_document'|trans }}</p>
+        {% else %}
+            <ul class="list">
+                {% for source in this.sources %}
+                    <li class="row rule-link-row">
+                        <a class="rule-link-row__main" href="{{ path('document_show', {id: source.id}) }}">
+                            <span class="format format--{{ source.format }}">{{ source.format }}</span>
+                            <span class="row__title"><span>{{ source.title }}</span></span>
+                        </a>
+                        <span class="row__meta">
+                            <span>{{ origins[source.origin] ?? source.origin }}</span>
+                            <span class="conf conf--{{ source.confidence|lower }}">{{ source.confidence }}</span>
+                            <button type="button" class="icon-button" aria-label="{{ 'document.props.unlink'|trans({path: source.title}) }}"
+                                    data-action="live#action" data-live-action-param="unlinkDocument" data-live-edge-id-param="{{ source.edge_id }}">×</button>
+                        </span>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+        <span class="link-search rule-editor__search">
+            <input class="input" type="search" data-model="debounce(150)|docQuery" value="{{ docQuery }}"
+                   placeholder="{{ 'rule.editor.link_doc'|trans }}" aria-label="{{ 'rule.editor.link_doc'|trans }}" autocomplete="off" spellcheck="false">
+            {% if this.documentCandidates is not empty %}
+                <ul class="link-search__results">
+                    {% for item in this.documentCandidates %}
+                        <li>
+                            <button type="button" class="link-search__item" data-action="live#action" data-live-action-param="linkDocument" data-live-node-id-param="{{ item.id }}">
+                                <span><span class="format format--{{ item.format }}">{{ item.format }}</span> {{ item.label }}</span>
+                            </button>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        </span>
+    </section>
+</div>

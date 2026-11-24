@@ -383,6 +383,7 @@ dashboard:
         rules: 'Règles métier'
         rules_sub: '{validated} validées · {to_review} à valider'
         see_documents: 'Voir les documents'
+        see_questions: 'Répondre aux questions'
         see_rules: 'Voir les règles métier'
         shadow_blockers: '{count, plural, =0 {aucun bloquant} one {# bloquant} other {# bloquants}}'
         shadow_open: 'Zones d’ombre'
@@ -705,6 +706,9 @@ flash:
         applied_memory: 'Proposition appliquée : « {memory} ».'
         rejected: 'Proposition rejetée.'
     rule:
+        created: 'Règle {code} créée.'
+        shadow_answered: 'Réponse métier enregistrée et archivée sur la règle.'
+        shadow_answered_decision: 'Réponse enregistrée : décision #{id} ajoutée pour les agents.'
         shadow_areas: "{count, plural, =0 {Aucune zone d'ombre trouvée.} one {# zone d'ombre trouvée.} other {# zones d'ombre trouvées.}}"
         unvalidated: 'Règle remise à valider.'
         validated: 'Règle validée : elle rejoint la mémoire du projet donnée aux agents.'
@@ -1004,6 +1008,7 @@ memory:
         learn: 'extraite par LLM'
         manual: 'saisie manuelle'
         mcp: 'agent (MCP)'
+        shadow_answer: 'réponse métier'
     tag:
         group: groupe
         private: privée
@@ -1051,6 +1056,7 @@ nav:
     overview: Aperçu
     project_settings: 'Réglages du projet'
     projects: Projets
+    questions: 'Questions métier'
     rules: 'Règles métier'
     settings: Réglages
     sidebar: 'Navigation principale'
@@ -1202,13 +1208,29 @@ proposal:
     updates: 'Met à jour'
     verdict_label: Verdict
     why: Pourquoi
+question:
+    empty: "Aucune question métier ouverte. Les questions apparaissent dès qu'une analyse des zones d'ombre détecte une ambiguïté sur une règle."
+    filter_severity: 'Filtrer par gravité'
+    lede: "Ambiguïtés détectées sur vos règles métier en attente de clarification. Chaque réponse est archivée et peut devenir une décision partagée avec les développeurs et leurs agents IA."
 rule:
+    editor:
+        link_code: 'Lier un fichier de code…'
+        link_doc: 'Lier un document source…'
+        saved: 'Règle enregistrée.'
+        statement: 'Énoncé de la règle'
+        statement_placeholder: 'Décrire la règle métier attendue, ses seuils et ses exceptions…'
+        title: 'Titre de la règle'
     index:
         drop_documents: 'Déposer des documents'
         empty: 'Aucune règle métier'
         empty_text: "Les règles viennent de l'extraction des documents métier du projet."
         files_title: 'Fichiers liés, dont vérifiés'
         filter_status: 'Filtrer par statut'
+        new: 'Nouvelle règle'
+        new_submit: 'Créer la règle'
+        new_text: 'Ajoutez une règle métier au projet : elle reçoit un identifiant RG automatique et pourra être reliée au code et aux documents.'
+        new_title: 'Nouvelle règle métier'
+        new_title_placeholder: 'ex. Remise plafonnée à 10 %'
         none_in_status: 'Aucune règle dans ce statut.'
         shadow_count: "{count, plural, one {# zone d'ombre} other {# zones d'ombre}}"
         shadow_title: "Zones d'ombre à lever avec le métier"
@@ -1216,6 +1238,11 @@ rule:
         verified_count: '{count, plural, one {# vérifié} other {# vérifiés}}'
     show:
         analyse: Analyser
+        answer_label: 'Réponse métier'
+        answer_optional_placeholder: 'Réponse métier (optionnelle) : clarifier le comportement attendu…'
+        answer_placeholder: 'Saisir la réponse métier attendue…'
+        answer_submit: 'Enregistrer la réponse'
+        append_statement: "Ajouter à l'énoncé de la règle"
         blocker: Bloquant
         implemented_by: 'Implémentée par'
         last_analysis: 'Dernière analyse le {date} ; réanalyser remplace la liste.'
@@ -1227,6 +1254,8 @@ rule:
         no_file: 'Aucun fichier de code relié à cette règle.'
         reanalyse: Réanalyser
         resolved: Résolue
+        resolved_history: '{count, plural, one {# réponse métier archivée} other {# réponses métier archivées}}'
+        save_decision: 'Enregistrer comme décision pour les agents IA'
         shadow: "Zones d'ombre"
         sources: Sources
         unvalidate: 'Remettre à valider'

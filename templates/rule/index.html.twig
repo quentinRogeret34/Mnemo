@@ -12,6 +12,10 @@
     <div class="view-head">
         <h1><twig:ux:icon name="lucide:clipboard-check" />{{ 'nav.rules'|trans }}</h1>
         <span class="view-head__meta">{{ rules.total }}</span>
+        <div class="view-head__actions">
+            <a class="button" href="{{ path('project_questions', {slug: project.slug}) }}"><twig:ux:icon name="lucide:triangle-alert" />{{ 'nav.questions'|trans }}</a>
+            <button class="button button--primary" type="button" commandfor="rule-new" command="show-modal"><twig:ux:icon name="lucide:plus" />{{ 'rule.index.new'|trans }}</button>
+        </div>
     </div>
 
     <nav class="tabs" aria-label="{{ 'rule.index.filter_status'|trans }}">
@@ -51,4 +55,31 @@
         </ul>
     {% endif %}
     {{ include('_pager.html.twig', {page: rules}) }}
+
+    <dialog class="dialog" id="rule-new" closedby="any" aria-labelledby="rule-new-title">
+        <h2 class="dialog__title" id="rule-new-title">{{ 'rule.index.new_title'|trans }}</h2>
+        <p class="dialog__text">{{ 'rule.index.new_text'|trans }}</p>
+        <form method="post" action="{{ path('rule_create', {slug: project.slug}) }}" class="form-stack">
+            <input type="hidden" name="_token" value="{{ csrf_token('rule-new-' ~ project.id) }}">
+            <div>
+                <label for="rule-new-label">{{ 'rule.editor.title'|trans }}</label>
+                <input id="rule-new-label" class="input" type="text" name="title" maxlength="255" placeholder="{{ 'rule.index.new_title_placeholder'|trans }}" required>
+            </div>
+            <div>
+                <label for="rule-new-statement">{{ 'rule.editor.statement'|trans }}</label>
+                <textarea id="rule-new-statement" class="input" name="statement" rows="4" maxlength="2000" placeholder="{{ 'rule.editor.statement_placeholder'|trans }}" required></textarea>
+            </div>
+            <div>
+                <label for="rule-new-status">{{ 'memory.index.status'|trans }}</label>
+                <select id="rule-new-status" class="select" name="status">
+                    <option value="to_review">{{ 'nav.to_review'|trans }}</option>
+                    <option value="validated">{{ 'rule.validated'|trans }}</option>
+                </select>
+            </div>
+            <div class="dialog__actions">
+                <button class="button" type="button" commandfor="rule-new" command="close">{{ 'common.cancel'|trans }}</button>
+                <button class="button button--primary" type="submit">{{ 'rule.index.new_submit'|trans }}</button>
+            </div>
+        </form>
+    </dialog>
 {% endblock %}
