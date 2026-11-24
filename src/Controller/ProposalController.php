@@ -71,6 +71,9 @@ final class ProposalController extends AbstractController
             'keep' => $payload->has('keep') ? $payload->getInt('keep') : null,
             'title' => $payload->has('title') ? $payload->getString('title') : null,
             'statement' => $payload->has('statement') ? $payload->getString('statement') : null,
+            'name' => $payload->has('name') ? $payload->getString('name') : null,
+            'description' => $payload->has('description') ? $payload->getString('description') : null,
+            'content' => $payload->has('content') ? $payload->getString('content') : null,
         ], static fn (mixed $value): bool => null !== $value);
 
         try {
@@ -82,6 +85,7 @@ final class ProposalController extends AbstractController
         }
 
         $flash = match (true) {
+            ProposalKind::SkillUpdate === $proposal->getKind() => new TranslatableMessage('flash.proposal.applied_skill', ['name' => (string) ($proposal->getPayload()['applied_asset_name'] ?? $proposal->getPayload()['name'] ?? '')]),
             null === $applied => new TranslatableMessage('flash.proposal.applied'),
             NodeType::BusinessRule === $applied->getType() => new TranslatableMessage('flash.proposal.applied_rule', ['code' => $applied->getExternalId(), 'title' => $applied->getLabel()]),
             default => new TranslatableMessage('flash.proposal.applied_memory', ['memory' => $applied->getLabel()]),

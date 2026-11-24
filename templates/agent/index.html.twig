@@ -9,6 +9,10 @@
 {% endblock %}
 
 {% block header_actions %}
+    <form method="post" action="{{ path('agent_asset_propose', {slug: project.slug}) }}">
+        <input type="hidden" name="_token" value="{{ csrf_token('agent-asset-propose-' ~ project.id) }}">
+        <button class="button" type="submit"><twig:ux:icon name="lucide:wand-sparkles" />{{ 'agent.propose'|trans }}</button>
+    </form>
     <a class="button button--primary" href="{{ path('agent_asset_new', {slug: project.slug}) }}"><twig:ux:icon name="lucide:plus" />{{ 'common.add'|trans }}</a>
 {% endblock %}
 

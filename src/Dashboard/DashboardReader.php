@@ -163,7 +163,7 @@ final class DashboardReader
         return array_map(
             static fn (array $row): array => ['id' => (int) $row['id']] + $row,
             $this->connection->fetchAllAssociative(
-                "SELECT p.id, p.kind, COALESCE(p.payload->>'lesson', p.payload->>'title', p.payload->>'memory_text', p.payload->>'a_text', p.payload->>'target_text') AS text, p.created_at
+                "SELECT p.id, p.kind, COALESCE(p.payload->>'lesson', p.payload->>'title', p.payload->>'name', p.payload->>'memory_text', p.payload->>'a_text', p.payload->>'target_text') AS text, p.created_at
                  FROM proposal p WHERE p.status = 'pending' AND (CAST(:project AS int) IS NULL OR p.project_id = :project)
                  ORDER BY p.created_at DESC, p.id DESC LIMIT $limit",
                 ['project' => $project?->getId()],

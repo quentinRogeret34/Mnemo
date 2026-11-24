@@ -2,10 +2,14 @@
 
 namespace App\Controller;
 
+use App\Agent\SkillEvolutionAdvisor;
 use App\Entity\AgentAsset;
 use App\Entity\Project;
+use App\Enum\ProposalKind;
 use App\Form\AgentAssetType;
+use App\Llm\LlmUnavailable;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Bridge\Doctrine\Attribute\MapEntity;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -22,6 +26,8 @@ final class AgentAssetController extends AbstractController
 {
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
+        private readonly SkillEvolutionAdvisor $skillEvolutionAdvisor,
+        private readonly LoggerInterface $logger,
     ) {
     }
 
@@ -50,6 +56,37 @@ final class AgentAssetController extends AbstractController
         }
 
         return $this->render('agent/edit.html.twig', ['project' => $project, 'asset' => $asset, 'form' => $form], new Response(status: $form->isSubmitted() ? Response::HTTP_UNPROCESSABLE_ENTITY : Response::HTTP_OK));
+    }
+
+    #[Route('/projects/{slug}/agent-assets/propose', name: 'agent_asset_propose', methods: ['POST'])]
+    public function propose(#[MapEntity(mapping: ['slug' => 'slug'])] Project $project, Request $request): Response
+    {
+        if (!$this->isCsrfTokenValid('agent-asset-propose-'.$project->getId(), $request->getPayload()->getString('_token'))) {
+            throw new AccessDeniedHttpException('Invalid CSRF token.');
+        }
+
+        try {
+            $report = $this->skillEvolutionAdvisor->advise($project);
+        } catch (LlmUnavailable|\UnexpectedValueException $exception) {
+            $this->addFlash('error', $exception instanceof LlmUnavailable ? $exception->translatable() : $exception->getMessage());
+
+            return $this->redirectToRoute('agent_asset_index', ['slug' => $project->getSlug()]);
+        } catch (\Throwable $exception) {
+            $this->logger->error('Skill evolution proposal failed for project {slug}: {message}', ['slug' => $project->getSlug(), 'message' => $exception->getMessage(), 'exception' => $exception]);
+            $this->addFlash('error', new TranslatableMessage('flash.llm.error', ['error' => $exception->getMessage()]));
+
+            return $this->redirectToRoute('agent_asset_index', ['slug' => $project->getSlug()]);
+        }
+
+        if ($report['proposed'] > 0) {
+            $this->addFlash('success', new TranslatableMessage('flash.agent_asset.proposed', ['count' => $report['proposed']]));
+
+            return $this->redirectToRoute('proposal_index', ['project' => $project->getSlug(), 'kind' => ProposalKind::SkillUpdate->value]);
+        }
+
+        $this->addFlash('success', new TranslatableMessage('flash.agent_asset.proposed_none'));
+
+        return $this->redirectToRoute('agent_asset_index', ['slug' => $project->getSlug()]);
     }
 
     #[Route('/projects/{slug}/agent-assets/{id}/delete', name: 'agent_asset_delete', requirements: ['id' => '\d+'], methods: ['POST'])]

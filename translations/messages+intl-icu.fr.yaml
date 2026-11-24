@@ -68,6 +68,7 @@ agent:
     lede: "Skills, commandes et sous-agents du projet. Le plugin les écrit dans le dossier {folder} de chaque Claude Code connecté au projet, au début de ses sessions, et retire ceux qui sont supprimés ici. Un fichier local du même nom n'est jamais écrasé."
     new: 'Nouveau skill'
     new_long: 'Nouveau skill, commande ou sous-agent'
+    propose: 'Proposer des évolutions IA'
     updated: Modifié
 app:
     name: Mnemo
@@ -586,6 +587,7 @@ enum:
         learning: Apprentissage
         refuted: 'Mémoire réfutée'
         rule_draft: 'Règle métier'
+        skill_update: 'Skill agent'
     shadow_category:
         ambiguous_term: 'Terme ambigu'
         missing_acceptance_criterion: "Critère d'acceptation manquant"
@@ -648,6 +650,8 @@ flash:
         user_updated: 'Compte de {name} mis à jour.'
     agent_asset:
         deleted: '« {name} » supprimé : son fichier est retiré des agents connectés à leur prochaine session.'
+        proposed: '{count, plural, one {# proposition de skill ajoutée à valider.} other {# propositions de skills ajoutées à valider.}}'
+        proposed_none: 'Aucune évolution de skill à proposer pour le moment.'
         saved: '{kind} « {name} » enregistré : les agents connectés le reçoivent à leur prochaine session.'
     api_key:
         revoked: 'Clé « {name} » révoquée.'
@@ -712,6 +716,7 @@ flash:
         applied: 'Proposition appliquée.'
         applied_memory: 'Proposition appliquée : « {memory} ».'
         applied_rule: 'Règle {code} validée et créée : « {title} ».'
+        applied_skill: 'Skill « {name} » appliqué : les agents connectés le recevront à leur prochaine session.'
         rejected: 'Proposition rejetée.'
     rule:
         created: 'Règle {code} créée.'
@@ -1179,6 +1184,7 @@ project:
 proposal:
     apply: Appliquer
     apply_rule: 'Valider et créer la règle'
+    apply_skill: 'Appliquer ce skill'
     archives: 'Archive :'
     axes: 'durabilité {durability}, réutilisation {reuse}, adéquation {fit}, risque {risk}'
     empty: "Rien à valider. Les propositions arrivent avec {command}, l'outil MCP {tool}, l'extraction de règles depuis les documents, le jardinage et la vérification des mémoires."
@@ -1209,6 +1215,10 @@ proposal:
     retract_memory: 'Retirer la mémoire'
     retracts: Retire
     score_label: Score
+    skill:
+        action_create: 'Nouveau skill'
+        action_update: 'Mise à jour'
+        previous: 'Voir le contenu actuel'
     source:
         conversation: conversation
         diff: diff

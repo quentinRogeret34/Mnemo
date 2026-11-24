@@ -68,6 +68,7 @@ agent:
     lede: 'Skills, commands and subagents of the project. The plugin writes them into the {folder} folder of every Claude Code connected to the project, at the start of its sessions, and removes those deleted here. A local file of the same name is never overwritten.'
     new: 'New skill'
     new_long: 'New skill, command or subagent'
+    propose: 'Propose AI updates'
     updated: Updated
 app:
     name: Mnemo
@@ -586,6 +587,7 @@ enum:
         learning: Learning
         refuted: 'Refuted memory'
         rule_draft: 'Business rule'
+        skill_update: 'Agent skill'
     shadow_category:
         ambiguous_term: 'Ambiguous term'
         missing_acceptance_criterion: 'Missing acceptance criterion'
@@ -648,6 +650,8 @@ flash:
         user_updated: 'Account of {name} updated.'
     agent_asset:
         deleted: '“{name}” deleted: its file is removed from the connected agents at their next session.'
+        proposed: '{count, plural, one {# skill update queued for review.} other {# skill updates queued for review.}}'
+        proposed_none: 'No skill update to propose right now.'
         saved: '{kind} “{name}” saved: the connected agents get it at their next session.'
     api_key:
         revoked: 'Key “{name}” revoked.'
@@ -712,6 +716,7 @@ flash:
         applied: 'Proposal applied.'
         applied_memory: 'Proposal applied: “{memory}”.'
         applied_rule: 'Rule {code} validated and created: “{title}”.'
+        applied_skill: 'Skill “{name}” applied: connected agents will receive it at their next session.'
         rejected: 'Proposal rejected.'
     rule:
         created: 'Rule {code} created.'
@@ -1179,6 +1184,7 @@ project:
 proposal:
     apply: Apply
     apply_rule: 'Validate and create rule'
+    apply_skill: 'Apply skill'
     archives: 'Archives:'
     axes: 'durability {durability}, reuse {reuse}, project fit {fit}, risk {risk}'
     empty: 'Nothing to review. Proposals come from {command}, the MCP tool {tool}, rule extraction from documents, gardening and memory verification.'
@@ -1209,6 +1215,10 @@ proposal:
     retract_memory: 'Retract the memory'
     retracts: Retracts
     score_label: Score
+    skill:
+        action_create: 'New skill'
+        action_update: 'Update'
+        previous: 'View current content'
     source:
         conversation: conversation
         diff: diff
