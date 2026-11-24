@@ -3,16 +3,21 @@
 namespace App\Controller;
 
 use App\Document\DocumentStorage;
+use App\Document\DocumentTextExtractor;
 use App\Entity\Folder;
 use App\Entity\Node;
 use App\Entity\Project;
 use App\Enum\NodeType;
+use App\Enum\ProposalKind;
 use App\Form\DocumentUploadType;
 use App\Form\FolderType;
 use App\Graph\KnowledgeReader;
+use App\Llm\LlmUnavailable;
 use App\Pagination\Page;
+use App\Rule\RuleExtractor;
 use App\Security\ProjectScope;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Bridge\Doctrine\Attribute\MapEntity;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Form\FormError;
@@ -23,6 +28,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Translation\TranslatableMessage;
 use Symfony\Contracts\Translation\TranslatorInterface;
@@ -34,9 +40,12 @@ final class DocumentController extends AbstractController
     public function __construct(
         private readonly KnowledgeReader $knowledgeReader,
         private readonly DocumentStorage $documentStorage,
+        private readonly DocumentTextExtractor $documentTextExtractor,
+        private readonly RuleExtractor $ruleExtractor,
         private readonly EntityManagerInterface $entityManager,
         private readonly ProjectScope $projectScope,
         private readonly TranslatorInterface $translator,
+        private readonly LoggerInterface $logger,
     ) {
     }
 
@@ -112,15 +121,75 @@ final class DocumentController extends AbstractController
             array_unshift($ancestors, $ancestor);
         }
 
+        $format = (string) ($document->getMetadata()['format'] ?? 'md');
+        $extractableProjects = array_values(array_filter(
+            $document->getProjects()->toArray(),
+            fn (Project $project): bool => !$project->isArchived() && $this->projectScope->allows($project),
+        ));
+
         return $this->render('document/show.html.twig', [
             'document' => $document,
             'ancestors' => $ancestors,
             'folders' => $this->knowledgeReader->folderTree(),
             'files' => $this->knowledgeReader->documentTree(),
-            'markdown' => 'md' === $document->getMetadata()['format'] ? $this->documentStorage->markdownBody($document) : null,
+            'markdown' => 'md' === $format ? $this->documentStorage->markdownBody($document) : null,
+            'extracted_text' => 'docx' === $format ? $this->documentTextExtractor->extract($document) : null,
+            'extractable_projects' => $extractableProjects,
             'rules' => $this->knowledgeReader->rulesDefinedBy($document),
             'memories' => $this->knowledgeReader->memoriesAbout($document->getId()),
         ]);
+    }
+
+    #[Route('/documents/{id}/extract-rules', name: 'document_extract_rules', requirements: ['id' => '\d+'], methods: ['POST'])]
+    public function extractRules(int $id, Request $request): Response
+    {
+        $document = $this->findDocument($id);
+        if (!$this->isCsrfTokenValid('document-extract-'.$document->getId(), $request->getPayload()->getString('_token'))) {
+            throw new AccessDeniedHttpException('Invalid CSRF token.');
+        }
+
+        $slug = trim($request->getPayload()->getString('project'));
+        $target = null;
+        foreach ($document->getProjects() as $attached) {
+            if ($this->projectScope->allows($attached) && ('' === $slug || $attached->getSlug() === $slug)) {
+                $target = $attached;
+                break;
+            }
+        }
+        if (null === $target) {
+            $this->addFlash('error', new TranslatableMessage('flash.document.extract_no_project'));
+
+            return $this->redirectToRoute('document_show', ['id' => $document->getId()]);
+        }
+
+        try {
+            $report = $this->ruleExtractor->extract($document, $target);
+        } catch (LlmUnavailable|\UnexpectedValueException $exception) {
+            $this->addFlash('error', $exception instanceof LlmUnavailable ? $exception->translatable() : $exception->getMessage());
+
+            return $this->redirectToRoute('document_show', ['id' => $document->getId()]);
+        } catch (\Throwable $exception) {
+            $this->logger->error('Rule extraction failed for document {id}: {message}', ['id' => $id, 'message' => $exception->getMessage(), 'exception' => $exception]);
+            $this->addFlash('error', new TranslatableMessage('flash.llm.error', ['error' => $exception->getMessage()]));
+
+            return $this->redirectToRoute('document_show', ['id' => $document->getId()]);
+        }
+
+        if ($report['empty']) {
+            $this->addFlash('error', new TranslatableMessage('flash.document.extract_empty'));
+
+            return $this->redirectToRoute('document_show', ['id' => $document->getId()]);
+        }
+
+        if ($report['proposed'] > 0) {
+            $this->addFlash('success', new TranslatableMessage('flash.document.rules_extracted', ['count' => $report['proposed']]));
+
+            return $this->redirectToRoute('proposal_index', ['project' => $target->getSlug(), 'kind' => ProposalKind::RuleDraft->value]);
+        }
+
+        $this->addFlash('success', new TranslatableMessage('flash.document.rules_extracted_none'));
+
+        return $this->redirectToRoute('document_show', ['id' => $document->getId()]);
     }
 
     #[Route('/documents/{id}/file', name: 'document_file', requirements: ['id' => '\d+'], methods: ['GET'])]

@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\Proposal;
+use App\Enum\NodeType;
 use App\Enum\ProposalKind;
 use App\Enum\ProposalStatus;
 use App\Pagination\Page;
@@ -68,17 +69,24 @@ final class ProposalController extends AbstractController
         $input = array_filter([
             'lesson' => $payload->has('lesson') ? $payload->getString('lesson') : null,
             'keep' => $payload->has('keep') ? $payload->getInt('keep') : null,
+            'title' => $payload->has('title') ? $payload->getString('title') : null,
+            'statement' => $payload->has('statement') ? $payload->getString('statement') : null,
         ], static fn (mixed $value): bool => null !== $value);
 
         try {
-            $memory = $this->applier->apply($proposal, $input);
+            $applied = $this->applier->apply($proposal, $input);
         } catch (\InvalidArgumentException $exception) {
             $this->addFlash('error', $exception->getMessage());
 
             return $this->back($request);
         }
 
-        $this->addFlash('success', null === $memory ? new TranslatableMessage('flash.proposal.applied') : new TranslatableMessage('flash.proposal.applied_memory', ['memory' => $memory->getLabel()]));
+        $flash = match (true) {
+            null === $applied => new TranslatableMessage('flash.proposal.applied'),
+            NodeType::BusinessRule === $applied->getType() => new TranslatableMessage('flash.proposal.applied_rule', ['code' => $applied->getExternalId(), 'title' => $applied->getLabel()]),
+            default => new TranslatableMessage('flash.proposal.applied_memory', ['memory' => $applied->getLabel()]),
+        };
+        $this->addFlash('success', $flash);
 
         return $this->back($request);
     }

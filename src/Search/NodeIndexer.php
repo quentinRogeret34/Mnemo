@@ -2,7 +2,7 @@
 
 namespace App\Search;
 
-use App\Document\DocumentStorage;
+use App\Document\DocumentTextExtractor;
 use App\Entity\Node;
 use App\Entity\Project;
 use App\Enum\NodeType;
@@ -22,7 +22,7 @@ final class NodeIndexer
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly Embedder $embedder,
-        private readonly DocumentStorage $documentStorage,
+        private readonly DocumentTextExtractor $documentTextExtractor,
     ) {
     }
 
@@ -111,8 +111,8 @@ final class NodeIndexer
     {
         $metadata = $node->getMetadata();
         $parts = [$node->getLabel(), $metadata['statement'] ?? null, $metadata['adr']['decision'] ?? null];
-        if (NodeType::Document === $node->getType() && 'md' === ($metadata['format'] ?? null)) {
-            $parts[] = $this->documentStorage->markdownBody($node);
+        if (NodeType::Document === $node->getType()) {
+            $parts[] = $this->documentTextExtractor->extract($node);
         }
 
         return mb_substr(trim(implode("\n", array_filter($parts, static fn (mixed $part): bool => \is_string($part) && '' !== $part))), 0, self::MAX_CHARS);

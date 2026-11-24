@@ -17,7 +17,7 @@
         <label class="visually-hidden" for="rule-statement-input">{{ 'rule.editor.statement'|trans }}</label>
         <textarea
             id="rule-statement-input"
-            class="rule-editor__statement"
+            class="rule-editor__statement callout"
             rows="3"
             maxlength="2000"
             placeholder="{{ 'rule.editor.statement_placeholder'|trans }}"
@@ -44,8 +44,8 @@
             <ul class="list">
                 {% for impl in this.implementations %}
                     {% set parts = impl.path|split('/') %}
-                    <li class="row rule-link-row">
-                        <a class="rule-link-row__main" href="{{ path('file_show', {slug: project.slug, path: impl.path}) }}">
+                    <li class="rule-link-row">
+                        <a class="row rule-link-row__main" href="{{ path('file_show', {slug: project.slug, path: impl.path}) }}">
                             <twig:ux:icon name="lucide:code" class="icon nav-item__icon" />
                             <span class="row__title mono"><span>{{ parts|last }}</span><span class="row__sub">{{ parts|slice(0, -1)|join('/') }}</span></span>
                         </a>
@@ -83,8 +83,8 @@
         {% else %}
             <ul class="list">
                 {% for source in this.sources %}
-                    <li class="row rule-link-row">
-                        <a class="rule-link-row__main" href="{{ path('document_show', {id: source.id}) }}">
+                    <li class="rule-link-row">
+                        <a class="row rule-link-row__main" href="{{ path('document_show', {id: source.id}) }}">
                             <span class="format format--{{ source.format }}">{{ source.format }}</span>
                             <span class="row__title"><span>{{ source.title }}</span></span>
                         </a>

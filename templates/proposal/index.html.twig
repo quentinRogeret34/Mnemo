@@ -49,13 +49,14 @@
                 {% set p = proposal.payload %}
                 {% set query = {project: project ? project.slug : null, kind: kind ? kind.value : null}|filter(v => v is not null) %}
                 {% set learning = proposal.kind.value == 'learning' %}
-                {% set tone = learning ? (tones[p.reconciliation] ?? 'neutral') : (proposal.kind.value == 'duplicate' ? 'warning' : 'danger') %}
+                {% set rule_draft = proposal.kind.value == 'rule_draft' %}
+                {% set tone = learning ? (tones[p.reconciliation] ?? 'neutral') : (rule_draft ? 'success' : (proposal.kind.value == 'duplicate' ? 'warning' : 'danger')) %}
                 <li class="proposal" id="proposal-{{ proposal.id }}">
                     <div class="proposal__head">
                         <span class="proposal__dot proposal__dot--{{ learning ? p.type : proposal.kind.value }}" aria-hidden="true"></span>
                         <div class="proposal__title">
                             <strong>{{ proposal.kind|trans }}</strong>
-                            <span class="row__sub">{{ proposal.project ? proposal.project.name : 'nav.all_projects'|trans }}{% if learning %} · {{ (sources[p.source.kind] ?? p.source.kind)|trans }}{% endif %}</span>
+                            <span class="row__sub">{{ proposal.project ? proposal.project.name : 'nav.all_projects'|trans }}{% if learning %} · {{ (sources[p.source.kind] ?? p.source.kind)|trans }}{% elseif rule_draft and (p.document_title ?? null) %} · {{ p.document_title }}{% endif %}</span>
                         </div>
                         <span class="pill pill--{{ tone }}">{{ learning ? (reconciliations[p.reconciliation] ?? p.reconciliation)|trans : proposal.kind|trans }}</span>
                     </div>
@@ -99,6 +100,39 @@
                                     {% endif %}
                                 </dl>
                             </details>
+                        {% elseif rule_draft %}
+                            <label class="visually-hidden" for="rule-title-{{ proposal.id }}">{{ 'rule.editor.title'|trans }}</label>
+                            <input id="rule-title-{{ proposal.id }}" name="title" type="text" class="input proposal__rule-title" maxlength="255" value="{{ p.title }}" required>
+                            <label class="visually-hidden" for="rule-statement-{{ proposal.id }}">{{ 'rule.editor.statement'|trans }}</label>
+                            <textarea id="rule-statement-{{ proposal.id }}" name="statement" class="proposal__lesson" rows="3" maxlength="2000" required>{{ p.statement }}</textarea>
+                            <dl class="kv">
+                                {% if p.document_id ?? null %}
+                                    <div class="kv__group">
+                                        <div class="kv__row">
+                                            <dt>{{ 'rule.show.sources'|trans }}</dt>
+                                            <dd>
+                                                <a class="link" href="{{ path('document_show', {id: p.document_id}) }}">
+                                                    <span class="format format--{{ p.document_format ?? 'md' }}">{{ p.document_format ?? 'md' }}</span>
+                                                    {{ p.document_title ?? ('#' ~ p.document_id) }}
+                                                </a>
+                                            </dd>
+                                        </div>
+                                    </div>
+                                {% endif %}
+                                {% if p.excerpt ?? null %}
+                                    <div class="kv__group">
+                                        <div class="kv__row kv__row--stack"><dt>{{ 'proposal.excerpt'|trans }}</dt><dd><q>{{ p.excerpt }}</q></dd></div>
+                                    </div>
+                                {% endif %}
+                                {% if (p.files ?? []) is not empty %}
+                                    <div class="kv__group">
+                                        <div class="kv__row kv__row--stack"><dt>{{ 'proposal.links'|trans }}</dt><dd>{% for file in p.files %}<span class="tag mono">{{ file }}</span>{% endfor %}</dd></div>
+                                    </div>
+                                {% endif %}
+                                <div class="kv__group">
+                                    <div class="kv__row"><dt>{{ 'proposal.proposed'|trans }}</dt><dd class="num">{{ proposal.createdAt|format_datetime('short', 'short') }}</dd></div>
+                                </div>
+                            </dl>
                         {% elseif proposal.kind.value in ['duplicate', 'contradiction'] %}
                             <fieldset class="proposal__pair">
                                 <legend class="row__sub">{{ (proposal.kind.value == 'duplicate' ? 'proposal.keep_merge' : 'proposal.keep')|trans }}</legend>
@@ -139,8 +173,8 @@
                         {% endif %}
 
                         <div class="proposal__actions">
-                            <button class="button button--primary" type="submit">{{ (proposal.kind.value == 'refuted' ? 'proposal.retract_memory' : 'proposal.apply')|trans }}</button>
-                            {% if learning %}
+                            <button class="button button--primary" type="submit">{{ (proposal.kind.value == 'refuted' ? 'proposal.retract_memory' : (rule_draft ? 'proposal.apply_rule' : 'proposal.apply'))|trans }}</button>
+                            {% if learning or rule_draft %}
                                 <label class="visually-hidden" for="reason-{{ proposal.id }}">{{ 'proposal.reject_reason.label'|trans }}</label>
                                 <select class="select proposal__reason" id="reason-{{ proposal.id }}" name="reason">
                                     <option value="">{{ 'proposal.reject_reason.placeholder'|trans }}</option>

@@ -2,7 +2,7 @@
 
 namespace App\Rule;
 
-use App\Document\DocumentStorage;
+use App\Document\DocumentTextExtractor;
 use App\Entity\Node;
 use App\Entity\Project;
 use App\Enum\MemoryType;
@@ -44,7 +44,7 @@ final class ShadowAreaDetector
     public function __construct(
         private readonly Chat $chat,
         private readonly KnowledgeReader $knowledgeReader,
-        private readonly DocumentStorage $documentStorage,
+        private readonly DocumentTextExtractor $documentTextExtractor,
         private readonly EntityManagerInterface $entityManager,
         private readonly MemoryStore $memoryStore,
         private readonly MemoryAccess $memoryAccess,
@@ -61,8 +61,12 @@ final class ShadowAreaDetector
         $sources = [];
         foreach ($this->knowledgeReader->ruleSources($rule) as $source) {
             $document = $this->entityManager->find(Node::class, $source['id']);
-            if (null !== $document && 'md' === $source['format']) {
-                $sources[] = \sprintf("Document « %s » :\n%s", $source['title'], mb_substr($this->documentStorage->markdownBody($document), 0, self::EXCERPT_CHARS));
+            if (null === $document) {
+                continue;
+            }
+            $body = $this->documentTextExtractor->extract($document);
+            if ('' !== $body) {
+                $sources[] = \sprintf("Document « %s » :\n%s", $source['title'], mb_substr($body, 0, self::EXCERPT_CHARS));
             }
         }
 

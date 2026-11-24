@@ -56,12 +56,38 @@
                 <div class="prose doc__body" data-toc-target="content">{{ markdown|markdown_to_html }}</div>
             {% elseif meta.format == 'pdf' %}
                 <iframe class="pdf-frame" src="{{ path('document_file', {id: document.id}) }}" title="{{ document.label }}"></iframe>
+            {% elseif extracted_text %}
+                <div class="prose doc__body" data-toc-target="content">
+                    <p class="row__sub doc__extracted-note">{{ 'document.extracted_preview'|trans }}</p>
+                    {% for paragraph in extracted_text|split("\n\n") %}
+                        <p>{{ paragraph|nl2br }}</p>
+                    {% endfor %}
+                </div>
             {% else %}
                 <p class="block__empty">{{ 'document.no_preview'|trans }}</p>
             {% endif %}
 
             <section class="block" aria-labelledby="rules-title">
-                <div class="block__head"><h2 id="rules-title">{{ 'document.defined_rules'|trans }}</h2><span class="block__count">{{ rules|length }}</span></div>
+                <div class="block__head">
+                    <h2 id="rules-title">{{ 'document.defined_rules'|trans }}</h2>
+                    <span class="block__count">{{ rules|length }}</span>
+                    {% if extractable_projects is not empty %}
+                        <form class="doc-extract-form" method="post" action="{{ path('document_extract_rules', {id: document.id}) }}">
+                            <input type="hidden" name="_token" value="{{ csrf_token('document-extract-' ~ document.id) }}">
+                            {% if extractable_projects|length == 1 %}
+                                <input type="hidden" name="project" value="{{ extractable_projects[0].slug }}">
+                            {% else %}
+                                <label class="visually-hidden" for="extract-project">{{ 'memory.index.project'|trans }}</label>
+                                <select class="select" id="extract-project" name="project">
+                                    {% for proj in extractable_projects %}
+                                        <option value="{{ proj.slug }}">{{ proj.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            {% endif %}
+                            <button class="button button--primary" type="submit"><twig:ux:icon name="lucide:wand-sparkles" />{{ 'document.extract_rules'|trans }}</button>
+                        </form>
+                    {% endif %}
+                </div>
                 {% if rules is empty %}
                     <p class="block__empty">{{ 'document.no_rule'|trans }}</p>
                 {% else %}

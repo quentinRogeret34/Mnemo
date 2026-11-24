@@ -495,6 +495,8 @@ document:
     docs_count: '{count} docs'
     download: Download
     empty_folder: 'Empty folder. Drop files or create a subfolder.'
+    extract_rules: 'Extract business rules'
+    extracted_preview: 'Text extracted from the Word file.'
     filter_tree: 'Filter'
     folder_at_root: 'The folder is created at the root.'
     folder_in: 'The folder is created in "{name}".'
@@ -583,6 +585,7 @@ enum:
         duplicate: Duplicate
         learning: Learning
         refuted: 'Refuted memory'
+        rule_draft: 'Business rule'
     shadow_category:
         ambiguous_term: 'Ambiguous term'
         missing_acceptance_criterion: 'Missing acceptance criterion'
@@ -673,6 +676,10 @@ flash:
         sync_started: 'Sync started: the repository is cloned and analysed in the background, the result shows in the history.'
     document:
         added: '{count, plural, one {# document added.} other {# documents added.}}'
+        extract_empty: 'No readable text could be extracted from this document (scanned PDF or empty file).'
+        extract_no_project: 'Attach this document to a project before extracting business rules.'
+        rules_extracted: '{count, plural, one {# business rule extracted and queued for review.} other {# business rules extracted and queued for review.}}'
+        rules_extracted_none: 'No new business rule detected in this document.'
     garden:
         compared: '{compared, plural, one {# memory compared} other {# memories compared}}: {proposed, plural, =0 {no proposal} one {# proposal} other {# proposals}} added for review.'
     github:
@@ -704,6 +711,7 @@ flash:
     proposal:
         applied: 'Proposal applied.'
         applied_memory: 'Proposal applied: “{memory}”.'
+        applied_rule: 'Rule {code} validated and created: “{title}”.'
         rejected: 'Proposal rejected.'
     rule:
         created: 'Rule {code} created.'
@@ -1170,11 +1178,13 @@ project:
         retype_title: 'Type “{slug}” exactly'
 proposal:
     apply: Apply
+    apply_rule: 'Validate and create rule'
     archives: 'Archives:'
     axes: 'durability {durability}, reuse {reuse}, project fit {fit}, risk {risk}'
-    empty: 'Nothing to review. Proposals come from {command}, the MCP tool {tool}, gardening and memory verification.'
+    empty: 'Nothing to review. Proposals come from {command}, the MCP tool {tool}, rule extraction from documents, gardening and memory verification.'
     evidence: Evidence
     evidence_source: 'Evidence and source'
+    excerpt: 'Document excerpt'
     filter_kind: 'Filter by kind'
     keep: 'Keep (the other is archived):'
     keep_merge: 'Keep (the other is merged into it, then archived):'

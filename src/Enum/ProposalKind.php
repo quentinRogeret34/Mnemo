@@ -8,6 +8,7 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 enum ProposalKind: string implements TranslatableInterface
 {
     case Learning = 'learning';
+    case RuleDraft = 'rule_draft';
     case Duplicate = 'duplicate';
     case Contradiction = 'contradiction';
     case Refuted = 'refuted';

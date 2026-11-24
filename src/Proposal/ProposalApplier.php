@@ -12,6 +12,7 @@ use App\Enum\NodeType;
 use App\Enum\ProposalKind;
 use App\Enum\ProposalStatus;
 use App\Memory\MemoryStore;
+use App\Rule\RuleStore;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
@@ -22,13 +23,14 @@ final class ProposalApplier
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly MemoryStore $memoryStore,
+        private readonly RuleStore $ruleStore,
     ) {
     }
 
     /**
-     * @param array{lesson?: string, keep?: int} $input the lesson as edited by the human, the memory kept from a pair
+     * @param array{lesson?: string, keep?: int, title?: string, statement?: string} $input the edited text/rule fields or the memory kept from a pair
      *
-     * @return Node|null the memory created or kept, if any
+     * @return Node|null the memory or business rule created or kept, if any
      */
     public function apply(Proposal $proposal, array $input = []): ?Node
     {
@@ -38,8 +40,9 @@ final class ProposalApplier
 
         $payload = $proposal->getPayload();
         $editedLesson = ProposalKind::Learning === $proposal->getKind() ? trim($input['lesson'] ?? (string) ($payload['lesson'] ?? '')) : null;
-        $memory = match ($proposal->getKind()) {
+        $result = match ($proposal->getKind()) {
             ProposalKind::Learning => $this->applyLearning($proposal, $payload, (string) $editedLesson),
+            ProposalKind::RuleDraft => $this->applyRuleDraft($proposal, $payload, $input),
             ProposalKind::Duplicate => $this->applyPair($payload, $input['keep'] ?? null, merge: true),
             ProposalKind::Contradiction => $this->applyPair($payload, $input['keep'] ?? null, merge: false),
             ProposalKind::Refuted => $this->applyRefuted($payload),
@@ -58,7 +61,7 @@ final class ProposalApplier
         $proposal->decide(ProposalStatus::Applied);
         $this->entityManager->flush();
 
-        return $memory;
+        return $result;
     }
 
     public function reject(Proposal $proposal, ?string $reason = null): void
@@ -121,6 +124,58 @@ final class ProposalApplier
         }
 
         return $memory;
+    }
+
+    /**
+     * @param array<string, mixed>                                                   $payload
+     * @param array{lesson?: string, keep?: int, title?: string, statement?: string} $input
+     */
+    private function applyRuleDraft(Proposal $proposal, array $payload, array $input): Node
+    {
+        $project = $proposal->getProject();
+        if (null === $project) {
+            throw new \InvalidArgumentException('Cette proposition de règle n\'est rattachée à aucun projet.');
+        }
+
+        $originalTitle = trim((string) ($payload['title'] ?? ''));
+        $originalStatement = trim((string) ($payload['statement'] ?? ''));
+        $title = trim($input['title'] ?? $originalTitle);
+        $statement = trim($input['statement'] ?? $originalStatement);
+
+        $rule = $this->ruleStore->create($project, $title, $statement, status: 'validated', source: 'document');
+
+        $documentId = isset($payload['document_id']) ? (int) $payload['document_id'] : 0;
+        if ($documentId > 0) {
+            $document = $this->entityManager->find(Node::class, $documentId);
+            if (null !== $document && NodeType::Document === $document->getType()) {
+                $this->ruleStore->linkDocument($rule, $document, Confidence::Verified, EdgeOrigin::Human, 'extrait du document');
+            }
+        }
+
+        $files = \is_array($payload['files'] ?? null) ? \array_slice($payload['files'], 0, 5) : [];
+        foreach ($files as $filePath) {
+            if (!\is_string($filePath) || '' === trim($filePath)) {
+                continue;
+            }
+            $file = $this->entityManager->getRepository(Node::class)->findOneBy([
+                'project' => $project,
+                'type' => NodeType::CodeFile,
+                'path' => $filePath,
+            ]);
+            if (null !== $file) {
+                $this->ruleStore->linkCode($rule, $file, Confidence::Inferred, EdgeOrigin::Llm, 'suggéré lors de l\'extraction');
+            }
+        }
+
+        $wasEdited = $title !== $originalTitle || $statement !== $originalStatement;
+        $proposal->annotatePayload([
+            'human_feedback' => $wasEdited
+                ? ['edited' => true, 'applied_title' => $title, 'applied_statement' => $statement]
+                : ['edited' => false],
+            'applied_rule_code' => $rule->getExternalId(),
+        ]);
+
+        return $rule;
     }
 
     /**

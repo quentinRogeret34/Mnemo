@@ -56,7 +56,7 @@
 
     {% set delta_label = previous ? 'dashboard.vs_previous'|trans : period_text %}
     {% set stored_base = summary.memories - summary.memories_added %}
-    {% set kinds_order = ['learning', 'duplicate', 'contradiction', 'refuted'] %}
+    {% set kinds_order = ['learning', 'rule_draft', 'duplicate', 'contradiction', 'refuted'] %}
     {% set pending_total = pending_kinds|reduce((sum, row) => sum + row.value, 0) %}
     {% set attention_count = summary.pending + failing_connectors|length + (refuted > 0 ? 1 : 0) %}
     {% set has_aside = 'attention' in widgets or 'ai_quality' in widgets or 'timeline' in widgets %}

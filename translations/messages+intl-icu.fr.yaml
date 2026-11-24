@@ -495,6 +495,8 @@ document:
     docs_count: '{count} doc.'
     download: Télécharger
     empty_folder: 'Dossier vide. Déposer des fichiers ou créer un sous-dossier.'
+    extract_rules: 'Extraire les règles métier'
+    extracted_preview: 'Texte extrait du fichier Word.'
     filter_tree: 'Filtrer'
     folder_at_root: 'Le dossier sera créé à la racine.'
     folder_in: 'Le dossier sera créé dans « {name} ».'
@@ -583,6 +585,7 @@ enum:
         duplicate: Doublon
         learning: Apprentissage
         refuted: 'Mémoire réfutée'
+        rule_draft: 'Règle métier'
     shadow_category:
         ambiguous_term: 'Terme ambigu'
         missing_acceptance_criterion: "Critère d'acceptation manquant"
@@ -673,6 +676,10 @@ flash:
         sync_started: "Synchronisation lancée : le dépôt est cloné et analysé en arrière-plan, le résultat apparaît dans l'historique."
     document:
         added: '{count, plural, one {# document ajouté.} other {# documents ajoutés.}}'
+        extract_empty: "Aucun texte exploitable n'a pu être extrait de ce document (PDF scanné ou fichier vide)."
+        extract_no_project: 'Rattachez ce document à un projet avant d’en extraire les règles métier.'
+        rules_extracted: '{count, plural, one {# règle métier extraite et ajoutée à valider.} other {# règles métier extraites et ajoutées à valider.}}'
+        rules_extracted_none: 'Aucune nouvelle règle métier détectée dans ce document.'
     garden:
         compared: '{compared, plural, one {# mémoire comparée} other {# mémoires comparées}} : {proposed, plural, =0 {aucune proposition ajoutée} one {# proposition ajoutée} other {# propositions ajoutées}} à valider.'
     github:
@@ -704,6 +711,7 @@ flash:
     proposal:
         applied: 'Proposition appliquée.'
         applied_memory: 'Proposition appliquée : « {memory} ».'
+        applied_rule: 'Règle {code} validée et créée : « {title} ».'
         rejected: 'Proposition rejetée.'
     rule:
         created: 'Règle {code} créée.'
@@ -1170,11 +1178,13 @@ project:
         retype_title: 'Retaper exactement « {slug} »'
 proposal:
     apply: Appliquer
+    apply_rule: 'Valider et créer la règle'
     archives: 'Archive :'
     axes: 'durabilité {durability}, réutilisation {reuse}, adéquation {fit}, risque {risk}'
-    empty: "Rien à valider. Les propositions arrivent avec {command}, l'outil MCP {tool}, le jardinage et la vérification des mémoires."
+    empty: "Rien à valider. Les propositions arrivent avec {command}, l'outil MCP {tool}, l'extraction de règles depuis les documents, le jardinage et la vérification des mémoires."
     evidence: Preuve
     evidence_source: 'Preuve et source'
+    excerpt: 'Extrait du document'
     filter_kind: 'Filtrer par sorte'
     keep: "Garder (l'autre est archivée) :"
     keep_merge: "Garder (l'autre est fusionnée dedans puis archivée) :"
