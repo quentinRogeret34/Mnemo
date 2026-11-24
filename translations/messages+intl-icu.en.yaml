@@ -374,6 +374,12 @@ dashboard:
         7d: 'over 7 days'
         90d: 'over 90 days'
         all: 'since the start'
+    quality:
+        assistant: 'Assistant satisfaction'
+        assistant_detail: '{up} helpful · {down} unhelpful'
+        proposals: 'Proposal acceptance'
+        proposals_detail: '{applied} applied ({edited} edited) · {rejected} rejected'
+        title: 'AI quality'
     query: 'Search or file'
     recalled: 'Recalled memories'
     recalled_title: 'Memories returned to the agents by search, file_context and get_document'
@@ -672,6 +678,8 @@ form:
         type: Type
         visibility: Visibility
     project:
+        auto_garden: 'Nightly auto-gardening'
+        auto_garden_help: 'Re-indexes changed content, verifies up to 5 stale memories and checks for duplicates automatically every night.'
         chat_model_help: "OpenRouter id, e.g. anthropic/claude-sonnet-4.5. Empty: the instance's one."
         embedding_model_help: "Pick it from the list. Changing it indexes the project's content again. Empty: the instance's one."
         groups: 'Groups with access'
@@ -1068,6 +1076,7 @@ project:
         delete_forever: 'Delete for good'
         delete_text: 'Its code graph, business rules and {count, plural, one {# connector} other {# connectors}}, clones included, are deleted. Its documents and memories stay in the workspace, detached from the project. Cannot be undone.'
         delete_title: 'Delete {name}?'
+        last_auto_garden: 'Last run: {date}'
         no_connector: 'No connector feeds this project.'
         project: Project
         restore: 'Restore the project'
@@ -1092,6 +1101,13 @@ proposal:
     proposed: Proposed
     reject: Reject
     reject_confirm: 'Reject this proposal?'
+    reject_reason:
+        duplicate: 'Already known / duplicate'
+        label: 'Rejection reason'
+        outdated: 'Outdated information'
+        placeholder: 'Reason (optional)…'
+        too_obvious: 'Too obvious / in code'
+        wrong: 'Inaccurate or off-topic'
     replaces_text: 'Replaces the text of:'
     retract: 'Retract:'
     retract_memory: 'Retract the memory'

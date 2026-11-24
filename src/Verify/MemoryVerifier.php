@@ -82,6 +82,47 @@ final class MemoryVerifier
         return $report;
     }
 
+    /**
+     * Verifies stale memories first (linked code changed since last verification), then unverified/edited memories,
+     * up to $limit total to keep scheduled runs bounded.
+     *
+     * @return array{checked: int, verified: int, refuted: int, conflict: int, unverified: int}
+     */
+    public function verifyStale(Project $project, int $limit): array
+    {
+        $ids = $this->entityManager->getConnection()->fetchFirstColumn(
+            <<<SQL
+                SELECT m.id FROM node m
+                WHERE m.type = :memory AND COALESCE(m.metadata->>'status', 'active') = 'active' AND {$this->memoryAccess->sql('m')}
+                  AND EXISTS (SELECT 1 FROM node_project np WHERE np.node_id = m.id AND np.project_id = :project)
+                  AND (
+                      m.metadata->'verification' IS NULL
+                      OR m.metadata->'verification'->>'text' IS DISTINCT FROM m.label
+                      OR (
+                          m.metadata->'verification'->>'at' IS NOT NULL
+                          AND EXISTS (
+                              SELECT 1 FROM edge a JOIN edge t ON t.target_id = a.target_id AND t.relation = 'touches' JOIN node c ON c.id = t.source_id
+                              WHERE a.source_id = m.id AND a.relation = 'about' AND a.status = 'active'
+                                AND (c.metadata->>'date')::timestamptz > (m.metadata->'verification'->>'at')::timestamptz
+                          )
+                      )
+                  )
+                ORDER BY CASE WHEN m.metadata->'verification'->>'at' IS NOT NULL THEN 0 ELSE 1 END, m.id
+                LIMIT :limit
+                SQL,
+            ['memory' => NodeType::Memory->value, 'project' => $project->getId(), 'limit' => $limit],
+            ['limit' => ParameterType::INTEGER],
+        );
+
+        $report = ['checked' => 0, 'verified' => 0, 'refuted' => 0, 'conflict' => 0, 'unverified' => 0];
+        foreach ($this->entityManager->getRepository(Node::class)->findBy(['id' => $ids], ['id' => 'ASC']) as $memory) {
+            ++$report['checked'];
+            ++$report[$this->verify($memory, $project)['verdict']];
+        }
+
+        return $report;
+    }
+
     private function hasPendingProposal(Node $memory): bool
     {
         return false !== $this->entityManager->getConnection()->fetchOne(

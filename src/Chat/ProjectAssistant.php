@@ -3,6 +3,7 @@
 namespace App\Chat;
 
 use AiObservability\Agent\AgentTracer;
+use AiSteering\Steering\SteeringInputProcessor;
 use App\Entity\Project;
 use App\Llm\LlmSettings;
 use App\Llm\LlmUnavailable;
@@ -57,6 +58,7 @@ final class ProjectAssistant
         private readonly WorkspaceTools $workspaceTools,
         private readonly EventDispatcherInterface $eventDispatcher,
         private readonly ?AgentTracer $agentTracer = null,
+        private readonly ?SteeringInputProcessor $steeringInputProcessor = null,
     ) {
     }
 
@@ -75,10 +77,15 @@ final class ProjectAssistant
         $systemPrompt = null !== $project ? \sprintf(self::SYSTEM, $project->getName()) : self::GLOBAL_SYSTEM;
         $agentName = null !== $project ? 'project_assistant' : 'workspace_assistant';
 
+        $inputProcessors = array_values(array_filter([
+            $this->steeringInputProcessor,
+            new SystemPromptInputProcessor($systemPrompt),
+        ]));
+
         $agent = new Agent(
             $this->settings->platform($this->settings->chatPlatform),
             $this->settings->chatModel($project),
-            [new SystemPromptInputProcessor($systemPrompt)],
+            $inputProcessors,
             name: $agentName,
             toolbox: new ObjectParametersToolbox(new FaultTolerantToolbox(new Toolbox([$tools], eventDispatcher: $this->eventDispatcher))),
             maxToolCalls: self::MAX_TOOL_CALLS,

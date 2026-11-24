@@ -140,6 +140,16 @@
 
                         <div class="proposal__actions">
                             <button class="button button--primary" type="submit">{{ (proposal.kind.value == 'refuted' ? 'proposal.retract_memory' : 'proposal.apply')|trans }}</button>
+                            {% if learning %}
+                                <label class="visually-hidden" for="reason-{{ proposal.id }}">{{ 'proposal.reject_reason.label'|trans }}</label>
+                                <select class="select proposal__reason" id="reason-{{ proposal.id }}" name="reason">
+                                    <option value="">{{ 'proposal.reject_reason.placeholder'|trans }}</option>
+                                    <option value="too_obvious">{{ 'proposal.reject_reason.too_obvious'|trans }}</option>
+                                    <option value="wrong">{{ 'proposal.reject_reason.wrong'|trans }}</option>
+                                    <option value="outdated">{{ 'proposal.reject_reason.outdated'|trans }}</option>
+                                    <option value="duplicate">{{ 'proposal.reject_reason.duplicate'|trans }}</option>
+                                </select>
+                            {% endif %}
                             <button class="button" type="submit" formaction="{{ path('proposal_reject', {id: proposal.id}|merge(query)) }}" data-confirm="{{ 'proposal.reject_confirm'|trans }}" data-confirm-label="{{ 'proposal.reject'|trans }}">{{ 'proposal.reject'|trans }}</button>
                         </div>
                     </form>

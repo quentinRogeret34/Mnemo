@@ -235,6 +235,32 @@
                 {% endif %}
             </section>
 
+            <section class="side-block" aria-labelledby="quality-title">
+                <h2 class="side-block__title" id="quality-title">{{ 'dashboard.quality.title'|trans }}</h2>
+                <div class="quality">
+                    <div class="quality__metric">
+                        <div class="quality__head">
+                            <span class="quality__label">{{ 'dashboard.quality.proposals'|trans }}</span>
+                            <strong class="quality__value num">{{ ai_quality.acceptance_rate is not null ? ai_quality.acceptance_rate|format_number({fraction_digit: 0}) ~ ' %' : '—' }}</strong>
+                        </div>
+                        <span class="bars__track"><span class="bars__fill bars__fill--top" style="width: {{ ai_quality.acceptance_rate ?? 0 }}%"></span></span>
+                        <span class="row__sub num">
+                            {{ 'dashboard.quality.proposals_detail'|trans({applied: ai_quality.applied, rejected: ai_quality.rejected, edited: ai_quality.edited}) }}
+                        </span>
+                    </div>
+                    <div class="quality__metric">
+                        <div class="quality__head">
+                            <span class="quality__label">{{ 'dashboard.quality.assistant'|trans }}</span>
+                            <strong class="quality__value num">{{ ai_quality.satisfaction_rate is not null ? ai_quality.satisfaction_rate|format_number({fraction_digit: 0}) ~ ' %' : '—' }}</strong>
+                        </div>
+                        <span class="bars__track"><span class="bars__fill bars__fill--top" style="width: {{ ai_quality.satisfaction_rate ?? 0 }}%"></span></span>
+                        <span class="row__sub num">
+                            {{ 'dashboard.quality.assistant_detail'|trans({up: ai_quality.thumbs_up, down: ai_quality.thumbs_down}) }}
+                        </span>
+                    </div>
+                </div>
+            </section>
+
             <section class="side-block" aria-labelledby="timeline-title">
                 <h2 class="side-block__title" id="timeline-title">{{ 'dashboard.timeline'|trans }}</h2>
                 {% set entries = timeline.days|reduce((all, items) => all|merge(items), []) %}

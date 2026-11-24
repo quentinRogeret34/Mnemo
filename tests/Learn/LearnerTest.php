@@ -136,6 +136,42 @@ final class LearnerTest extends KernelTestCase
         self::assertSame(1, $this->entityManager->getRepository(Proposal::class)->count([]));
     }
 
+    public function testHumanRejectionsAndEditsCalibrateFutureExtractions(): void
+    {
+        $call = 0;
+        $this->scriptLlm(function () use (&$call): array {
+            ++$call;
+
+            return 1 === $call ? $this->extraction([
+                $this->candidate('Ne pas oublier de lancer phpunit.'),
+                $this->candidate('Le cache des prix dure 10 minutes.'),
+            ]) : $this->extraction([]);
+        });
+
+        $applier = self::getContainer()->get(ProposalApplier::class);
+        $this->learn('session 1');
+
+        $proposals = $this->entityManager->getRepository(Proposal::class)->findBy([], ['id' => 'ASC']);
+        self::assertCount(2, $proposals);
+
+        $applier->reject($proposals[0], 'too_obvious');
+        $applier->apply($proposals[1], ['lesson' => 'Le cache catalogue expire après 10 minutes dans PriceCache.']);
+
+        self::assertSame(['rejected_reason' => 'too_obvious'], $proposals[0]->getPayload()['human_feedback']);
+        self::assertSame([
+            'edited' => true,
+            'original_lesson' => 'Le cache des prix dure 10 minutes.',
+            'applied_lesson' => 'Le cache catalogue expire après 10 minutes dans PriceCache.',
+        ], $proposals[1]->getPayload()['human_feedback']);
+
+        $this->learn('session 2');
+
+        self::assertCount(2, $this->llmCalls);
+        self::assertStringContainsString('<team_calibration>', $this->llmCalls[1]['user']);
+        self::assertStringContainsString('Rejeté (too_obvious) : Ne pas oublier de lancer phpunit.', $this->llmCalls[1]['user']);
+        self::assertStringContainsString('Le cache catalogue expire après 10 minutes dans PriceCache.', $this->llmCalls[1]['user']);
+    }
+
     /**
      * @return array{extracted: int, dropped_low_score: int, covered: int, already_proposed: int, proposed: int, truncated: bool}
      */

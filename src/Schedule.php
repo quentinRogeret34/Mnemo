@@ -2,6 +2,7 @@
 
 namespace App;
 
+use App\Message\RunAutoGardening;
 use App\Message\SyncDueConnectors;
 use Symfony\Component\Scheduler\Attribute\AsSchedule;
 use Symfony\Component\Scheduler\RecurringMessage;
@@ -22,6 +23,7 @@ class Schedule implements ScheduleProviderInterface
         return (new SymfonySchedule())
             ->stateful($this->cache)
             ->processOnlyLastMissedRun(true)
-            ->add(RecurringMessage::every('1 hour', new SyncDueConnectors()));
+            ->add(RecurringMessage::every('1 hour', new SyncDueConnectors()))
+            ->add(RecurringMessage::every('24 hours', new RunAutoGardening()));
     }
 }

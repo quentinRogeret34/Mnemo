@@ -9,6 +9,7 @@ use App\Project\ProjectResolver;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\CallbackTransformer;
+use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\Form\FormInterface;
@@ -66,6 +67,11 @@ final class ProjectType extends AbstractType
                     'required' => false,
                     'help' => 'form.project.embedding_model_help',
                     'attr' => ['autocomplete' => 'off', 'spellcheck' => 'false', 'placeholder' => $this->llmSettings->embeddingModel(), 'data-controller' => 'model-picker', 'data-model-picker-url-value' => $this->urlGenerator->generate('llm_models', ['kind' => 'embedding'])],
+                ])
+                ->add('autoGarden', CheckboxType::class, [
+                    'label' => 'form.project.auto_garden',
+                    'required' => false,
+                    'help' => 'form.project.auto_garden_help',
                 ]);
         }
         if ($options['groups']) {

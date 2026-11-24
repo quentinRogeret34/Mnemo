@@ -87,8 +87,9 @@ final class ProposalController extends AbstractController
     public function reject(Proposal $proposal, Request $request): Response
     {
         $this->checkToken($proposal, $request);
+        $reason = trim($request->getPayload()->getString('reason'));
         try {
-            $this->applier->reject($proposal);
+            $this->applier->reject($proposal, '' === $reason ? null : $reason);
             $this->addFlash('success', new TranslatableMessage('flash.proposal.rejected'));
         } catch (\InvalidArgumentException $exception) {
             $this->addFlash('error', $exception->getMessage());

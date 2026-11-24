@@ -55,6 +55,7 @@ final class DashboardController extends AbstractController
             'latest_proposals' => $this->reader->latestProposals($projectEntity, self::ATTENTION_SIZE),
             'failing_connectors' => $this->reader->failingConnectors($projectEntity),
             'refuted' => $this->reader->refutedMemories($projectEntity),
+            'ai_quality' => $this->reader->aiQuality($projectEntity, $from),
             'timeline' => $this->activityReader->feed($projectEntity, new \DateTimeImmutable('@0'), self::TIMELINE_SIZE),
             'recent' => Page::ofRows($this->reader->recentCalls($projectEntity, self::CALLS_SIZE, Page::offset($page, self::CALLS_SIZE)), $page, self::CALLS_SIZE),
         ]);

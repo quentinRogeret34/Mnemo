@@ -40,6 +40,12 @@ class Project
     #[Assert\Length(max: 150)]
     private ?string $embeddingModel = null;
 
+    #[ORM\Column(options: ['default' => false])]
+    private bool $autoGarden = false;
+
+    #[ORM\Column(nullable: true)]
+    private ?\DateTimeImmutable $lastAutoGardenAt = null;
+
     public function __construct(
         #[ORM\Column(length: 100, unique: true)]
         #[Assert\NotBlank(message: 'project.slug.blank')]
@@ -136,5 +142,25 @@ class Project
     public function restore(): void
     {
         $this->archivedAt = null;
+    }
+
+    public function isAutoGarden(): bool
+    {
+        return $this->autoGarden;
+    }
+
+    public function setAutoGarden(bool $autoGarden): void
+    {
+        $this->autoGarden = $autoGarden;
+    }
+
+    public function getLastAutoGardenAt(): ?\DateTimeImmutable
+    {
+        return $this->lastAutoGardenAt;
+    }
+
+    public function markAutoGardened(?\DateTimeImmutable $at = null): void
+    {
+        $this->lastAutoGardenAt = $at ?? new \DateTimeImmutable();
     }
 }

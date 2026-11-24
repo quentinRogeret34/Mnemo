@@ -374,6 +374,12 @@ dashboard:
         7d: 'sur 7 jours'
         90d: 'sur 90 jours'
         all: 'depuis le début'
+    quality:
+        assistant: 'Satisfaction assistant'
+        assistant_detail: '{up} utiles · {down} peu utiles'
+        proposals: 'Acceptation /proposals'
+        proposals_detail: '{applied} appliquées ({edited} éditées) · {rejected} rejetées'
+        title: 'Qualité IA'
     query: 'Recherche ou fichier'
     recalled: 'Mémoires rappelées'
     recalled_title: 'Mémoires renvoyées aux agents par search, file_context et get_document'
@@ -672,6 +678,8 @@ form:
         type: Type
         visibility: Visibilité
     project:
+        auto_garden: 'Auto-jardinage nocturne'
+        auto_garden_help: 'Ré-indexe les contenus modifiés, vérifie jusqu’à 5 mémoires périmées et détecte les doublons automatiquement chaque nuit.'
         chat_model_help: "Identifiant OpenRouter, ex. anthropic/claude-sonnet-4.5. Vide : celui de l'instance."
         embedding_model_help: "À choisir dans la liste. En changer réindexe le contenu du projet. Vide : celui de l'instance."
         groups: 'Groupes qui y accèdent'
@@ -1068,6 +1076,7 @@ project:
         delete_forever: 'Supprimer définitivement'
         delete_text: "Son graphe de code, ses règles métier et {count, plural, one {son connecteur} other {ses # connecteurs}}, clones compris, sont supprimés. Ses documents et ses mémoires restent dans l'espace, détachés du projet. Irréversible."
         delete_title: 'Supprimer {name} ?'
+        last_auto_garden: 'Dernier passage : {date}'
         no_connector: "Aucun connecteur n'alimente ce projet."
         project: Projet
         restore: 'Restaurer le projet'
@@ -1092,6 +1101,13 @@ proposal:
     proposed: Proposée
     reject: Rejeter
     reject_confirm: 'Rejeter cette proposition ?'
+    reject_reason:
+        duplicate: 'Doublon déjà connu'
+        label: 'Raison du rejet'
+        outdated: 'Information obsolète'
+        placeholder: 'Raison (optionnel)…'
+        too_obvious: 'Trop évident / dans le code'
+        wrong: 'Inexact ou hors sujet'
     replaces_text: 'Remplace le texte de :'
     retract: 'Retirer :'
     retract_memory: 'Retirer la mémoire'

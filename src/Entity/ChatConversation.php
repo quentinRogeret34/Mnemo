@@ -221,6 +221,20 @@ class ChatConversation
         return false;
     }
 
+    /**
+     * @return 'up'|'down'|null
+     */
+    public function messageFeedback(string $messageId): ?string
+    {
+        foreach ($this->messages as $message) {
+            if ($message['id'] === $messageId && 'assistant' === $message['role']) {
+                return $message['feedback'] ?? null;
+            }
+        }
+
+        return null;
+    }
+
     private static function newMessageId(): string
     {
         return bin2hex(random_bytes(8));

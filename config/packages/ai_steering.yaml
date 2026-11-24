@@ -1,0 +1,4 @@
+ai_steering:
+    hub:
+        url: '%env(AI_HUB_URL)%'
+        token: '%env(AI_HUB_STEERING_TOKEN)%'

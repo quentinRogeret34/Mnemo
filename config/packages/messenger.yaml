@@ -9,6 +9,7 @@ framework:
             App\Message\ReviewPullRequest: async
             App\Message\IndexNode: async
             App\Message\ReindexNodes: async
+            App\Message\GardenProject: async
 
 when@test:
     framework:

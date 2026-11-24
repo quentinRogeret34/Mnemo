@@ -37,12 +37,23 @@ final class ProposalApplier
         }
 
         $payload = $proposal->getPayload();
+        $editedLesson = ProposalKind::Learning === $proposal->getKind() ? trim($input['lesson'] ?? (string) ($payload['lesson'] ?? '')) : null;
         $memory = match ($proposal->getKind()) {
-            ProposalKind::Learning => $this->applyLearning($proposal, $payload, trim($input['lesson'] ?? $payload['lesson'])),
+            ProposalKind::Learning => $this->applyLearning($proposal, $payload, (string) $editedLesson),
             ProposalKind::Duplicate => $this->applyPair($payload, $input['keep'] ?? null, merge: true),
             ProposalKind::Contradiction => $this->applyPair($payload, $input['keep'] ?? null, merge: false),
             ProposalKind::Refuted => $this->applyRefuted($payload),
         };
+
+        if (ProposalKind::Learning === $proposal->getKind() && 'retracts' !== ($payload['reconciliation'] ?? 'new')) {
+            $original = trim((string) ($payload['lesson'] ?? ''));
+            $wasEdited = '' !== $original && $editedLesson !== $original;
+            $proposal->annotatePayload([
+                'human_feedback' => $wasEdited
+                    ? ['edited' => true, 'original_lesson' => $original, 'applied_lesson' => $editedLesson]
+                    : ['edited' => false],
+            ]);
+        }
 
         $proposal->decide(ProposalStatus::Applied);
         $this->entityManager->flush();
@@ -50,10 +61,15 @@ final class ProposalApplier
         return $memory;
     }
 
-    public function reject(Proposal $proposal): void
+    public function reject(Proposal $proposal, ?string $reason = null): void
     {
         if (!$proposal->isPending()) {
             throw new \InvalidArgumentException('Cette proposition a déjà été traitée.');
+        }
+
+        $reason = null === $reason ? null : mb_substr(trim($reason), 0, 120);
+        if (null !== $reason && '' !== $reason) {
+            $proposal->annotatePayload(['human_feedback' => ['rejected_reason' => $reason]]);
         }
 
         $proposal->decide(ProposalStatus::Rejected);

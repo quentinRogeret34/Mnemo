@@ -2,6 +2,7 @@
 
 namespace App\Twig\Components;
 
+use AiObservability\Feedback\Feedback;
 use App\Chat\ChatHistory;
 use App\Chat\ProjectAssistant;
 use App\Entity\ChatConversation;
@@ -55,6 +56,7 @@ final class ProjectChat
         private readonly ProjectScope $projectScope,
         private readonly LlmSettings $llmSettings,
         private readonly TranslatorInterface $translator,
+        private readonly ?Feedback $feedback = null,
     ) {
     }
 
@@ -202,6 +204,14 @@ final class ProjectChat
         }
         if ($conversation->toggleFeedback($messageId, $value)) {
             $this->chatHistory->save();
+            $current = $conversation->messageFeedback($messageId);
+            if (null !== $current) {
+                $this->feedback?->record(
+                    $conversation->getUuid()->toRfc4122(),
+                    'up' === $current ? 1.0 : 0.0,
+                    label: $current,
+                );
+            }
         }
     }
 

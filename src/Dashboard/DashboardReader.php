@@ -198,6 +198,60 @@ final class DashboardReader
     }
 
     /**
+     * Self-improvement signals over the selected window: proposal acceptance / human edits and assistant ratings.
+     *
+     * @return array{applied: int, rejected: int, edited: int, acceptance_rate: ?float, thumbs_up: int, thumbs_down: int, satisfaction_rate: ?float}
+     */
+    public function aiQuality(?Project $project, ?\DateTimeImmutable $from): array
+    {
+        $proposalRow = $this->connection->fetchAssociative(
+            <<<'SQL'
+                SELECT COUNT(*) FILTER (WHERE p.status = 'applied') AS applied,
+                       COUNT(*) FILTER (WHERE p.status = 'rejected') AS rejected,
+                       COUNT(*) FILTER (WHERE p.status = 'applied' AND (p.payload->'human_feedback'->>'edited')::boolean IS TRUE) AS edited
+                FROM proposal p
+                WHERE (CAST(:project AS int) IS NULL OR p.project_id = :project)
+                  AND (CAST(:from AS timestamp) IS NULL OR p.decided_at >= :from)
+                SQL,
+            ['project' => $project?->getId(), 'from' => $from],
+            ['from' => Types::DATETIME_IMMUTABLE],
+        );
+
+        $chatRow = $this->connection->fetchAssociative(
+            <<<'SQL'
+                SELECT COUNT(*) FILTER (WHERE msg->>'feedback' = 'up') AS thumbs_up,
+                       COUNT(*) FILTER (WHERE msg->>'feedback' = 'down') AS thumbs_down
+                FROM chat_conversation c
+                CROSS JOIN LATERAL jsonb_array_elements(c.messages) AS msg
+                WHERE msg->>'role' = 'assistant'
+                  AND (CAST(:project AS int) IS NULL OR c.project_id = :project)
+                  AND (CAST(:from AS timestamp) IS NULL OR c.updated_at >= :from)
+                SQL,
+            ['project' => $project?->getId(), 'from' => $from],
+            ['from' => Types::DATETIME_IMMUTABLE],
+        );
+
+        $applied = (int) ($proposalRow['applied'] ?? 0);
+        $rejected = (int) ($proposalRow['rejected'] ?? 0);
+        $edited = (int) ($proposalRow['edited'] ?? 0);
+        $decided = $applied + $rejected;
+
+        $up = (int) ($chatRow['thumbs_up'] ?? 0);
+        $down = (int) ($chatRow['thumbs_down'] ?? 0);
+        $rated = $up + $down;
+
+        return [
+            'applied' => $applied,
+            'rejected' => $rejected,
+            'edited' => $edited,
+            'acceptance_rate' => $decided > 0 ? round($applied / $decided * 100, 1) : null,
+            'thumbs_up' => $up,
+            'thumbs_down' => $down,
+            'satisfaction_rate' => $rated > 0 ? round($up / $rated * 100, 1) : null,
+        ];
+    }
+
+    /**
      * @return list<array{created_at: string, tool: string, project: ?string, query: ?string, results: int, memories: int, failed: bool, duration_ms: int, client: ?string, total: int}>
      */
     public function recentCalls(?Project $project, int $limit = 12, int $offset = 0): array

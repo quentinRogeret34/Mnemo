@@ -37,6 +37,18 @@
             <legend>{{ 'nav.llm'|trans }}</legend>
             {{ form_row(form.chatModel) }}
             {{ form_row(form.embeddingModel) }}
+            <div class="checkbox-field">
+                <label class="checkbox-field__label">
+                    {{ form_widget(form.autoGarden) }}
+                    <span>{{ form.autoGarden.vars.label|trans }}</span>
+                </label>
+                <p class="help-text">
+                    {{ form.autoGarden.vars.help|trans }}
+                    {% if project.lastAutoGardenAt %}
+                        · {{ 'project.settings.last_auto_garden'|trans({date: project.lastAutoGardenAt|format_datetime('short', 'short')}) }}
+                    {% endif %}
+                </p>
+            </div>
             <div class="upload__actions">
                 <button class="button button--primary" type="submit">{{ 'common.save_settings'|trans }}</button>
             </div>

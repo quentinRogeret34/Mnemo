@@ -81,6 +81,14 @@ class Proposal
         $this->decidedAt = new \DateTimeImmutable();
     }
 
+    /**
+     * @param array<string, mixed> $extra
+     */
+    public function annotatePayload(array $extra): void
+    {
+        $this->payload = $extra + $this->payload;
+    }
+
     public function getCreatedAt(): \DateTimeImmutable
     {
         return $this->createdAt;

@@ -48,6 +48,7 @@ final class LearningExtractor
 
     public function __construct(
         private readonly Chat $chat,
+        private readonly ?CalibrationContext $calibration = null,
     ) {
     }
 
@@ -58,10 +59,12 @@ final class LearningExtractor
     {
         $truncated = mb_strlen($text) > self::MAX_SOURCE_CHARS;
         $text = mb_substr($text, 0, self::MAX_SOURCE_CHARS);
+        $calibration = $this->calibration?->forProject($project) ?? '';
+        $calibrationBlock = '' === $calibration ? '' : "\n\n".$calibration;
 
         $answer = $this->chat->ask(
             self::SYSTEM,
-            \sprintf("Projet : %s\nSource : %s (%s)\n\n<source>\n%s\n</source>", $project->getName(), $kind->describe(), $label, $text),
+            \sprintf("Projet : %s\nSource : %s (%s)%s\n\n<source>\n%s\n</source>", $project->getName(), $kind->describe(), $label, $calibrationBlock, $text),
             self::schema(),
             $project,
         );
