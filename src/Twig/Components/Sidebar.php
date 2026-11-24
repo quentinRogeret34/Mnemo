@@ -3,6 +3,7 @@
 namespace App\Twig\Components;
 
 use App\Entity\Project;
+use App\Factory\FactoryGuard;
 use App\Graph\KnowledgeReader;
 use App\Project\ProjectResolver;
 use App\Security\ProjectScope;
@@ -17,7 +18,13 @@ final class Sidebar
         private readonly KnowledgeReader $knowledgeReader,
         private readonly ProjectScope $projectScope,
         private readonly ProjectResolver $projectResolver,
+        private readonly FactoryGuard $factoryGuard,
     ) {
+    }
+
+    public function isFactoryAvailable(): bool
+    {
+        return $this->factoryGuard->canOperate();
     }
 
     public function mayCreate(): bool

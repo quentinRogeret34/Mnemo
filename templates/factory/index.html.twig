@@ -1,0 +1,209 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ 'factory.title'|trans }}{% if project %} — {{ project.name }}{% endif %}{% endblock %}
+
+{% block crumbs %}
+    {% if project %}
+        <a href="{{ path('project_show', {slug: project.slug}) }}">{{ project.name }}</a>
+        <span class="crumbs__sep" aria-hidden="true">/</span>
+    {% endif %}
+    <span class="crumbs__current">{{ 'factory.title'|trans }}</span>
+{% endblock %}
+
+{% block body %}
+    <div class="view-head">
+        <div>
+            <h1>
+                <twig:ux:icon name="lucide:kanban" />
+                {{ 'factory.title'|trans }}
+                <span class="tag tag--accent">{{ 'factory.dev_badge'|trans }}</span>
+            </h1>
+            <p class="page__lede">{{ 'factory.lede'|trans }}</p>
+        </div>
+        {% if project %}
+            <div class="view-head__actions">
+                <button class="button button--primary" type="button" commandfor="factory-new-session" command="show-modal">
+                    <twig:ux:icon name="lucide:plus" />
+                    {{ 'factory.new_session'|trans }}
+                </button>
+            </div>
+        {% endif %}
+    </div>
+
+    <div class="kpis" role="region" aria-label="{{ 'factory.stats_label'|trans }}">
+        <div class="kpi">
+            <span class="kpi__label">{{ 'factory.kpi.active'|trans }}</span>
+            <strong class="kpi__value">{{ stats.active }}</strong>
+        </div>
+        <div class="kpi">
+            <span class="kpi__label">{{ 'factory.kpi.last_24h'|trans }}</span>
+            <strong class="kpi__value">{{ stats.last24h }}</strong>
+        </div>
+        <div class="kpi">
+            <span class="kpi__label">{{ 'factory.kpi.succeeded'|trans }}</span>
+            <strong class="kpi__value">{{ stats.succeeded }}</strong>
+        </div>
+        <div class="kpi">
+            <span class="kpi__label">{{ 'factory.kpi.failed'|trans }}</span>
+            <strong class="kpi__value">{{ stats.failed }}</strong>
+        </div>
+        <div class="kpi">
+            <span class="kpi__label">{{ 'factory.kpi.total'|trans }}</span>
+            <strong class="kpi__value">{{ stats.total }}</strong>
+        </div>
+    </div>
+
+    <div class="filter-bar" role="navigation" aria-label="{{ 'factory.filter_status'|trans }}">
+        {% set base_route = project ? 'project_factory' : 'factory_index' %}
+        {% set base_params = project ? {slug: project.slug} : {} %}
+        <a class="filter-chip{% if status_filter is null %} is-active{% endif %}" href="{{ path(base_route, base_params) }}">
+            {{ 'factory.filter.all'|trans }}
+        </a>
+        {% for st in statuses %}
+            <a class="filter-chip{% if status_filter == st %} is-active{% endif %}" href="{{ path(base_route, base_params|merge({status: st.value})) }}">
+                {{ st|trans }}
+            </a>
+        {% endfor %}
+    </div>
+
+    <div class="table-wrap table-wrap--framed factory-table">
+        {% if sessions is empty %}
+            <div class="empty">
+                <p class="empty__title">{{ 'factory.empty.title'|trans }}</p>
+                <p class="empty__text">{{ 'factory.empty.text'|trans }}</p>
+            </div>
+        {% else %}
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>{{ 'factory.col.session'|trans }}</th>
+                        {% if not project %}<th>{{ 'factory.col.project'|trans }}</th>{% endif %}
+                        <th>{{ 'factory.col.status'|trans }}</th>
+                        <th>{{ 'factory.col.runner'|trans }}</th>
+                        <th>{{ 'factory.col.context'|trans }}</th>
+                        <th>{{ 'factory.col.files'|trans }}</th>
+                        <th>{{ 'factory.col.started'|trans }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for session in sessions %}
+                        <tr>
+                            <td>
+                                <a class="factory-session-link" href="{{ path('factory_session_show', {publicId: session.publicId}) }}">
+                                    <strong>{{ session.title }}</strong>
+                                    <span class="row__sub">
+                                        <code>{{ session.publicId }}</code> · {{ session.role }}
+                                        {% if session.client %}· {{ session.client }}{% endif %}
+                                    </span>
+                                </a>
+                            </td>
+                            {% if not project %}
+                                <td>
+                                    <a class="link" href="{{ path('project_factory', {slug: session.project.slug}) }}">{{ session.project.name }}</a>
+                                </td>
+                            {% endif %}
+                            <td>
+                                <span class="factory-status factory-status--{{ session.status.value }}">
+                                    {{ session.status|trans }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="tag">{{ session.runner|trans }}</span>
+                            </td>
+                            <td>
+                                <div class="factory-context-chips">
+                                    {% if session.branch %}
+                                        <code class="code-chip">{{ session.branch }}</code>
+                                    {% endif %}
+                                    {% if session.sourceRuleCode %}
+                                        <span class="tag tag--accent">{{ session.sourceRuleCode }}</span>
+                                    {% endif %}
+                                    {% if not session.branch and not session.sourceRuleCode %}
+                                        <span class="row__sub">—</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                <span class="row__sub">{{ session.filesTouched|length }}</span>
+                            </td>
+                            <td>
+                                <span class="row__sub" title="{{ session.startedAt|date('Y-m-d H:i:s') }}">
+                                    {{ session.startedAt|date('d/m H:i') }}
+                                    · {{ session.durationSeconds }}s
+                                </span>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+    </div>
+
+    <details class="panel factory-hooks">
+        <summary class="factory-hooks__summary">
+            <twig:ux:icon name="lucide:plug-zap" />
+            <span>{{ 'factory.hooks.title'|trans }}</span>
+            <span class="row__sub">{{ 'factory.hooks.subtitle'|trans }}</span>
+        </summary>
+        <div class="factory-hooks__body">
+            <p class="help-text">{{ 'factory.hooks.mcp_hint'|trans }}</p>
+            <div class="factory-mcp-tools">
+                <code class="code-chip">start_session</code>
+                <code class="code-chip">log_session_event</code>
+                <code class="code-chip">end_session</code>
+                <code class="code-chip">list_sessions</code>
+            </div>
+            <p class="help-text">{{ 'factory.hooks.claude_hint'|trans({url: hook_url}) }}</p>
+            <pre class="factory-code"><code>{{ hook_snippet }}</code></pre>
+        </div>
+    </details>
+
+    {% if project %}
+        <dialog id="factory-new-session" class="dialog">
+            <form method="post" action="{{ path('factory_session_start', {slug: project.slug}) }}" class="form-stack">
+                <input type="hidden" name="_token" value="{{ csrf_token('factory_session_start_' ~ project.slug) }}">
+                <h2>{{ 'factory.new_session'|trans }}</h2>
+                <label>
+                    {{ 'factory.form.title'|trans }}
+                    <input class="input" type="text" name="title" required maxlength="255" placeholder="{{ 'factory.form.title_placeholder'|trans }}">
+                </label>
+                <label>
+                    {{ 'factory.form.goal'|trans }}
+                    <textarea class="input" name="goal" rows="3" placeholder="{{ 'factory.form.goal_placeholder'|trans }}"></textarea>
+                </label>
+                <div class="factory-form-row">
+                    <label>
+                        {{ 'factory.form.role'|trans }}
+                        <input class="input" type="text" name="role" value="developer" maxlength="60">
+                    </label>
+                    <label>
+                        {{ 'factory.form.runner'|trans }}
+                        <select class="select" name="runner">
+                            {% for runner in runners %}
+                                <option value="{{ runner.value }}">{{ runner|trans }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                </div>
+                <div class="factory-form-row">
+                    <label>
+                        {{ 'factory.form.branch'|trans }}
+                        <input class="input" type="text" name="branch" maxlength="200" placeholder="feat/rg-012-export">
+                    </label>
+                    <label>
+                        {{ 'factory.form.rule_code'|trans }}
+                        <input class="input" type="text" name="rule_code" maxlength="50" placeholder="RG-001">
+                    </label>
+                </div>
+                <label>
+                    {{ 'factory.form.client'|trans }}
+                    <input class="input" type="text" name="client" maxlength="100" placeholder="claude-code / codex / cursor">
+                </label>
+                <div class="dialog__actions">
+                    <button class="button" type="button" commandfor="factory-new-session" command="close">{{ 'common.cancel'|trans }}</button>
+                    <button class="button button--primary" type="submit">{{ 'factory.form.start_submit'|trans }}</button>
+                </div>
+            </form>
+        </dialog>
+    {% endif %}
+{% endblock %}

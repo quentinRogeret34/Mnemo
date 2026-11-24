@@ -607,6 +607,29 @@ enum:
         agent: Sous-agent
         command: Commande
         skill: Skill
+    agent_runner_kind:
+        claude_cli: 'Claude Code CLI'
+        codex_cli: 'Codex CLI'
+        external_mcp: 'Agent MCP / IDE'
+        gemini_cli: 'Gemini CLI'
+        internal_llm: 'Agent LLM interne'
+    agent_session_event_kind:
+        completed: Terminé
+        decision: Décision
+        error: Erreur
+        file_changed: 'Fichier modifié'
+        handoff: Passation
+        log: Journal
+        started: Démarré
+        step: Étape
+        tool_call: 'Appel outil'
+    agent_session_status:
+        cancelled: Annulée
+        failed: 'En échec'
+        queued: 'En file'
+        running: 'En cours'
+        succeeded: Réussie
+        waiting_human: 'Attente humaine'
     dashboard_role:
         all: Complet
         business: Métier
@@ -710,6 +733,79 @@ file:
     target: 'Fichier cible'
     unused: "Aucun autre fichier ne l'utilise."
     used_by: 'Utilisé par'
+factory:
+    back_to_list: 'Retour aux sessions'
+    col:
+        context: Contexte
+        files: Fichiers
+        project: Projet
+        runner: Runner
+        session: Session
+        started: Démarrée
+        status: Statut
+    dev_badge: 'Mode dev'
+    empty:
+        text: 'Démarre une session depuis le bouton ci-dessus, via les outils MCP (start_session) ou avec un hook Claude Code ci-dessous.'
+        title: 'Aucune session enregistrée'
+    filter:
+        all: Toutes
+    filter_status: 'Filtrer par statut'
+    flash:
+        event_added: 'Événement ajouté à la timeline de session.'
+        finished: 'Session clôturée.'
+        message_required: 'Renseigner un message pour enregistrer l’événement.'
+        started: 'Session démarrée et tracée.'
+        title_required: 'Donner un titre à la session.'
+    form:
+        branch: Branche
+        client: 'Client / IDE'
+        event_kind: Type
+        event_message: Message
+        event_message_placeholder: 'Décision prise, étape franchie, erreur rencontrée…'
+        event_submit: 'Ajouter à la timeline'
+        files: 'Fichiers touchés (optionnel, séparés par virgule)'
+        final_status: 'Statut final'
+        finish_submit: 'Clôturer la session'
+        goal: 'Objectif / Prompt'
+        goal_placeholder: 'Contexte de la tâche, critères d’acceptation ou règle métier ciblée…'
+        role: Rôle
+        rule_code: 'Règle métier'
+        runner: Runner
+        start_submit: 'Démarrer le suivi'
+        summary_placeholder: 'Résumé du travail accompli, PR ouverte, tests validés…'
+        title: Titre
+        title_placeholder: 'ex. Implémenter RG-014 — calcul de remise dégressive'
+    hooks:
+        claude_hint: 'Hook Claude Code (.claude/settings.json) vers {url} :'
+        mcp_hint: 'Outils MCP disponibles directement pour tes agents IDE/CLI :'
+        subtitle: 'Brancher Claude Code, Cursor ou Codex en 10 secondes'
+        title: 'Hooks locaux & outils MCP'
+    kpi:
+        active: 'En cours'
+        failed: 'En échec'
+        last_24h: 'Dernières 24 h'
+        succeeded: Réussies
+        total: Total
+    lede: 'Journal centralisé des sessions d’agents (IDE, CLI locaux et futurs workers de ruche) rattachées à la mémoire et aux règles métier du projet.'
+    new_session: 'Nouvelle session'
+    show:
+        close_session: 'Clôturer la session'
+        duration: Durée
+        files_touched: 'Fichiers touchés'
+        finished_at: Terminée
+        goal: Objectif
+        log_event: 'Journaliser une étape'
+        metadata: Propriétés
+        no_events: 'Aucun événement enregistré pour cette session.'
+        no_files: 'Aucun fichier recensé pour le moment.'
+        parent: 'Session parente'
+        payload: 'Détails JSON'
+        started_by: 'Lancée par'
+        sub_sessions: 'Sous-sessions (workers)'
+        summary: Résumé
+        timeline: Timeline
+    stats_label: 'Indicateurs de la Software Factory'
+    title: 'Software Factory'
 flash:
     dashboard:
         saved: 'Préférences du tableau de bord enregistrées.'
@@ -1145,6 +1241,7 @@ nav:
     dashboard: 'Tableau de bord'
     documents: Documents
     expand: 'Déplier le menu'
+    factory: 'Software Factory'
     filter_projects: 'Filtrer les projets'
     garden: Jardinage
     hint_code: code

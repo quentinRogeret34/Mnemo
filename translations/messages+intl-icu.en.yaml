@@ -607,6 +607,29 @@ enum:
         agent: Subagent
         command: Command
         skill: Skill
+    agent_runner_kind:
+        claude_cli: 'Claude Code CLI'
+        codex_cli: 'Codex CLI'
+        external_mcp: 'MCP / IDE agent'
+        gemini_cli: 'Gemini CLI'
+        internal_llm: 'Internal LLM agent'
+    agent_session_event_kind:
+        completed: Completed
+        decision: Decision
+        error: Error
+        file_changed: 'File changed'
+        handoff: Handoff
+        log: Log
+        started: Started
+        step: Step
+        tool_call: 'Tool call'
+    agent_session_status:
+        cancelled: Cancelled
+        failed: Failed
+        queued: Queued
+        running: Running
+        succeeded: Succeeded
+        waiting_human: 'Waiting human'
     dashboard_role:
         all: Full
         business: Business
@@ -710,6 +733,79 @@ file:
     target: 'Target file'
     unused: 'No other file uses it.'
     used_by: 'Used by'
+factory:
+    back_to_list: 'Back to sessions'
+    col:
+        context: Context
+        files: Files
+        project: Project
+        runner: Runner
+        session: Session
+        started: Started
+        status: Status
+    dev_badge: 'Dev mode'
+    empty:
+        text: 'Start a session above, call the MCP tools (start_session), or wire a Claude Code hook below.'
+        title: 'No session recorded yet'
+    filter:
+        all: All
+    filter_status: 'Filter by status'
+    flash:
+        event_added: 'Event appended to session timeline.'
+        finished: 'Session closed.'
+        message_required: 'Provide a message to record the event.'
+        started: 'Session started and tracked.'
+        title_required: 'Provide a title for the session.'
+    form:
+        branch: Branch
+        client: 'Client / IDE'
+        event_kind: Type
+        event_message: Message
+        event_message_placeholder: 'Decision made, milestone reached, error encountered…'
+        event_submit: 'Append to timeline'
+        files: 'Touched files (optional, comma-separated)'
+        final_status: 'Final status'
+        finish_submit: 'Close session'
+        goal: 'Goal / Prompt'
+        goal_placeholder: 'Task context, acceptance criteria or targeted business rule…'
+        role: Role
+        rule_code: 'Business rule'
+        runner: Runner
+        start_submit: 'Start tracking'
+        summary_placeholder: 'Summary of delivered work, PR link, tests passed…'
+        title: Title
+        title_placeholder: 'e.g. Implement RG-014 — tiered discount calculation'
+    hooks:
+        claude_hint: 'Claude Code hook (.claude/settings.json) posting to {url}:'
+        mcp_hint: 'MCP tools directly available to your IDE/CLI agents:'
+        subtitle: 'Connect Claude Code, Cursor or Codex in 10 seconds'
+        title: 'Local hooks & MCP tools'
+    kpi:
+        active: Active
+        failed: Failed
+        last_24h: 'Last 24h'
+        succeeded: Succeeded
+        total: Total
+    lede: 'Centralized journal of agent sessions (IDE, local CLIs and upcoming swarm workers) linked to project memory and business rules.'
+    new_session: 'New session'
+    show:
+        close_session: 'Close session'
+        duration: Duration
+        files_touched: 'Files touched'
+        finished_at: Finished
+        goal: Goal
+        log_event: 'Log an event'
+        metadata: Metadata
+        no_events: 'No event recorded for this session.'
+        no_files: 'No file recorded yet.'
+        parent: 'Parent session'
+        payload: 'JSON payload'
+        started_by: 'Started by'
+        sub_sessions: 'Sub-sessions (workers)'
+        summary: Summary
+        timeline: Timeline
+    stats_label: 'Software Factory metrics'
+    title: 'Software Factory'
 flash:
     dashboard:
         saved: 'Dashboard preferences saved.'
@@ -1145,6 +1241,7 @@ nav:
     dashboard: Dashboard
     documents: Documents
     expand: 'Expand the menu'
+    factory: 'Software Factory'
     filter_projects: 'Filter projects'
     garden: Gardening
     hint_code: code

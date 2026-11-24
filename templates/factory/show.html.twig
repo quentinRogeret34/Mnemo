@@ -1,0 +1,199 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ session.title }} — {{ 'factory.title'|trans }}{% endblock %}
+
+{% block crumbs %}
+    <a href="{{ path('project_show', {slug: project.slug}) }}">{{ project.name }}</a>
+    <span class="crumbs__sep" aria-hidden="true">/</span>
+    <a href="{{ path('project_factory', {slug: project.slug}) }}">{{ 'factory.title'|trans }}</a>
+    <span class="crumbs__sep" aria-hidden="true">/</span>
+    <span class="crumbs__current">{{ session.publicId }}</span>
+{% endblock %}
+
+{% block body %}
+    <div class="view-head">
+        <div>
+            <h1>
+                <twig:ux:icon name="lucide:kanban" />
+                {{ session.title }}
+            </h1>
+            <p class="page__lede">
+                <code>{{ session.publicId }}</code> ·
+                <span class="factory-status factory-status--{{ session.status.value }}">{{ session.status|trans }}</span> ·
+                <span class="tag">{{ session.runner|trans }}</span> ·
+                {{ session.role }}
+                {% if session.client %}· {{ session.client }}{% endif %}
+            </p>
+        </div>
+        <div class="view-head__actions">
+            <a class="button" href="{{ path('project_factory', {slug: project.slug}) }}">{{ 'factory.back_to_list'|trans }}</a>
+        </div>
+    </div>
+
+    <div class="factory-detail-grid">
+        <div class="factory-detail-main">
+            {% if session.goal %}
+                <section class="panel">
+                    <h2>{{ 'factory.show.goal'|trans }}</h2>
+                    <p class="factory-goal">{{ session.goal }}</p>
+                </section>
+            {% endif %}
+
+            {% if session.summary %}
+                <section class="callout callout--info">
+                    <strong>{{ 'factory.show.summary'|trans }}</strong>
+                    <p>{{ session.summary }}</p>
+                </section>
+            {% endif %}
+
+            {% if children is not empty %}
+                <section class="panel">
+                    <h2>{{ 'factory.show.sub_sessions'|trans }} ({{ children|length }})</h2>
+                    <ul class="list">
+                        {% for child in children %}
+                            <li>
+                                <a class="row" href="{{ path('factory_session_show', {publicId: child.publicId}) }}">
+                                    <span class="row__title">{{ child.title }}</span>
+                                    <span class="row__sub">{{ child.role }} · {{ child.runner|trans }}</span>
+                                    <span class="factory-status factory-status--{{ child.status.value }}">{{ child.status|trans }}</span>
+                                </a>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </section>
+            {% endif %}
+
+            <section class="panel">
+                <h2>{{ 'factory.show.timeline'|trans }} ({{ events|length }})</h2>
+                {% if events is empty %}
+                    <p class="help-text">{{ 'factory.show.no_events'|trans }}</p>
+                {% else %}
+                    <ol class="factory-timeline">
+                        {% for event in events %}
+                            <li class="factory-timeline__item factory-timeline__item--{{ event.kind.value }}">
+                                <div class="factory-timeline__head">
+                                    <span class="tag">{{ event.kind|trans }}</span>
+                                    <time class="row__sub" datetime="{{ event.createdAt|date('c') }}">{{ event.createdAt|date('d/m/Y H:i:s') }}</time>
+                                </div>
+                                <p class="factory-timeline__msg">{{ event.message }}</p>
+                                {% if event.payload is not empty %}
+                                    <details class="factory-timeline__payload">
+                                        <summary>{{ 'factory.show.payload'|trans }}</summary>
+                                        <pre class="factory-code"><code>{{ event.payload|json_encode(constant('JSON_PRETTY_PRINT') b-or constant('JSON_UNESCAPED_SLASHES') b-or constant('JSON_UNESCAPED_UNICODE')) }}</code></pre>
+                                    </details>
+                                {% endif %}
+                            </li>
+                        {% endfor %}
+                    </ol>
+                {% endif %}
+            </section>
+
+            <section class="panel">
+                <h2>{{ 'factory.show.log_event'|trans }}</h2>
+                <form method="post" action="{{ path('factory_session_event', {publicId: session.publicId}) }}" class="form-stack">
+                    <input type="hidden" name="_token" value="{{ csrf_token('factory_session_event_' ~ session.publicId) }}">
+                    <div class="factory-form-row">
+                        <label>
+                            {{ 'factory.form.event_kind'|trans }}
+                            <select class="select" name="kind">
+                                {% for kind in event_kinds %}
+                                    <option value="{{ kind.value }}">{{ kind|trans }}</option>
+                                {% endfor %}
+                            </select>
+                        </label>
+                        <label>
+                            {{ 'factory.form.files'|trans }}
+                            <input class="input" type="text" name="files" placeholder="src/Foo.php, tests/FooTest.php">
+                        </label>
+                    </div>
+                    <label>
+                        {{ 'factory.form.event_message'|trans }}
+                        <textarea class="input" name="message" rows="2" required placeholder="{{ 'factory.form.event_message_placeholder'|trans }}"></textarea>
+                    </label>
+                    <div>
+                        <button class="button button--primary" type="submit">{{ 'factory.form.event_submit'|trans }}</button>
+                    </div>
+                </form>
+            </section>
+        </div>
+
+        <aside class="factory-detail-aside">
+            <section class="panel">
+                <h2>{{ 'factory.show.metadata'|trans }}</h2>
+                <dl class="props">
+                    <dt>{{ 'factory.col.project'|trans }}</dt>
+                    <dd><a class="link" href="{{ path('project_show', {slug: project.slug}) }}">{{ project.name }}</a></dd>
+                    <dt>{{ 'factory.col.status'|trans }}</dt>
+                    <dd><span class="factory-status factory-status--{{ session.status.value }}">{{ session.status|trans }}</span></dd>
+                    <dt>{{ 'factory.col.runner'|trans }}</dt>
+                    <dd>{{ session.runner|trans }}</dd>
+                    <dt>{{ 'factory.form.role'|trans }}</dt>
+                    <dd>{{ session.role }}</dd>
+                    {% if session.branch %}
+                        <dt>{{ 'factory.form.branch'|trans }}</dt>
+                        <dd><code class="code-chip">{{ session.branch }}</code></dd>
+                    {% endif %}
+                    {% if session.worktreePath %}
+                        <dt>Worktree</dt>
+                        <dd><code class="code-chip">{{ session.worktreePath }}</code></dd>
+                    {% endif %}
+                    {% if session.sourceRuleCode %}
+                        <dt>{{ 'factory.form.rule_code'|trans }}</dt>
+                        <dd><span class="tag tag--accent">{{ session.sourceRuleCode }}</span></dd>
+                    {% endif %}
+                    {% if session.parentSession %}
+                        <dt>{{ 'factory.show.parent'|trans }}</dt>
+                        <dd><a class="link" href="{{ path('factory_session_show', {publicId: session.parentSession.publicId}) }}">{{ session.parentSession.title }}</a></dd>
+                    {% endif %}
+                    {% if session.startedBy %}
+                        <dt>{{ 'factory.show.started_by'|trans }}</dt>
+                        <dd>{{ session.startedBy }}</dd>
+                    {% endif %}
+                    <dt>{{ 'factory.col.started'|trans }}</dt>
+                    <dd>{{ session.startedAt|date('d/m/Y H:i:s') }}</dd>
+                    {% if session.finishedAt %}
+                        <dt>{{ 'factory.show.finished_at'|trans }}</dt>
+                        <dd>{{ session.finishedAt|date('d/m/Y H:i:s') }}</dd>
+                    {% endif %}
+                    <dt>{{ 'factory.show.duration'|trans }}</dt>
+                    <dd>{{ session.durationSeconds }} s</dd>
+                </dl>
+            </section>
+
+            <section class="panel">
+                <h2>{{ 'factory.show.files_touched'|trans }} ({{ session.filesTouched|length }})</h2>
+                {% if session.filesTouched is empty %}
+                    <p class="help-text">{{ 'factory.show.no_files'|trans }}</p>
+                {% else %}
+                    <ul class="factory-file-list">
+                        {% for file in session.filesTouched %}
+                            <li><code class="code-chip">{{ file }}</code></li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+            </section>
+
+            {% if session.status.isActive %}
+                <section class="panel">
+                    <h2>{{ 'factory.show.close_session'|trans }}</h2>
+                    <form method="post" action="{{ path('factory_session_finish', {publicId: session.publicId}) }}" class="form-stack">
+                        <input type="hidden" name="_token" value="{{ csrf_token('factory_session_finish_' ~ session.publicId) }}">
+                        <label>
+                            {{ 'factory.form.final_status'|trans }}
+                            <select class="select" name="status">
+                                <option value="succeeded">{{ 'enum.agent_session_status.succeeded'|trans }}</option>
+                                <option value="failed">{{ 'enum.agent_session_status.failed'|trans }}</option>
+                                <option value="cancelled">{{ 'enum.agent_session_status.cancelled'|trans }}</option>
+                            </select>
+                        </label>
+                        <label>
+                            {{ 'factory.show.summary'|trans }}
+                            <textarea class="input" name="summary" rows="3" placeholder="{{ 'factory.form.summary_placeholder'|trans }}"></textarea>
+                        </label>
+                        <button class="button button--primary" type="submit">{{ 'factory.form.finish_submit'|trans }}</button>
+                    </form>
+                </section>
+            {% endif %}
+        </aside>
+    </div>
+{% endblock %}

@@ -18,7 +18,7 @@ use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 #[AsEventListener]
 final class ProjectAccessListener
 {
-    private const ACROSS_PROJECTS = ['dashboard', 'activity', 'activity_feed', 'memory_index', 'memory_graph', 'memory_graph_data', 'proposal_index'];
+    private const ACROSS_PROJECTS = ['dashboard', 'activity', 'activity_feed', 'memory_index', 'memory_graph', 'memory_graph_data', 'proposal_index', 'factory_index'];
     private const WORKSPACE = ['document_index'];
     private const WORKSPACE_PREFIXES = ['connector_'];
 
