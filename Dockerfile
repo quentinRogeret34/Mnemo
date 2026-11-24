@@ -28,7 +28,7 @@ RUN composer dump-autoload --classmap-authoritative --no-dev --no-interaction \
     && composer dump-env prod \
     && composer run-script --no-dev post-install-cmd \
     && php bin/console asset-map:compile \
-    && mkdir -p var/storage var/repos var/lock var/worktrees var/sessions
+    && mkdir -p var/storage var/repos var/worktrees
 
 FROM dunglas/frankenphp:1-php8.5 AS prod
 
@@ -47,7 +47,7 @@ COPY docker/php/prod.ini /usr/local/etc/php/conf.d/zz-prod.ini
 
 WORKDIR /app
 COPY --from=prod-builder --chown=appuser:appuser /app /app
-RUN mkdir -p /data /config /app/var/storage /app/var/repos /app/var/lock /app/var/worktrees /app/var/sessions \
+RUN mkdir -p /data /config /app/var/storage /app/var/repos /app/var/worktrees \
     && chown -R appuser:appuser /data /config /app/var
 
 USER appuser

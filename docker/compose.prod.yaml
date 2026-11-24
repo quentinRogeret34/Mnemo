@@ -41,7 +41,6 @@ x-app: &app
   volumes:
     - storage:/app/var/storage
     - repos:/app/var/repos
-    - locks:/app/var/lock
     - worktrees:/app/var/worktrees
   depends_on:
     database:
@@ -79,9 +78,7 @@ services:
     volumes:
       - storage:/app/var/storage
       - repos:/app/var/repos
-      - locks:/app/var/lock
       - worktrees:/app/var/worktrees
-      - sessions:/app/var/sessions
       - caddy_data:/data
       - caddy_config:/config
 
@@ -116,9 +113,7 @@ services:
 volumes:
   storage:
   repos:
-  locks:
   worktrees:
-  sessions:
   caddy_data:
   caddy_config:
   database_data:

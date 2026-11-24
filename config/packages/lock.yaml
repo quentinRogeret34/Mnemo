@@ -1,3 +1,7 @@
 framework:
-    # A directory shared by the web and worker containers, so that both see the same locks.
-    lock: 'flock://%kernel.project_dir%/var/lock'
+    # Distributed locks backed by PostgreSQL (table "lock_keys"), shared across web and worker containers.
+    lock: '%env(DATABASE_URL)%'
+
+when@test:
+    framework:
+        lock: 'in-memory'

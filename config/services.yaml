@@ -25,3 +25,8 @@ services:
     # Tables, task lists and strikethrough in uploaded Markdown documents (vendor class, so no attribute possible).
     League\CommonMark\Extension\GithubFlavoredMarkdownExtension:
         tags: ['twig.markdown.league_extension']
+
+    # Persist PHP sessions in PostgreSQL so deployments and multiple replicas never drop logins.
+    Symfony\Component\HttpFoundation\Session\Storage\Handler\PdoSessionHandler:
+        arguments:
+            - '%env(DATABASE_URL)%'
