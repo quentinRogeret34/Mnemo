@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="{{ app.request.locale }}">
+    <head>
+        {{ include('_head_common.html.twig') }}
+        <title>{{ 'register.title'|trans }} · {{ 'app.name'|trans }}</title>
+        {{ importmap('app') }}
+    </head>
+    <body class="auth-body" data-controller="busy" data-action="submit@window->busy#mark pageshow@window->busy#reset">
+        <main class="auth-split">
+            <section class="auth-split__main">
+                <header class="auth-split__brand">
+                    <a class="workspace" href="{{ path('login') }}"><span class="workspace__mark" aria-hidden="true">M</span>{{ 'app.name'|trans }}</a>
+                </header>
+
+                <div class="login__card auth-form">
+                    <div class="auth-form__head">
+                        <h1>{{ 'register.heading'|trans }}</h1>
+                        <p class="auth-form__sub">{{ 'register.subtitle'|trans }}</p>
+                    </div>
+
+                    {% if error %}<p class="flash flash--error" role="alert">{{ error|trans }}</p>{% endif %}
+
+                    {{ include('security/_oauth_buttons.html.twig') }}
+
+                    {% if providers is not empty %}
+                        <div class="auth-divider" role="separator"><span>{{ 'login.or'|trans }}</span></div>
+                    {% endif %}
+
+                    <form class="auth-fields" method="post" action="{{ path('register') }}">
+                        <div class="auth-field">
+                            <label for="register-name">{{ 'register.name'|trans }}</label>
+                            <input class="input auth-input" id="register-name" type="text" name="name" value="{{ values.name }}" placeholder="{{ 'register.name_placeholder'|trans }}" autocomplete="name" maxlength="150" required autofocus>
+                        </div>
+
+                        <div class="auth-field">
+                            <label for="register-email">{{ 'register.email'|trans }}</label>
+                            <input class="input auth-input" id="register-email" type="email" name="email" value="{{ values.email }}" placeholder="{{ 'login.email_placeholder'|trans }}" autocomplete="email" maxlength="180" required>
+                        </div>
+
+                        <div class="auth-field" data-controller="password-visibility">
+                            <label for="register-password">{{ 'login.password'|trans }}</label>
+                            <div class="auth-password-wrap">
+                                <input class="input auth-input" id="register-password" type="password" name="password" placeholder="{{ 'register.password_placeholder'|trans }}" autocomplete="new-password" minlength="10" required data-password-visibility-target="input">
+                                <button class="auth-password-toggle" type="button" aria-label="{{ 'login.toggle_password'|trans }}" aria-pressed="false" data-password-visibility-target="button" data-action="password-visibility#toggle">
+                                    <twig:ux:icon name="lucide:eye" class="icon" />
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="auth-field">
+                            <label for="register-password-confirm">{{ 'register.password_confirm'|trans }}</label>
+                            <input class="input auth-input" id="register-password-confirm" type="password" name="password_confirm" placeholder="••••••••••" autocomplete="new-password" minlength="10" required>
+                        </div>
+
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token('register') }}">
+                        <button class="button button--primary auth-submit" type="submit">{{ 'register.submit'|trans }}</button>
+                    </form>
+
+                    <p class="auth-switch">
+                        {{ 'register.has_account'|trans }}
+                        <a class="link" href="{{ path('login') }}">{{ 'login.submit'|trans }}</a>
+                    </p>
+                </div>
+
+                <footer class="auth-split__foot">
+                    <a href="https://github.com/quentinRogeret34/Mnemo" target="_blank" rel="noopener">{{ 'nav.source'|trans }}</a>
+                    <span>© {{ 'now'|date('Y') }} {{ 'app.name'|trans }}</span>
+                </footer>
+            </section>
+
+            {{ include('security/_showcase.html.twig') }}
+        </main>
+    </body>
+</html>

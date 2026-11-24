@@ -6,15 +6,16 @@ use App\Enum\UserStatus;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
 
 /**
- * Someone who signed in through GitHub, GitLab or Google. A new account waits for a super admin to approve it.
+ * Someone who signed in through GitHub, GitLab, Google or email/password. A new account waits for a super admin to approve it.
  */
 #[ORM\Entity]
 #[ORM\Table(name: 'app_user')]
 #[ORM\UniqueConstraint(name: 'app_user_provider_unique', columns: ['provider', 'provider_id'])]
-class User implements UserInterface
+class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
@@ -26,6 +27,9 @@ class User implements UserInterface
 
     #[ORM\Column]
     private bool $superAdmin = false;
+
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $passwordHash = null;
 
     /**
      * @var Collection<int, UserGroup>
@@ -133,6 +137,16 @@ class User implements UserInterface
             $this->isActive() => ['ROLE_USER'],
             default => ['ROLE_PENDING'],
         };
+    }
+
+    public function getPassword(): ?string
+    {
+        return $this->passwordHash;
+    }
+
+    public function setPassword(?string $passwordHash): void
+    {
+        $this->passwordHash = $passwordHash;
     }
 
     public function eraseCredentials(): void

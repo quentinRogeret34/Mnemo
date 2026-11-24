@@ -1150,12 +1150,45 @@ locale:
     fr: Français
 login:
     continue_with: 'Continuer avec {provider}'
+    create_account: 'Créer un compte'
+    email_or_username: 'Email ou identifiant'
+    email_placeholder: 'nom@entreprise.fr'
     fallback: 'Compte de secours (mot de passe)'
+    heading: 'Bon retour'
+    no_account: 'Pas encore de compte ?'
     no_provider: "Aucun fournisseur de connexion n'est configuré (variables {variables})."
+    or: ou
     password: 'Mot de passe'
+    showcase:
+        alignment: 'Alignement Métier ↔ Dev'
+        badge: 'Mémoire active · 100 % tracée'
+        memory: 'Santé du graphe'
+        text: 'Règles métier, décisions d’architecture et contexte code unifiés pour vos équipes produit, dev et agents IA.'
+        title: 'Mémoire partagée, zéro dérive'
+        verified: Vérifiée
     submit: 'Se connecter'
+    subtitle: 'Connectez-vous à votre espace de connaissance métier et technique.'
     title: Connexion
+    toggle_password: 'Afficher ou masquer le mot de passe'
     username: Identifiant
+register:
+    email: 'Adresse email'
+    error:
+        csrf: 'Session expirée, merci de réessayer.'
+        email: 'Saisir une adresse email valide.'
+        email_taken: 'Un compte existe déjà avec cette adresse email.'
+        name: 'Indiquer votre nom (150 caractères maximum).'
+        password_length: 'Le mot de passe doit contenir au moins 10 caractères.'
+        password_mismatch: 'Les deux mots de passe ne correspondent pas.'
+    has_account: 'Déjà un compte ?'
+    heading: 'Créer un compte'
+    name: 'Nom complet'
+    name_placeholder: 'Camille Dupont'
+    password_confirm: 'Confirmer le mot de passe'
+    password_placeholder: '10 caractères minimum'
+    submit: 'Créer mon compte'
+    subtitle: 'Votre compte sera activé après validation par un administrateur.'
+    title: Inscription
 memory:
     about:
         empty: 'Aucune mémoire liée. Lier une mémoire depuis sa page.'

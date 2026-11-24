@@ -218,6 +218,61 @@ final class AccountsTest extends WebTestCase
         self::assertSame(['shop'], $this->entityManager->getRepository(UserGroup::class)->findOneBy(['name' => 'Back'])->getProjects()->map(static fn ($project): string => $project->getSlug())->getValues());
     }
 
+    public function testEmailAndPasswordRegistrationAndSignIn(): void
+    {
+        $http = new MockHttpClient();
+        self::getContainer()->set(OAuthClient::class, new OAuthClient($http, 'gh-id', 'gh-sec', 'gl-id', 'gl-sec', 'https://gitlab.com', 'gg-id', 'gg-sec'));
+
+        // All three OAuth providers + email/password form are rendered on /login
+        $crawler = $this->client->request('GET', '/login');
+        self::assertResponseIsSuccessful();
+        self::assertSame(
+            ['Continuer avec GitHub', 'Continuer avec GitLab', 'Continuer avec Google'],
+            $crawler->filter('.login__provider')->each(static fn ($link): string => trim($link->text())),
+        );
+        self::assertSelectorExists('input[name="_username"]');
+        self::assertSelectorExists('input[name="_password"]');
+        self::assertSelectorExists('a[href="/register"]');
+
+        // Register a listed admin email -> immediately active super admin
+        $crawler = $this->client->request('GET', '/register');
+        self::assertResponseIsSuccessful();
+        $token = (string) $crawler->filter('input[name="_csrf_token"]')->attr('value');
+        $this->client->request('POST', '/register', [
+            '_csrf_token' => $token,
+            'name' => 'Alice Admin',
+            'email' => 'alice@example.com',
+            'password' => 'SuperSecret123!',
+            'password_confirm' => 'SuperSecret123!',
+        ]);
+        self::assertResponseRedirects('/dashboard');
+        $this->client->followRedirect();
+        self::assertResponseIsSuccessful();
+        $this->logOut();
+
+        // Register a non-admin email -> pending approval
+        $crawler = $this->client->request('GET', '/register');
+        $token = (string) $crawler->filter('input[name="_csrf_token"]')->attr('value');
+        $this->client->request('POST', '/register', [
+            '_csrf_token' => $token,
+            'name' => 'Clara User',
+            'email' => 'clara@example.com',
+            'password' => 'ClaraSecret123!',
+            'password_confirm' => 'ClaraSecret123!',
+        ]);
+        self::assertResponseRedirects('/pending');
+        $this->client->followRedirect();
+        $this->logOut();
+
+        // Sign back in with email & password via /login
+        $crawler = $this->client->request('GET', '/login');
+        $this->client->submit($crawler->selectButton('Se connecter')->form([
+            '_username' => 'alice@example.com',
+            '_password' => 'SuperSecret123!',
+        ]));
+        self::assertResponseRedirects('/dashboard');
+    }
+
     private function signIn(): void
     {
         $this->client->request('GET', '/oauth/github');

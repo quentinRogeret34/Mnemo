@@ -5,28 +5,60 @@
         <title>{{ 'login.title'|trans }} · {{ 'app.name'|trans }}</title>
         {{ importmap('app') }}
     </head>
-    <body data-controller="busy" data-action="submit@window->busy#mark pageshow@window->busy#reset">
-        <main class="login">
-            <div class="login__card">
-                <span class="workspace"><span class="workspace__mark" aria-hidden="true">M</span>{{ 'app.name'|trans }}</span>
-                <h1>{{ 'login.title'|trans }}</h1>
-                {% if error %}<p class="flash flash--error" role="alert">{{ error.messageKey|trans(error.messageData, 'security') }}</p>{% endif %}
-                {% for key, label in providers %}
-                    <a class="button login__provider" href="{{ path('oauth_connect', {provider: key}) }}">{% if key == 'github' %}<twig:ux:icon name="simple-icons:github" />{% endif %}{{ 'login.continue_with'|trans({provider: label}) }}</a>
-                {% endfor %}
-                {% if providers is empty %}<p class="row__sub">{{ 'login.no_provider'|trans({variables: '<span class="mono">OAUTH_*</span>'})|raw }}</p>{% endif %}
-                <details class="login__password" {% if providers is empty or (error and last_username) %}open{% endif %}>
-                    <summary class="row__sub">{{ 'login.fallback'|trans }}</summary>
-                    <form method="post" action="{{ path('login') }}">
-                        <label for="username">{{ 'login.username'|trans }}</label>
-                        <input class="input" id="username" type="text" name="_username" value="{{ last_username }}" autocomplete="username" required autofocus>
-                        <label for="password">{{ 'login.password'|trans }}</label>
-                        <input class="input" id="password" type="password" name="_password" autocomplete="current-password" required>
+    <body class="auth-body" data-controller="busy" data-action="submit@window->busy#mark pageshow@window->busy#reset">
+        <main class="auth-split">
+            <section class="auth-split__main">
+                <header class="auth-split__brand">
+                    <span class="workspace"><span class="workspace__mark" aria-hidden="true">M</span>{{ 'app.name'|trans }}</span>
+                </header>
+
+                <div class="login__card auth-form">
+                    <div class="auth-form__head">
+                        <h1>{{ 'login.heading'|trans }}</h1>
+                        <p class="auth-form__sub">{{ 'login.subtitle'|trans }}</p>
+                    </div>
+
+                    {% if error %}<p class="flash flash--error" role="alert">{{ error.messageKey|trans(error.messageData, 'security') }}</p>{% endif %}
+
+                    {{ include('security/_oauth_buttons.html.twig') }}
+
+                    {% if providers is not empty %}
+                        <div class="auth-divider" role="separator"><span>{{ 'login.or'|trans }}</span></div>
+                    {% endif %}
+
+                    <form class="auth-fields" method="post" action="{{ path('login') }}">
+                        <div class="auth-field">
+                            <label for="username">{{ 'login.email_or_username'|trans }}</label>
+                            <input class="input auth-input" id="username" type="text" name="_username" value="{{ last_username }}" placeholder="{{ 'login.email_placeholder'|trans }}" autocomplete="username" required autofocus>
+                        </div>
+
+                        <div class="auth-field" data-controller="password-visibility">
+                            <label for="password">{{ 'login.password'|trans }}</label>
+                            <div class="auth-password-wrap">
+                                <input class="input auth-input" id="password" type="password" name="_password" placeholder="••••••••••" autocomplete="current-password" required data-password-visibility-target="input">
+                                <button class="auth-password-toggle" type="button" aria-label="{{ 'login.toggle_password'|trans }}" aria-pressed="false" data-password-visibility-target="button" data-action="password-visibility#toggle">
+                                    <twig:ux:icon name="lucide:eye" class="icon" />
+                                </button>
+                            </div>
+                        </div>
+
                         <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
-                        <button class="button button--primary" type="submit">{{ 'login.submit'|trans }}</button>
+                        <button class="button button--primary auth-submit" type="submit">{{ 'login.submit'|trans }}</button>
                     </form>
-                </details>
-            </div>
+
+                    <p class="auth-switch">
+                        {{ 'login.no_account'|trans }}
+                        <a class="link" href="{{ path('register') }}">{{ 'login.create_account'|trans }}</a>
+                    </p>
+                </div>
+
+                <footer class="auth-split__foot">
+                    <a href="https://github.com/quentinRogeret34/Mnemo" target="_blank" rel="noopener">{{ 'nav.source'|trans }}</a>
+                    <span>© {{ 'now'|date('Y') }} {{ 'app.name'|trans }}</span>
+                </footer>
+            </section>
+
+            {{ include('security/_showcase.html.twig') }}
         </main>
     </body>
 </html>

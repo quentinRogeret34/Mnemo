@@ -1150,12 +1150,45 @@ locale:
     fr: Français
 login:
     continue_with: 'Continue with {provider}'
+    create_account: 'Create an account'
+    email_or_username: 'Email or username'
+    email_placeholder: 'name@company.com'
     fallback: 'Fallback account (password)'
+    heading: 'Welcome back'
+    no_account: 'No account yet?'
     no_provider: 'No sign-in provider is configured ({variables} variables).'
+    or: or
     password: Password
+    showcase:
+        alignment: 'Business ↔ Dev alignment'
+        badge: 'Live memory · 100% traceable'
+        memory: 'Graph health'
+        text: 'Business rules, architecture decisions and codebase context unified for product, engineering and AI agents.'
+        title: 'Shared memory, zero drift'
+        verified: Verified
     submit: 'Sign in'
+    subtitle: 'Sign in to your business and engineering knowledge workspace.'
     title: 'Sign in'
+    toggle_password: 'Show or hide password'
     username: Username
+register:
+    email: 'Email address'
+    error:
+        csrf: 'Session expired, please try again.'
+        email: 'Enter a valid email address.'
+        email_taken: 'An account already exists with this email address.'
+        name: 'Enter your name (150 characters maximum).'
+        password_length: 'Password must be at least 10 characters long.'
+        password_mismatch: 'Passwords do not match.'
+    has_account: 'Already have an account?'
+    heading: 'Create an account'
+    name: 'Full name'
+    name_placeholder: 'Alex Morgan'
+    password_confirm: 'Confirm password'
+    password_placeholder: 'At least 10 characters'
+    submit: 'Create account'
+    subtitle: 'Your account will be activated once approved by an administrator.'
+    title: Register
 memory:
     about:
         empty: 'No linked memory. Link a memory from its page.'
