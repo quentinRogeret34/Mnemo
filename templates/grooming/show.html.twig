@@ -1,0 +1,232 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ run.topic }} · {{ 'grooming.title'|trans }} · {{ project.name }}{% endblock %}
+
+{% block crumbs %}
+    <a href="{{ path('project_show', {slug: project.slug}) }}">{{ project.name }}</a>
+    <span class="crumbs__sep" aria-hidden="true">/</span>
+    <a href="{{ path('project_grooming', {slug: project.slug}) }}">{{ 'grooming.title'|trans }}</a>
+    <span class="crumbs__sep" aria-hidden="true">/</span>
+    <span class="crumbs__current">{{ run.topic }}</span>
+{% endblock %}
+
+{% block header_actions %}
+    <a class="button" href="{{ path('project_grooming', {slug: project.slug, topic: run.topic}) }}">
+        <twig:ux:icon name="lucide:rotate-ccw" />
+        {{ 'grooming.show.rerun'|trans }}
+    </a>
+    <a class="button button--primary" href="{{ path('proposal_index', {project: project.slug}) }}">
+        <twig:ux:icon name="lucide:clipboard-check" />
+        {{ 'grooming.show.open_proposals'|trans }}
+    </a>
+{% endblock %}
+
+{% block body %}
+    {% set score_tone = run.status == 'failed' ? 'danger' : (run.readinessScore >= 70 ? 'success' : (run.readinessScore >= 40 ? 'warning' : 'danger')) %}
+    {% set blockers = run.blockingQuestionsCount %}
+    {% set agent_icons = {
+        cartographe: 'lucide:network',
+        critique: 'lucide:shield-alert',
+        groomer: 'lucide:wand-sparkles',
+    } %}
+    {% set severity_tones = {
+        blocking: 'danger',
+        important: 'warning',
+        nice_to_have: 'neutral',
+    } %}
+
+    <div class="view-head">
+        <h1>
+            <twig:ux:icon name="lucide:wand-sparkles" />
+            {{ run.topic }}
+        </h1>
+        <span class="view-head__meta">
+            {{ run.createdAt|format_datetime('short', 'short') }}
+            {% if run.createdBy %}· {{ run.createdBy }}{% endif %}
+        </span>
+    </div>
+
+    <section class="panel grooming-hero">
+        <div class="grooming-ring grooming-ring--{{ score_tone }}" style="--grooming-score: {{ run.readinessScore }}" aria-label="{{ 'grooming.show.readiness_label'|trans({score: run.readinessScore}) }}">
+            <div class="grooming-ring__inner">
+                <span class="grooming-ring__value num">{{ run.readinessScore }}%</span>
+                <span class="grooming-ring__label">{{ 'grooming.col.readiness'|trans }}</span>
+            </div>
+        </div>
+
+        <div class="grooming-hero__body">
+            <div class="grooming-hero__head">
+                <h2>{{ 'grooming.show.executive_summary'|trans }}</h2>
+                <span class="pill pill--{{ score_tone }}">
+                    {% if run.status == 'failed' %}
+                        {{ 'grooming.status.failed'|trans }}
+                    {% elseif run.readinessScore >= 70 %}
+                        {{ 'grooming.readiness.ready'|trans }}
+                    {% elseif run.readinessScore >= 40 %}
+                        {{ 'grooming.readiness.partial'|trans }}
+                    {% else %}
+                        {{ 'grooming.readiness.not_ready'|trans }}
+                    {% endif %}
+                </span>
+            </div>
+
+            <div class="prose grooming-hero__summary">
+                {{ run.summary|markdown_to_html }}
+            </div>
+
+            {% if run.context %}
+                <details class="grooming-context-details">
+                    <summary>{{ 'grooming.show.input_context'|trans }}</summary>
+                    <p class="grooming-context-details__body">{{ run.context }}</p>
+                </details>
+            {% endif %}
+
+            <div class="grooming-hero__bar" aria-hidden="true">
+                <span class="grooming-bar__fill grooming-bar__fill--{{ score_tone }}" style="width: {{ run.readinessScore }}%"></span>
+            </div>
+        </div>
+    </section>
+
+    <section class="kpis" aria-label="{{ 'dashboard.key_figures'|trans }}">
+        <div class="kpi">
+            <span class="kpi__label">{{ ux_icon('lucide:activity') }}{{ 'grooming.col.readiness'|trans }}</span>
+            <span class="kpi__value num">{{ run.readinessScore }}%</span>
+            <div class="kpi__foot"><span class="kpi__delta"><span>{{ 'grooming.kpi.agents'|trans({count: run.steps|length}) }}</span></span></div>
+        </div>
+        <div class="kpi">
+            <span class="kpi__label">{{ ux_icon('lucide:triangle-alert') }}{{ 'grooming.col.questions'|trans }}</span>
+            <span class="kpi__value num">{{ run.questions|length }}</span>
+            <div class="kpi__foot"><span class="kpi__delta"><span>{{ 'grooming.kpi.blockers'|trans({count: blockers}) }}</span></span></div>
+        </div>
+        <div class="kpi">
+            <span class="kpi__label">{{ ux_icon('lucide:clipboard-check') }}{{ 'grooming.col.proposals'|trans }}</span>
+            <span class="kpi__value num">{{ run.createdProposalIds|length }}</span>
+            <div class="kpi__foot">
+                <span class="kpi__delta">
+                    <a class="link" href="{{ path('proposal_index', {project: project.slug}) }}">{{ 'grooming.show.review_in_proposals'|trans }}</a>
+                </span>
+            </div>
+        </div>
+    </section>
+
+    <section class="grooming-section" aria-labelledby="grooming-agents-title">
+        <div class="grooming-section-head">
+            <h2 id="grooming-agents-title">
+                <twig:ux:icon name="lucide:network" />
+                {{ 'grooming.show.agents_title'|trans }}
+            </h2>
+        </div>
+
+        <div class="grooming-agents-grid">
+            {% for step in run.steps %}
+                {% set agent_key = step.agent ?? 'groomer' %}
+                <article class="panel grooming-agent-card grooming-agent-card--{{ agent_key }}">
+                    <header class="grooming-agent-card__head">
+                        <span class="grooming-agent-card__step num">{{ loop.index }}</span>
+                        <span class="grooming-agent-badge grooming-agent-badge--{{ agent_key }}">
+                            {{ ux_icon(agent_icons[agent_key] ?? 'lucide:wand-sparkles') }}
+                            {{ step.role }}
+                        </span>
+                    </header>
+
+                    {% if step.summary %}
+                        <p class="grooming-agent-card__summary">{{ step.summary }}</p>
+                    {% endif %}
+
+                    {% if step.findings is not empty %}
+                        <ul class="grooming-findings">
+                            {% for finding in step.findings %}
+                                <li>{{ finding }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                </article>
+            {% endfor %}
+        </div>
+    </section>
+
+    <div class="grooming-columns">
+        <section class="panel grooming-section" aria-labelledby="grooming-questions-title">
+            <div class="grooming-section-head">
+                <h2 id="grooming-questions-title">
+                    <twig:ux:icon name="lucide:triangle-alert" />
+                    {{ 'grooming.show.questions_title'|trans }}
+                </h2>
+                <span class="row__sub num">{{ run.questions|length }}</span>
+            </div>
+
+            {% if run.questions is empty %}
+                <p class="block__empty">{{ 'grooming.show.questions_empty'|trans }}</p>
+            {% else %}
+                <ul class="grooming-question-list">
+                    {% for item in run.questions %}
+                        {% set sev = item.severity ?? 'important' %}
+                        <li class="grooming-question grooming-question--{{ sev }}">
+                            <div class="grooming-question__head">
+                                <span class="pill pill--{{ severity_tones[sev] ?? 'neutral' }}">
+                                    {{ ('grooming.severity.' ~ sev)|trans }}
+                                </span>
+                                <strong class="grooming-question__text">{{ item.question }}</strong>
+                            </div>
+                            {% if item.rationale %}
+                                <p class="grooming-question__rationale">{{ item.rationale }}</p>
+                            {% endif %}
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        </section>
+
+        <section class="panel grooming-section" aria-labelledby="grooming-proposals-title">
+            <div class="grooming-section-head">
+                <h2 id="grooming-proposals-title">
+                    <twig:ux:icon name="lucide:clipboard-check" />
+                    {{ 'grooming.show.proposals_title'|trans }}
+                </h2>
+                <a class="link" href="{{ path('proposal_index', {project: project.slug}) }}">
+                    {{ 'grooming.show.open_proposals'|trans }} {{ ux_icon('lucide:arrow-up-right') }}
+                </a>
+            </div>
+
+            {% if proposals is empty %}
+                <p class="block__empty">{{ 'grooming.show.proposals_empty'|trans }}</p>
+            {% else %}
+                <ul class="grooming-proposal-list">
+                    {% for proposal in proposals %}
+                        {% set payload = proposal.payload %}
+                        {% set is_rule = proposal.kind.value == 'rule_draft' %}
+                        {% set status_tone = proposal.status.value == 'applied' ? 'success' : (proposal.status.value == 'rejected' ? 'danger' : 'warning') %}
+                        <li class="grooming-proposal-item">
+                            <div class="grooming-proposal-item__head">
+                                <span class="pill pill--{{ is_rule ? 'success' : 'accent' }}">
+                                    {{ proposal.kind|trans }}
+                                </span>
+                                <span class="pill pill--{{ status_tone }}">
+                                    {{ ('grooming.proposal_status.' ~ proposal.status.value)|trans }}
+                                </span>
+                            </div>
+                            <div class="grooming-proposal-item__title">
+                                {% if is_rule %}
+                                    <strong>{{ payload.title ?? '' }}</strong>
+                                    {% if payload.statement ?? null %}
+                                        <p class="row__sub">{{ payload.statement }}</p>
+                                    {% endif %}
+                                {% else %}
+                                    <strong>{{ payload.lesson ?? '' }}</strong>
+                                    {% if payload.reason ?? null %}
+                                        <p class="row__sub">{{ payload.reason }}</p>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                            <div class="grooming-proposal-item__foot">
+                                <a class="link" href="{{ path('proposal_index', {project: project.slug, kind: proposal.kind.value}) }}#proposal-{{ proposal.id }}">
+                                    {{ 'grooming.show.view_proposal'|trans }} {{ ux_icon('lucide:arrow-up-right') }}
+                                </a>
+                            </div>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        </section>
+    </div>
+{% endblock %}

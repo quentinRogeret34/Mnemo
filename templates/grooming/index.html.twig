@@ -1,0 +1,179 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ 'grooming.title'|trans }} · {{ project.name }}{% endblock %}
+
+{% block crumbs %}
+    <a href="{{ path('project_show', {slug: project.slug}) }}">{{ project.name }}</a>
+    <span class="crumbs__sep" aria-hidden="true">/</span>
+    <span class="crumbs__current">{{ 'grooming.title'|trans }}</span>
+{% endblock %}
+
+{% block header_actions %}
+    <a class="button" href="{{ path('proposal_index', {project: project.slug}) }}">
+        <twig:ux:icon name="lucide:clipboard-check" />
+        {{ 'nav.to_review'|trans }}
+    </a>
+    <a class="button" href="{{ path('project_alignment', {slug: project.slug}) }}">
+        <twig:ux:icon name="lucide:scale" />
+        {{ 'nav.alignment'|trans }}
+    </a>
+{% endblock %}
+
+{% block body %}
+    <div class="view-head">
+        <h1>
+            <twig:ux:icon name="lucide:wand-sparkles" />
+            {{ 'grooming.title'|trans }}
+        </h1>
+        <span class="view-head__meta">{{ project.name }}</span>
+    </div>
+
+    <section class="panel grooming-launcher" aria-labelledby="grooming-launch-title">
+        <div class="grooming-launcher__head">
+            <h2 id="grooming-launch-title">{{ 'grooming.launch.title'|trans }}</h2>
+            <div class="grooming-pipeline-badges" aria-label="{{ 'grooming.pipeline.label'|trans }}">
+                <span class="grooming-agent-badge grooming-agent-badge--cartographe">
+                    {{ ux_icon('lucide:network') }} {{ 'grooming.agent.cartographe'|trans }}
+                </span>
+                <span class="grooming-pipeline-arrow" aria-hidden="true">→</span>
+                <span class="grooming-agent-badge grooming-agent-badge--critique">
+                    {{ ux_icon('lucide:shield-alert') }} {{ 'grooming.agent.critique'|trans }}
+                </span>
+                <span class="grooming-pipeline-arrow" aria-hidden="true">→</span>
+                <span class="grooming-agent-badge grooming-agent-badge--groomer">
+                    {{ ux_icon('lucide:wand-sparkles') }} {{ 'grooming.agent.groomer'|trans }}
+                </span>
+            </div>
+        </div>
+
+        <form method="post" action="{{ path('project_grooming_run', {slug: project.slug}) }}" class="form-stack grooming-form">
+            <input type="hidden" name="_token" value="{{ csrf_token('grooming-run-' ~ project.id) }}">
+
+            <div class="grooming-form__field">
+                <label class="grooming-form__label" for="grooming-topic">{{ 'grooming.form.topic'|trans }}</label>
+                <input
+                    id="grooming-topic"
+                    name="topic"
+                    type="text"
+                    class="input"
+                    maxlength="255"
+                    required
+                    value="{{ prefill_topic }}"
+                    placeholder="{{ 'grooming.form.topic_placeholder'|trans }}"
+                >
+            </div>
+
+            {% if suggested_topics is not empty %}
+                <div class="grooming-suggestions">
+                    <span class="grooming-suggestions__label">{{ 'grooming.form.suggestions'|trans }}</span>
+                    <div class="grooming-chips">
+                        {% for chip in suggested_topics %}
+                            <a
+                                class="grooming-chip{{ prefill_topic == chip ? ' grooming-chip--active' }}"
+                                href="{{ path('project_grooming', {slug: project.slug, topic: chip}) }}"
+                            >{{ chip }}</a>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+
+            <div class="grooming-form__field">
+                <label class="grooming-form__label" for="grooming-context">{{ 'grooming.form.context'|trans }}</label>
+                <textarea
+                    id="grooming-context"
+                    name="context"
+                    class="input"
+                    rows="3"
+                    placeholder="{{ 'grooming.form.context_placeholder'|trans }}"
+                ></textarea>
+            </div>
+
+            <div class="grooming-form__actions">
+                <button class="button button--primary" type="submit">
+                    <twig:ux:icon name="lucide:wand-sparkles" />
+                    {{ 'grooming.form.submit'|trans }}
+                </button>
+            </div>
+        </form>
+    </section>
+
+    <section class="grooming-history" aria-labelledby="grooming-history-title">
+        <div class="grooming-section-head">
+            <h2 id="grooming-history-title">
+                <twig:ux:icon name="lucide:history" />
+                {{ 'grooming.history.title'|trans }}
+            </h2>
+            {% if runs is not empty %}
+                <span class="row__sub num">{{ 'grooming.history.count'|trans({count: runs|length}) }}</span>
+            {% endif %}
+        </div>
+
+        {% if runs is empty %}
+            <p class="block__empty">{{ 'grooming.history.empty'|trans }}</p>
+        {% else %}
+            <div class="table-wrap table-wrap--framed grooming-table">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">{{ 'grooming.col.topic'|trans }}</th>
+                            <th scope="col">{{ 'grooming.col.readiness'|trans }}</th>
+                            <th scope="col" class="num">{{ 'grooming.col.questions'|trans }}</th>
+                            <th scope="col" class="num">{{ 'grooming.col.proposals'|trans }}</th>
+                            <th scope="col" class="num">{{ 'grooming.col.date'|trans }}</th>
+                            <th scope="col"><span class="visually-hidden">{{ 'project.index.col.action'|trans }}</span></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for run in runs %}
+                            {% set score_tone = run.status == 'failed' ? 'danger' : (run.readinessScore >= 70 ? 'success' : (run.readinessScore >= 40 ? 'warning' : 'danger')) %}
+                            {% set blockers = run.blockingQuestionsCount %}
+                            <tr class="grooming-run-row">
+                                <td class="data-table__fill" data-label="{{ 'grooming.col.topic'|trans }}">
+                                    <a class="grooming-run-link" href="{{ path('project_grooming_show', {slug: project.slug, id: run.id}) }}">
+                                        <strong>{{ run.topic }}</strong>
+                                    </a>
+                                    {% if run.summary %}
+                                        <div class="row__sub data-table__clip">{{ run.summary }}</div>
+                                    {% endif %}
+                                </td>
+                                <td class="data-table__nowrap" data-label="{{ 'grooming.col.readiness'|trans }}">
+                                    {% if run.status == 'failed' %}
+                                        <span class="pill pill--danger">{{ 'grooming.status.failed'|trans }}</span>
+                                    {% else %}
+                                        <div class="grooming-score-inline">
+                                            <span class="pill pill--{{ score_tone }} num">{{ run.readinessScore }}%</span>
+                                            <span class="grooming-bar" aria-hidden="true">
+                                                <span class="grooming-bar__fill grooming-bar__fill--{{ score_tone }}" style="width: {{ run.readinessScore }}%"></span>
+                                            </span>
+                                        </div>
+                                    {% endif %}
+                                </td>
+                                <td class="num data-table__nowrap" data-label="{{ 'grooming.col.questions'|trans }}">
+                                    <span class="num">{{ run.questions|length }}</span>
+                                    {% if blockers > 0 %}
+                                        <span class="pill pill--danger num">{{ 'grooming.blockers_short'|trans({count: blockers}) }}</span>
+                                    {% endif %}
+                                </td>
+                                <td class="num data-table__nowrap" data-label="{{ 'grooming.col.proposals'|trans }}">
+                                    {% if run.createdProposalIds|length > 0 %}
+                                        <span class="pill pill--accent num">{{ run.createdProposalIds|length }}</span>
+                                    {% else %}
+                                        <span class="row__sub num">0</span>
+                                    {% endif %}
+                                </td>
+                                <td class="num row__sub data-table__nowrap" data-label="{{ 'grooming.col.date'|trans }}">
+                                    {{ run.createdAt|format_datetime('short', 'short') }}
+                                </td>
+                                <td class="num data-table__nowrap">
+                                    <a class="button button--ghost" href="{{ path('project_grooming_show', {slug: project.slug, id: run.id}) }}">
+                                        {{ 'common.open'|trans }}
+                                    </a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+    </section>
+{% endblock %}
