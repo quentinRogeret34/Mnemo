@@ -1477,6 +1477,7 @@ proposal:
     apply_skill: 'Apply skill'
     archives: 'Archives:'
     axes: 'durability {durability}, reuse {reuse}, project fit {fit}, risk {risk}'
+    back_to_grooming: 'Back to grooming'
     choose_apply: 'Choose and apply'
     choose_pair: 'Pick one'
     col:
@@ -1485,10 +1486,13 @@ proposal:
         signal: Signal
     edit: 'Edit / details'
     empty: 'Nothing to review. Proposals come from {command}, the MCP tool {tool}, rule extraction from documents, gardening and memory verification.'
+    empty_grooming: 'All proposals from this grooming swarm have already been reviewed.'
     evidence: Evidence
     evidence_source: 'Evidence and source'
     excerpt: 'Document excerpt'
+    filter_grooming: 'Grooming swarm filter'
     filter_kind: 'Filter by kind'
+    grooming_chip: 'Swarm: {topic}'
     keep: 'Keep (the other is archived):'
     keep_merge: 'Keep (the other is merged into it, then archived):'
     lede: 'What the LLM proposes only enters the graph once applied here. A superseded or retracted memory is archived, not deleted.'
@@ -1685,12 +1689,14 @@ marketplace:
 
 grooming:
     addon:
-        description: 'Explores the knowledge graph with 3 agents (Cartographer, Critic, Groomer) to detect blind spots and generate actionable business rule and memory proposals.'
+        description: 'Multi-round 3-agent debate (Product, Architect, Critic) + Groomer synthesis to surface blind spots and propose business rules and memories.'
         name: 'Grooming Swarm'
     agent:
+        architect: 'Tech Architect'
         cartographe: Cartographer
-        critique: Critic
+        critique: 'Critic & QA'
         groomer: Groomer
+        product: 'Product & Business'
     blockers_short: '{count, plural, =1 {1 blocker} other {# blockers}}'
     col:
         date: Date
@@ -1700,10 +1706,15 @@ grooming:
         topic: Topic
     flash:
         completed: 'Grooming “{topic}” completed ({score}%) · {proposals, plural, =0 {no proposals} =1 {1 proposal created} other {# proposals created}} · {questions, plural, =0 {no open questions} =1 {1 open question} other {# open questions}}.'
+        started: 'Grooming swarm started on “{topic}” ({rounds, plural, =1 {1 round} other {# rounds}} in background).'
         topic_required: 'Provide a topic to groom.'
     form:
         context: 'Additional context (optional)'
         context_placeholder: 'Product constraints, ticket excerpt, target scope…'
+        rounds: 'Discussion rounds'
+        rounds_1: '1 round (fast)'
+        rounds_2: '2 rounds (recommended)'
+        rounds_3: '3 rounds (deep debate)'
         submit: 'Run grooming swarm'
         suggestions: 'Suggested topics:'
         topic: 'Topic or feature to groom'
@@ -1713,13 +1724,19 @@ grooming:
         empty: 'No grooming runs yet. Launch the swarm on a topic above.'
         title: 'Run history'
     kpi:
-        agents: '{count, plural, =1 {1 agent completed} other {# agents completed}}'
+        agents: '{count, plural, =1 {1 turn completed} other {# turns completed}}'
         blockers: '{count, plural, =0 {no blocking questions} =1 {1 blocking question} other {# blocking questions}}'
     launch:
         title: 'New grooming analysis'
+    modal:
+        back: 'Back to history'
+        body: 'The 3 agents (Product, Architect, Critic) are debating “{topic}” in the background ({rounds, plural, =1 {1 round} other {# rounds}} + synthesis). You can close this dialog and come back later, or stay here while it updates automatically.'
+        close: 'Close and watch'
+        reopen: 'Show progress'
+        title: 'Grooming swarm in progress'
     nav: 'Grooming Swarm'
     pipeline:
-        label: '3-agent pipeline'
+        label: '3-agent debate'
     proposal_status:
         applied: Applied
         pending: Pending
@@ -1728,12 +1745,18 @@ grooming:
         not_ready: 'Blockers to resolve'
         partial: 'Needs refinement'
         ready: 'Ready to implement'
+    round:
+        initial: 'Initial positions'
+        label: 'Round {round}/{total}'
+        refinement: 'Refinement & cross-feedback'
+        synthesis: 'Final synthesis · Groomer'
+    rounds_badge: '{count, plural, =1 {1 round} other {# rounds}}'
     severity:
         blocking: Blocking
         important: Important
         nice_to_have: 'Nice to have'
     show:
-        agents_title: 'Swarm deliberation (3 agents)'
+        agents_title: 'Swarm debate'
         executive_summary: 'Executive summary'
         input_context: 'Provided context'
         open_proposals: 'Open /proposals'
@@ -1748,4 +1771,6 @@ grooming:
     status:
         completed: Completed
         failed: Failed
+        running: Running
+        running_hint: 'Debate running ({done}/{total} steps)…'
     title: 'Grooming Swarm'

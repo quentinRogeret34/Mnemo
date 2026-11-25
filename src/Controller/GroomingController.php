@@ -2,19 +2,21 @@
 
 namespace App\Controller;
 
+use App\Entity\GroomingRun;
 use App\Entity\Project;
 use App\Grooming\GroomingContextCollector;
 use App\Grooming\GroomingRunRepository;
 use App\Grooming\GroomingSwarmRunner;
-use App\Llm\LlmUnavailable;
+use App\Message\RunGroomingSwarm;
 use App\Security\ProjectScope;
-use Psr\Log\LoggerInterface;
 use Symfony\Bridge\Doctrine\Attribute\MapEntity;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
+use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Translation\TranslatableMessage;
 
@@ -25,7 +27,7 @@ final class GroomingController extends AbstractController
         private readonly GroomingContextCollector $contextCollector,
         private readonly GroomingRunRepository $runRepository,
         private readonly ProjectScope $projectScope,
-        private readonly LoggerInterface $logger,
+        private readonly MessageBusInterface $messageBus,
     ) {
     }
 
@@ -57,6 +59,7 @@ final class GroomingController extends AbstractController
 
         $topic = trim($request->getPayload()->getString('topic'));
         $context = trim($request->getPayload()->getString('context'));
+        $rounds = max(1, min(GroomingRun::MAX_ROUNDS, $request->getPayload()->getInt('rounds', GroomingRun::DEFAULT_ROUNDS)));
 
         if ('' === $topic) {
             $this->addFlash('error', new TranslatableMessage('grooming.flash.topic_required'));
@@ -64,38 +67,28 @@ final class GroomingController extends AbstractController
             return $this->redirectToRoute('project_grooming', ['slug' => $project->getSlug()]);
         }
 
-        try {
-            $report = $this->runner->run(
-                $project,
-                $topic,
-                '' === $context ? null : $context,
-                $this->projectScope->viewer()?->getEmail(),
-            );
-        } catch (LlmUnavailable $exception) {
-            $this->addFlash('error', $exception->translatable());
+        $run = $this->runner->start(
+            $project,
+            $topic,
+            '' === $context ? null : $context,
+            $rounds,
+            $this->projectScope->viewer()?->getEmail(),
+        );
 
-            return $this->redirectToRoute('project_grooming', ['slug' => $project->getSlug(), 'topic' => $topic]);
-        } catch (\Throwable $exception) {
-            $this->logger->error('Grooming swarm failed for project {slug}: {message}', [
-                'slug' => $project->getSlug(),
-                'message' => $exception->getMessage(),
-                'exception' => $exception,
-            ]);
-            $this->addFlash('error', new TranslatableMessage('flash.llm.error', ['error' => $exception->getMessage()]));
-
-            return $this->redirectToRoute('project_grooming', ['slug' => $project->getSlug(), 'topic' => $topic]);
+        $runId = $run->getId();
+        if (null !== $runId) {
+            $this->messageBus->dispatch(new RunGroomingSwarm($runId));
         }
 
-        $this->addFlash('success', new TranslatableMessage('grooming.flash.completed', [
-            'topic' => $report->run->getTopic(),
-            'score' => $report->readinessScore,
-            'proposals' => \count($report->createdProposals),
-            'questions' => \count($report->questions),
+        $this->addFlash('success', new TranslatableMessage('grooming.flash.started', [
+            'topic' => $run->getTopic(),
+            'rounds' => $run->getRounds(),
         ]));
 
         return $this->redirectToRoute('project_grooming_show', [
             'slug' => $project->getSlug(),
-            'id' => $report->run->getId(),
+            'id' => $runId,
+            'started' => 1,
         ]);
     }
 
@@ -103,6 +96,7 @@ final class GroomingController extends AbstractController
     public function show(
         #[MapEntity(mapping: ['slug' => 'slug'])] Project $project,
         int $id,
+        #[MapQueryParameter] bool $started = false,
     ): Response {
         $this->denyUnlessProjectAllowed($project);
 
@@ -115,6 +109,35 @@ final class GroomingController extends AbstractController
             'project' => $project,
             'run' => $run,
             'proposals' => $this->runRepository->findProposalsForRun($run),
+            'show_running_modal' => $started && $run->isRunning(),
+        ]);
+    }
+
+    #[Route('/projects/{slug}/grooming/{id}/status', name: 'project_grooming_status', requirements: ['id' => '\d+'], methods: ['GET'])]
+    public function status(
+        #[MapEntity(mapping: ['slug' => 'slug'])] Project $project,
+        int $id,
+    ): JsonResponse {
+        $this->denyUnlessProjectAllowed($project);
+
+        $run = $this->runRepository->findForProject($project, $id);
+        if (null === $run) {
+            throw $this->createNotFoundException('Grooming run not found.');
+        }
+
+        $steps = $run->getSteps();
+        $latest = [] === $steps ? null : $steps[\count($steps) - 1];
+
+        return $this->json([
+            'status' => $run->getStatus(),
+            'rounds' => $run->getRounds(),
+            'steps_count' => \count($steps),
+            'expected_steps' => $run->expectedStepsCount(),
+            'readiness_score' => $run->getReadinessScore(),
+            'proposals_count' => \count($run->getCreatedProposalIds()),
+            'questions_count' => \count($run->getQuestions()),
+            'latest_role' => $latest['role'] ?? null,
+            'latest_round' => $latest['round'] ?? null,
         ]);
     }
 

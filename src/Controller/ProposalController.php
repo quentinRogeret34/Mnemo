@@ -2,8 +2,10 @@
 
 namespace App\Controller;
 
+use App\Entity\GroomingRun;
 use App\Entity\Proposal;
 use App\Enum\ProposalKind;
+use App\Grooming\GroomingRunRepository;
 use App\Pagination\Page;
 use App\Proposal\ProposalApplier;
 use App\Repository\ProposalRepository;
@@ -22,18 +24,32 @@ final class ProposalController extends AbstractController
 
     public function __construct(
         private readonly ProposalRepository $proposalRepository,
+        private readonly GroomingRunRepository $groomingRunRepository,
         private readonly ProjectScope $projectScope,
         private readonly ProposalApplier $applier,
     ) {
     }
 
     #[Route('/proposals', name: 'proposal_index', methods: ['GET'])]
-    public function index(#[MapQueryParameter] ?string $project = null, #[MapQueryParameter] ?string $kind = null, #[MapQueryParameter] int $page = 1): Response
-    {
+    public function index(
+        #[MapQueryParameter] ?string $project = null,
+        #[MapQueryParameter] ?string $kind = null,
+        #[MapQueryParameter] ?int $grooming = null,
+        #[MapQueryParameter] int $page = 1,
+    ): Response {
         $page = max(1, $page);
         $projectEntity = $this->projectScope->bySlug($project);
         $kindEnum = null === $kind ? null : ProposalKind::tryFrom($kind);
-        $kindCounts = $this->proposalRepository->countPendingByKind($projectEntity);
+
+        $groomingRun = null;
+        $onlyIds = null;
+        if (null !== $grooming) {
+            $groomingRun = $this->resolveGroomingRun($grooming, $projectEntity);
+            $projectEntity ??= $groomingRun->getProject();
+            $onlyIds = $groomingRun->getCreatedProposalIds();
+        }
+
+        $kindCounts = $this->proposalRepository->countPendingByKind($projectEntity, $onlyIds);
 
         return $this->render('proposal/index.html.twig', [
             'project' => $projectEntity,
@@ -42,9 +58,10 @@ final class ProposalController extends AbstractController
             'kinds' => ProposalKind::cases(),
             'kind_counts' => $kindCounts,
             'all_count' => array_sum($kindCounts),
+            'grooming_run' => $groomingRun,
             'proposals' => new Page(
-                $this->proposalRepository->findPending($projectEntity, $kindEnum, self::PAGE_SIZE, Page::offset($page, self::PAGE_SIZE)),
-                $this->proposalRepository->countPending($projectEntity, $kindEnum),
+                $this->proposalRepository->findPending($projectEntity, $kindEnum, self::PAGE_SIZE, Page::offset($page, self::PAGE_SIZE), $onlyIds),
+                $this->proposalRepository->countPending($projectEntity, $kindEnum, $onlyIds),
                 $page,
                 self::PAGE_SIZE,
             ),
@@ -94,6 +111,19 @@ final class ProposalController extends AbstractController
         return $this->back($request);
     }
 
+    private function resolveGroomingRun(int $id, ?\App\Entity\Project $project): GroomingRun
+    {
+        $run = null !== $project
+            ? $this->groomingRunRepository->findForProject($project, $id)
+            : $this->groomingRunRepository->find($id);
+
+        if (null === $run || !$this->projectScope->allows($run->getProject())) {
+            throw $this->createNotFoundException('Grooming run not found.');
+        }
+
+        return $run;
+    }
+
     private function checkToken(Proposal $proposal, Request $request): void
     {
         $allowed = null === $proposal->getProject()
@@ -112,7 +142,11 @@ final class ProposalController extends AbstractController
      */
     private function back(Request $request): Response
     {
-        $filters = array_filter(['project' => $request->query->get('project'), 'kind' => $request->query->get('kind')]);
+        $filters = array_filter([
+            'project' => $request->query->get('project'),
+            'kind' => $request->query->get('kind'),
+            'grooming' => $request->query->get('grooming'),
+        ]);
 
         return $this->redirectToRoute('proposal_index', $filters);
     }

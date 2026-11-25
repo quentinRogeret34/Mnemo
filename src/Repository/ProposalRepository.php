@@ -21,19 +21,31 @@ final class ProposalRepository extends ServiceEntityRepository
     }
 
     /**
+     * @param list<int>|null $onlyIds
+     *
      * @return array<string, int>
      */
-    public function countPendingByKind(?Project $project): array
+    public function countPendingByKind(?Project $project, ?array $onlyIds = null): array
     {
         $counts = [];
         foreach (ProposalKind::cases() as $case) {
             $counts[$case->value] = 0;
         }
+        if ([] === $onlyIds) {
+            return $counts;
+        }
 
-        $rows = $this->getEntityManager()->getConnection()->fetchAllKeyValue(
-            'SELECT kind, COUNT(*) FROM proposal WHERE status = :pending AND (CAST(:project AS int) IS NULL OR project_id = :project) GROUP BY kind',
-            ['pending' => ProposalStatus::Pending->value, 'project' => $project?->getId()],
-        );
+        $sql = 'SELECT kind, COUNT(*) FROM proposal WHERE status = :pending AND (CAST(:project AS int) IS NULL OR project_id = :project)';
+        $params = ['pending' => ProposalStatus::Pending->value, 'project' => $project?->getId()];
+        $types = [];
+        if (null !== $onlyIds) {
+            $sql .= ' AND id IN (:ids)';
+            $params['ids'] = $onlyIds;
+            $types['ids'] = ArrayParameterType::INTEGER;
+        }
+        $sql .= ' GROUP BY kind';
+
+        $rows = $this->getEntityManager()->getConnection()->fetchAllKeyValue($sql, $params, $types);
         foreach ($rows as $rowKind => $count) {
             $counts[(string) $rowKind] = (int) $count;
         }
@@ -42,18 +54,65 @@ final class ProposalRepository extends ServiceEntityRepository
     }
 
     /**
+     * @param list<int>|null $onlyIds
+     *
      * @return list<Proposal>
      */
-    public function findPending(?Project $project, ?ProposalKind $kind, int $limit, int $offset): array
+    public function findPending(?Project $project, ?ProposalKind $kind, int $limit, int $offset, ?array $onlyIds = null): array
     {
-        $criteria = $this->pendingCriteria($project, $kind);
+        if ([] === $onlyIds) {
+            return [];
+        }
 
-        return $this->findBy($criteria, ['createdAt' => 'ASC', 'id' => 'ASC'], $limit, $offset);
+        $qb = $this->createQueryBuilder('p')
+            ->where('p.status = :status')
+            ->setParameter('status', ProposalStatus::Pending)
+            ->orderBy('p.createdAt', 'DESC')
+            ->addOrderBy('p.id', 'DESC')
+            ->setMaxResults($limit)
+            ->setFirstResult($offset);
+
+        if (null !== $project) {
+            $qb->andWhere('p.project = :project')->setParameter('project', $project);
+        }
+        if (null !== $kind) {
+            $qb->andWhere('p.kind = :kind')->setParameter('kind', $kind);
+        }
+        if (null !== $onlyIds) {
+            $qb->andWhere('p.id IN (:ids)')->setParameter('ids', $onlyIds, ArrayParameterType::INTEGER);
+        }
+
+        /** @var list<Proposal> $results */
+        $results = $qb->getQuery()->getResult();
+
+        return $results;
     }
 
-    public function countPending(?Project $project, ?ProposalKind $kind = null): int
+    /**
+     * @param list<int>|null $onlyIds
+     */
+    public function countPending(?Project $project, ?ProposalKind $kind = null, ?array $onlyIds = null): int
     {
-        return $this->count($this->pendingCriteria($project, $kind));
+        if ([] === $onlyIds) {
+            return 0;
+        }
+
+        $qb = $this->createQueryBuilder('p')
+            ->select('COUNT(p.id)')
+            ->where('p.status = :status')
+            ->setParameter('status', ProposalStatus::Pending);
+
+        if (null !== $project) {
+            $qb->andWhere('p.project = :project')->setParameter('project', $project);
+        }
+        if (null !== $kind) {
+            $qb->andWhere('p.kind = :kind')->setParameter('kind', $kind);
+        }
+        if (null !== $onlyIds) {
+            $qb->andWhere('p.id IN (:ids)')->setParameter('ids', $onlyIds, ArrayParameterType::INTEGER);
+        }
+
+        return (int) $qb->getQuery()->getSingleScalarResult();
     }
 
     /**
@@ -76,15 +135,5 @@ final class ProposalRepository extends ServiceEntityRepository
         }
 
         return $counts;
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function pendingCriteria(?Project $project, ?ProposalKind $kind): array
-    {
-        return ['status' => ProposalStatus::Pending]
-            + (null === $project ? [] : ['project' => $project])
-            + (null === $kind ? [] : ['kind' => $kind]);
     }
 }

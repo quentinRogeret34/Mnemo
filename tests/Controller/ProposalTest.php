@@ -35,6 +35,22 @@ final class ProposalTest extends WebTestCase
         self::getContainer()->get(GraphifyImporter::class)->import($this->project, __DIR__.'/../Fixtures/graphify/graph-v1.json');
     }
 
+    public function testLatestProposalsAppearFirst(): void
+    {
+        $this->givenProposal(ProposalKind::Learning, $this->learning('Première proposition ancienne.'));
+        $this->givenProposal(ProposalKind::Learning, $this->learning('Dernière proposition récente.'));
+
+        $crawler = $this->client->request('GET', '/proposals?project=demo');
+        self::assertResponseIsSuccessful();
+        $summaries = $crawler->filter('.proposal-row .proposal-cell__summary')->each(
+            static fn ($node): string => trim($node->text()),
+        );
+        self::assertSame([
+            'Dernière proposition récente.',
+            'Première proposition ancienne.',
+        ], $summaries);
+    }
+
     public function testLearningIsAppliedWithTheEditedText(): void
     {
         $this->givenProposal(ProposalKind::Learning, $this->learning('Le catalogue est chargé au démarrage.'));

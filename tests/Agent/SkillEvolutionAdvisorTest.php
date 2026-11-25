@@ -94,7 +94,10 @@ final class SkillEvolutionAdvisorTest extends WebTestCase
 
         // Apply the update proposal (with human edit) and the create proposal.
         $crawler = $this->client->request('GET', '/proposals?project=demo&kind=skill_update');
-        $firstForm = $crawler->filter('.proposal-drawer')->first()->selectButton('Appliquer ce skill')->form();
+        $updateDrawer = $crawler->filter('.proposal-drawer')->reduce(
+            static fn ($node): bool => str_contains($node->text(), 'symfony-guardrails'),
+        )->first();
+        $firstForm = $updateDrawer->selectButton('Appliquer ce skill')->form();
         $firstForm['content'] = "- Utiliser les attributs PHP.\n- Toujours générer une migration Doctrine propre.";
         $this->client->submit($firstForm);
         $crawler = $this->client->followRedirect();

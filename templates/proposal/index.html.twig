@@ -12,7 +12,7 @@
 
 {% block body %}
     {% set scoped = app.user and not is_granted('ROLE_SUPER_ADMIN') %}
-    {% set filters = {project: project ? project.slug : null} %}
+    {% set filters = {project: project ? project.slug : null, grooming: grooming_run ? grooming_run.id : null} %}
     {% set reconciliations = {new: 'memory.new', updates: 'proposal.updates', supersedes: 'memory.show.replaces', retracts: 'proposal.retracts'} %}
     {% set tones = {new: 'success', updates: 'warning', supersedes: 'warning', retracts: 'danger'} %}
     {% set sources = {conversation: 'proposal.source.conversation', file: 'proposal.source.file', diff: 'proposal.source.diff', review: 'proposal.source.review'} %}
@@ -43,10 +43,25 @@
         {% endif %}
     </div>
 
+    {% if grooming_run %}
+        <ul class="filter-chips" aria-label="{{ 'proposal.filter_grooming'|trans }}">
+            <li>
+                <a class="filter-chip" href="{{ path('proposal_index', {project: project ? project.slug : null, kind: kind ? kind.value : null}|filter(v => v is not null)) }}" title="{{ 'common.reset'|trans }}">
+                    {{ ux_icon('lucide:wand-sparkles') }}
+                    {{ 'proposal.grooming_chip'|trans({topic: grooming_run.topic}) }}
+                    {{ ux_icon('lucide:x') }}
+                </a>
+            </li>
+            <li>
+                <a class="filter-chips__reset" href="{{ path('project_grooming_show', {slug: grooming_run.project.slug, id: grooming_run.id}) }}">{{ 'proposal.back_to_grooming'|trans }}</a>
+            </li>
+        </ul>
+    {% endif %}
+
     {% if proposals.items is empty %}
-        <p class="block__empty">{{ 'proposal.empty'|trans({command: '<span class="mono">app:learn</span>', tool: '<span class="mono">learn</span>'})|raw }}</p>
+        <p class="block__empty">{{ (grooming_run ? 'proposal.empty_grooming' : 'proposal.empty')|trans({command: '<span class="mono">app:learn</span>', tool: '<span class="mono">learn</span>'})|raw }}</p>
     {% else %}
-        {% set query = {project: project ? project.slug : null, kind: kind ? kind.value : null}|filter(v => v is not null) %}
+        {% set query = {project: project ? project.slug : null, kind: kind ? kind.value : null, grooming: grooming_run ? grooming_run.id : null}|filter(v => v is not null) %}
         <div class="table-wrap table-wrap--framed proposal-table">
             <table class="data-table">
                 <thead>

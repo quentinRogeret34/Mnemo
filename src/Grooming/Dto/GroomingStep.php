@@ -3,7 +3,7 @@
 namespace App\Grooming\Dto;
 
 /**
- * One hive agent turn in a Grooming Swarm run (Cartographe, Critique, or Groomer).
+ * One agent intervention in a multi-round Grooming Swarm debate or final synthesis.
  */
 final readonly class GroomingStep
 {
@@ -15,20 +15,28 @@ final readonly class GroomingStep
         public string $role,
         public string $summary,
         public array $findings,
+        public int $round = 1,
+        public ?string $stance = null,
     ) {
     }
 
     /**
-     * @return array{agent: string, role: string, summary: string, findings: list<string>}
+     * @return array{agent: string, role: string, summary: string, findings: list<string>, round: int, stance?: string}
      */
     public function toArray(): array
     {
-        return [
+        $data = [
             'agent' => $this->agent,
             'role' => $this->role,
             'summary' => $this->summary,
             'findings' => $this->findings,
+            'round' => $this->round,
         ];
+        if (null !== $this->stance && '' !== $this->stance) {
+            $data['stance'] = $this->stance;
+        }
+
+        return $data;
     }
 
     /**
@@ -43,12 +51,17 @@ final readonly class GroomingStep
                 $findings[] = trim($item);
             }
         }
+        $stance = isset($data['stance']) && \is_string($data['stance']) && '' !== trim($data['stance'])
+            ? trim($data['stance'])
+            : null;
 
         return new self(
             agent: (string) ($data['agent'] ?? ''),
             role: (string) ($data['role'] ?? ''),
             summary: (string) ($data['summary'] ?? ''),
             findings: $findings,
+            round: max(1, (int) ($data['round'] ?? 1)),
+            stance: $stance,
         );
     }
 }

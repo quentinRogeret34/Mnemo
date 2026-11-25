@@ -13,6 +13,7 @@ framework:
             App\Message\PlanSwarm: async
             App\Message\RunSwarmWorker: async
             App\Message\ReviewSwarm: async
+            App\Message\RunGroomingSwarm: async
 
 when@test:
     framework:

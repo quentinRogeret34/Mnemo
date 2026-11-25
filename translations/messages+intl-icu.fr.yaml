@@ -1477,6 +1477,7 @@ proposal:
     apply_skill: 'Appliquer ce skill'
     archives: 'Archive :'
     axes: 'durabilité {durability}, réutilisation {reuse}, adéquation {fit}, risque {risk}'
+    back_to_grooming: 'Retour à la ruche'
     choose_apply: 'Choisir et appliquer'
     choose_pair: 'À départager'
     col:
@@ -1485,10 +1486,13 @@ proposal:
         signal: Signal
     edit: 'Modifier / détails'
     empty: "Rien à valider. Les propositions arrivent avec {command}, l'outil MCP {tool}, l'extraction de règles depuis les documents, le jardinage et la vérification des mémoires."
+    empty_grooming: 'Toutes les propositions de cette ruche de grooming ont déjà été traitées.'
     evidence: Preuve
     evidence_source: 'Preuve et source'
     excerpt: 'Extrait du document'
+    filter_grooming: 'Filtre ruche de grooming'
     filter_kind: 'Filtrer par sorte'
+    grooming_chip: 'Ruche : {topic}'
     keep: "Garder (l'autre est archivée) :"
     keep_merge: "Garder (l'autre est fusionnée dedans puis archivée) :"
     lede: "Ce que le LLM propose n'entre dans le graphe qu'une fois appliqué ici. Une mémoire remplacée ou retirée est archivée, pas supprimée."
@@ -1685,12 +1689,14 @@ marketplace:
 
 grooming:
     addon:
-        description: 'Explore le graphe de connaissances à 3 agents (Cartographe, Critique, Groomer) pour détecter les angles morts et proposer des règles métier et mémoires.'
+        description: 'Débat multi-tours à 3 agents (Produit, Architecte, Critique) + synthèse Groomer pour détecter les angles morts et proposer des règles métier et mémoires.'
         name: 'Ruche de grooming'
     agent:
+        architect: 'Architecte Tech'
         cartographe: Cartographe
-        critique: Critique
+        critique: 'Critique & QA'
         groomer: Groomer
+        product: 'Produit & Métier'
     blockers_short: '{count, plural, =1 {1 bloquant} other {# bloquants}}'
     col:
         date: Date
@@ -1700,10 +1706,15 @@ grooming:
         topic: Sujet
     flash:
         completed: 'Grooming « {topic} » terminé ({score} %) · {proposals, plural, =0 {aucune proposition} =1 {1 proposition créée} other {# propositions créées}} · {questions, plural, =0 {aucune question} =1 {1 question ouverte} other {# questions ouvertes}}.'
+        started: 'Ruche de grooming lancée sur « {topic} » ({rounds, plural, =1 {1 tour} other {# tours}} en arrière-plan).'
         topic_required: 'Indiquer un sujet à analyser.'
     form:
         context: 'Contexte additionnel (optionnel)'
         context_placeholder: 'Contraintes produit, extrait de ticket, périmètre envisagé…'
+        rounds: 'Tours de discussion'
+        rounds_1: '1 tour (rapide)'
+        rounds_2: '2 tours (recommandé)'
+        rounds_3: '3 tours (approfondi)'
         submit: 'Lancer la ruche de grooming'
         suggestions: 'Sujets suggérés :'
         topic: 'Sujet ou fonctionnalité à groomer'
@@ -1713,13 +1724,19 @@ grooming:
         empty: 'Aucune analyse de grooming pour le moment. Lancer la ruche sur un sujet ci-dessus.'
         title: 'Historique des analyses'
     kpi:
-        agents: '{count, plural, =1 {1 agent exécuté} other {# agents exécutés}}'
+        agents: '{count, plural, =1 {1 prise de parole} other {# prises de parole}}'
         blockers: '{count, plural, =0 {aucune question bloquante} =1 {1 question bloquante} other {# questions bloquantes}}'
     launch:
         title: 'Nouvelle analyse de grooming'
+    modal:
+        back: "Retour à l'historique"
+        body: 'Les 3 agents (Produit, Architecte, Critique) débattent sur « {topic} » en arrière-plan ({rounds, plural, =1 {1 tour} other {# tours}} + synthèse). Vous pouvez fermer cette fenêtre et revenir plus tard, la page se mettra à jour automatiquement.'
+        close: 'Fermer et suivre'
+        reopen: 'Voir la progression'
+        title: 'Ruche de grooming en cours'
     nav: 'Ruche de grooming'
     pipeline:
-        label: 'Pipeline des 3 agents'
+        label: 'Débat à 3 agents'
     proposal_status:
         applied: Appliquée
         pending: 'En attente'
@@ -1728,12 +1745,18 @@ grooming:
         not_ready: 'Bloquants à lever'
         partial: 'À affiner'
         ready: 'Prêt pour implémentation'
+    round:
+        initial: 'Positions initiales'
+        label: 'Tour {round}/{total}'
+        refinement: 'Affinage & réponses croisées'
+        synthesis: 'Synthèse finale · Groomer'
+    rounds_badge: '{count, plural, =1 {1 tour} other {# tours}}'
     severity:
         blocking: Bloquant
         important: Important
         nice_to_have: Souhaitable
     show:
-        agents_title: 'Délibération de la ruche (3 agents)'
+        agents_title: 'Débat de la ruche'
         executive_summary: 'Synthèse exécutive'
         input_context: 'Contexte fourni'
         open_proposals: 'Ouvrir /proposals'
@@ -1748,4 +1771,6 @@ grooming:
     status:
         completed: Terminé
         failed: Échec
+        running: 'En cours'
+        running_hint: 'Débat en cours ({done}/{total} étapes)…'
     title: 'Ruche de grooming'

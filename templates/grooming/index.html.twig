@@ -32,10 +32,14 @@
         <div class="grooming-launcher__head">
             <h2 id="grooming-launch-title">{{ 'grooming.launch.title'|trans }}</h2>
             <div class="grooming-pipeline-badges" aria-label="{{ 'grooming.pipeline.label'|trans }}">
-                <span class="grooming-agent-badge grooming-agent-badge--cartographe">
-                    {{ ux_icon('lucide:network') }} {{ 'grooming.agent.cartographe'|trans }}
+                <span class="grooming-agent-badge grooming-agent-badge--product">
+                    {{ ux_icon('lucide:lightbulb') }} {{ 'grooming.agent.product'|trans }}
                 </span>
-                <span class="grooming-pipeline-arrow" aria-hidden="true">→</span>
+                <span class="grooming-pipeline-arrow" aria-hidden="true">↔</span>
+                <span class="grooming-agent-badge grooming-agent-badge--architect">
+                    {{ ux_icon('lucide:code') }} {{ 'grooming.agent.architect'|trans }}
+                </span>
+                <span class="grooming-pipeline-arrow" aria-hidden="true">↔</span>
                 <span class="grooming-agent-badge grooming-agent-badge--critique">
                     {{ ux_icon('lucide:shield-alert') }} {{ 'grooming.agent.critique'|trans }}
                 </span>
@@ -89,6 +93,14 @@
             </div>
 
             <div class="grooming-form__actions">
+                <div class="grooming-rounds-field">
+                    <label class="grooming-form__label" for="grooming-rounds">{{ 'grooming.form.rounds'|trans }}</label>
+                    <select id="grooming-rounds" name="rounds" class="select">
+                        <option value="1">{{ 'grooming.form.rounds_1'|trans }}</option>
+                        <option value="2" selected>{{ 'grooming.form.rounds_2'|trans }}</option>
+                        <option value="3">{{ 'grooming.form.rounds_3'|trans }}</option>
+                    </select>
+                </div>
                 <button class="button button--primary" type="submit">
                     <twig:ux:icon name="lucide:wand-sparkles" />
                     {{ 'grooming.form.submit'|trans }}
@@ -134,10 +146,14 @@
                                     </a>
                                     {% if run.summary %}
                                         <div class="row__sub data-table__clip">{{ run.summary }}</div>
+                                    {% elseif run.running %}
+                                        <div class="row__sub">{{ 'grooming.status.running_hint'|trans({done: run.steps|length, total: run.expectedStepsCount}) }}</div>
                                     {% endif %}
                                 </td>
                                 <td class="data-table__nowrap" data-label="{{ 'grooming.col.readiness'|trans }}">
-                                    {% if run.status == 'failed' %}
+                                    {% if run.running %}
+                                        <span class="pill pill--accent grooming-pill-running"><span class="grooming-pulse" aria-hidden="true"></span>{{ 'grooming.status.running'|trans }}</span>
+                                    {% elseif run.status == 'failed' %}
                                         <span class="pill pill--danger">{{ 'grooming.status.failed'|trans }}</span>
                                     {% else %}
                                         <div class="grooming-score-inline">
@@ -156,7 +172,7 @@
                                 </td>
                                 <td class="num data-table__nowrap" data-label="{{ 'grooming.col.proposals'|trans }}">
                                     {% if run.createdProposalIds|length > 0 %}
-                                        <span class="pill pill--accent num">{{ run.createdProposalIds|length }}</span>
+                                        <a class="pill pill--accent num" href="{{ path('proposal_index', {project: project.slug, grooming: run.id}) }}">{{ run.createdProposalIds|length }}</a>
                                     {% else %}
                                         <span class="row__sub num">0</span>
                                     {% endif %}

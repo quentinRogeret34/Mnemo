@@ -37,6 +37,11 @@ final readonly class GroomingRunRepository
         return $runs;
     }
 
+    public function find(int $id): ?GroomingRun
+    {
+        return $this->entityManager->find(GroomingRun::class, $id);
+    }
+
     public function findForProject(Project $project, int $id): ?GroomingRun
     {
         return $this->entityManager->getRepository(GroomingRun::class)->findOneBy([

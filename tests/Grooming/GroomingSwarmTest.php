@@ -14,11 +14,14 @@ use App\Enum\NodeType;
 use App\Enum\ProposalKind;
 use App\Enum\ProposalStatus;
 use App\Enum\UserStatus;
+use App\Message\RunGroomingSwarm;
+use App\MessageHandler\RunGroomingSwarmHandler;
 use App\Tests\LlmTestTrait;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\Filesystem\Filesystem;
+use Symfony\Component\Messenger\Transport\InMemory\InMemoryTransport;
 
 final class GroomingSwarmTest extends WebTestCase
 {
@@ -38,6 +41,11 @@ final class GroomingSwarmTest extends WebTestCase
             'TRUNCATE project, node, edge, folder, proposal, grooming_run, app_user, user_group RESTART IDENTITY CASCADE',
         );
         (new Filesystem())->remove(self::getContainer()->getParameter('kernel.project_dir').'/var/storage/test');
+
+        $transport = self::getContainer()->get('messenger.transport.async');
+        if ($transport instanceof InMemoryTransport) {
+            $transport->reset();
+        }
 
         $this->project = new Project('demo', 'Demo project', '/repos/demo');
         $this->entityManager->persist($this->project);
@@ -89,83 +97,138 @@ final class GroomingSwarmTest extends WebTestCase
         parent::tearDown();
     }
 
-    public function testLaunchingGroomingSwarmRunsThreeAgentsPersistsRunCreatesDeduplicatedProposalsAndRendersReport(): void
+    public function testAsyncLaunchOpensProgressModalRunsMultiRoundDebateAndFiltersProposals(): void
     {
-        $this->scriptGroomingPipeline();
+        $this->scriptGroomingDebates([2, 1]);
+
+        // Seed an unrelated pending proposal on the same project to verify ?grooming=<id> isolates only this run's proposals.
+        $unrelated = new Proposal($this->project, ProposalKind::Learning, [
+            'lesson' => 'Mémoire sans rapport avec le grooming.',
+            'evidence' => 'manual',
+            'type' => 'fact',
+            'score' => 6,
+            'axes' => ['durability' => 3, 'reuse' => 3, 'project_fit' => 3, 'risk' => 3],
+            'files' => [],
+            'rules' => [],
+            'adr' => [],
+            'reconciliation' => 'new',
+            'target_id' => null,
+            'target_text' => null,
+            'reason' => '',
+            'source' => ['kind' => 'conversation', 'label' => 'unrelated'],
+        ]);
+        $this->entityManager->persist($unrelated);
+        $this->entityManager->flush();
 
         $crawler = $this->client->request('GET', '/projects/demo/grooming');
         self::assertResponseIsSuccessful();
         self::assertSelectorTextContains('.grooming-chips', 'Plafond de remise panier');
-        self::assertSelectorExists('.grooming-form');
+        self::assertSelectorExists('.grooming-form select[name="rounds"]');
 
         $form = $crawler->filter('.grooming-form')->form([
             'topic' => 'Remises et promotions',
             'context' => 'Préparation sprint Q4 : cumul codes promo et remises VIP.',
+            'rounds' => '2',
         ]);
         $this->client->submit($form);
 
         self::assertResponseRedirects();
         $location = (string) $this->client->getResponse()->headers->get('Location');
-        self::assertMatchesRegularExpression('#/projects/demo/grooming/\d+$#', $location);
+        self::assertMatchesRegularExpression('#/projects/demo/grooming/\d+\?started=1$#', $location);
 
-        $crawler = $this->client->followRedirect();
+        /** @var InMemoryTransport $transport */
+        $transport = self::getContainer()->get('messenger.transport.async');
+        $envelopes = $transport->getSent();
+        self::assertCount(1, $envelopes);
+        $message = $envelopes[0]->getMessage();
+        self::assertInstanceOf(RunGroomingSwarm::class, $message);
+        self::assertCount(0, $this->llmCalls);
+
+        // Verify the HTTP request returned immediately with the progress modal open.
+        $this->client->followRedirect();
         self::assertResponseIsSuccessful();
-        self::assertCount(3, $this->llmCalls);
+        self::assertSelectorExists('dialog#grooming-running-modal[open]');
+        self::assertSelectorTextContains('#grooming-running-modal', 'Ruche de grooming en cours');
+
+        // Status JSON endpoint reports running state before worker executes.
+        $this->client->request('GET', '/projects/demo/grooming/'.$message->runId.'/status');
+        self::assertResponseIsSuccessful();
+        $runningJson = json_decode((string) $this->client->getResponse()->getContent(), true, 512, \JSON_THROW_ON_ERROR);
+        self::assertSame(GroomingRun::STATUS_RUNNING, $runningJson['status']);
+        self::assertSame(2, $runningJson['rounds']);
+        self::assertSame(7, $runningJson['expected_steps']);
+
+        // Execute the async Messenger handler (2 rounds * 3 debating agents + 1 Groomer synthesis = 7 LLM calls).
+        $this->executeGrooming($message);
+
+        self::assertCount(7, $this->llmCalls);
+        // Round 1 Product sees graph context; Round 2 Product sees Round 1 Architect & Critique transcript.
         self::assertStringContainsString('Plafond de remise panier', $this->llmCalls[0]['user']);
         self::assertStringContainsString('src/Pricing/DiscountPolicy.php', $this->llmCalls[0]['user']);
-        self::assertStringContainsString('Cartographie existante', $this->llmCalls[1]['user']);
-        self::assertStringContainsString('Cumul codes promo', $this->llmCalls[2]['user']);
+        self::assertStringContainsString('Tour 1/2', $this->llmCalls[0]['user']);
+        self::assertStringContainsString('Tour 2/2 (affinage)', $this->llmCalls[3]['user']);
+        self::assertStringContainsString('Fil de discussion précédent', $this->llmCalls[3]['user']);
+        self::assertStringContainsString('Architecte Tech', $this->llmCalls[3]['user']);
+        self::assertStringContainsString('Critique & QA', $this->llmCalls[3]['user']);
+        // Groomer receives full multi-round debate transcript.
+        self::assertStringContainsString('Transcription complète du débat multi-tours', $this->llmCalls[6]['user']);
 
-        self::assertSelectorTextContains('.flash', '64 %');
-        self::assertSelectorTextContains('.flash', '2 propositions créées');
+        // Status JSON endpoint now reports completed.
+        $this->client->request('GET', '/projects/demo/grooming/'.$message->runId.'/status');
+        self::assertResponseIsSuccessful();
+        $doneJson = json_decode((string) $this->client->getResponse()->getContent(), true, 512, \JSON_THROW_ON_ERROR);
+        self::assertSame(GroomingRun::STATUS_COMPLETED, $doneJson['status']);
+        self::assertSame(7, $doneJson['steps_count']);
+        self::assertSame(64, $doneJson['readiness_score']);
+        self::assertSame(2, $doneJson['proposals_count']);
+
+        // Report page displays the 2 debate rounds + synthesis, questions, and filtered /proposals link.
+        $crawler = $this->client->request('GET', '/projects/demo/grooming/'.$message->runId);
+        self::assertResponseIsSuccessful();
+        self::assertSelectorNotExists('#grooming-running-modal');
         self::assertSelectorTextContains('.grooming-ring__value', '64%');
-        self::assertCount(3, $crawler->filter('.grooming-agent-card'));
+        self::assertCount(7, $crawler->filter('.grooming-agent-card'));
+        self::assertCount(3, $crawler->filter('.grooming-round__head'));
         self::assertCount(2, $crawler->filter('.grooming-question'));
         self::assertSelectorTextContains('.grooming-question:first-child', 'Bloquant');
         self::assertCount(2, $crawler->filter('.grooming-proposal-item'));
 
-        $this->entityManager->clear();
-        $runs = $this->entityManager->getRepository(GroomingRun::class)->findBy([], ['id' => 'ASC']);
-        self::assertCount(1, $runs);
-        $run = $runs[0];
-        self::assertSame(GroomingRun::STATUS_COMPLETED, $run->getStatus());
-        self::assertSame(64, $run->getReadinessScore());
-        self::assertCount(3, $run->getSteps());
-        self::assertCount(2, $run->getQuestions());
-        self::assertSame('blocking', $run->getQuestions()[0]['severity']);
-        self::assertCount(2, $run->getCreatedProposalIds());
+        $openProposalsHref = (string) $crawler->selectLink('Ouvrir /proposals')->attr('href');
+        self::assertStringContainsString('grooming='.$message->runId, $openProposalsHref);
 
-        $proposals = $this->entityManager->getRepository(Proposal::class)->findBy(
-            ['project' => $this->project, 'status' => ProposalStatus::Pending],
-            ['id' => 'ASC'],
-        );
-        self::assertCount(2, $proposals);
-        self::assertSame(ProposalKind::RuleDraft, $proposals[0]->getKind());
-        self::assertSame('Non-cumul des codes promotionnels', $proposals[0]->getPayload()['title']);
-        self::assertSame(ProposalKind::Learning, $proposals[1]->getKind());
-        self::assertSame('Valider toute remise supérieure à 10 % via un événement d’audit dédié.', $proposals[1]->getPayload()['lesson']);
-
-        // Created proposals must render cleanly in /proposals.
-        $this->client->request('GET', '/proposals?project=demo');
+        // Clicking "Ouvrir /proposals" displays ONLY the 2 proposals linked to this grooming run (excluding the unrelated one).
+        $filteredCrawler = $this->client->request('GET', $openProposalsHref);
         self::assertResponseIsSuccessful();
-        self::assertCount(2, $this->client->getCrawler()->filter('.proposal-row'));
+        self::assertCount(2, $filteredCrawler->filter('.proposal-row'));
+        self::assertSelectorTextContains('.filter-chips', 'Remises et promotions');
+        self::assertStringNotContainsString('Mémoire sans rapport', $filteredCrawler->html());
 
-        // A second run on the same topic deduplicates against already-pending proposals.
+        // Unfiltered /proposals shows all 3 proposals on the project.
+        $allCrawler = $this->client->request('GET', '/proposals?project=demo');
+        self::assertResponseIsSuccessful();
+        self::assertCount(3, $allCrawler->filter('.proposal-row'));
+
+        // A second 1-round run deduplicates against already-pending proposals.
         $this->llmCalls = [];
+        $transport->reset();
+
         $crawler = $this->client->request('GET', '/projects/demo/grooming');
         self::assertResponseIsSuccessful();
         self::assertCount(1, $crawler->filter('.grooming-run-row'));
 
         $this->client->submit($crawler->filter('.grooming-form')->form([
             'topic' => 'Remises et promotions',
+            'rounds' => '1',
         ]));
         self::assertResponseRedirects();
-        $this->client->followRedirect();
-        self::assertSelectorTextContains('.flash', 'aucune proposition');
+        $secondMessage = $transport->getSent()[0]->getMessage();
+        self::assertInstanceOf(RunGroomingSwarm::class, $secondMessage);
+        $this->executeGrooming($secondMessage);
 
+        self::assertCount(4, $this->llmCalls);
         $this->entityManager->clear();
         self::assertCount(2, $this->entityManager->getRepository(GroomingRun::class)->findAll());
-        self::assertCount(2, $this->entityManager->getRepository(Proposal::class)->findAll());
+        self::assertCount(3, $this->entityManager->getRepository(Proposal::class)->findAll());
     }
 
     public function testEnforcesProjectScopeAccessAndCsrfProtection(): void
@@ -204,8 +267,18 @@ final class GroomingSwarmTest extends WebTestCase
         $this->client->request('GET', '/projects/other/grooming/'.$otherRunId);
         self::assertResponseStatusCodeSame(404);
 
-        // Cross-project run ID isolation under an allowed project slug.
         $this->client->request('GET', '/projects/demo/grooming/'.$otherRunId);
+        self::assertResponseStatusCodeSame(404);
+
+        $this->client->request('GET', '/projects/demo/grooming/'.$otherRunId.'/status');
+        self::assertResponseStatusCodeSame(404);
+
+        // Proposals filtered by another project's grooming run must also be 404 (both directly and after scope redirect).
+        $this->client->request('GET', '/proposals?project=demo&grooming='.$otherRunId);
+        self::assertResponseStatusCodeSame(404);
+        $this->client->request('GET', '/proposals?grooming='.$otherRunId);
+        self::assertResponseRedirects('/proposals?project=demo&grooming='.$otherRunId);
+        $this->client->followRedirect();
         self::assertResponseStatusCodeSame(404);
 
         // Invalid CSRF token on allowed project is rejected.
@@ -213,33 +286,62 @@ final class GroomingSwarmTest extends WebTestCase
         self::assertResponseStatusCodeSame(403);
     }
 
-    private function scriptGroomingPipeline(): void
+    private function executeGrooming(RunGroomingSwarm $message): void
     {
-        $callIndex = 0;
-        $this->scriptLlm(static function () use (&$callIndex): array {
-            $turn = $callIndex % 3;
-            ++$callIndex;
+        self::getContainer()->get(RunGroomingSwarmHandler::class)($message);
+    }
 
-            if (0 === $turn) {
-                return [
-                    'summary' => 'Cartographie existante : la règle RG-001 couvre le plafond de 10 %, mais le cumul des codes promo est absent.',
-                    'findings' => [
-                        'RG-001 documente le plafond de remise panier à 10 %.',
-                        'DiscountPolicy.php porte la logique tarifaire mais ne précise pas les codes promo.',
-                    ],
-                    'coverage_gaps' => [
-                        'Règles de cumul entre codes promotionnels et remises VIP.',
-                        'Traçabilité des validations direction.',
-                    ],
-                    'related_files' => ['src/Pricing/DiscountPolicy.php'],
-                ];
-            }
+    /**
+     * @param list<int> $roundsSequence
+     */
+    private function scriptGroomingDebates(array $roundsSequence): void
+    {
+        $runIndex = 0;
+        $callInRun = 0;
 
-            if (1 === $turn) {
+        $this->scriptLlm(static function () use (&$runIndex, &$callInRun, $roundsSequence): array {
+            $rounds = $roundsSequence[$runIndex] ?? 1;
+            $totalDebateCalls = $rounds * 3;
+            $index = $callInRun;
+            ++$callInRun;
+
+            if ($index < $totalDebateCalls) {
+                $slot = $index % 3;
+                $round = intdiv($index, 3) + 1;
+
+                if (0 === $slot) {
+                    return [
+                        'stance' => 1 === $round ? 'Périmètre incomplet' : 'Arbitrage proposé',
+                        'summary' => 1 === $round
+                            ? 'Position Produit T1 : RG-001 couvre le plafond de 10 %, mais le cumul codes promo reste flou.'
+                            : 'Réponse Produit T2 : accord avec l’Architecte et le Critique pour interdire le cumul par défaut.',
+                        'findings' => [
+                            'RG-001 documente le plafond de remise panier à 10 %.',
+                            'Les codes promotionnels doivent avoir une règle de non-cumul explicite.',
+                        ],
+                    ];
+                }
+
+                if (1 === $slot) {
+                    return [
+                        'stance' => 1 === $round ? 'Impact code identifié' : 'Garde-fou validé',
+                        'summary' => 1 === $round
+                            ? 'Position Architecte T1 : DiscountPolicy.php calcule la remise sans vérification de cumul.'
+                            : 'Réponse Architecte T2 : un événement d’audit dédié permet de tracer toute exception direction.',
+                        'findings' => [
+                            'DiscountPolicy.php porte la logique tarifaire à sécuriser.',
+                            'Prévoir un événement d’audit sur les dépassements > 10 %.',
+                        ],
+                    ];
+                }
+
                 return [
-                    'summary' => 'Plusieurs hypothèses implicites sur les cumuls et les seuils de validation exposent à des dérives tarifaires.',
+                    'stance' => 1 === $round ? 'Zones d’ombre détectées' : 'Bloquant confirmé',
+                    'summary' => 1 === $round
+                        ? 'Position Critique T1 : risque de dérive tarifaire sur les cumuls VIP et codes expirés.'
+                        : 'Réponse Critique T2 : la proposition Produit/Tech réduit le risque, mais le cas VIP reste bloquant.',
                     'findings' => [
-                        'Aucune règle ne tranche le cumul codes promo + remise panier.',
+                        'Aucune règle ne tranche encore le cumul codes promo + remise VIP.',
                         'Le format de preuve d’une validation direction n’est pas spécifié.',
                     ],
                     'questions' => [
@@ -257,9 +359,12 @@ final class GroomingSwarmTest extends WebTestCase
                 ];
             }
 
+            ++$runIndex;
+            $callInRun = 0;
+
             return [
                 'readiness_score' => 64,
-                'executive_summary' => 'Le socle de remise panier (RG-001) existe mais le cumul des codes promo reste bloquant avant implémentation.',
+                'executive_summary' => 'Après débat entre Produit, Architecte et Critique, le non-cumul fait consensus mais le cas VIP reste bloquant.',
                 'step_summary' => 'Consolidation d’une nouvelle règle sur le non-cumul et d’une décision d’audit.',
                 'findings' => [
                     'Lever la question bloquante sur le cumul codes promo / VIP.',
@@ -292,7 +397,7 @@ final class GroomingSwarmTest extends WebTestCase
                     [
                         'lesson' => 'Valider toute remise supérieure à 10 % via un événement d’audit dédié.',
                         'type' => 'decision',
-                        'evidence' => 'Recommandation du Critique et du Groomer sur RG-001.',
+                        'evidence' => 'Consensus du débat multi-tours Produit/Architecte/Critique.',
                         'reason' => 'Assure la traçabilité financière des exceptions direction.',
                         'score' => 8,
                         'files' => ['src/Pricing/DiscountPolicy.php'],
