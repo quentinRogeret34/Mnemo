@@ -1622,3 +1622,63 @@ studio:
     tree_label: 'Project files tree'
     unsaved: '• Unsaved'
     view_mode: 'Editor view mode'
+
+addon:
+    category:
+        factory: 'Software Factory'
+        integration: Integration
+        knowledge: Knowledge
+        runner: Runner
+    code_graph:
+        description: 'Indexes the Git repository, maps symbols and links source files to business rules.'
+        name: 'Code Graph'
+    factory:
+        description: 'Orchestrates agent sessions, multi-agent swarms and live execution journals.'
+        name: 'Software Factory'
+    garden:
+        description: 'Keeps the knowledge graph healthy by detecting duplicates, contradictions and stale rules.'
+        name: Gardening
+    scope:
+        both: 'Workspace & Project'
+        project: Project
+        workspace: Workspace
+    studio:
+        description: 'Integrated editor for project Markdown documents, skills and agent assets.'
+        name: Studio
+    webhooks:
+        description: 'Real-time notifications to Slack, Discord or Microsoft Teams for alerts and PR checks.'
+        name: 'Webhooks & Alerts'
+
+marketplace:
+    action:
+        disable: Disable
+        enable: Enable
+    active_count: '{active}/{total} active'
+    categories_label: 'Addon categories'
+    category_all: All
+    empty:
+        text: 'No addons are registered in this category yet.'
+        title: 'No addons'
+    flash:
+        disabled: 'Addon “{name}” disabled.'
+        enabled: 'Addon “{name}” enabled.'
+        preset_applied: 'Preset “{preset}” applied.'
+    nav: Marketplace
+    override: Custom
+    preset:
+        active: Active
+        apply: Apply
+        business:
+            description: 'Lightweight business mode: knowledge, rules, gardening and alerts — hides Factory, Studio and Code Graph.'
+            name: 'Business Pilot'
+        factory:
+            description: 'Full suite: enables every module including Software Factory, Studio and Code Graph.'
+            name: 'Software Factory'
+    presets_label: 'Quick presets'
+    scope_label: 'Configuration scope'
+    scope_workspace: 'Whole workspace'
+    status:
+        active: Active
+        inactive: Inactive
+    title: Marketplace
+    workspace_only: 'Workspace-wide'

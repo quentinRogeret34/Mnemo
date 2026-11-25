@@ -98,11 +98,19 @@
                     <twig:ux:icon name="lucide:network" class="icon nav-item__icon" />
                     <span class="nav-item__label">{{ 'nav.memory_graph'|trans }}</span>
                 </a>
+                {% if this.addonEnabled('code_graph') %}
                 <a class="nav-item" href="{{ path('project_code', {slug: project.slug}) }}" {% if route in ['project_code', 'file_show'] %}aria-current="page"{% endif %}>
                     <twig:ux:icon name="lucide:code" class="icon nav-item__icon" />
                     <span class="nav-item__label">{{ 'nav.code'|trans }}</span>
                     <span class="nav-item__count">{{ counts.files }}</span>
                 </a>
+                {% endif %}
+                {% for item in this.extraNavItems('knowledge') %}
+                <a class="nav-item" href="{{ item.projectScoped ? path(item.route, {slug: project.slug}) : path(item.route) }}" {% if item.isActive(route) %}aria-current="page"{% endif %}>
+                    {{ ux_icon(item.icon, {class: 'icon nav-item__icon'}) }}
+                    <span class="nav-item__label">{{ item.label|trans }}</span>
+                </a>
+                {% endfor %}
             </nav>
         </details>
 
@@ -112,10 +120,12 @@
                 <twig:ux:icon name="lucide:chevron-down" class="icon nav-accordion__chevron" />
             </summary>
             <nav class="nav-group" aria-label="{{ 'nav.tools'|trans }}">
+                {% if this.addonEnabled('studio') %}
                 <a class="nav-item" href="{{ path('project_studio', {slug: project.slug}) }}" {% if route == 'project_studio' %}aria-current="page"{% endif %}>
                     <twig:ux:icon name="lucide:file-code" class="icon nav-item__icon" />
                     <span class="nav-item__label">{{ 'nav.studio'|trans }}</span>
                 </a>
+                {% endif %}
                 <a class="nav-item" href="{{ path('project_chat', {slug: project.slug}) }}" {% if route == 'project_chat' %}aria-current="page"{% endif %}>
                     <twig:ux:icon name="lucide:message-circle" class="icon nav-item__icon" />
                     <span class="nav-item__label">{{ 'nav.assistant'|trans }}</span>
@@ -134,9 +144,21 @@
                     <span class="nav-item__label">{{ 'nav.factory'|trans }}</span>
                 </a>
                 {% endif %}
+                {% if this.addonEnabled('garden') %}
                 <a class="nav-item" href="{{ path('garden_show', {slug: project.slug}) }}" {% if route == 'garden_show' %}aria-current="page"{% endif %}>
                     <twig:ux:icon name="lucide:sprout" class="icon nav-item__icon" />
                     <span class="nav-item__label">{{ 'nav.garden'|trans }}</span>
+                </a>
+                {% endif %}
+                {% for item in this.extraNavItems('studio_agents') %}
+                <a class="nav-item" href="{{ item.projectScoped ? path(item.route, {slug: project.slug}) : path(item.route) }}" {% if item.isActive(route) %}aria-current="page"{% endif %}>
+                    {{ ux_icon(item.icon, {class: 'icon nav-item__icon'}) }}
+                    <span class="nav-item__label">{{ item.label|trans }}</span>
+                </a>
+                {% endfor %}
+                <a class="nav-item" href="{{ path('marketplace_index', {project: project.slug}) }}" {% if route == 'marketplace_index' %}aria-current="page"{% endif %}>
+                    <twig:ux:icon name="lucide:plug-zap" class="icon nav-item__icon" />
+                    <span class="nav-item__label">{{ 'marketplace.nav'|trans }}</span>
                 </a>
                 <a class="nav-item" href="{{ path('project_settings', {slug: project.slug}) }}" {% if route == 'project_settings' %}aria-current="page"{% endif %}>
                     <twig:ux:icon name="lucide:sliders-horizontal" class="icon nav-item__icon" />
@@ -195,6 +217,12 @@
                     <twig:ux:icon name="lucide:scale" class="icon nav-item__icon" />
                     <span class="nav-item__label">{{ 'nav.alignment'|trans }}</span>
                 </a>
+                {% for item in this.extraNavItems('knowledge') %}
+                <a class="nav-item" href="{{ path(item.route) }}" {% if item.isActive(route) %}aria-current="page"{% endif %}>
+                    {{ ux_icon(item.icon, {class: 'icon nav-item__icon'}) }}
+                    <span class="nav-item__label">{{ item.label|trans }}</span>
+                </a>
+                {% endfor %}
             </nav>
         </details>
 
@@ -214,10 +242,20 @@
                     <span class="nav-item__label">{{ 'nav.factory'|trans }}</span>
                 </a>
                 {% endif %}
+                {% for item in this.extraNavItems('studio_agents') %}
+                <a class="nav-item" href="{{ path(item.route) }}" {% if item.isActive(route) %}aria-current="page"{% endif %}>
+                    {{ ux_icon(item.icon, {class: 'icon nav-item__icon'}) }}
+                    <span class="nav-item__label">{{ item.label|trans }}</span>
+                </a>
+                {% endfor %}
                 {% if not this.scoped %}
                 <a class="nav-item" href="{{ path('connector_index') }}" {% if route starts with 'connector_' %}aria-current="page"{% endif %}>
                     <twig:ux:icon name="lucide:plug" class="icon nav-item__icon" />
                     <span class="nav-item__label">{{ 'nav.connectors'|trans }}</span>
+                </a>
+                <a class="nav-item" href="{{ path('marketplace_index') }}" {% if route == 'marketplace_index' %}aria-current="page"{% endif %}>
+                    <twig:ux:icon name="lucide:plug-zap" class="icon nav-item__icon" />
+                    <span class="nav-item__label">{{ 'marketplace.nav'|trans }}</span>
                 </a>
                 {% endif %}
             </nav>

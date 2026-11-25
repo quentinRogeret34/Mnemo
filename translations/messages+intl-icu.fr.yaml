@@ -1622,3 +1622,63 @@ studio:
     tree_label: 'Arborescence des fichiers du projet'
     unsaved: '• Modifié'
     view_mode: 'Mode d’édition'
+
+addon:
+    category:
+        factory: 'Software Factory'
+        integration: Intégration
+        knowledge: Connaissance
+        runner: Runner
+    code_graph:
+        description: 'Indexe le dépôt Git, cartographie les symboles et relie le code aux règles métier.'
+        name: 'Graphe de code'
+    factory:
+        description: 'Orchestre les sessions d’agents, les ruches multi-agents et les journaux d’exécution.'
+        name: 'Software Factory'
+    garden:
+        description: 'Maintient la base de connaissances propre : doublons, contradictions et règles obsolètes.'
+        name: Jardinage
+    scope:
+        both: 'Espace & Projet'
+        project: Projet
+        workspace: Espace
+    studio:
+        description: 'Éditeur intégré pour les documents Markdown, skills et fichiers d’agents du projet.'
+        name: Studio
+    webhooks:
+        description: 'Notifications temps réel vers Slack, Discord ou Microsoft Teams sur alertes et PR.'
+        name: 'Webhooks & alertes'
+
+marketplace:
+    action:
+        disable: Désactiver
+        enable: Activer
+    active_count: '{active}/{total} actifs'
+    categories_label: 'Catégories de modules'
+    category_all: Tous
+    empty:
+        text: 'Aucun module n’est enregistré dans cette catégorie pour le moment.'
+        title: 'Aucun module'
+    flash:
+        disabled: 'Module « {name} » désactivé.'
+        enabled: 'Module « {name} » activé.'
+        preset_applied: 'Profil « {preset} » appliqué.'
+    nav: Marketplace
+    override: Personnalisé
+    preset:
+        active: Actif
+        apply: Appliquer
+        business:
+            description: 'Mode léger centré métier : connaissances, règles, jardinage et alertes — masque Factory, Studio et Graphe de code.'
+            name: 'Pilote Métier'
+        factory:
+            description: 'Suite complète : active tous les modules dont Software Factory, Studio et Graphe de code.'
+            name: 'Software Factory'
+    presets_label: 'Profils rapides'
+    scope_label: 'Portée de configuration'
+    scope_workspace: 'Tout l’espace'
+    status:
+        active: Actif
+        inactive: Inactif
+    title: Marketplace
+    workspace_only: 'Niveau espace'
