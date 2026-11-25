@@ -12,7 +12,6 @@ use App\Entity\UserGroup;
 use App\Enum\MemoryType;
 use App\Enum\NodeType;
 use App\Enum\ProposalKind;
-use App\Enum\ProposalStatus;
 use App\Enum\UserStatus;
 use App\Message\RunGroomingSwarm;
 use App\MessageHandler\RunGroomingSwarmHandler;

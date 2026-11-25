@@ -177,8 +177,8 @@ class GroomingRun
 
     /**
      * @param list<array{agent: string, role: string, summary: string, findings: list<string>, round?: int, stance?: string}> $steps
-     * @param list<array{question: string, severity: string, rationale: string}>                                                $questions
-     * @param list<int>                                                                                                         $createdProposalIds
+     * @param list<array{question: string, severity: string, rationale: string}>                                              $questions
+     * @param list<int>                                                                                                       $createdProposalIds
      */
     public function complete(int $readinessScore, string $summary, array $steps, array $questions, array $createdProposalIds): void
     {
