@@ -5,12 +5,12 @@
 {% block crumbs %}<span class="crumbs__current">{{ 'nav.connectors'|trans }}</span>{% endblock %}
 
 {% block header_actions %}
-    {% if github_oauth %}<a class="button" href="{{ path('github_repositories') }}"><twig:ux:icon name="simple-icons:github" />{{ 'connector.github.title'|trans }}</a>{% endif %}
+    {% if github_oauth %}<a class="button" href="{{ path('github_repositories') }}">{{ include('_brand_logo.html.twig', {brand: 'github'}) }}{{ 'connector.github.title'|trans }}</a>{% endif %}
     <a class="button" href="{{ path('connector_new') }}"><twig:ux:icon name="lucide:plus" />{{ 'connector.custom'|trans }}</a>
 {% endblock %}
 
 {% block body %}
-    <div class="view-head">
+    <div class="view-head" data-tone="teal">
         <h1><twig:ux:icon name="lucide:plug" />{{ 'project.settings.connectors'|trans }}</h1>
         <span class="view-head__meta">{{ connectors|length }}</span>
     </div>
@@ -19,7 +19,7 @@
         <twig:EmptyState :title="'connector.empty'|trans" :text="'connector.empty_text'|trans">
             <twig:block name="icon"><twig:ux:icon name="lucide:plug" /></twig:block>
             <twig:block name="actions">
-                {% if github_oauth %}<a class="button button--primary" href="{{ path('github_repositories') }}"><twig:ux:icon name="simple-icons:github" />{{ 'palette.github'|trans }}</a>{% endif %}
+                {% if github_oauth %}<a class="button button--primary" href="{{ path('github_repositories') }}">{{ include('_brand_logo.html.twig', {brand: 'github'}) }}{{ 'palette.github'|trans }}</a>{% endif %}
                 <a class="button" href="{{ path('connector_new') }}"><twig:ux:icon name="lucide:plus" />{{ 'connector.custom'|trans }}</a>
             </twig:block>
         </twig:EmptyState>
@@ -28,7 +28,10 @@
             {% for connector in connectors %}
                 <li>
                     <a class="row" href="{{ path('connector_show', {id: connector.id}) }}">
-                        <span class="code-chip">{{ connector.mode.api ? connector.mode.value|upper : connector.transport.value|upper }}</span>
+                        <span class="connector-row__lead">
+                            {{ include('_brand_logo.html.twig', {connector: connector, badge: true, size: 'sm'}) }}
+                            <span class="code-chip">{{ connector.mode.api ? connector.mode.value|upper : connector.transport.value|upper }}</span>
+                        </span>
                         <span class="row__title"><span>{{ connector.name }}</span><span class="row__sub">{{ connector.mode|trans }}{{ connector.project ? ' · ' ~ connector.project.name }}</span></span>
                         <span class="row__meta">{{ include('connector/_status.html.twig') }}</span>
                     </a>
@@ -40,19 +43,19 @@
     <section class="block" aria-labelledby="presets-title">
         <div class="block__head">
             <h2 id="presets-title">{{ 'connector.presets'|trans }}</h2>
-            <span class="row__sub">{{ 'connector.presets_lede'|trans }}</span>
         </div>
         <ul class="presets">
-            {% set preset_icons = {
-                'github-api': 'simple-icons:github',
-                atlassian: 'simple-icons:atlassian',
-                linear: 'lucide:kanban',
-                notion: 'simple-icons:notion',
-            } %}
             {% for key, preset in presets %}
                 <li class="preset">
                     <div class="preset__head">
-                        {{ ux_icon(preset_icons[key] ?? 'lucide:plug') }}
+                        {% if key == 'atlassian' %}
+                            <span class="brand-pair" aria-hidden="true">
+                                {{ include('_brand_logo.html.twig', {brand: 'jira', badge: true, size: 'md'}) }}
+                                {{ include('_brand_logo.html.twig', {brand: 'confluence', badge: true, size: 'md'}) }}
+                            </span>
+                        {% else %}
+                            {{ include('_brand_logo.html.twig', {brand: key, badge: true, size: 'md'}) }}
+                        {% endif %}
                         <span class="preset__name">{{ ('connector.preset.' ~ key ~ '.label')|trans }}</span>
                         <span class="tag">{{ ('connector.preset.' ~ key ~ '.auth')|trans }}</span>
                     </div>
@@ -60,7 +63,7 @@
                     <div class="preset__actions">
                         {% if preset.flow == 'github_oauth' %}
                             {% if github_oauth %}
-                                <a class="button button--primary" href="{{ path('github_repositories') }}"><twig:ux:icon name="simple-icons:github" />{{ 'connector.quick_connect'|trans }}</a>
+                                <a class="button button--primary" href="{{ path('github_repositories') }}">{{ include('_brand_logo.html.twig', {brand: 'github'}) }}{{ 'connector.quick_connect'|trans }}</a>
                             {% else %}
                                 <a class="button" href="{{ path('connector_new', {preset: key}) }}"><twig:ux:icon name="lucide:settings" />{{ 'connector.configure'|trans }}</a>
                             {% endif %}
@@ -93,7 +96,7 @@
     </section>
 
     <dialog class="dialog" id="notion-connect" closedby="any" aria-labelledby="notion-connect-title">
-        <h2 class="dialog__title" id="notion-connect-title">{{ 'connector.notion_dialog.title'|trans }}</h2>
+        <h2 class="dialog__title dialog__title--brand" id="notion-connect-title">{{ include('_brand_logo.html.twig', {brand: 'notion', badge: true, size: 'sm'}) }}{{ 'connector.notion_dialog.title'|trans }}</h2>
         <p class="dialog__text">{{ 'connector.notion_dialog.text'|trans }}</p>
         <form class="form-stack" method="post" action="{{ path('connector_connect', {preset: 'notion'}) }}">
             <input type="hidden" name="_token" value="{{ csrf_token('connector-connect-notion') }}">

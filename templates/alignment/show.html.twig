@@ -35,14 +35,13 @@
         aligned: summary.aligned,
     } %}
 
-    <div class="view-head">
+    <div class="view-head" data-tone="emerald">
         <h1><twig:ux:icon name="lucide:scale" />{{ 'nav.alignment'|trans }}</h1>
         {% if summary.score is not null %}
             <span class="alignment-score num">{{ summary.score }} %</span>
         {% endif %}
         <span class="view-head__meta">{{ project ? project.name : 'nav.all_projects'|trans }}</span>
     </div>
-    <p class="page__lede">{{ 'alignment.lede'|trans }}</p>
 
     <section class="kpis" aria-label="{{ 'dashboard.key_figures'|trans }}">
         <div class="kpi">

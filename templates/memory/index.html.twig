@@ -27,7 +27,7 @@
     {% set selected_group = group == 'type' ? (type ? type.value : null) : source %}
 
     <div class="memories-page" data-controller="table-density" data-table-density-storage-key-value="mnemo.memories.density" data-table-density-default-value="comfortable">
-        <div class="view-head view-head--split">
+        <div class="view-head view-head--split" data-tone="amber">
             <div class="view-head__title">
                 <h1><twig:ux:icon name="lucide:lightbulb" />{{ 'nav.memories'|trans }}</h1>
                 <span class="view-head__meta">{{ project ? 'memory.index.count_project'|trans({count: memories.total, name: project.name}) : memories.total }}</span>

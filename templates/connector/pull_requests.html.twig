@@ -13,11 +13,10 @@
 {% endblock %}
 
 {% block body %}
-    <div class="view-head">
+    <div class="view-head" data-tone="teal">
         <h1><twig:ux:icon name="lucide:git-pull-request" />{{ 'connector.pr.open'|trans }}</h1>
         {% if error is null %}<span class="view-head__meta">{{ pull_requests|length }}</span>{% endif %}
     </div>
-    <p class="page__lede">{{ 'connector.pr.lede'|trans({check: '<span class="mono">mnemo/rules</span>'})|raw }}</p>
 
     {% if error %}
         <p class="form-errors block" role="alert">{{ 'connector.pr.error'|trans({error: error}) }}</p>

@@ -17,11 +17,10 @@
 {% endblock %}
 
 {% block body %}
-    <div class="view-head">
+    <div class="view-head" data-tone="violet">
         <h1><twig:ux:icon name="lucide:graduation-cap" />{{ 'nav.agent_assets'|trans }}</h1>
         <span class="view-head__meta">{{ assets|length }}</span>
     </div>
-    <p class="page__lede">{{ 'agent.lede'|trans({folder: '<span class="mono">.claude/</span>'})|raw }}</p>
 
     {% if assets is empty %}
         <twig:EmptyState :title="'agent.empty'|trans" :text="'agent.empty_text'|trans">

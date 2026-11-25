@@ -136,10 +136,7 @@
                 {% if 'business_overview' in widgets %}
                     <section class="panel panel--span" aria-labelledby="panel-business-overview">
                         <div class="panel__head">
-                            <div>
-                                <h2 id="panel-business-overview">{{ 'dashboard.widget.business_overview'|trans }}</h2>
-                                <span class="row__sub">{{ 'dashboard.widget.business_overview_desc'|trans }}</span>
-                            </div>
+                            <h2 id="panel-business-overview">{{ 'dashboard.widget.business_overview'|trans }}</h2>
                             {% if business.alignment_score is not null %}
                                 <span class="alignment-score num">{{ business.alignment_score }} %</span>
                             {% endif %}
@@ -173,10 +170,7 @@
                 {% if 'shadow_questions' in widgets %}
                     <section class="panel panel--span" aria-labelledby="panel-shadow-questions">
                         <div class="panel__head">
-                            <div>
-                                <h2 id="panel-shadow-questions">{{ 'dashboard.widget.shadow_questions'|trans }}</h2>
-                                <span class="row__sub">{{ 'dashboard.widget.shadow_questions_desc'|trans }}</span>
-                            </div>
+                            <h2 id="panel-shadow-questions">{{ 'dashboard.widget.shadow_questions'|trans }}</h2>
                             <span class="block__count num">{{ business.shadow_open }}</span>
                         </div>
                         {% if shadow_questions is empty %}
@@ -207,10 +201,7 @@
                 {% if 'recent_documents' in widgets %}
                     <section class="panel panel--wide" aria-labelledby="panel-recent-documents">
                         <div class="panel__head">
-                            <div>
-                                <h2 id="panel-recent-documents">{{ 'dashboard.widget.recent_documents'|trans }}</h2>
-                                <span class="row__sub">{{ 'dashboard.widget.recent_documents_desc'|trans }}</span>
-                            </div>
+                            <h2 id="panel-recent-documents">{{ 'dashboard.widget.recent_documents'|trans }}</h2>
                             {% if project %}
                                 <a class="button" href="{{ path('project_show', {slug: project.slug}) }}">{{ 'dashboard.business.see_documents'|trans }}</a>
                             {% endif %}

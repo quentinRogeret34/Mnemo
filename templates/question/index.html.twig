@@ -15,11 +15,10 @@
     {% set route_name = project and return_to == 'project_questions' ? 'project_questions' : 'question_index' %}
     {% set base_params = project ? (return_to == 'project_questions' ? {slug: project.slug} : {project: project.slug}) : {} %}
 
-    <div class="view-head">
+    <div class="view-head" data-tone="amber">
         <h1><twig:ux:icon name="lucide:triangle-alert" />{{ 'nav.questions'|trans }}</h1>
         <span class="view-head__meta num">{{ questions|length }}</span>
     </div>
-    <p class="page__lede">{{ 'question.lede'|trans }}</p>
 
     <div class="filter-bar">
         <nav class="tabs" aria-label="{{ 'question.filter_severity'|trans }}">

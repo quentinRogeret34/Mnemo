@@ -14,7 +14,7 @@
                 <button type="button" class="toggle-chip" aria-pressed="{{ linked ? 'true' : 'false' }}"
                         data-action="live#action" data-live-action-param="toggleProject" data-live-project-id-param="{{ project.id }}"
                         title="{{ (linked ? 'document.props.detach' : 'document.props.attach')|trans({name: project.name}) }}">
-                    <span class="project-dot" aria-hidden="true"></span>{{ project.name }}
+                    <span class="project-dot" data-hue="{{ project.id % 8 }}" aria-hidden="true"></span>{{ project.name }}
                 </button>
             {% else %}
                 <span class="row__sub">{{ 'document.no_project'|trans }}</span>

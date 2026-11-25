@@ -9,7 +9,6 @@
         <h1><twig:ux:icon name="lucide:key-round" />{{ 'nav.api_keys'|trans }}</h1>
         <span class="view-head__meta">{{ keys|length }}</span>
     </div>
-    <p class="page__lede">{{ 'keys.lede'|trans({mcp: '<span class="mono">/mcp</span>', api: '<span class="mono">/api</span>', header: '<span class="mono">Authorization: Bearer &lt;' ~ 'keys.key'|trans|e ~ '&gt;</span>'})|raw }}</p>
 
     {% if token %}
         <div class="archived-banner" role="status" {{ stimulus_controller('clipboard') }}>

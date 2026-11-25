@@ -13,11 +13,10 @@
 {% endblock %}
 
 {% block body %}
-    <div class="view-head">
+    <div class="view-head" data-tone="violet">
         <h1><twig:ux:icon name="lucide:network" />{{ 'nav.memory_graph'|trans }}</h1>
         <span class="view-head__meta">{{ project ? project.name : 'nav.all_projects'|trans }}</span>
     </div>
-    <p class="page__lede">{{ 'memory.graph.lede'|trans }}</p>
 
     {% set labels = {
         root: project ? project.name : 'nav.all_projects'|trans,
