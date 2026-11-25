@@ -1477,6 +1477,13 @@ proposal:
     apply_skill: 'Apply skill'
     archives: 'Archives:'
     axes: 'durability {durability}, reuse {reuse}, project fit {fit}, risk {risk}'
+    choose_apply: 'Choose and apply'
+    choose_pair: 'Pick one'
+    col:
+        actions: Actions
+        proposal: Proposal
+        signal: Signal
+    edit: 'Edit / details'
     empty: 'Nothing to review. Proposals come from {command}, the MCP tool {tool}, rule extraction from documents, gardening and memory verification.'
     evidence: Evidence
     evidence_source: 'Evidence and source'
@@ -1491,6 +1498,7 @@ proposal:
     pending: '{count} pending'
     pending_project: '{count} pending for {name}'
     proposed: Proposed
+    quick_apply: 'Quick apply'
     reject: Reject
     reject_confirm: 'Reject this proposal?'
     reject_reason:

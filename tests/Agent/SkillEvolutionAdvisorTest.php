@@ -81,7 +81,7 @@ final class SkillEvolutionAdvisorTest extends WebTestCase
         $crawler = $this->client->followRedirect();
 
         self::assertSelectorTextContains('.flash', '2 propositions de skills ajoutées');
-        self::assertCount(2, $crawler->filter('.proposal'));
+        self::assertCount(2, $crawler->filter('.proposal-row'));
         self::assertStringContainsString('LockFactory', $this->llmCalls[0]['user']);
         self::assertStringContainsString('symfony-guardrails', $this->llmCalls[0]['user']);
 
@@ -94,13 +94,13 @@ final class SkillEvolutionAdvisorTest extends WebTestCase
 
         // Apply the update proposal (with human edit) and the create proposal.
         $crawler = $this->client->request('GET', '/proposals?project=demo&kind=skill_update');
-        $firstForm = $crawler->filter('.proposal')->first()->selectButton('Appliquer ce skill')->form();
+        $firstForm = $crawler->filter('.proposal-drawer')->first()->selectButton('Appliquer ce skill')->form();
         $firstForm['content'] = "- Utiliser les attributs PHP.\n- Toujours générer une migration Doctrine propre.";
         $this->client->submit($firstForm);
         $crawler = $this->client->followRedirect();
         self::assertSelectorTextContains('.flash', 'Skill « symfony-guardrails » appliqué');
 
-        $secondForm = $crawler->filter('.proposal')->first()->selectButton('Appliquer ce skill')->form();
+        $secondForm = $crawler->filter('.proposal-drawer')->first()->selectButton('Appliquer ce skill')->form();
         $this->client->submit($secondForm);
         $this->client->followRedirect();
         self::assertSelectorTextContains('.flash', 'Skill « concurrency-locks » appliqué');

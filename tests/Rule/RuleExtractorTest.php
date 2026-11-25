@@ -100,7 +100,7 @@ final class RuleExtractorTest extends WebTestCase
         $crawler = $this->client->followRedirect();
 
         self::assertSelectorTextContains('.flash', '2 règles métier extraites');
-        self::assertCount(2, $crawler->filter('.proposal'));
+        self::assertCount(2, $crawler->filter('.proposal-row'));
         self::assertStringContainsString('Spécification remises', $this->llmCalls[0]['user']);
 
         // Second extraction on the same document deduplicates against pending proposals.
@@ -112,7 +112,7 @@ final class RuleExtractorTest extends WebTestCase
 
         // Apply the first RuleDraft proposal with human edits.
         $crawler = $this->client->request('GET', '/proposals?project=demo&kind=rule_draft');
-        $firstForm = $crawler->filter('.proposal')->first()->selectButton('Valider et créer la règle')->form();
+        $firstForm = $crawler->filter('.proposal-drawer')->first()->selectButton('Valider et créer la règle')->form();
         $firstForm['title'] = 'Plafond de remise panier (10 %)';
         $firstForm['statement'] = 'Une remise panier ne dépasse jamais 10 % TTC sans validation direction.';
         $this->client->submit($firstForm);

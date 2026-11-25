@@ -1477,6 +1477,13 @@ proposal:
     apply_skill: 'Appliquer ce skill'
     archives: 'Archive :'
     axes: 'durabilité {durability}, réutilisation {reuse}, adéquation {fit}, risque {risk}'
+    choose_apply: 'Choisir et appliquer'
+    choose_pair: 'À départager'
+    col:
+        actions: Actions
+        proposal: Proposition
+        signal: Signal
+    edit: 'Modifier / détails'
     empty: "Rien à valider. Les propositions arrivent avec {command}, l'outil MCP {tool}, l'extraction de règles depuis les documents, le jardinage et la vérification des mémoires."
     evidence: Preuve
     evidence_source: 'Preuve et source'
@@ -1491,6 +1498,7 @@ proposal:
     pending: '{count} en attente'
     pending_project: '{count} en attente pour {name}'
     proposed: Proposée
+    quick_apply: 'Valider rapidement'
     reject: Rejeter
     reject_confirm: 'Rejeter cette proposition ?'
     reject_reason:
