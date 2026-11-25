@@ -3426,3 +3426,211 @@ a.pill:hover { filter: brightness(0.96); }
 @media (max-width: 40rem) {
     .grooming-hero { grid-template-columns: minmax(0, 1fr); justify-items: start; }
 }
+
+/* UI Polish & Brand Logos */
+
+/* Curated 8-hue deterministic palette for projects (light & dark balanced OKLCH) */
+[data-hue="0"] { --project-hue: light-dark(oklch(52% 0.165 258), oklch(69% 0.145 258)); }
+[data-hue="1"] { --project-hue: light-dark(oklch(52% 0.14 162), oklch(70% 0.14 162)); }
+[data-hue="2"] { --project-hue: light-dark(oklch(60% 0.16 58), oklch(75% 0.145 64)); }
+[data-hue="3"] { --project-hue: light-dark(oklch(53% 0.175 292), oklch(71% 0.155 292)); }
+[data-hue="4"] { --project-hue: light-dark(oklch(56% 0.175 14), oklch(71% 0.15 16)); }
+[data-hue="5"] { --project-hue: light-dark(oklch(54% 0.135 220), oklch(72% 0.13 220)); }
+[data-hue="6"] { --project-hue: light-dark(oklch(57% 0.165 34), oklch(72% 0.145 36)); }
+[data-hue="7"] { --project-hue: light-dark(oklch(53% 0.135 136), oklch(72% 0.13 138)); }
+
+.project-dot[data-hue] {
+    background: var(--project-hue);
+    border-radius: 3px;
+    box-shadow: 0 0 0 1px color-mix(in oklch, var(--project-hue) 25%, transparent);
+}
+.project-dot--lg {
+    width: 0.625rem;
+    height: 0.625rem;
+    margin-inline: 0.1875rem;
+    border-radius: 3px;
+}
+.menu__item[aria-current="true"] .project-dot[data-hue],
+.nav-item[aria-current="page"] .project-dot[data-hue],
+.toggle-chip[aria-pressed="true"] .project-dot[data-hue] {
+    background: var(--project-hue);
+    box-shadow: 0 0 0 2.5px color-mix(in oklch, var(--project-hue) 28%, transparent);
+}
+.project-avatar[data-hue] {
+    background: var(--project-hue);
+    color: oklch(99% 0.004 250);
+    box-shadow: inset 0 1px 0 oklch(100% 0 0 / 0.18), 0 1px 2px color-mix(in oklch, var(--project-hue) 28%, transparent);
+}
+
+/* Tasteful domain tones for sidebar icons and page header chips */
+[data-tone="ink"] {
+    --tone-fg: light-dark(oklch(46% 0.14 255), oklch(73% 0.125 250));
+    --tone-bg: light-dark(oklch(94.8% 0.022 252), oklch(25% 0.048 255));
+}
+[data-tone="emerald"] {
+    --tone-fg: light-dark(oklch(45% 0.12 158), oklch(73% 0.135 158));
+    --tone-bg: light-dark(oklch(95.2% 0.025 158), oklch(24% 0.042 158));
+}
+[data-tone="amber"] {
+    --tone-fg: light-dark(oklch(51% 0.135 66), oklch(77% 0.13 72));
+    --tone-bg: light-dark(oklch(95.8% 0.028 76), oklch(25% 0.044 74));
+}
+[data-tone="violet"] {
+    --tone-fg: light-dark(oklch(49% 0.165 286), oklch(73% 0.135 286));
+    --tone-bg: light-dark(oklch(95.2% 0.024 286), oklch(25% 0.052 286));
+}
+[data-tone="teal"] {
+    --tone-fg: light-dark(oklch(46% 0.115 212), oklch(73% 0.12 212));
+    --tone-bg: light-dark(oklch(95% 0.022 212), oklch(24% 0.04 212));
+}
+
+.nav-item[data-tone] .nav-item__icon {
+    color: color-mix(in oklch, var(--tone-fg) 76%, var(--color-muted));
+    transition: color var(--dur-fast) var(--ease-out);
+}
+.nav-item[data-tone]:hover .nav-item__icon,
+.nav-item[data-tone][aria-current="page"] .nav-item__icon,
+.nav-item[data-tone].is-current .nav-item__icon {
+    color: var(--tone-fg);
+}
+
+/* Tinted icon chips on page headers */
+.view-head { align-items: center; }
+.view-head h1 > .icon:not(.brand-logo) {
+    width: 1.875rem;
+    height: 1.875rem;
+    padding: 0.36rem;
+    border-radius: var(--radius-sm);
+    background: var(--tone-bg, var(--color-accent-soft));
+    color: var(--tone-fg, var(--color-accent));
+    border: var(--rule-width) solid color-mix(in oklch, var(--tone-fg, var(--color-accent)) 18%, transparent);
+    box-shadow: var(--shadow-btn);
+}
+
+/* Brand SVG logos & tinted badges */
+.brand-logo { display: inline-block; flex: none; }
+.brand-logo--github,
+.brand-logo--notion { color: light-dark(#181717, #f0f6fc); }
+.button--primary .brand-logo--github,
+.button--primary .brand-logo--notion { color: currentColor; }
+
+.brand-badge {
+    display: inline-grid;
+    place-items: center;
+    flex: none;
+    border-radius: var(--radius-sm);
+    border: var(--rule-width) solid var(--color-rule);
+    background: var(--color-card);
+    box-shadow: var(--shadow-btn);
+}
+.brand-badge--sm { width: 1.625rem; height: 1.625rem; }
+.brand-badge--sm .brand-logo { width: 0.95rem; height: 0.95rem; }
+.brand-badge--md { width: 2.125rem; height: 2.125rem; }
+.brand-badge--md .brand-logo { width: 1.2rem; height: 1.2rem; }
+.brand-badge--lg { width: 2.625rem; height: 2.625rem; border-radius: var(--radius-md); }
+.brand-badge--lg .brand-logo { width: 1.45rem; height: 1.45rem; }
+
+.brand-badge--github {
+    background: light-dark(oklch(96% 0.004 250), oklch(23% 0.01 255));
+    border-color: light-dark(oklch(86% 0.008 250), oklch(34% 0.012 255));
+}
+.brand-badge--gitlab {
+    background: light-dark(oklch(96.5% 0.024 38), oklch(24% 0.042 36));
+    border-color: light-dark(oklch(87% 0.055 38), oklch(36% 0.06 36));
+}
+.brand-badge--google {
+    background: light-dark(oklch(98.5% 0.005 250), oklch(23% 0.012 255));
+    border-color: light-dark(oklch(88% 0.014 250), oklch(34% 0.016 255));
+}
+.brand-badge--atlassian,
+.brand-badge--jira,
+.brand-badge--confluence {
+    background: light-dark(oklch(95.5% 0.025 255), oklch(24% 0.05 255));
+    border-color: light-dark(oklch(86% 0.055 255), oklch(36% 0.07 255));
+}
+.brand-badge--linear {
+    background: light-dark(oklch(95.2% 0.026 276), oklch(24% 0.052 276));
+    border-color: light-dark(oklch(85% 0.06 276), oklch(36% 0.07 276));
+}
+.brand-badge--notion {
+    background: light-dark(oklch(97% 0.003 90), oklch(23% 0.008 255));
+    border-color: light-dark(oklch(87% 0.006 90), oklch(34% 0.01 255));
+}
+.brand-badge--slack {
+    background: light-dark(oklch(96.5% 0.018 335), oklch(24% 0.036 335));
+    border-color: light-dark(oklch(87% 0.042 335), oklch(35% 0.05 335));
+}
+.brand-badge--discord {
+    background: light-dark(oklch(95.2% 0.028 274), oklch(24% 0.054 274));
+    border-color: light-dark(oklch(85% 0.062 274), oklch(36% 0.072 274));
+}
+.brand-badge--teams {
+    background: light-dark(oklch(95% 0.026 280), oklch(24% 0.05 280));
+    border-color: light-dark(oklch(85% 0.058 280), oklch(36% 0.068 280));
+}
+.brand-badge--generic {
+    background: var(--color-hover);
+    color: var(--color-muted);
+}
+
+.brand-pair { display: inline-flex; align-items: center; gap: var(--space-3xs); }
+.connector-row__lead { display: inline-flex; align-items: center; gap: var(--space-xs); flex: none; }
+.connector-head-icon { display: inline-flex; align-items: center; gap: var(--space-xs); }
+.dialog__title--brand { display: inline-flex; align-items: center; gap: var(--space-xs); }
+
+/* Webhook format radio cards */
+.webhook-formats { display: grid; gap: var(--space-xs); }
+.webhook-format-grid {
+    display: grid;
+    gap: var(--space-xs);
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 10.5rem), 1fr));
+}
+.webhook-format-card {
+    position: relative;
+    display: block;
+    cursor: pointer;
+}
+.webhook-format-card input[type="radio"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    margin: 0;
+    cursor: pointer;
+}
+.webhook-format-card__body {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    min-height: 2.75rem;
+    padding: var(--space-xs) var(--space-sm);
+    border: var(--rule-width) solid var(--color-rule-2);
+    border-radius: var(--radius-sm);
+    background: var(--color-card);
+    color: var(--color-ink-2);
+    font-size: var(--text-sm);
+    font-weight: 500;
+    box-shadow: var(--shadow-btn);
+    transition: border-color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+}
+.webhook-format-card:hover .webhook-format-card__body {
+    background: var(--color-hover);
+    border-color: var(--color-control);
+    color: var(--color-ink);
+}
+.webhook-format-card:has(input:checked) .webhook-format-card__body {
+    border-color: var(--color-accent);
+    background: var(--color-accent-soft);
+    color: var(--color-ink);
+    box-shadow: 0 0 0 1px var(--color-accent);
+}
+.webhook-format-card:has(input:focus-visible) .webhook-format-card__body {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+}
+.webhook-format-card__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+@media (forced-colors: active) {
+    .project-dot[data-hue] { background: CanvasText; box-shadow: none; }
+    .view-head h1 > .icon:not(.brand-logo) { border-color: CanvasText; background: Canvas; color: CanvasText; }
+    .webhook-format-card:has(input:checked) .webhook-format-card__body { border-color: Highlight; }
+}

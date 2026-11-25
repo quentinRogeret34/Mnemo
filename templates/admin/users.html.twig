@@ -10,7 +10,6 @@
         <h1><twig:ux:icon name="lucide:users" />{{ 'nav.users'|trans }}</h1>
         <span class="view-head__meta">{{ users|length }}{% if pending > 0 %} · {{ 'proposal.pending'|trans({count: pending}) }}{% endif %}</span>
     </div>
-    <p class="page__lede">{{ 'admin.lede'|trans }}</p>
 
     {% if users is empty %}
         <p class="block__empty">{{ 'admin.empty'|trans }}</p>
@@ -46,7 +45,6 @@
 
     <section class="block" aria-labelledby="groups-title">
         <div class="block__head"><h2 id="groups-title">{{ 'admin.groups'|trans }}</h2><span class="block__count">{{ groups|length }}</span></div>
-        <p class="row__sub">{{ 'admin.groups_help'|trans }}</p>
         <form class="inline-form admin-group-new" method="post" action="{{ path('admin_group_create') }}">
             <input type="hidden" name="_token" value="{{ csrf_token('admin-group-create') }}">
             <label class="visually-hidden" for="group-name">{{ 'admin.group_name'|trans }}</label>

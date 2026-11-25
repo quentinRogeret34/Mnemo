@@ -1,0 +1,121 @@
+{# Colored brand SVG marks for external integrations & OAuth providers.
+   Accepts:
+     - brand: string ('github', 'github-api', 'gitlab', 'google', 'atlassian', 'jira', 'confluence', 'linear', 'notion', 'slack', 'discord', 'teams', 'generic')
+     - connector: optional App\Entity\Connector (auto-detects brand when brand is omitted)
+     - badge: bool (false by default; wraps the SVG in a soft-tinted .brand-badge chip)
+     - size: 'sm' | 'md' | 'lg' (default 'sm')
+     - class: extra CSS classes on the SVG
+#}
+{% set resolved = brand ?? '' %}
+{% if resolved is empty and connector is defined and connector is not null %}
+    {% set hay = (connector.mode.value ~ ' ' ~ connector.endpoint ~ ' ' ~ connector.name)|lower %}
+    {% if connector.mode.value == 'github' or 'github' in hay %}
+        {% set resolved = 'github' %}
+    {% elseif connector.mode.value == 'gitlab' or 'gitlab' in hay %}
+        {% set resolved = 'gitlab' %}
+    {% elseif connector.mode.value == 'notion' or 'notion' in hay %}
+        {% set resolved = 'notion' %}
+    {% elseif 'confluence' in hay and 'jira' not in hay %}
+        {% set resolved = 'confluence' %}
+    {% elseif 'jira' in hay and 'confluence' not in hay %}
+        {% set resolved = 'jira' %}
+    {% elseif 'atlassian' in hay or 'jira' in hay %}
+        {% set resolved = 'atlassian' %}
+    {% elseif 'linear' in hay %}
+        {% set resolved = 'linear' %}
+    {% elseif 'slack' in hay %}
+        {% set resolved = 'slack' %}
+    {% elseif 'discord' in hay %}
+        {% set resolved = 'discord' %}
+    {% elseif 'teams' in hay or 'office.com' in hay or 'microsoft' in hay %}
+        {% set resolved = 'teams' %}
+    {% elseif 'google' in hay %}
+        {% set resolved = 'google' %}
+    {% else %}
+        {% set resolved = 'generic' %}
+    {% endif %}
+{% endif %}
+{% set resolved = resolved|lower %}
+{% if resolved == 'github-api' %}{% set resolved = 'github' %}{% endif %}
+{% if resolved == 'microsoft-teams' %}{% set resolved = 'teams' %}{% endif %}
+{% if resolved is empty %}{% set resolved = 'generic' %}{% endif %}
+
+{% set svg_class = ('icon brand-logo brand-logo--' ~ resolved ~ (class is defined and class ? ' ' ~ class : ''))|trim %}
+{% set use_badge = badge ?? false %}
+{% set badge_size = size ?? 'sm' %}
+
+{% if use_badge %}<span class="brand-badge brand-badge--{{ resolved }} brand-badge--{{ badge_size }}" aria-hidden="true">{% endif %}
+{% if resolved == 'github' %}
+    <svg class="{{ svg_class }}" viewBox="0 0 24 24" aria-hidden="true">
+        <path fill="currentColor" d="M12 .5a11.5 11.5 0 0 0-3.64 22.41c.58.11.79-.25.79-.55v-2.14c-3.2.7-3.88-1.36-3.88-1.36-.52-1.33-1.28-1.69-1.28-1.69-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.68 0-1.25.45-2.28 1.19-3.08-.12-.29-.52-1.46.11-3.04 0 0 .97-.31 3.17 1.18a10.97 10.97 0 0 1 5.76 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.58.23 2.75.11 3.04.74.8 1.19 1.83 1.19 3.08 0 4.41-2.69 5.39-5.25 5.67.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.55A11.5 11.5 0 0 0 12 .5Z"/>
+    </svg>
+{% elseif resolved == 'gitlab' %}
+    <svg class="{{ svg_class }}" viewBox="0 0 24 24" aria-hidden="true">
+        <path fill="#E24329" d="m12 21.42 4.2-12.92H7.8L12 21.42Z"/>
+        <path fill="#FC6D26" d="M12 21.42 7.8 8.5H1.93L12 21.42Z"/>
+        <path fill="#FCA326" d="M1.93 8.5.65 12.42a.87.87 0 0 0 .32.98L12 21.42 1.93 8.5Z"/>
+        <path fill="#E24329" d="M1.93 8.5H7.8L5.28.74a.44.44 0 0 0-.84 0L1.93 8.5Z"/>
+        <path fill="#FC6D26" d="M12 21.42 16.2 8.5h5.87L12 21.42Z"/>
+        <path fill="#FCA326" d="m22.07 8.5 1.28 3.92a.87.87 0 0 1-.32.98L12 21.42 22.07 8.5Z"/>
+        <path fill="#E24329" d="M22.07 8.5H16.2l2.52-7.76a.44.44 0 0 1 .84 0L22.07 8.5Z"/>
+    </svg>
+{% elseif resolved == 'google' %}
+    <svg class="{{ svg_class }}" viewBox="0 0 24 24" aria-hidden="true">
+        <path fill="#4285F4" d="M23.49 12.27c0-.79-.07-1.54-.2-2.27H12v4.3h6.45a5.52 5.52 0 0 1-2.39 3.62v3h3.87c2.26-2.08 3.56-5.15 3.56-8.65Z"/>
+        <path fill="#34A853" d="M12 24c3.24 0 5.95-1.07 7.93-2.91l-3.87-3a7.17 7.17 0 0 1-10.67-3.77H1.4v3.09A12 12 0 0 0 12 24Z"/>
+        <path fill="#FBBC05" d="M5.39 14.32A7.2 7.2 0 0 1 5.01 12c0-.81.14-1.59.38-2.32V6.59H1.4A12 12 0 0 0 0 12c0 1.94.46 3.77 1.4 5.41l3.99-3.09Z"/>
+        <path fill="#EA4335" d="M12 4.75c1.76 0 3.34.61 4.59 1.8l3.44-3.44C17.95 1.19 15.24 0 12 0A12 12 0 0 0 1.4 6.59l3.99 3.09A7.15 7.15 0 0 1 12 4.75Z"/>
+    </svg>
+{% elseif resolved == 'atlassian' %}
+    <svg class="{{ svg_class }}" viewBox="0 0 24 24" aria-hidden="true">
+        <path fill="#0052CC" d="M7.55 11.42a.68.68 0 0 0-1.15.08L1.65 21.02a.68.68 0 0 0 .61.98h6.71a.68.68 0 0 0 .62-.39c1.43-2.98.58-7.49-2.04-10.19Z"/>
+        <path fill="#2684FF" d="M11.63 2.4c-1.5 2.41-1.63 5.54-.33 8.17l4.38 8.76a.68.68 0 0 0 .61.37h5.45a.68.68 0 0 0 .61-.98L12.83 2.4a.68.68 0 0 0-1.2 0Z"/>
+    </svg>
+{% elseif resolved == 'jira' %}
+    <svg class="{{ svg_class }}" viewBox="0 0 24 24" aria-hidden="true">
+        <path fill="#2684FF" d="M21.53 2H11.5a4.43 4.43 0 0 0 4.43 4.43h1.81v1.74A4.44 4.44 0 0 0 22.17 12.6V2.64A.64.64 0 0 0 21.53 2Z"/>
+        <path fill="#0052CC" d="M16.57 6.99H6.54a4.43 4.43 0 0 0 4.43 4.43h1.81v1.75a4.43 4.43 0 0 0 4.43 4.43V7.63a.64.64 0 0 0-.64-.64Z"/>
+        <path fill="#2684FF" d="M11.61 11.98H1.58a4.43 4.43 0 0 0 4.43 4.43h1.81v1.74a4.43 4.43 0 0 0 4.43 4.43v-9.96a.64.64 0 0 0-.64-.64Z"/>
+    </svg>
+{% elseif resolved == 'confluence' %}
+    <svg class="{{ svg_class }}" viewBox="0 0 24 24" aria-hidden="true">
+        <path fill="#0052CC" d="M2.62 17.4c-.24.4-.52.86-.75 1.22a.72.72 0 0 0 .25.99l4.26 2.61a.72.72 0 0 0 1-.23c.2-.33.45-.75.73-1.22 1.98-3.27 3.97-2.87 7.57-1.14l4.23 2.02a.72.72 0 0 0 .97-.36l2.03-4.58a.72.72 0 0 0-.35-.94c-.88-.42-2.64-1.26-4.21-2.01-5.68-2.73-10.52-2.55-15.73 3.64Z"/>
+        <path fill="#2684FF" d="M21.38 6.6c.24-.4.52-.86.75-1.22a.72.72 0 0 0-.25-.99l-4.26-2.61a.72.72 0 0 0-1 .23c-.2.33-.45.75-.73 1.22-1.98 3.27-3.97 2.87-7.57 1.14L4.09 2.35a.72.72 0 0 0-.97.36L1.09 7.29a.72.72 0 0 0 .35.94c.88.42 2.64 1.26 4.21 2.01 5.68 2.73 10.52 2.55 15.73-3.64Z"/>
+    </svg>
+{% elseif resolved == 'linear' %}
+    <svg class="{{ svg_class }}" viewBox="0 0 24 24" aria-hidden="true">
+        <path fill="#5E6AD2" d="M3.11 13.73a9.97 9.97 0 0 0 7.16 7.16l-7.16-7.16Zm-.58-3.03 10.77 10.77c.64-.09 1.26-.25 1.85-.46L2.99 8.85c-.21.59-.37 1.21-.46 1.85Zm1.16-3.7 13.31 13.31c.48-.3.93-.64 1.35-1.02L4.71 5.65c-.38.42-.72.87-1.02 1.35Zm2.34-2.57 13.54 13.54A9.97 9.97 0 0 0 22 12c0-5.52-4.48-10-10-10a9.97 9.97 0 0 0-5.97 2.43Z"/>
+    </svg>
+{% elseif resolved == 'notion' %}
+    <svg class="{{ svg_class }}" viewBox="0 0 24 24" aria-hidden="true">
+        <path fill="currentColor" d="M4.46 4.21c.74.6 1.02.56 2.42.46l13.1-.79c.28 0 .05-.28-.05-.33L17.75 2c-.6-.46-1.4-.97-2.93-.84L2.14 2.09c-.46.05-.56.28-.37.46l2.69 1.66Zm.79 2.97v13.78c0 .74.37 1.02 1.21.97l14.4-.84c.84-.05.93-.56.93-1.16V6.26c0-.6-.23-.93-.74-.88l-15.05.88c-.56.05-.75.33-.75.92Zm14.21.74c.09.42 0 .84-.42.88l-.7.14v10.22c-.6.33-1.16.51-1.63.51-.74 0-.93-.23-1.49-.93l-4.55-7.15v6.92l1.44.33s0 .84-1.16.84l-3.21.19c-.09-.19 0-.65.33-.74l.84-.23V9.55l-1.16-.09c-.09-.42.14-1.02.79-1.07l3.44-.23 4.74 7.25V9l-1.21-.14c-.09-.51.28-.88.74-.93l3.21-.01Z"/>
+    </svg>
+{% elseif resolved == 'slack' %}
+    <svg class="{{ svg_class }}" viewBox="0 0 24 24" aria-hidden="true">
+        <path fill="#E01E5A" d="M6.1 15.1a2.1 2.1 0 1 1-2.1-2.1h2.1v2.1Zm1.05 0a2.1 2.1 0 1 1 4.2 0v5.25a2.1 2.1 0 1 1-4.2 0V15.1Z"/>
+        <path fill="#36C5F0" d="M9.25 6.1a2.1 2.1 0 1 1 2.1-2.1v2.1h-2.1Zm0 1.05a2.1 2.1 0 1 1 0 4.2H4a2.1 2.1 0 1 1 0-4.2h5.25Z"/>
+        <path fill="#2EB67D" d="M18.25 9.25a2.1 2.1 0 1 1 2.1 2.1h-2.1v-2.1Zm-1.05 0a2.1 2.1 0 1 1-4.2 0V4a2.1 2.1 0 1 1 4.2 0v5.25Z"/>
+        <path fill="#ECB22E" d="M15.1 18.25a2.1 2.1 0 1 1-2.1 2.1v-2.1h2.1Zm0-1.05a2.1 2.1 0 1 1 0-4.2h5.25a2.1 2.1 0 1 1 0 4.2H15.1Z"/>
+    </svg>
+{% elseif resolved == 'discord' %}
+    <svg class="{{ svg_class }}" viewBox="0 0 24 24" aria-hidden="true">
+        <path fill="#5865F2" d="M20.32 4.37a19.8 19.8 0 0 0-4.89-1.52.07.07 0 0 0-.08.04c-.21.38-.44.87-.61 1.25a18.27 18.27 0 0 0-5.48 0 12.64 12.64 0 0 0-.62-1.25.08.08 0 0 0-.08-.04 19.74 19.74 0 0 0-4.89 1.52.07.07 0 0 0-.03.03C.53 9.04-.32 13.58.1 18.06a.08.08 0 0 0 .03.05 19.9 19.9 0 0 0 5.99 3.03.08.08 0 0 0 .08-.03c.46-.63.87-1.3 1.22-2a.08.08 0 0 0-.04-.11 13.1 13.1 0 0 1-1.87-.89.08.08 0 0 1-.01-.13c.13-.09.25-.19.37-.29a.07.07 0 0 1 .08-.01c3.93 1.79 8.18 1.79 12.06 0a.07.07 0 0 1 .08.01c.12.1.24.2.37.29a.08.08 0 0 1-.01.13c-.6.35-1.22.65-1.87.89a.08.08 0 0 0-.04.11c.36.7.77 1.37 1.22 2a.08.08 0 0 0 .08.03 19.84 19.84 0 0 0 6-3.03.08.08 0 0 0 .03-.05c.5-5.18-.84-9.68-3.55-13.66a.06.06 0 0 0-.03-.03ZM8.02 15.33c-1.18 0-2.16-1.08-2.16-2.42 0-1.33.96-2.42 2.16-2.42 1.21 0 2.18 1.1 2.16 2.42 0 1.34-.96 2.42-2.16 2.42Zm7.97 0c-1.18 0-2.16-1.08-2.16-2.42 0-1.33.96-2.42 2.16-2.42 1.21 0 2.18 1.1 2.16 2.42 0 1.34-.95 2.42-2.16 2.42Z"/>
+    </svg>
+{% elseif resolved == 'teams' %}
+    <svg class="{{ svg_class }}" viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="19.5" cy="7.5" r="2.25" fill="#5059C9"/>
+        <path fill="#5059C9" d="M22.5 11h-4.5v5.5a2.5 2.5 0 0 0 5 0v-5a.5.5 0 0 0-.5-.5Z"/>
+        <circle cx="14.5" cy="6" r="3" fill="#7B83EB"/>
+        <path fill="#7B83EB" d="M18.5 10h-8v7a4 4 0 0 0 8 0v-6.5a.5.5 0 0 0-.5-.5Z"/>
+        <rect x="2" y="6.5" width="11" height="11" rx="2" fill="#464EB8"/>
+        <path fill="#FFFFFF" d="M10.2 9.4H4.8v1.45h1.95v4.75h1.5v-4.75h1.95V9.4Z"/>
+    </svg>
+{% else %}
+    <svg class="{{ svg_class }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M12 22v-5"/>
+        <path d="M9 8V2"/>
+        <path d="M15 8V2"/>
+        <path d="M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z"/>
+    </svg>
+{% endif %}
+{% if use_badge %}</span>{% endif %}

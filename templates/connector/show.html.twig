@@ -17,7 +17,10 @@
 
 {% block body %}
     <article class="page">
-        <div class="page__icon"><span class="code-chip">{{ connector.transport.value|upper }}</span></div>
+        <div class="page__icon connector-head-icon">
+            {{ include('_brand_logo.html.twig', {connector: connector, badge: true, size: 'lg'}) }}
+            <span class="code-chip">{{ connector.transport.value|upper }}</span>
+        </div>
         <h1 class="page__title">{{ connector.name }}</h1>
 
         <dl class="props">
@@ -74,7 +77,7 @@
             {% if connector.oauthToken %}
                 <form method="post" action="{{ path('connector_oauth_disconnect', {id: connector.id}) }}"><input type="hidden" name="_token" value="{{ token }}"><button class="button" type="submit" data-confirm="{{ 'connector.show.disconnect_confirm'|trans }}" data-confirm-label="{{ 'connector.show.disconnect'|trans }}"><twig:ux:icon name="lucide:unplug" />{{ 'connector.show.disconnect_github'|trans }}</button></form>
             {% elseif oauth %}
-                <form method="post" action="{{ path('connector_oauth', {id: connector.id}) }}"><input type="hidden" name="_token" value="{{ token }}"><button class="button" type="submit"><twig:ux:icon name="simple-icons:github" />{{ 'connector.github.connect'|trans }}</button></form>
+                <form method="post" action="{{ path('connector_oauth', {id: connector.id}) }}"><input type="hidden" name="_token" value="{{ token }}"><button class="button" type="submit">{{ include('_brand_logo.html.twig', {brand: 'github'}) }}{{ 'connector.github.connect'|trans }}</button></form>
             {% endif %}
             {% if connector.mcpAuthorization %}
                 <form method="post" action="{{ path('connector_authorize_revoke', {id: connector.id}) }}"><input type="hidden" name="_token" value="{{ token }}"><button class="button" type="submit" data-confirm="{{ 'connector.show.revoke_confirm'|trans }}" data-confirm-label="{{ 'form.upload.remove'|trans }}"><twig:ux:icon name="lucide:unplug" />{{ 'connector.show.revoke'|trans }}</button></form>

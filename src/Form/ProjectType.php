@@ -80,6 +80,7 @@ final class ProjectType extends AbstractType
                 ->add('webhookFormat', EnumType::class, [
                     'class' => WebhookFormat::class,
                     'label' => 'form.project.webhook_format',
+                    'expanded' => true,
                 ])
                 ->add('webhookUrl', TextType::class, [
                     'label' => 'form.project.webhook_url',

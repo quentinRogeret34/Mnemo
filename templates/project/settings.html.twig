@@ -52,8 +52,22 @@
         </fieldset>
         <fieldset id="notifications">
             <legend>{{ 'project.settings.notifications'|trans }}</legend>
-            <p class="row__sub">{{ 'project.settings.notifications_lede'|trans }}</p>
-            {{ form_row(form.webhookFormat) }}
+            <div class="webhook-formats">
+                <span class="form-label">{{ form.webhookFormat.vars.label|trans }}</span>
+                <div class="webhook-format-grid" role="radiogroup" aria-label="{{ form.webhookFormat.vars.label|trans }}">
+                    {% for child in form.webhookFormat %}
+                        <label class="webhook-format-card">
+                            {{ form_widget(child) }}
+                            <span class="webhook-format-card__body">
+                                {{ include('_brand_logo.html.twig', {brand: child.vars.value, badge: true, size: 'sm'}) }}
+                                <span class="webhook-format-card__name">{{ child.vars.label|trans }}</span>
+                            </span>
+                        </label>
+                    {% endfor %}
+                </div>
+                {{ form_errors(form.webhookFormat) }}
+                {% do form.webhookFormat.setRendered %}
+            </div>
             {{ form_row(form.webhookUrl) }}
             {% if project.hasWebhook %}
                 <div class="checkbox-field">
@@ -83,8 +97,8 @@
     {% if project.hasWebhook %}
         <form class="inline-form" method="post" action="{{ path('project_webhook_test', {slug: project.slug}) }}">
             <input type="hidden" name="_token" value="{{ token }}">
-            <button class="button" type="submit"><twig:ux:icon name="lucide:send-horizontal" />{{ 'project.settings.webhook_test'|trans }}</button>
-            <span class="row__sub">{{ 'project.settings.webhook_configured'|trans({format: project.webhookFormat|trans}) }}</span>
+            <button class="button" type="submit">{{ include('_brand_logo.html.twig', {brand: project.webhookFormat.value}) }}{{ 'project.settings.webhook_test'|trans }}</button>
+            <span class="row__sub webhook-configured">{{ 'project.settings.webhook_configured'|trans({format: project.webhookFormat|trans}) }}</span>
         </form>
     {% endif %}
 
@@ -100,7 +114,10 @@
                 {% for connector in connectors %}
                     <li>
                         <{{ scoped ? 'div' : 'a' }} class="row" {% if not scoped %}href="{{ path('connector_show', {id: connector.id}) }}"{% endif %}>
-                            <span class="code-chip">{{ connector.mode.api ? connector.mode.value|upper : connector.transport.value|upper }}</span>
+                            <span class="connector-row__lead">
+                                {{ include('_brand_logo.html.twig', {connector: connector, badge: true, size: 'sm'}) }}
+                                <span class="code-chip">{{ connector.mode.api ? connector.mode.value|upper : connector.transport.value|upper }}</span>
+                            </span>
                             <span class="row__title"><span>{{ connector.name }}</span><span class="row__sub">{{ connector.mode|trans }}</span></span>
                             <span class="row__meta">{{ include('connector/_status.html.twig') }}</span>
                         </{{ scoped ? 'div' : 'a' }}>
@@ -109,7 +126,7 @@
             </ul>
         {% endif %}
         {% if github_oauth %}
-            <p class="project-settings__action"><a class="button" href="{{ path('github_repositories', {project: project.slug}) }}"><twig:ux:icon name="simple-icons:github" />{{ 'palette.github'|trans }}</a></p>
+            <p class="project-settings__action"><a class="button" href="{{ path('github_repositories', {project: project.slug}) }}">{{ include('_brand_logo.html.twig', {brand: 'github'}) }}{{ 'palette.github'|trans }}</a></p>
         {% endif %}
     </section>
 

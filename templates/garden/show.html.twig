@@ -16,11 +16,10 @@
         links: {label: 'garden.links', clean: 'garden.clean.links'},
     } %}
     {% set total = findings|reduce((sum, finding) => sum + finding.count, 0) %}
-    <div class="view-head">
+    <div class="view-head" data-tone="emerald">
         <h1><twig:ux:icon name="lucide:sprout" />{{ 'nav.garden'|trans }}</h1>
         <span class="view-head__meta">{{ 'garden.total'|trans({count: total}) }}</span>
     </div>
-    <p class="page__lede">{{ 'garden.lede'|trans }}</p>
 
     <ol class="steps">
         <li class="steps__item"><span class="steps__title">{{ 'garden.step.spot'|trans }}</span><span class="row__sub">{{ 'garden.step.spot_text'|trans }}</span></li>

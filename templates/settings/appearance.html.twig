@@ -17,12 +17,9 @@
                     <label class="key-form__check"><input type="radio" name="locale" value="{{ locale }}" {{ locale == app.request.locale ? 'checked' }}> {{ ('locale.' ~ locale)|trans }}</label>
                 {% endfor %}
             </div>
-            <p class="help-text">{{ 'appearance.language_help'|trans }}</p>
         </fieldset>
         <div><button class="button button--primary" type="submit">{{ 'appearance.language_submit'|trans }}</button></div>
     </form>
-
-    <p class="page__lede">{{ 'appearance.lede'|trans }}</p>
 
     <form class="panel form-stack appearance" data-controller="appearance" data-appearance-dark-value="{{ 'appearance.currently_dark'|trans }}" data-appearance-light-value="{{ 'appearance.currently_light'|trans }}" data-action="change->appearance#update theme:change@window->appearance#refresh">
         <fieldset>
@@ -43,14 +40,12 @@
                 <label class="key-form__check"><input type="radio" name="accent" value="violet"><span class="swatch" data-accent="violet"></span> Violet</label>
                 <label class="key-form__check"><input type="radio" name="accent" value="rose"><span class="swatch" data-accent="rose"></span> Rose</label>
             </div>
-            <p class="help-text">{{ 'appearance.accent_help'|trans }}</p>
         </fieldset>
         <fieldset>
             <legend>{{ 'appearance.contrast'|trans }}</legend>
             <div class="choices">
                 <label class="key-form__check"><input type="checkbox" name="contrast" value="more"> {{ 'appearance.contrast_more'|trans }}</label>
             </div>
-            <p class="help-text">{{ 'appearance.contrast_help'|trans }}</p>
         </fieldset>
         <fieldset>
             <legend>{{ 'appearance.text_size'|trans }}</legend>
