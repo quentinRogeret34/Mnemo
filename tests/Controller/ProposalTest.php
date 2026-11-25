@@ -54,6 +54,23 @@ final class ProposalTest extends WebTestCase
         self::assertSame(ProposalStatus::Applied, $this->entityManager->getRepository(Proposal::class)->findOneBy([])->getStatus());
     }
 
+    public function testLearningIsQuickAppliedFromTheTable(): void
+    {
+        $this->givenProposal(ProposalKind::Learning, $this->learning('Le catalogue est chargé au démarrage.'));
+
+        $crawler = $this->client->request('GET', '/proposals?project=demo');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('.proposal-table .proposal-act--approve');
+        self::assertSelectorExists('.proposal-table .proposal-act--reject');
+        self::assertSelectorExists('.proposal-table .proposal-act--edit');
+        $this->client->submit($crawler->selectButton('Valider rapidement')->form());
+
+        self::assertResponseRedirects('/proposals?project=demo');
+        $memory = $this->entityManager->getRepository(Node::class)->findOneBy(['type' => NodeType::Memory]);
+        self::assertSame('Le catalogue est chargé au démarrage.', $memory->getLabel());
+        self::assertSame(ProposalStatus::Applied, $this->entityManager->getRepository(Proposal::class)->findOneBy([])->getStatus());
+    }
+
     public function testRejectedProposalChangesNothing(): void
     {
         $this->givenProposal(ProposalKind::Learning, $this->learning('Le catalogue est chargé au démarrage.'));
@@ -64,6 +81,21 @@ final class ProposalTest extends WebTestCase
         self::assertResponseRedirects('/proposals');
         self::assertSame(0, $this->entityManager->getRepository(Node::class)->count(['type' => NodeType::Memory]));
         self::assertSame(ProposalStatus::Rejected, $this->entityManager->getRepository(Proposal::class)->findOneBy([])->getStatus());
+    }
+
+    public function testRejectedProposalFromDrawerSavesReason(): void
+    {
+        $this->givenProposal(ProposalKind::Learning, $this->learning('Le catalogue est chargé au démarrage.'));
+
+        $crawler = $this->client->request('GET', '/proposals');
+        $drawerReject = $crawler->filter('.proposal-drawer button[formaction*="/reject"]')->first();
+        $form = $drawerReject->form(['reason' => 'too_obvious']);
+        $this->client->submit($form);
+
+        self::assertResponseRedirects('/proposals');
+        $proposal = $this->entityManager->getRepository(Proposal::class)->findOneBy([]);
+        self::assertSame(ProposalStatus::Rejected, $proposal->getStatus());
+        self::assertSame('too_obvious', $proposal->getPayload()['human_feedback']['rejected_reason'] ?? null);
     }
 
     public function testDuplicateMergesLinksIntoTheKeptMemory(): void

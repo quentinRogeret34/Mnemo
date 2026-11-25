@@ -16,11 +16,13 @@
     {% set reconciliations = {new: 'memory.new', updates: 'proposal.updates', supersedes: 'memory.show.replaces', retracts: 'proposal.retracts'} %}
     {% set tones = {new: 'success', updates: 'warning', supersedes: 'warning', retracts: 'danger'} %}
     {% set sources = {conversation: 'proposal.source.conversation', file: 'proposal.source.file', diff: 'proposal.source.diff', review: 'proposal.source.review'} %}
+    {% set memory_icons = {decision: 'lucide:gavel', convention: 'lucide:ruler', task_learning: 'lucide:graduation-cap', preference: 'lucide:sliders-horizontal', fact: 'lucide:lightbulb'} %}
+    {% set kind_icons = {rule_draft: 'lucide:clipboard-check', skill_update: 'lucide:graduation-cap', duplicate: 'lucide:copy', contradiction: 'lucide:triangle-alert', refuted: 'lucide:shield-alert'} %}
+
     <div class="view-head">
         <h1><twig:ux:icon name="lucide:check" />{{ 'nav.to_review'|trans }}</h1>
         <span class="view-head__meta">{{ project ? 'proposal.pending_project'|trans({count: proposals.total, name: project.name}) : 'proposal.pending'|trans({count: proposals.total}) }}</span>
     </div>
-    <p class="page__lede">{{ 'proposal.lede'|trans }}</p>
 
     <div class="filter-bar">
         <nav class="tabs" aria-label="{{ 'proposal.filter_kind'|trans }}">
@@ -44,177 +46,140 @@
     {% if proposals.items is empty %}
         <p class="block__empty">{{ 'proposal.empty'|trans({command: '<span class="mono">app:learn</span>', tool: '<span class="mono">learn</span>'})|raw }}</p>
     {% else %}
-        <ul class="proposals">
-            {% for proposal in proposals.items %}
-                {% set p = proposal.payload %}
-                {% set query = {project: project ? project.slug : null, kind: kind ? kind.value : null}|filter(v => v is not null) %}
-                {% set learning = proposal.kind.value == 'learning' %}
-                {% set rule_draft = proposal.kind.value == 'rule_draft' %}
-                {% set skill_update = proposal.kind.value == 'skill_update' %}
-                {% set tone = learning ? (tones[p.reconciliation] ?? 'neutral') : (rule_draft or skill_update ? 'success' : (proposal.kind.value == 'duplicate' ? 'warning' : 'danger')) %}
-                <li class="proposal" id="proposal-{{ proposal.id }}">
-                    <div class="proposal__head">
-                        <span class="proposal__dot proposal__dot--{{ learning ? p.type : proposal.kind.value }}" aria-hidden="true"></span>
-                        <div class="proposal__title">
-                            <strong>{{ proposal.kind|trans }}</strong>
-                            <span class="row__sub">{{ proposal.project ? proposal.project.name : 'nav.all_projects'|trans }}{% if learning %} · {{ (sources[p.source.kind] ?? p.source.kind)|trans }}{% elseif rule_draft and (p.document_title ?? null) %} · {{ p.document_title }}{% elseif skill_update %} · {{ ('enum.agent_asset_kind.' ~ (p.kind ?? 'skill'))|trans }}{% endif %}</span>
-                        </div>
-                        <span class="pill pill--{{ tone }}">{{ learning ? (reconciliations[p.reconciliation] ?? p.reconciliation)|trans : (skill_update ? ((p.action ?? 'create') == 'update' ? 'proposal.skill.action_update' : 'proposal.skill.action_create')|trans : proposal.kind|trans) }}</span>
-                    </div>
-
-                    <form method="post" action="{{ path('proposal_apply', {id: proposal.id}|merge(query)) }}" class="proposal__body">
-                        <input type="hidden" name="_token" value="{{ csrf_token('proposal-' ~ proposal.id) }}">
-
-                        {% if learning %}
-                            {% if p.reconciliation == 'retracts' %}
-                                <p class="proposal__text">{{ 'proposal.retract'|trans }} <a href="{{ path('memory_show', {id: p.target_id}) }}">{{ p.target_text }}</a></p>
-                            {% else %}
-                                <label class="visually-hidden" for="lesson-{{ proposal.id }}">{{ 'proposal.lesson'|trans }}</label>
-                                <textarea id="lesson-{{ proposal.id }}" name="lesson" class="proposal__lesson" rows="3" maxlength="1000">{{ p.lesson }}</textarea>
-                                {% if p.target_id %}
-                                    <p class="row__sub">{{ (p.reconciliation == 'updates' ? 'proposal.replaces_text' : 'proposal.archives')|trans }} <a href="{{ path('memory_show', {id: p.target_id}) }}">{{ p.target_text }}</a></p>
-                                {% endif %}
-                            {% endif %}
-                            <dl class="kv">
-                                <div class="kv__group">
-                                    <div class="kv__row"><dt>{{ 'proposal.type'|trans }}</dt><dd>{{ include('memory/_type.html.twig', {type: p.type}) }}</dd></div>
-                                    <div class="kv__row"><dt>{{ 'memory.index.source'|trans }}</dt><dd>{{ p.source.label }}</dd></div>
-                                </div>
-                                <div class="kv__group">
-                                    <div class="kv__row" title="{{ 'proposal.axes'|trans({durability: p.axes.durability, reuse: p.axes.reuse, fit: p.axes.project_fit, risk: p.axes.risk}) }}"><dt>{{ 'proposal.score_label'|trans }}</dt><dd class="num">{{ p.score }}/10</dd></div>
-                                </div>
-                                <div class="kv__group">
-                                    <div class="kv__row"><dt>{{ 'proposal.proposed'|trans }}</dt><dd class="num">{{ proposal.createdAt|format_datetime('short', 'short') }}</dd></div>
-                                </div>
-                            </dl>
-                            <details class="proposal__more">
-                                <summary>{{ 'proposal.evidence_source'|trans }}</summary>
-                                <dl class="props props--flat">
-                                    <dt>{{ 'proposal.evidence'|trans }}</dt><dd><q>{{ p.evidence }}</q></dd>
-                                    {% if p.reason %}<dt>{{ 'proposal.why'|trans }}</dt><dd>{{ p.reason }}</dd>{% endif %}
-                                    {% if p.files is not empty or p.rules is not empty %}
-                                        <dt>{{ 'proposal.links'|trans }}</dt>
-                                        <dd>{% for file in p.files %}<span class="tag mono">{{ file }}</span>{% endfor %}{% for rule in p.rules %}<span class="tag mono">{{ rule }}</span>{% endfor %}</dd>
-                                    {% endif %}
-                                    {% if p.adr is not empty %}
-                                        <dt>{{ 'enum.memory_type.decision'|trans }}</dt><dd>{{ p.adr.decision ?? '' }}</dd>
-                                    {% endif %}
-                                </dl>
-                            </details>
-                        {% elseif rule_draft %}
-                            <label class="visually-hidden" for="rule-title-{{ proposal.id }}">{{ 'rule.editor.title'|trans }}</label>
-                            <input id="rule-title-{{ proposal.id }}" name="title" type="text" class="input proposal__rule-title" maxlength="255" value="{{ p.title }}" required>
-                            <label class="visually-hidden" for="rule-statement-{{ proposal.id }}">{{ 'rule.editor.statement'|trans }}</label>
-                            <textarea id="rule-statement-{{ proposal.id }}" name="statement" class="proposal__lesson" rows="3" maxlength="2000" required>{{ p.statement }}</textarea>
-                            <dl class="kv">
-                                {% if p.document_id ?? null %}
-                                    <div class="kv__group">
-                                        <div class="kv__row">
-                                            <dt>{{ 'rule.show.sources'|trans }}</dt>
-                                            <dd>
-                                                <a class="link" href="{{ path('document_show', {id: p.document_id}) }}">
-                                                    <span class="format format--{{ p.document_format ?? 'md' }}">{{ p.document_format ?? 'md' }}</span>
-                                                    {{ p.document_title ?? ('#' ~ p.document_id) }}
-                                                </a>
-                                            </dd>
+        {% set query = {project: project ? project.slug : null, kind: kind ? kind.value : null}|filter(v => v is not null) %}
+        <div class="table-wrap table-wrap--framed proposal-table">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th scope="col">{{ 'proposal.col.proposal'|trans }}</th>
+                        <th scope="col">{{ 'nav.projects'|trans }}</th>
+                        <th scope="col">{{ 'proposal.col.signal'|trans }}</th>
+                        <th scope="col" class="num">{{ 'proposal.proposed'|trans }}</th>
+                        <th scope="col" class="proposal-table__actions-head">{{ 'proposal.col.actions'|trans }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for proposal in proposals.items %}
+                        {% set p = proposal.payload %}
+                        {% set kind_value = proposal.kind.value %}
+                        {% set learning = kind_value == 'learning' %}
+                        {% set rule_draft = kind_value == 'rule_draft' %}
+                        {% set skill_update = kind_value == 'skill_update' %}
+                        {% set pair = kind_value in ['duplicate', 'contradiction'] %}
+                        {% set variant = learning ? (p.type ?? 'fact') : kind_value %}
+                        {% set icon_name = learning ? (memory_icons[p.type ?? 'fact'] ?? 'lucide:lightbulb') : (kind_icons[kind_value] ?? 'lucide:info') %}
+                        {% set tone = learning ? (tones[p.reconciliation] ?? 'neutral') : (rule_draft ? 'success' : (skill_update ? 'accent' : (kind_value == 'duplicate' ? 'warning' : 'danger'))) %}
+                        {% set badge_label = learning ? (reconciliations[p.reconciliation] ?? p.reconciliation)|trans : (skill_update ? ((p.action ?? 'create') == 'update' ? 'proposal.skill.action_update' : 'proposal.skill.action_create')|trans : proposal.kind|trans) %}
+                        {% set drawer_id = 'proposal-drawer-' ~ proposal.id %}
+                        <tr class="proposal-row" id="proposal-{{ proposal.id }}">
+                            <td>
+                                <div class="proposal-cell">
+                                    <span class="proposal-cell__icon proposal-cell__icon--{{ variant }}" aria-hidden="true">{{ ux_icon(icon_name) }}</span>
+                                    <div class="proposal-cell__main">
+                                        <button class="proposal-cell__trigger" type="button" commandfor="{{ drawer_id }}" command="show-modal">
+                                            {% if learning %}
+                                                {% if p.reconciliation == 'retracts' %}
+                                                    <span class="proposal-cell__summary">{{ 'proposal.retract'|trans }} {{ p.target_text }}</span>
+                                                {% else %}
+                                                    <span class="proposal-cell__summary">{{ p.lesson }}</span>
+                                                {% endif %}
+                                            {% elseif rule_draft %}
+                                                <span class="proposal-cell__summary"><strong>{{ p.title }}</strong>{% if p.statement ?? null %} — {{ p.statement }}{% endif %}</span>
+                                            {% elseif skill_update %}
+                                                <span class="proposal-cell__summary"><code class="mono">{{ p.name }}</code>{% if p.description ?? null %} — {{ p.description }}{% endif %}</span>
+                                            {% elseif pair %}
+                                                <span class="proposal-cell__summary">{{ p.a_text }} <span class="proposal-cell__vs" aria-hidden="true">↔</span> {{ p.b_text }}</span>
+                                            {% else %}
+                                                <span class="proposal-cell__summary">{{ p.memory_text }}</span>
+                                            {% endif %}
+                                        </button>
+                                        <div class="proposal-cell__meta">
+                                            <span class="pill pill--{{ tone }}">{{ badge_label }}</span>
+                                            {% if learning %}
+                                                <span>{{ ('enum.memory_type.' ~ (p.type ?? 'fact'))|trans }}</span>
+                                                {% if p.source.kind ?? null %}<span>{{ (sources[p.source.kind] ?? p.source.kind)|trans }}</span>{% endif %}
+                                            {% elseif rule_draft and (p.document_title ?? null) %}
+                                                <span>{{ p.document_title }}</span>
+                                            {% elseif skill_update %}
+                                                <span>{{ ('enum.agent_asset_kind.' ~ (p.kind ?? 'skill'))|trans }}</span>
+                                            {% elseif p.reason ?? null %}
+                                                <span class="proposal-cell__reason">{{ p.reason }}</span>
+                                            {% endif %}
                                         </div>
                                     </div>
-                                {% endif %}
-                                {% if p.excerpt ?? null %}
-                                    <div class="kv__group">
-                                        <div class="kv__row kv__row--stack"><dt>{{ 'proposal.excerpt'|trans }}</dt><dd><q>{{ p.excerpt }}</q></dd></div>
-                                    </div>
-                                {% endif %}
-                                {% if (p.files ?? []) is not empty %}
-                                    <div class="kv__group">
-                                        <div class="kv__row kv__row--stack"><dt>{{ 'proposal.links'|trans }}</dt><dd>{% for file in p.files %}<span class="tag mono">{{ file }}</span>{% endfor %}</dd></div>
-                                    </div>
-                                {% endif %}
-                                <div class="kv__group">
-                                    <div class="kv__row"><dt>{{ 'proposal.proposed'|trans }}</dt><dd class="num">{{ proposal.createdAt|format_datetime('short', 'short') }}</dd></div>
                                 </div>
-                            </dl>
-                        {% elseif skill_update %}
-                            <div class="proposal__skill-fields">
-                                <label class="visually-hidden" for="skill-name-{{ proposal.id }}">{{ 'form.agent_asset.name'|trans }}</label>
-                                <input id="skill-name-{{ proposal.id }}" name="name" type="text" class="input mono proposal__rule-title" maxlength="64" pattern="[a-z0-9]+(-[a-z0-9]+)*" value="{{ p.name }}" required>
-                                <label class="visually-hidden" for="skill-desc-{{ proposal.id }}">{{ 'form.agent_asset.description'|trans }}</label>
-                                <input id="skill-desc-{{ proposal.id }}" name="description" type="text" class="input" maxlength="500" value="{{ p.description }}" required>
-                                <label class="visually-hidden" for="skill-content-{{ proposal.id }}">{{ 'form.agent_asset.content'|trans }}</label>
-                                <textarea id="skill-content-{{ proposal.id }}" name="content" class="proposal__lesson mono" rows="6" maxlength="100000" required>{{ p.content }}</textarea>
-                            </div>
-                            <dl class="kv">
-                                {% if p.reason ?? null %}
-                                    <div class="kv__group"><div class="kv__row kv__row--stack"><dt>{{ 'proposal.why'|trans }}</dt><dd>{{ p.reason }}</dd></div></div>
+                            </td>
+                            <td data-label="{{ 'nav.projects'|trans }}">
+                                <span class="proposal-project">
+                                    <span class="project-dot"{% if proposal.project %} data-hue="{{ proposal.project.id % 8 }}"{% endif %} aria-hidden="true"></span>
+                                    <span>{{ proposal.project ? proposal.project.name : 'nav.all_projects'|trans }}</span>
+                                </span>
+                            </td>
+                            <td data-label="{{ 'proposal.col.signal'|trans }}">
+                                {% if learning and (p.score ?? null) is not null %}
+                                    {% set score_tone = p.score >= 8 ? 'high' : (p.score >= 6 ? 'mid' : 'low') %}
+                                    <span class="score-badge score-badge--{{ score_tone }} num" title="{{ 'proposal.axes'|trans({durability: p.axes.durability, reuse: p.axes.reuse, fit: p.axes.project_fit, risk: p.axes.risk}) }}">{{ p.score }}</span>
+                                {% elseif rule_draft and (p.document_format ?? null) %}
+                                    <span class="format format--{{ p.document_format }}">{{ p.document_format }}</span>
+                                {% elseif kind_value == 'refuted' %}
+                                    <span class="pill pill--danger">{{ p.verdict in ['verified', 'refuted', 'conflict', 'unverified'] ? ('verdict.' ~ p.verdict)|trans : p.verdict }}</span>
+                                {% elseif pair %}
+                                    <span class="pill pill--{{ kind_value == 'duplicate' ? 'warning' : 'danger' }}">{{ 'proposal.choose_pair'|trans }}</span>
+                                {% else %}
+                                    <span class="row__sub">—</span>
                                 {% endif %}
-                                {% if (p.memory_ids ?? []) is not empty %}
-                                    <div class="kv__group"><div class="kv__row"><dt>{{ 'nav.memories'|trans }}</dt><dd>{% for mid in p.memory_ids %}<a class="tag mono" href="{{ path('memory_show', {id: mid}) }}">#{{ mid }}</a>{% endfor %}</dd></div></div>
-                                {% endif %}
-                                <div class="kv__group"><div class="kv__row"><dt>{{ 'proposal.proposed'|trans }}</dt><dd class="num">{{ proposal.createdAt|format_datetime('short', 'short') }}</dd></div></div>
-                            </dl>
-                            {% if p.previous_content ?? null %}
-                                <details class="proposal__more">
-                                    <summary>{{ 'proposal.skill.previous'|trans }}</summary>
-                                    <pre class="proposal__skill-prev mono">{{ p.previous_content }}</pre>
-                                </details>
-                            {% endif %}
-                        {% elseif proposal.kind.value in ['duplicate', 'contradiction'] %}
-                            <fieldset class="proposal__pair">
-                                <legend class="row__sub">{{ (proposal.kind.value == 'duplicate' ? 'proposal.keep_merge' : 'proposal.keep')|trans }}</legend>
-                                {% for side in ['a', 'b'] %}
-                                    <div class="proposal__choice">
-                                        <label class="proposal__choice-label">
-                                            <input type="radio" name="keep" value="{{ attribute(p, side ~ '_id') }}" {% if side == 'a' %}checked{% endif %}>
-                                            <span>{{ attribute(p, side ~ '_text') }}</span>
-                                        </label>
-                                        <a class="link proposal__choice-link" href="{{ path('memory_show', {id: attribute(p, side ~ '_id')}) }}">{{ 'proposal.page'|trans }}</a>
-                                    </div>
-                                {% endfor %}
-                            </fieldset>
-                            <dl class="kv">
-                                <div class="kv__group">
-                                    <div class="kv__row kv__row--stack"><dt>{{ 'proposal.why'|trans }}</dt><dd>{{ p.reason }}</dd></div>
-                                </div>
-                                <div class="kv__group">
-                                    <div class="kv__row"><dt>{{ 'proposal.proposed'|trans }}</dt><dd class="num">{{ proposal.createdAt|format_datetime('short', 'short') }}</dd></div>
-                                </div>
-                            </dl>
-                        {% else %}
-                            <p class="proposal__text"><a href="{{ path('memory_show', {id: p.memory_id}) }}">{{ p.memory_text }}</a></p>
-                            <dl class="kv">
-                                <div class="kv__group">
-                                    <div class="kv__row"><dt>{{ 'proposal.verdict_label'|trans }}</dt><dd>{{ p.verdict in ['verified', 'refuted', 'conflict', 'unverified'] ? ('verdict.' ~ p.verdict)|trans : p.verdict }}</dd></div>
-                                    <div class="kv__row kv__row--stack"><dt>{{ 'proposal.why'|trans }}</dt><dd>{{ p.reason }}</dd></div>
-                                </div>
-                                {% if p.sources is not empty %}
-                                    <div class="kv__group">
-                                        <div class="kv__row kv__row--stack"><dt>{{ 'memory.show.sources'|trans }}</dt><dd>{% for source in p.sources %}{{ source.label }}{{ not loop.last ? ', ' }}{% endfor %}</dd></div>
-                                    </div>
-                                {% endif %}
-                                <div class="kv__group">
-                                    <div class="kv__row"><dt>{{ 'proposal.proposed'|trans }}</dt><dd class="num">{{ proposal.createdAt|format_datetime('short', 'short') }}</dd></div>
-                                </div>
-                            </dl>
-                        {% endif %}
+                            </td>
+                            <td class="num row__sub data-table__nowrap" data-label="{{ 'proposal.proposed'|trans }}">
+                                {{ proposal.createdAt|format_datetime('short', 'short') }}
+                            </td>
+                            <td class="proposal-table__actions" data-label="{{ 'proposal.col.actions'|trans }}">
+                                <div class="proposal-acts">
+                                    {% if pair %}
+                                        <button class="proposal-act proposal-act--approve" type="button" commandfor="{{ drawer_id }}" command="show-modal" title="{{ 'proposal.choose_apply'|trans }}">
+                                            {{ ux_icon('lucide:check') }}
+                                            <span class="visually-hidden">{{ 'proposal.choose_apply'|trans }}</span>
+                                        </button>
+                                    {% else %}
+                                        <form method="post" action="{{ path('proposal_apply', {id: proposal.id}|merge(query)) }}" class="proposal-act-form">
+                                            <input type="hidden" name="_token" value="{{ csrf_token('proposal-' ~ proposal.id) }}">
+                                            <button class="proposal-act proposal-act--approve" type="submit" title="{{ 'proposal.quick_apply'|trans }}">
+                                                {{ ux_icon('lucide:check') }}
+                                                <span class="visually-hidden">{{ 'proposal.quick_apply'|trans }}</span>
+                                            </button>
+                                        </form>
+                                    {% endif %}
 
-                        <div class="proposal__actions">
-                            <button class="button button--primary" type="submit">{{ (proposal.kind.value == 'refuted' ? 'proposal.retract_memory' : (rule_draft ? 'proposal.apply_rule' : (skill_update ? 'proposal.apply_skill' : 'proposal.apply')))|trans }}</button>
-                            {% if learning or rule_draft or skill_update %}
-                                <label class="visually-hidden" for="reason-{{ proposal.id }}">{{ 'proposal.reject_reason.label'|trans }}</label>
-                                <select class="select proposal__reason" id="reason-{{ proposal.id }}" name="reason">
-                                    <option value="">{{ 'proposal.reject_reason.placeholder'|trans }}</option>
-                                    <option value="too_obvious">{{ 'proposal.reject_reason.too_obvious'|trans }}</option>
-                                    <option value="wrong">{{ 'proposal.reject_reason.wrong'|trans }}</option>
-                                    <option value="outdated">{{ 'proposal.reject_reason.outdated'|trans }}</option>
-                                    <option value="duplicate">{{ 'proposal.reject_reason.duplicate'|trans }}</option>
-                                </select>
-                            {% endif %}
-                            <button class="button" type="submit" formaction="{{ path('proposal_reject', {id: proposal.id}|merge(query)) }}" data-confirm="{{ 'proposal.reject_confirm'|trans }}" data-confirm-label="{{ 'proposal.reject'|trans }}">{{ 'proposal.reject'|trans }}</button>
-                        </div>
-                    </form>
-                </li>
-            {% endfor %}
-        </ul>
+                                    <form method="post" action="{{ path('proposal_reject', {id: proposal.id}|merge(query)) }}" class="proposal-act-form">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('proposal-' ~ proposal.id) }}">
+                                        <button class="proposal-act proposal-act--reject" type="submit" title="{{ 'proposal.reject'|trans }}">
+                                            {{ ux_icon('lucide:x') }}
+                                            <span class="visually-hidden">{{ 'proposal.reject'|trans }}</span>
+                                        </button>
+                                    </form>
+
+                                    <button class="proposal-act proposal-act--edit" type="button" commandfor="{{ drawer_id }}" command="show-modal" title="{{ 'proposal.edit'|trans }}">
+                                        {{ ux_icon('lucide:pencil') }}
+                                        <span class="visually-hidden">{{ 'proposal.edit'|trans }}</span>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% for proposal in proposals.items %}
+            {{ include('proposal/_drawer.html.twig', {
+                proposal: proposal,
+                query: query,
+                reconciliations: reconciliations,
+                tones: tones,
+                sources: sources,
+                memory_icons: memory_icons,
+                kind_icons: kind_icons,
+            }) }}
+        {% endfor %}
     {% endif %}
     {{ include('_pager.html.twig', {page: proposals}) }}
 {% endblock %}

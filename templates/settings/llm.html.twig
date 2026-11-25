@@ -5,10 +5,9 @@
 {% block crumbs %}<span class="crumbs__current">{{ 'nav.llm'|trans }}</span>{% endblock %}
 
 {% block body %}
-    <div class="view-head">
+    <div class="view-head" data-tone="violet">
         <h1><twig:ux:icon name="lucide:brain" />{{ 'nav.llm'|trans }}</h1>
     </div>
-    <p class="page__lede">{{ 'llm.lede'|trans }}</p>
 
     <dl class="props props--flat">
         <dt>{{ 'form.llm.api_key'|trans }}</dt>

@@ -14,11 +14,10 @@
 
 {% block body %}
     <article class="page">
-        <div class="view-head">
-            <h1><twig:ux:icon name="lucide:sliders-horizontal" />{{ 'connector.setup.heading'|trans({name: connector.name}) }}</h1>
+        <div class="view-head" data-tone="teal">
+            <h1>{{ include('_brand_logo.html.twig', {connector: connector, badge: true, size: 'md'}) }}{{ 'connector.setup.heading'|trans({name: connector.name}) }}</h1>
             {% if inspection %}<span class="status status--validated">{{ inspection.server }}</span>{% endif %}
         </div>
-        <p class="page__lede">{{ 'connector.setup.lede'|trans }}</p>
 
         {% if inspection_error %}
             <p class="form-errors block" role="alert">{{ 'connector.show.connection_failed'|trans({error: inspection_error}) }}</p>

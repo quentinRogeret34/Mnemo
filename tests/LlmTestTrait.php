@@ -22,6 +22,7 @@ trait LlmTestTrait
     private function scriptLlm(\Closure $answer): void
     {
         $platform = MockPlatformFactory::createPlatform(function (Model $model, array|string|object $input) use ($answer): string {
+            \assert(\is_array($input));
             $system = $input['messages'][0]['content'];
             $user = $input['messages'][1]['content'];
             $this->llmCalls[] = ['system' => $system, 'user' => $user, 'model' => $model->getName()];

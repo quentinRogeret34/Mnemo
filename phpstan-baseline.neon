@@ -493,22 +493,10 @@ parameters:
 			path: src/Verify/MemoryVerifier.php
 
 		-
-			message: '#^Cannot access offset ''messages'' on array\|object\|string\.$#'
-			identifier: offsetAccess.nonOffsetAccessible
-			count: 2
-			path: tests/Agent/SkillEvolutionAdvisorTest.php
-
-		-
 			message: '#^Parameter \#1 \$objectOrClass of class ReflectionClass constructor expects class\-string\<T of object\>\|T of object, string given\.$#'
 			identifier: argument.type
 			count: 1
 			path: tests/Architecture/ArchitectureTest.php
-
-		-
-			message: '#^Cannot access offset ''messages'' on array\|object\|string\.$#'
-			identifier: offsetAccess.nonOffsetAccessible
-			count: 2
-			path: tests/Briefing/BriefingAndNotifierTest.php
 
 		-
 			message: '#^Binary operation "\." between ''/connectors…'' and array\<mixed\>\|string results in an error\.$#'
@@ -563,12 +551,6 @@ parameters:
 			identifier: argument.type
 			count: 2
 			path: tests/Controller/AgentAssetTest.php
-
-		-
-			message: '#^Cannot access offset ''messages'' on array\|object\|string\.$#'
-			identifier: offsetAccess.nonOffsetAccessible
-			count: 2
-			path: tests/Controller/ClientHookControllerTest.php
 
 		-
 			message: '#^Cannot cast array\|string\|null to string\.$#'
@@ -655,12 +637,6 @@ parameters:
 			path: tests/Fixtures/mcp/server.php
 
 		-
-			message: '#^Cannot access offset ''messages'' on array\|object\|string\.$#'
-			identifier: offsetAccess.nonOffsetAccessible
-			count: 2
-			path: tests/Forge/ForgeImporterTest.php
-
-		-
 			message: '#^Parameter \#1 \$haystack of function str_ends_with expects string, string\|false\|null given\.$#'
 			identifier: argument.type
 			count: 3
@@ -697,24 +673,6 @@ parameters:
 			path: tests/Forge/GitHubAppTest.php
 
 		-
-			message: '#^Cannot access offset ''messages'' on array\|object\|string\.$#'
-			identifier: offsetAccess.nonOffsetAccessible
-			count: 2
-			path: tests/Garden/GardenTest.php
-
-		-
-			message: '#^Cannot access offset ''messages'' on array\|object\|string\.$#'
-			identifier: offsetAccess.nonOffsetAccessible
-			count: 2
-			path: tests/Learn/LearnerTest.php
-
-		-
-			message: '#^Cannot access offset ''messages'' on array\|object\|string\.$#'
-			identifier: offsetAccess.nonOffsetAccessible
-			count: 2
-			path: tests/Mcp/McpServerTest.php
-
-		-
 			message: '#^Parameter \#1 \$json of function json_decode expects string, string\|false given\.$#'
 			identifier: argument.type
 			count: 1
@@ -725,12 +683,6 @@ parameters:
 			identifier: argument.type
 			count: 3
 			path: tests/Mcp/McpServerTest.php
-
-		-
-			message: '#^Cannot access offset ''messages'' on array\|object\|string\.$#'
-			identifier: offsetAccess.nonOffsetAccessible
-			count: 2
-			path: tests/Review/PullRequestReviewerTest.php
 
 		-
 			message: '#^Parameter \#1 \$haystack of function str_contains expects string, string\|false\|null given\.$#'
@@ -749,18 +701,6 @@ parameters:
 			identifier: assign.propertyType
 			count: 1
 			path: tests/Review/PullRequestReviewerTest.php
-
-		-
-			message: '#^Cannot access offset ''messages'' on array\|object\|string\.$#'
-			identifier: offsetAccess.nonOffsetAccessible
-			count: 2
-			path: tests/Rule/RuleExtractorTest.php
-
-		-
-			message: '#^Cannot access offset ''messages'' on array\|object\|string\.$#'
-			identifier: offsetAccess.nonOffsetAccessible
-			count: 2
-			path: tests/Rule/ShadowAreaDetectorTest.php
 
 		-
 			message: '#^Parameter \#1 \$callback of function array_map expects \(callable\(object\)\: mixed\)\|null, App\\MessageHandler\\IndexNodeHandler given\.$#'
@@ -785,9 +725,3 @@ parameters:
 			identifier: argument.type
 			count: 1
 			path: tests/Security/AccountsTest.php
-
-		-
-			message: '#^Cannot access offset ''messages'' on array\|object\|string\.$#'
-			identifier: offsetAccess.nonOffsetAccessible
-			count: 2
-			path: tests/Verify/MemoryVerifierTest.php

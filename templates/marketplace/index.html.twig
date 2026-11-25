@@ -1,0 +1,150 @@
+{% extends 'base.html.twig' %}
+
+{% set base_query = project ? {project: project.slug} : {} %}
+{% set current_query = base_query|merge(category ? {category: category.value} : {}) %}
+
+{% block title %}{{ 'marketplace.title'|trans }}{% endblock %}
+
+{% block crumbs %}
+    {% if project %}
+        <a href="{{ path('project_show', {slug: project.slug}) }}">{{ project.name }}</a>
+        <span class="crumbs__sep" aria-hidden="true">/</span>
+    {% endif %}
+    <span class="crumbs__current">{{ 'marketplace.title'|trans }}</span>
+{% endblock %}
+
+{% block body %}
+    <div class="view-head view-head--split">
+        <div class="marketplace-head__title">
+            <h1><twig:ux:icon name="lucide:plug-zap" />{{ 'marketplace.title'|trans }}</h1>
+            <span class="pill pill--accent num">{{ 'marketplace.active_count'|trans({active: active_count, total: all_count}) }}</span>
+        </div>
+
+        <nav class="marketplace-scope" aria-label="{{ 'marketplace.scope_label'|trans }}">
+            {% if not is_scoped %}
+                <a class="marketplace-scope__item" href="{{ path('marketplace_index', category ? {category: category.value} : {}) }}" {% if not project %}aria-current="page"{% endif %}>
+                    {{ ux_icon('lucide:layout-grid', {class: 'icon'}) }}
+                    <span>{{ 'marketplace.scope_workspace'|trans }}</span>
+                </a>
+            {% endif %}
+            {% for item in projects %}
+                <a class="marketplace-scope__item" href="{{ path('marketplace_index', {project: item.slug}|merge(category ? {category: category.value} : {})) }}" {% if project and project.id == item.id %}aria-current="page"{% endif %}>
+                    <span class="project-dot" data-hue="{{ item.id % 8 }}" aria-hidden="true"></span>
+                    <span>{{ item.name }}</span>
+                </a>
+            {% endfor %}
+        </nav>
+    </div>
+
+    <section class="marketplace-presets" aria-label="{{ 'marketplace.presets_label'|trans }}">
+        <article class="marketplace-preset{{ active_preset == 'business' ? ' is-active' : '' }}">
+            <div class="marketplace-preset__icon marketplace-preset__icon--success" aria-hidden="true">
+                {{ ux_icon('lucide:lightbulb', {class: 'icon'}) }}
+            </div>
+            <div class="marketplace-preset__body">
+                <div class="marketplace-preset__head">
+                    <h2>{{ 'marketplace.preset.business.name'|trans }}</h2>
+                    {% if active_preset == 'business' %}
+                        <span class="pill pill--success">{{ 'marketplace.preset.active'|trans }}</span>
+                    {% endif %}
+                </div>
+                <p>{{ 'marketplace.preset.business.description'|trans }}</p>
+            </div>
+            <form method="post" action="{{ path('marketplace_preset', {preset: 'business'}|merge(current_query)) }}">
+                <input type="hidden" name="_token" value="{{ csrf_token('marketplace-preset-business') }}">
+                <button class="button{{ active_preset == 'business' ? '' : ' button--primary' }}" type="submit" {% if not project and is_scoped %}disabled{% endif %}>
+                    {{ ux_icon('lucide:wand-sparkles', {class: 'icon'}) }}
+                    {{ 'marketplace.preset.apply'|trans }}
+                </button>
+            </form>
+        </article>
+
+        <article class="marketplace-preset{{ active_preset == 'factory' ? ' is-active' : '' }}">
+            <div class="marketplace-preset__icon marketplace-preset__icon--violet" aria-hidden="true">
+                {{ ux_icon('lucide:kanban', {class: 'icon'}) }}
+            </div>
+            <div class="marketplace-preset__body">
+                <div class="marketplace-preset__head">
+                    <h2>{{ 'marketplace.preset.factory.name'|trans }}</h2>
+                    {% if active_preset == 'factory' %}
+                        <span class="pill pill--success">{{ 'marketplace.preset.active'|trans }}</span>
+                    {% endif %}
+                </div>
+                <p>{{ 'marketplace.preset.factory.description'|trans }}</p>
+            </div>
+            <form method="post" action="{{ path('marketplace_preset', {preset: 'factory'}|merge(current_query)) }}">
+                <input type="hidden" name="_token" value="{{ csrf_token('marketplace-preset-factory') }}">
+                <button class="button{{ active_preset == 'factory' ? '' : ' button--primary' }}" type="submit" {% if not project and is_scoped %}disabled{% endif %}>
+                    {{ ux_icon('lucide:wand-sparkles', {class: 'icon'}) }}
+                    {{ 'marketplace.preset.apply'|trans }}
+                </button>
+            </form>
+        </article>
+    </section>
+
+    <nav class="tabs" aria-label="{{ 'marketplace.categories_label'|trans }}">
+        <a href="{{ path('marketplace_index', base_query) }}" {% if not category %}aria-current="page"{% endif %}>
+            {{ 'marketplace.category_all'|trans }} <span class="tab__count num">{{ all_count }}</span>
+        </a>
+        {% for cat in categories %}
+            <a href="{{ path('marketplace_index', base_query|merge({category: cat.value})) }}" {% if category and category == cat %}aria-current="page"{% endif %}>
+                {{ cat|trans }} <span class="tab__count num">{{ category_counts[cat.value] ?? 0 }}</span>
+            </a>
+        {% endfor %}
+    </nav>
+
+    {% if cards is empty %}
+        <twig:EmptyState :title="'marketplace.empty.title'|trans" :text="'marketplace.empty.text'|trans">
+            <twig:block name="icon"><twig:ux:icon name="lucide:plug-zap" /></twig:block>
+            <twig:block name="actions">
+                <a class="button" href="{{ path('marketplace_index', base_query) }}">{{ 'marketplace.category_all'|trans }}</a>
+            </twig:block>
+        </twig:EmptyState>
+    {% else %}
+        <div class="marketplace-grid">
+            {% for card in cards %}
+                {% set manifest = card.manifest %}
+                <article class="addon-card{{ card.enabled ? ' addon-card--enabled' : ' addon-card--disabled' }}" data-addon-id="{{ manifest.id }}">
+                    <div class="addon-card__top">
+                        <span class="addon-card__icon addon-card__icon--{{ manifest.color }}" aria-hidden="true">
+                            {{ ux_icon(manifest.icon, {class: 'icon'}) }}
+                        </span>
+                        <div class="addon-card__statuses">
+                            {% if card.overridden %}
+                                <span class="pill pill--accent">{{ 'marketplace.override'|trans }}</span>
+                            {% endif %}
+                            <span class="pill{{ card.enabled ? ' pill--success' : '' }}">
+                                {{ (card.enabled ? 'marketplace.status.active' : 'marketplace.status.inactive')|trans }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="addon-card__body">
+                        <h3 class="addon-card__title">{{ manifest.name|trans }}</h3>
+                        <p class="addon-card__desc">{{ manifest.description|trans }}</p>
+                    </div>
+
+                    <div class="addon-card__foot">
+                        <div class="addon-card__pills">
+                            <span class="tag">{{ manifest.category|trans }}</span>
+                            <span class="tag">{{ manifest.scope|trans }}</span>
+                        </div>
+
+                        {% if card.can_toggle and (project or not is_scoped) %}
+                            <form method="post" action="{{ path('marketplace_toggle', {id: manifest.id}|merge(current_query)) }}">
+                                <input type="hidden" name="_token" value="{{ csrf_token('marketplace-toggle-' ~ manifest.id) }}">
+                                <input type="hidden" name="enabled" value="{{ card.enabled ? '0' : '1' }}">
+                                <button class="button{{ card.enabled ? '' : ' button--primary' }}" type="submit">
+                                    {{ ux_icon(card.enabled ? 'lucide:circle-x' : 'lucide:circle-check', {class: 'icon'}) }}
+                                    {{ (card.enabled ? 'marketplace.action.disable' : 'marketplace.action.enable')|trans }}
+                                </button>
+                            </form>
+                        {% else %}
+                            <span class="addon-card__readonly">{{ 'marketplace.workspace_only'|trans }}</span>
+                        {% endif %}
+                    </div>
+                </article>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endblock %}

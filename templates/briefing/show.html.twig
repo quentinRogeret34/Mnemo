@@ -19,7 +19,7 @@
         <form method="post" action="{{ path('project_briefing_send', {slug: project.slug}) }}">
             <input type="hidden" name="_token" value="{{ briefing_token }}">
             <input type="hidden" name="period" value="{{ period }}">
-            <button class="button" type="submit"><twig:ux:icon name="lucide:send-horizontal" />{{ 'briefing.send_webhook'|trans({format: project.webhookFormat|trans}) }}</button>
+            <button class="button" type="submit">{{ include('_brand_logo.html.twig', {brand: project.webhookFormat.value}) }}{{ 'briefing.send_webhook'|trans({format: project.webhookFormat|trans}) }}</button>
         </form>
     {% endif %}
 {% endblock %}
@@ -28,11 +28,10 @@
     {% set alignment = data.alignment %}
     {% set period_labels = {'7d': 'period.7d', '30d': 'period.30d'} %}
 
-    <div class="view-head">
+    <div class="view-head" data-tone="violet">
         <h1><twig:ux:icon name="lucide:library" />{{ 'nav.briefing'|trans }}</h1>
         <span class="view-head__meta">{{ project.name }}</span>
     </div>
-    <p class="page__lede">{{ 'briefing.lede'|trans }}</p>
 
     <div class="filter-bar">
         <nav class="tabs" aria-label="{{ 'period.label'|trans }}">
@@ -174,10 +173,7 @@
 
     <section class="panel briefing-export" aria-labelledby="briefing-export-title" data-controller="clipboard">
         <div class="panel__head">
-            <div>
-                <h2 id="briefing-export-title">{{ 'briefing.export_title'|trans }}</h2>
-                <span class="row__sub">{{ 'briefing.export_desc'|trans }}</span>
-            </div>
+            <h2 id="briefing-export-title">{{ 'briefing.export_title'|trans }}</h2>
             <button class="button" type="button" data-action="clipboard#copy">
                 <twig:ux:icon name="lucide:copy" />
                 <span data-clipboard-target="label">{{ 'briefing.copy_markdown'|trans }}</span>

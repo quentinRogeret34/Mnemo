@@ -44,7 +44,7 @@
             <twig:block name="icon"><twig:ux:icon name="lucide:folder-plus" /></twig:block>
             <twig:block name="actions">
                 {% if may_create %}<button class="button button--primary" type="button" commandfor="project-new" command="show-modal"><twig:ux:icon name="lucide:plus" />{{ 'project.new'|trans }}</button>{% endif %}
-                {% if github_oauth %}<a class="button" href="{{ path('github_repositories') }}"><twig:ux:icon name="simple-icons:github" />{{ 'palette.github'|trans }}</a>{% endif %}
+                {% if github_oauth %}<a class="button" href="{{ path('github_repositories') }}">{{ include('_brand_logo.html.twig', {brand: 'github'}) }}{{ 'palette.github'|trans }}</a>{% endif %}
             </twig:block>
             <details class="empty-state__more">
                 <summary>{{ 'common.command_line'|trans }}</summary>
@@ -74,7 +74,7 @@ bin/console app:ingest:code &lt;slug&gt; var/graphify/&lt;slug&gt;/graphify-out/
                         <tr class="project-row">
                             <td>
                                 <a class="project-row__name" href="{{ path('project_show', {slug: project.slug}) }}">
-                                    <span class="project-avatar" style="--hue: {{ (project.id * 137) % 360 }}" aria-hidden="true">{{ project.name|slice(0, 2)|upper }}</span>
+                                    <span class="project-avatar" data-hue="{{ project.id % 8 }}" aria-hidden="true">{{ project.name|slice(0, 2)|upper }}</span>
                                     <span class="project-row__title"><span>{{ project.name }}</span><span class="row__sub">{{ project.slug }}</span></span>
                                 </a>
                             </td>

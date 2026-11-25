@@ -11,15 +11,12 @@
 {% endblock %}
 
 {% block body %}
-    <div class="view-head">
-        <div>
-            <h1>
-                <twig:ux:icon name="lucide:kanban" />
-                {{ 'factory.title'|trans }}
-                <span class="tag tag--accent">{{ 'factory.dev_badge'|trans }}</span>
-            </h1>
-            <p class="page__lede">{{ 'factory.lede'|trans }}</p>
-        </div>
+    <div class="view-head" data-tone="teal">
+        <h1>
+            <twig:ux:icon name="lucide:kanban" />
+            {{ 'factory.title'|trans }}
+            <span class="tag tag--accent">{{ 'factory.dev_badge'|trans }}</span>
+        </h1>
         {% if project %}
             <div class="view-head__actions">
                 <button class="button" type="button" commandfor="factory-new-session" command="show-modal">

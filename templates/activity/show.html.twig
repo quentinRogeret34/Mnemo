@@ -14,11 +14,10 @@
     {% set scope = project ? {project: project.slug} : {} %}
     {% set period_labels = {'1d': 'period.24h', '7d': 'period.7d', '30d': 'period.30d'} %}
     {% set type_labels = {commit: 'activity.type.commit', ticket: 'activity.type.ticket', document: 'nav.documents', memory: 'nav.memories', business_rule: 'nav.rules'} %}
-    <div class="view-head">
+    <div class="view-head" data-tone="teal">
         <h1><twig:ux:icon name="lucide:activity" />{{ 'nav.activity'|trans }}</h1>
         <span class="view-head__meta">{{ project ? project.name : 'nav.all_projects'|trans }}</span>
     </div>
-    <p class="page__lede">{{ 'activity.lede'|trans }}</p>
 
     <div class="filter-bar">
         <nav class="tabs" aria-label="{{ 'period.label'|trans }}">

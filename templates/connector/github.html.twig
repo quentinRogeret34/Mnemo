@@ -19,16 +19,15 @@
 
 {% block body %}
     <div class="view-head">
-        <h1><twig:ux:icon name="simple-icons:github" />{{ 'connector.github.title'|trans }}</h1>
+        <h1>{{ include('_brand_logo.html.twig', {brand: 'github', badge: true, size: 'md'}) }}{{ 'connector.github.title'|trans }}</h1>
         {% if repositories is not null %}<span class="view-head__meta">{{ repositories|length }}</span>{% endif %}
     </div>
-    <p class="page__lede">{{ 'connector.github.lede'|trans }}</p>
 
     {% if repositories is null %}
         <form method="post" action="{{ path('github_repositories_oauth') }}">
             <input type="hidden" name="_token" value="{{ token }}">
             <input type="hidden" name="project" value="{{ selected ? selected.slug }}">
-            <button class="button button--primary" type="submit"><twig:ux:icon name="simple-icons:github" />{{ 'connector.github.connect'|trans }}</button>
+            <button class="button button--primary" type="submit">{{ include('_brand_logo.html.twig', {brand: 'github'}) }}{{ 'connector.github.connect'|trans }}</button>
             <span class="row__sub">{{ 'connector.github.scope'|trans }}</span>
         </form>
     {% else %}

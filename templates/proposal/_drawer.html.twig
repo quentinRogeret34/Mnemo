@@ -1,0 +1,266 @@
+{% set p = proposal.payload %}
+{% set kind_value = proposal.kind.value %}
+{% set learning = kind_value == 'learning' %}
+{% set rule_draft = kind_value == 'rule_draft' %}
+{% set skill_update = kind_value == 'skill_update' %}
+{% set pair = kind_value in ['duplicate', 'contradiction'] %}
+{% set variant = learning ? (p.type ?? 'fact') : kind_value %}
+{% set icon_name = learning ? (memory_icons[p.type ?? 'fact'] ?? 'lucide:lightbulb') : (kind_icons[kind_value] ?? 'lucide:info') %}
+{% set tone = learning ? (tones[p.reconciliation] ?? 'neutral') : (rule_draft ? 'success' : (skill_update ? 'accent' : (kind_value == 'duplicate' ? 'warning' : 'danger'))) %}
+{% set badge_label = learning ? (reconciliations[p.reconciliation] ?? p.reconciliation)|trans : (skill_update ? ((p.action ?? 'create') == 'update' ? 'proposal.skill.action_update' : 'proposal.skill.action_create')|trans : proposal.kind|trans) %}
+{% set drawer_id = 'proposal-drawer-' ~ proposal.id %}
+
+<dialog class="drawer proposal-drawer" id="{{ drawer_id }}" closedby="any" aria-labelledby="{{ drawer_id }}-title" data-controller="dialog">
+    <div class="drawer__head">
+        <button class="icon-button drawer__close" type="button" commandfor="{{ drawer_id }}" command="close" aria-label="{{ 'common.close'|trans }}">
+            {{ ux_icon('lucide:x') }}
+        </button>
+        <div class="drawer__head-meta">
+            <span class="pill pill--{{ tone }}">{{ badge_label }}</span>
+        </div>
+    </div>
+
+    <form method="post" action="{{ path('proposal_apply', {id: proposal.id}|merge(query)) }}" class="drawer__form">
+        <input type="hidden" name="_token" value="{{ csrf_token('proposal-' ~ proposal.id) }}">
+
+        <div class="drawer__body">
+            <div class="drawer__hero">
+                <span class="proposal-cell__icon proposal-cell__icon--lg proposal-cell__icon--{{ variant }}" aria-hidden="true">{{ ux_icon(icon_name) }}</span>
+                <h2 class="drawer__title" id="{{ drawer_id }}-title">
+                    {% if rule_draft %}
+                        {{ p.title }}
+                    {% elseif skill_update %}
+                        <span class="mono">{{ p.name }}</span>
+                    {% else %}
+                        {{ proposal.kind|trans }}
+                    {% endif %}
+                </h2>
+            </div>
+
+            <dl class="drawer__meta">
+                <div class="drawer__meta-row">
+                    <dt>{{ ux_icon('lucide:folder') }}{{ 'memory.index.project'|trans }}</dt>
+                    <dd>
+                        <span class="proposal-project">
+                            <span class="project-dot"{% if proposal.project %} data-hue="{{ proposal.project.id % 8 }}"{% endif %} aria-hidden="true"></span>
+                            <span>{{ proposal.project ? proposal.project.name : 'nav.all_projects'|trans }}</span>
+                        </span>
+                    </dd>
+                </div>
+
+                {% if learning %}
+                    <div class="drawer__meta-row">
+                        <dt>{{ ux_icon('lucide:circle-dashed') }}{{ 'proposal.type'|trans }}</dt>
+                        <dd>{{ include('memory/_type.html.twig', {type: p.type}) }}</dd>
+                    </div>
+                    {% if (p.score ?? null) is not null %}
+                        {% set score_tone = p.score >= 8 ? 'high' : (p.score >= 6 ? 'mid' : 'low') %}
+                        <div class="drawer__meta-row">
+                            <dt>{{ ux_icon('lucide:activity') }}{{ 'proposal.score_label'|trans }}</dt>
+                            <dd>
+                                <span class="score-badge score-badge--{{ score_tone }} num">{{ p.score }}/10</span>
+                                <span class="drawer__meta-hint">{{ 'proposal.axes'|trans({durability: p.axes.durability, reuse: p.axes.reuse, fit: p.axes.project_fit, risk: p.axes.risk}) }}</span>
+                            </dd>
+                        </div>
+                    {% endif %}
+                    <div class="drawer__meta-row">
+                        <dt>{{ ux_icon('lucide:file-text') }}{{ 'memory.index.source'|trans }}</dt>
+                        <dd>{{ (sources[p.source.kind] ?? p.source.kind)|trans }} · {{ p.source.label }}</dd>
+                    </div>
+                {% elseif skill_update %}
+                    <div class="drawer__meta-row">
+                        <dt>{{ ux_icon('lucide:circle-dashed') }}{{ 'proposal.type'|trans }}</dt>
+                        <dd>{{ ('enum.agent_asset_kind.' ~ (p.kind ?? 'skill'))|trans }}</dd>
+                    </div>
+                {% elseif kind_value == 'refuted' %}
+                    <div class="drawer__meta-row">
+                        <dt>{{ ux_icon('lucide:shield-alert') }}{{ 'proposal.verdict_label'|trans }}</dt>
+                        <dd><span class="pill pill--danger">{{ p.verdict in ['verified', 'refuted', 'conflict', 'unverified'] ? ('verdict.' ~ p.verdict)|trans : p.verdict }}</span></dd>
+                    </div>
+                {% endif %}
+
+                <div class="drawer__meta-row">
+                    <dt>{{ ux_icon('lucide:history') }}{{ 'proposal.proposed'|trans }}</dt>
+                    <dd class="num">{{ proposal.createdAt|format_datetime('short', 'short') }}</dd>
+                </div>
+            </dl>
+
+            <div class="drawer__section">
+                {% if learning %}
+                    {% if p.reconciliation == 'retracts' %}
+                        <div class="drawer__callout drawer__callout--danger">
+                            <span class="drawer__callout-label">{{ 'proposal.retract'|trans }}</span>
+                            <a class="link" href="{{ path('memory_show', {id: p.target_id}) }}">{{ p.target_text }}</a>
+                        </div>
+                    {% else %}
+                        <label class="drawer__label" for="lesson-{{ proposal.id }}">{{ 'proposal.lesson'|trans }}</label>
+                        <textarea id="lesson-{{ proposal.id }}" name="lesson" class="proposal__lesson" rows="4" maxlength="1000">{{ p.lesson }}</textarea>
+                        {% if p.target_id %}
+                            <div class="drawer__callout">
+                                <span class="drawer__callout-label">{{ (p.reconciliation == 'updates' ? 'proposal.replaces_text' : 'proposal.archives')|trans }}</span>
+                                <a class="link" href="{{ path('memory_show', {id: p.target_id}) }}">{{ p.target_text }}</a>
+                            </div>
+                        {% endif %}
+                    {% endif %}
+                {% elseif rule_draft %}
+                    <div class="drawer__fields">
+                        <div>
+                            <label class="drawer__label" for="rule-title-{{ proposal.id }}">{{ 'rule.editor.title'|trans }}</label>
+                            <input id="rule-title-{{ proposal.id }}" name="title" type="text" class="input proposal__rule-title" maxlength="255" value="{{ p.title }}" required>
+                        </div>
+                        <div>
+                            <label class="drawer__label" for="rule-statement-{{ proposal.id }}">{{ 'rule.editor.statement'|trans }}</label>
+                            <textarea id="rule-statement-{{ proposal.id }}" name="statement" class="proposal__lesson" rows="4" maxlength="2000" required>{{ p.statement }}</textarea>
+                        </div>
+                    </div>
+                {% elseif skill_update %}
+                    <div class="drawer__fields">
+                        <div>
+                            <label class="drawer__label" for="skill-name-{{ proposal.id }}">{{ 'form.agent_asset.name'|trans }}</label>
+                            <input id="skill-name-{{ proposal.id }}" name="name" type="text" class="input mono proposal__rule-title" maxlength="64" pattern="[a-z0-9]+(-[a-z0-9]+)*" value="{{ p.name }}" required>
+                        </div>
+                        <div>
+                            <label class="drawer__label" for="skill-desc-{{ proposal.id }}">{{ 'form.agent_asset.description'|trans }}</label>
+                            <input id="skill-desc-{{ proposal.id }}" name="description" type="text" class="input" maxlength="500" value="{{ p.description }}" required>
+                        </div>
+                        <div>
+                            <label class="drawer__label" for="skill-content-{{ proposal.id }}">{{ 'form.agent_asset.content'|trans }}</label>
+                            <textarea id="skill-content-{{ proposal.id }}" name="content" class="proposal__lesson mono" rows="7" maxlength="100000" required>{{ p.content }}</textarea>
+                        </div>
+                    </div>
+                {% elseif pair %}
+                    <fieldset class="proposal__pair">
+                        <legend class="drawer__label">{{ (kind_value == 'duplicate' ? 'proposal.keep_merge' : 'proposal.keep')|trans }}</legend>
+                        {% for side in ['a', 'b'] %}
+                            <div class="proposal__choice">
+                                <label class="proposal__choice-label">
+                                    <input type="radio" name="keep" value="{{ attribute(p, side ~ '_id') }}" {% if side == 'a' %}checked{% endif %}>
+                                    <span>{{ attribute(p, side ~ '_text') }}</span>
+                                </label>
+                                <a class="link proposal__choice-link" href="{{ path('memory_show', {id: attribute(p, side ~ '_id')}) }}">{{ 'proposal.page'|trans }} {{ ux_icon('lucide:arrow-up-right') }}</a>
+                            </div>
+                        {% endfor %}
+                    </fieldset>
+                {% else %}
+                    <div class="drawer__callout drawer__callout--danger">
+                        <a class="link" href="{{ path('memory_show', {id: p.memory_id}) }}">{{ p.memory_text }}</a>
+                    </div>
+                {% endif %}
+            </div>
+
+            {% if learning %}
+                {% if (p.evidence ?? null) or (p.reason ?? null) or (p.files ?? []) is not empty or (p.rules ?? []) is not empty or (p.adr ?? []) is not empty %}
+                    <div class="drawer__section drawer__section--muted">
+                        <h3 class="drawer__section-title">{{ 'proposal.evidence_source'|trans }}</h3>
+                        <dl class="drawer__details">
+                            {% if p.evidence ?? null %}
+                                <dt>{{ 'proposal.evidence'|trans }}</dt>
+                                <dd><q>{{ p.evidence }}</q></dd>
+                            {% endif %}
+                            {% if p.reason ?? null %}
+                                <dt>{{ 'proposal.why'|trans }}</dt>
+                                <dd>{{ p.reason }}</dd>
+                            {% endif %}
+                            {% if (p.files ?? []) is not empty or (p.rules ?? []) is not empty %}
+                                <dt>{{ 'proposal.links'|trans }}</dt>
+                                <dd class="drawer__tags">
+                                    {% for file in p.files %}<span class="tag mono">{{ file }}</span>{% endfor %}
+                                    {% for rule in p.rules %}<span class="tag mono">{{ rule }}</span>{% endfor %}
+                                </dd>
+                            {% endif %}
+                            {% if (p.adr ?? []) is not empty %}
+                                <dt>{{ 'enum.memory_type.decision'|trans }}</dt>
+                                <dd>{{ p.adr.decision ?? '' }}</dd>
+                            {% endif %}
+                        </dl>
+                    </div>
+                {% endif %}
+            {% elseif rule_draft %}
+                {% if (p.document_id ?? null) or (p.excerpt ?? null) or (p.files ?? []) is not empty %}
+                    <div class="drawer__section drawer__section--muted">
+                        {% if p.document_id ?? null %}
+                            <h3 class="drawer__section-title">{{ 'rule.show.sources'|trans }}</h3>
+                            <a class="drawer__attachment" href="{{ path('document_show', {id: p.document_id}) }}">
+                                <span class="format format--{{ p.document_format ?? 'md' }}">{{ p.document_format ?? 'md' }}</span>
+                                <span class="drawer__attachment-name">{{ p.document_title ?? ('#' ~ p.document_id) }}</span>
+                                {{ ux_icon('lucide:arrow-up-right') }}
+                            </a>
+                        {% endif %}
+                        {% if p.excerpt ?? null %}
+                            <blockquote class="drawer__quote">{{ p.excerpt }}</blockquote>
+                        {% endif %}
+                        {% if (p.files ?? []) is not empty %}
+                            <div class="drawer__tags">
+                                {% for file in p.files %}<span class="tag mono">{{ file }}</span>{% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            {% elseif skill_update %}
+                {% if (p.reason ?? null) or (p.memory_ids ?? []) is not empty or (p.previous_content ?? null) %}
+                    <div class="drawer__section drawer__section--muted">
+                        <dl class="drawer__details">
+                            {% if p.reason ?? null %}
+                                <dt>{{ 'proposal.why'|trans }}</dt>
+                                <dd>{{ p.reason }}</dd>
+                            {% endif %}
+                            {% if (p.memory_ids ?? []) is not empty %}
+                                <dt>{{ 'nav.memories'|trans }}</dt>
+                                <dd class="drawer__tags">{% for mid in p.memory_ids %}<a class="tag mono" href="{{ path('memory_show', {id: mid}) }}">#{{ mid }}</a>{% endfor %}</dd>
+                            {% endif %}
+                        </dl>
+                        {% if p.previous_content ?? null %}
+                            <details class="proposal__more">
+                                <summary>{{ 'proposal.skill.previous'|trans }}</summary>
+                                <pre class="proposal__skill-prev mono">{{ p.previous_content }}</pre>
+                            </details>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            {% elseif pair %}
+                {% if p.reason ?? null %}
+                    <div class="drawer__section drawer__section--muted">
+                        <h3 class="drawer__section-title">{{ 'proposal.why'|trans }}</h3>
+                        <p class="drawer__note">{{ p.reason }}</p>
+                    </div>
+                {% endif %}
+            {% else %}
+                {% if (p.reason ?? null) or (p.sources ?? []) is not empty %}
+                    <div class="drawer__section drawer__section--muted">
+                        <dl class="drawer__details">
+                            {% if p.reason ?? null %}
+                                <dt>{{ 'proposal.why'|trans }}</dt>
+                                <dd>{{ p.reason }}</dd>
+                            {% endif %}
+                            {% if (p.sources ?? []) is not empty %}
+                                <dt>{{ 'memory.show.sources'|trans }}</dt>
+                                <dd>{% for source in p.sources %}{{ source.label }}{{ not loop.last ? ', ' }}{% endfor %}</dd>
+                            {% endif %}
+                        </dl>
+                    </div>
+                {% endif %}
+            {% endif %}
+        </div>
+
+        <div class="drawer__foot">
+            <div class="drawer__foot-reject">
+                {% if learning or rule_draft or skill_update %}
+                    <label class="visually-hidden" for="reason-{{ proposal.id }}">{{ 'proposal.reject_reason.label'|trans }}</label>
+                    <select class="select drawer__reason" id="reason-{{ proposal.id }}" name="reason">
+                        <option value="">{{ 'proposal.reject_reason.placeholder'|trans }}</option>
+                        <option value="too_obvious">{{ 'proposal.reject_reason.too_obvious'|trans }}</option>
+                        <option value="wrong">{{ 'proposal.reject_reason.wrong'|trans }}</option>
+                        <option value="outdated">{{ 'proposal.reject_reason.outdated'|trans }}</option>
+                        <option value="duplicate">{{ 'proposal.reject_reason.duplicate'|trans }}</option>
+                    </select>
+                {% endif %}
+                <button class="button button--danger-outline" type="submit" formaction="{{ path('proposal_reject', {id: proposal.id}|merge(query)) }}">
+                    {{ ux_icon('lucide:x') }}{{ 'proposal.reject'|trans }}
+                </button>
+            </div>
+            <button class="button button--primary" type="submit">
+                {{ ux_icon('lucide:check') }}{{ (kind_value == 'refuted' ? 'proposal.retract_memory' : (rule_draft ? 'proposal.apply_rule' : (skill_update ? 'proposal.apply_skill' : 'proposal.apply')))|trans }}
+            </button>
+        </div>
+    </form>
+</dialog>
