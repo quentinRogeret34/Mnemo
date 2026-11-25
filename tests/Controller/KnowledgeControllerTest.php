@@ -120,7 +120,7 @@ final class KnowledgeControllerTest extends WebTestCase
         self::assertSelectorTextContains('.page__title', 'Discount cap');
         self::assertCount(2, $crawler->filter('section[aria-labelledby="impl-title"] .row'));
         $this->client->request('GET', '/proposals?project=acme-shop');
-        self::assertSelectorCount(2, '.proposal');
+        self::assertSelectorCount(2, '.proposal-row');
     }
 
     private function givenRuleImplementedBy(string $path): void

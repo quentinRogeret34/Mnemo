@@ -29,7 +29,7 @@
             {% endif %}
             {% for item in projects %}
                 <a class="marketplace-scope__item" href="{{ path('marketplace_index', {project: item.slug}|merge(category ? {category: category.value} : {})) }}" {% if project and project.id == item.id %}aria-current="page"{% endif %}>
-                    <span class="project-dot" aria-hidden="true"></span>
+                    <span class="project-dot" data-hue="{{ item.id % 8 }}" aria-hidden="true"></span>
                     <span>{{ item.name }}</span>
                 </a>
             {% endfor %}

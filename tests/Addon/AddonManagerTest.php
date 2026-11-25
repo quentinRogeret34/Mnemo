@@ -12,6 +12,7 @@ use App\Addon\AddonScope;
 use App\Addon\Builtin\CodeGraphAddon;
 use App\Addon\Builtin\FactoryAddon;
 use App\Addon\Builtin\GardenAddon;
+use App\Addon\Builtin\GroomingAddon;
 use App\Addon\Builtin\SlackWebhookAddon;
 use App\Addon\Builtin\StudioAddon;
 use App\Entity\Project;
@@ -33,6 +34,7 @@ final class AddonManagerTest extends KernelTestCase
         self::assertContains(StudioAddon::ID, $ids);
         self::assertContains(CodeGraphAddon::ID, $ids);
         self::assertContains(GardenAddon::ID, $ids);
+        self::assertContains(GroomingAddon::ID, $ids);
         self::assertContains(SlackWebhookAddon::ID, $ids);
 
         foreach ($ids as $id) {
@@ -95,6 +97,7 @@ final class AddonManagerTest extends KernelTestCase
         self::assertFalse($manager->isEnabled(StudioAddon::ID, $project));
         self::assertFalse($manager->isEnabled(CodeGraphAddon::ID, $project));
         self::assertTrue($manager->isEnabled(GardenAddon::ID, $project));
+        self::assertTrue($manager->isEnabled(GroomingAddon::ID, $project));
         self::assertTrue($manager->isEnabled(SlackWebhookAddon::ID, $project));
 
         // Nav items reflect disabled addons
@@ -105,6 +108,7 @@ final class AddonManagerTest extends KernelTestCase
         self::assertNotContains('project_factory', $studioNavRoutes);
         self::assertNotContains('project_studio', $studioNavRoutes);
         self::assertContains('garden_show', $studioNavRoutes);
+        self::assertContains('project_grooming', $studioNavRoutes);
         self::assertSame([], $manager->navItemsFor('knowledge', $project));
 
         // Software Factory preset restores everything
@@ -113,6 +117,7 @@ final class AddonManagerTest extends KernelTestCase
         self::assertTrue($manager->isEnabled(StudioAddon::ID, $project));
         self::assertTrue($manager->isEnabled(CodeGraphAddon::ID, $project));
         self::assertTrue($manager->isEnabled(GardenAddon::ID, $project));
+        self::assertTrue($manager->isEnabled(GroomingAddon::ID, $project));
         self::assertTrue($manager->isEnabled(SlackWebhookAddon::ID, $project));
     }
 

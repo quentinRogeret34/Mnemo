@@ -111,7 +111,7 @@
                             </td>
                             <td data-label="{{ 'nav.projects'|trans }}">
                                 <span class="proposal-project">
-                                    <span class="project-dot" aria-hidden="true"></span>
+                                    <span class="project-dot"{% if proposal.project %} data-hue="{{ proposal.project.id % 8 }}"{% endif %} aria-hidden="true"></span>
                                     <span>{{ proposal.project ? proposal.project.name : 'nav.all_projects'|trans }}</span>
                                 </span>
                             </td>
