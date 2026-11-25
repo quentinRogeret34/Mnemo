@@ -3112,3 +3112,166 @@ a.pill:hover { filter: brightness(0.96); }
 @media (pointer: coarse) {
     .proposal-act { width: 2.5rem; height: 2.5rem; }
 }
+
+
+/* Grooming Swarm Addon */
+.grooming-launcher { margin-bottom: var(--space-lg); }
+.grooming-launcher__head {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+    gap: var(--space-sm); margin-bottom: var(--space-md);
+}
+.grooming-launcher__head h2 { margin: 0; font-size: var(--text-md); }
+.grooming-pipeline-badges { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2xs); }
+.grooming-pipeline-arrow { color: var(--color-faint); font-size: var(--text-xs); }
+.grooming-agent-badge {
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    padding: 0.2rem 0.55rem; border-radius: 999px;
+    font-size: var(--text-xs); font-weight: 600;
+    border: var(--rule-width) solid var(--color-rule);
+    background: var(--color-paper-2); color: var(--color-ink-2);
+}
+.grooming-agent-badge .icon { width: 0.875rem; height: 0.875rem; }
+.grooming-agent-badge--cartographe {
+    background: var(--color-accent-soft);
+    border-color: color-mix(in oklch, var(--color-accent) 30%, var(--color-rule));
+    color: var(--color-accent);
+}
+.grooming-agent-badge--critique {
+    background: var(--color-warning-soft);
+    border-color: color-mix(in oklch, var(--color-warning) 35%, var(--color-rule));
+    color: var(--color-warning);
+}
+.grooming-agent-badge--groomer {
+    background: var(--color-success-soft);
+    border-color: color-mix(in oklch, var(--color-success) 35%, var(--color-rule));
+    color: var(--color-success);
+}
+
+.grooming-form__field { display: flex; flex-direction: column; gap: var(--space-2xs); }
+.grooming-form__label { font-size: var(--text-xs); font-weight: 600; color: var(--color-ink-2); }
+.grooming-form__actions { display: flex; align-items: center; gap: var(--space-sm); padding-top: var(--space-2xs); }
+
+.grooming-suggestions { display: flex; flex-direction: column; gap: var(--space-2xs); }
+.grooming-suggestions__label { font-size: var(--text-xs); color: var(--color-muted); }
+.grooming-chips { display: flex; flex-wrap: wrap; gap: var(--space-2xs); }
+.grooming-chip {
+    display: inline-flex; align-items: center; padding: 0.25rem 0.65rem;
+    border-radius: 999px; border: var(--rule-width) solid var(--color-rule);
+    background: var(--color-paper); color: var(--color-ink-2);
+    font-size: var(--text-xs); text-decoration: none;
+    transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+}
+.grooming-chip:hover { background: var(--color-hover); border-color: var(--color-rule-2); color: var(--color-ink); }
+.grooming-chip--active {
+    background: var(--color-accent-soft); border-color: var(--color-accent); color: var(--color-accent); font-weight: 600;
+}
+
+.grooming-section { margin-bottom: var(--space-lg); }
+.grooming-section-head {
+    display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm);
+    margin-bottom: var(--space-sm);
+}
+.grooming-section-head h2 {
+    margin: 0; font-size: var(--text-md); display: inline-flex; align-items: center; gap: var(--space-xs);
+}
+.grooming-run-link { color: var(--color-ink); text-decoration: none; }
+.grooming-run-link:hover { color: var(--color-accent); text-decoration: underline; }
+
+.grooming-score-inline { display: inline-flex; align-items: center; gap: var(--space-xs); }
+.grooming-bar {
+    display: inline-block; width: 4.5rem; height: 0.4rem; border-radius: 999px;
+    background: var(--color-paper-2); overflow: hidden;
+}
+.grooming-bar__fill { display: block; height: 100%; border-radius: 999px; }
+.grooming-bar__fill--success { background: var(--color-success); }
+.grooming-bar__fill--warning { background: var(--color-warning); }
+.grooming-bar__fill--danger { background: var(--color-danger); }
+
+.grooming-hero {
+    display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--space-lg);
+    align-items: center; margin-bottom: var(--space-lg);
+}
+.grooming-ring {
+    --ring-color: var(--color-accent);
+    width: 6.75rem; height: 6.75rem; border-radius: 50%;
+    display: grid; place-items: center;
+    background: conic-gradient(var(--ring-color) calc(var(--grooming-score, 0) * 1%), var(--color-paper-2) 0);
+    flex: none;
+}
+.grooming-ring--success { --ring-color: var(--color-success); }
+.grooming-ring--warning { --ring-color: var(--color-warning); }
+.grooming-ring--danger { --ring-color: var(--color-danger); }
+.grooming-ring__inner {
+    width: 5.25rem; height: 5.25rem; border-radius: 50%;
+    background: var(--color-card);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center;
+}
+.grooming-ring__value { font-size: var(--text-lg); font-weight: 700; line-height: 1.1; color: var(--color-ink); }
+.grooming-ring__label { font-size: var(--text-2xs); color: var(--color-muted); }
+
+.grooming-hero__body { min-width: 0; }
+.grooming-hero__head {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+    gap: var(--space-xs); margin-bottom: var(--space-xs);
+}
+.grooming-hero__head h2 { margin: 0; font-size: var(--text-md); }
+.grooming-hero__summary { font-size: var(--text-sm); color: var(--color-ink-2); }
+.grooming-hero__summary p:last-child { margin-bottom: 0; }
+.grooming-hero__bar {
+    height: 0.35rem; border-radius: 999px; background: var(--color-paper-2);
+    overflow: hidden; margin-top: var(--space-md);
+}
+.grooming-context-details { margin-top: var(--space-xs); font-size: var(--text-xs); color: var(--color-muted); }
+.grooming-context-details summary { cursor: pointer; font-weight: 500; }
+.grooming-context-details__body {
+    margin: var(--space-2xs) 0 0; padding: var(--space-xs) var(--space-sm);
+    background: var(--color-paper); border-radius: var(--radius-sm);
+    border: var(--rule-width) solid var(--color-rule); white-space: pre-wrap; color: var(--color-ink-2);
+}
+
+.grooming-agents-grid {
+    display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-md);
+}
+.grooming-agent-card { display: flex; flex-direction: column; gap: var(--space-sm); margin: 0; }
+.grooming-agent-card__head { display: flex; align-items: center; gap: var(--space-xs); }
+.grooming-agent-card__step {
+    width: 1.45rem; height: 1.45rem; border-radius: 999px;
+    background: var(--color-paper-2); border: var(--rule-width) solid var(--color-rule);
+    display: inline-grid; place-items: center; font-size: var(--text-2xs); font-weight: 700; color: var(--color-muted);
+}
+.grooming-agent-card__summary { margin: 0; font-size: var(--text-sm); color: var(--color-ink); }
+.grooming-findings {
+    margin: 0; padding-left: 1.1rem; display: flex; flex-direction: column; gap: 0.35rem;
+    font-size: var(--text-xs); color: var(--color-ink-2);
+}
+
+.grooming-columns {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-md); align-items: start;
+}
+.grooming-question-list, .grooming-proposal-list {
+    list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-sm);
+}
+.grooming-question, .grooming-proposal-item {
+    padding: var(--space-sm); border-radius: var(--radius-sm);
+    border: var(--rule-width) solid var(--color-rule); background: var(--color-paper);
+}
+.grooming-question--blocking { border-left: 3px solid var(--color-danger); }
+.grooming-question--important { border-left: 3px solid var(--color-warning); }
+.grooming-question--nice_to_have { border-left: 3px solid var(--color-rule-2); }
+.grooming-question__head { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--space-xs); }
+.grooming-question__text { font-size: var(--text-sm); color: var(--color-ink); flex: 1 1 12rem; }
+.grooming-question__rationale { margin: var(--space-2xs) 0 0; font-size: var(--text-xs); color: var(--color-muted); }
+
+.grooming-proposal-item__head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2xs); margin-bottom: var(--space-2xs); }
+.grooming-proposal-item__title { font-size: var(--text-sm); color: var(--color-ink); }
+.grooming-proposal-item__title p { margin: var(--space-3xs) 0 0; }
+.grooming-proposal-item__foot { margin-top: var(--space-xs); font-size: var(--text-xs); }
+
+@media (max-width: 64rem) {
+    .grooming-agents-grid { grid-template-columns: minmax(0, 1fr); }
+    .grooming-columns { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 40rem) {
+    .grooming-hero { grid-template-columns: minmax(0, 1fr); justify-items: start; }
+}

@@ -1622,3 +1622,70 @@ studio:
     tree_label: 'Project files tree'
     unsaved: '• Unsaved'
     view_mode: 'Editor view mode'
+
+grooming:
+    addon:
+        description: 'Explores the knowledge graph with 3 agents (Cartographer, Critic, Groomer) to detect blind spots and generate actionable business rule and memory proposals.'
+        name: 'Grooming Swarm'
+    agent:
+        cartographe: Cartographer
+        critique: Critic
+        groomer: Groomer
+    blockers_short: '{count, plural, =1 {1 blocker} other {# blockers}}'
+    col:
+        date: Date
+        proposals: Proposals
+        questions: Questions
+        readiness: Readiness
+        topic: Topic
+    flash:
+        completed: 'Grooming “{topic}” completed ({score}%) · {proposals, plural, =0 {no proposals} =1 {1 proposal created} other {# proposals created}} · {questions, plural, =0 {no open questions} =1 {1 open question} other {# open questions}}.'
+        topic_required: 'Provide a topic to groom.'
+    form:
+        context: 'Additional context (optional)'
+        context_placeholder: 'Product constraints, ticket excerpt, target scope…'
+        submit: 'Run grooming swarm'
+        suggestions: 'Suggested topics:'
+        topic: 'Topic or feature to groom'
+        topic_placeholder: 'e.g. Cart discount policy, Multi-currency billing…'
+    history:
+        count: '{count, plural, =1 {1 run} other {# runs}}'
+        empty: 'No grooming runs yet. Launch the swarm on a topic above.'
+        title: 'Run history'
+    kpi:
+        agents: '{count, plural, =1 {1 agent completed} other {# agents completed}}'
+        blockers: '{count, plural, =0 {no blocking questions} =1 {1 blocking question} other {# blocking questions}}'
+    launch:
+        title: 'New grooming analysis'
+    nav: 'Grooming Swarm'
+    pipeline:
+        label: '3-agent pipeline'
+    proposal_status:
+        applied: Applied
+        pending: Pending
+        rejected: Rejected
+    readiness:
+        not_ready: 'Blockers to resolve'
+        partial: 'Needs refinement'
+        ready: 'Ready to implement'
+    severity:
+        blocking: Blocking
+        important: Important
+        nice_to_have: 'Nice to have'
+    show:
+        agents_title: 'Swarm deliberation (3 agents)'
+        executive_summary: 'Executive summary'
+        input_context: 'Provided context'
+        open_proposals: 'Open /proposals'
+        proposals_empty: 'No new proposals generated (already covered or pending).'
+        proposals_title: 'Created proposals'
+        questions_empty: 'No open questions identified.'
+        questions_title: 'Open business questions'
+        readiness_label: 'Readiness: {score}%'
+        rerun: 'Re-run on topic'
+        review_in_proposals: 'Review in /proposals'
+        view_proposal: 'View in /proposals'
+    status:
+        completed: Completed
+        failed: Failed
+    title: 'Grooming Swarm'

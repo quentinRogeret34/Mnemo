@@ -1622,3 +1622,70 @@ studio:
     tree_label: 'Arborescence des fichiers du projet'
     unsaved: '• Modifié'
     view_mode: 'Mode d’édition'
+
+grooming:
+    addon:
+        description: 'Explore le graphe de connaissances à 3 agents (Cartographe, Critique, Groomer) pour détecter les angles morts et proposer des règles métier et mémoires.'
+        name: 'Ruche de grooming'
+    agent:
+        cartographe: Cartographe
+        critique: Critique
+        groomer: Groomer
+    blockers_short: '{count, plural, =1 {1 bloquant} other {# bloquants}}'
+    col:
+        date: Date
+        proposals: Propositions
+        questions: Questions
+        readiness: Maturité
+        topic: Sujet
+    flash:
+        completed: 'Grooming « {topic} » terminé ({score} %) · {proposals, plural, =0 {aucune proposition} =1 {1 proposition créée} other {# propositions créées}} · {questions, plural, =0 {aucune question} =1 {1 question ouverte} other {# questions ouvertes}}.'
+        topic_required: 'Indiquer un sujet à analyser.'
+    form:
+        context: 'Contexte additionnel (optionnel)'
+        context_placeholder: 'Contraintes produit, extrait de ticket, périmètre envisagé…'
+        submit: 'Lancer la ruche de grooming'
+        suggestions: 'Sujets suggérés :'
+        topic: 'Sujet ou fonctionnalité à groomer'
+        topic_placeholder: 'ex. Politique de remise panier, Facturation multi-devises…'
+    history:
+        count: '{count, plural, =1 {1 analyse} other {# analyses}}'
+        empty: 'Aucune analyse de grooming pour le moment. Lancer la ruche sur un sujet ci-dessus.'
+        title: 'Historique des analyses'
+    kpi:
+        agents: '{count, plural, =1 {1 agent exécuté} other {# agents exécutés}}'
+        blockers: '{count, plural, =0 {aucune question bloquante} =1 {1 question bloquante} other {# questions bloquantes}}'
+    launch:
+        title: 'Nouvelle analyse de grooming'
+    nav: 'Ruche de grooming'
+    pipeline:
+        label: 'Pipeline des 3 agents'
+    proposal_status:
+        applied: Appliquée
+        pending: 'En attente'
+        rejected: Rejetée
+    readiness:
+        not_ready: 'Bloquants à lever'
+        partial: 'À affiner'
+        ready: 'Prêt pour implémentation'
+    severity:
+        blocking: Bloquant
+        important: Important
+        nice_to_have: Souhaitable
+    show:
+        agents_title: 'Délibération de la ruche (3 agents)'
+        executive_summary: 'Synthèse exécutive'
+        input_context: 'Contexte fourni'
+        open_proposals: 'Ouvrir /proposals'
+        proposals_empty: 'Aucune nouvelle proposition générée (sujet déjà couvert ou déjà en attente).'
+        proposals_title: 'Propositions créées'
+        questions_empty: 'Aucune question ouverte identifiée.'
+        questions_title: 'Questions métier ouvertes'
+        readiness_label: 'Maturité : {score} %'
+        rerun: 'Relancer sur ce sujet'
+        review_in_proposals: 'Valider dans /proposals'
+        view_proposal: 'Voir dans /proposals'
+    status:
+        completed: Terminé
+        failed: Échec
+    title: 'Ruche de grooming'
