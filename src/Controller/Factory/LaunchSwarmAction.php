@@ -7,6 +7,7 @@ use App\Enum\AgentRunnerKind;
 use App\Enum\SwarmStrategy;
 use App\Factory\FactoryGuard;
 use App\Factory\Swarm\SwarmOrchestrator;
+use App\Security\ProjectScope;
 use Symfony\Bridge\Doctrine\Attribute\MapEntity;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\RedirectResponse;
@@ -18,18 +19,31 @@ final class LaunchSwarmAction extends AbstractController
     public function __construct(
         private readonly FactoryGuard $factoryGuard,
         private readonly SwarmOrchestrator $orchestrator,
+        private readonly ProjectScope $projectScope,
     ) {
     }
 
+    #[Route('/factory/swarms', name: 'factory_workspace_swarm_launch', methods: ['POST'])]
     #[Route('/projects/{slug}/factory/swarms', name: 'factory_swarm_launch', methods: ['POST'])]
     public function __invoke(
-        #[MapEntity(mapping: ['slug' => 'slug'])]
-        Project $project,
         Request $request,
+        #[MapEntity(mapping: ['slug' => 'slug'])]
+        ?Project $project = null,
     ): RedirectResponse {
         $this->factoryGuard->requireAccess();
-        if (!$this->isCsrfTokenValid('factory_swarm_launch_'.$project->getSlug(), $request->request->getString('_token'))) {
+        $csrfId = null === $project ? 'factory_swarm_launch_workspace' : 'factory_swarm_launch_'.$project->getSlug();
+        if (!$this->isCsrfTokenValid($csrfId, $request->request->getString('_token'))) {
             throw $this->createAccessDeniedException('Invalid CSRF token.');
+        }
+
+        $isWorkspace = null === $project;
+        if (null === $project) {
+            $project = $this->projectScope->bySlug(trim($request->request->getString('project')));
+            if (null === $project) {
+                $this->addFlash('error', 'factory.flash.project_required');
+
+                return $this->redirectToRoute('factory_index');
+            }
         }
 
         $title = trim($request->request->getString('title'));
@@ -37,7 +51,9 @@ final class LaunchSwarmAction extends AbstractController
         if ('' === $title || '' === $goal) {
             $this->addFlash('error', 'factory.swarm.flash.title_goal_required');
 
-            return $this->redirectToRoute('project_factory', ['slug' => $project->getSlug()]);
+            return $isWorkspace
+                ? $this->redirectToRoute('factory_index', ['project' => $project->getSlug()])
+                : $this->redirectToRoute('project_factory', ['slug' => $project->getSlug()]);
         }
 
         $strategy = SwarmStrategy::tryFrom($request->request->getString('strategy')) ?? SwarmStrategy::Parallel;

@@ -765,7 +765,9 @@ factory:
         status: Status
     dev_badge: 'Dev mode'
     empty:
-        text: 'Start a session above, call the MCP tools (start_session), or wire a Claude Code hook below.'
+        filtered_text: 'No session matches this status. Reset the filter to view the full history.'
+        filtered_title: 'No session for this status'
+        text: 'Start a manual session above or connect your IDE/CLI via MCP tools or a Claude Code hook below.'
         title: 'No session recorded yet'
     filter:
         all: All
@@ -774,9 +776,11 @@ factory:
         event_added: 'Event appended to session timeline.'
         finished: 'Session closed.'
         message_required: 'Provide a message to record the event.'
+        project_required: 'Select a project before starting.'
         started: 'Session started and tracked.'
         title_required: 'Provide a title for the session.'
     form:
+        advanced: 'Advanced options'
         branch: Branch
         client: 'Client / IDE'
         event_kind: Type
@@ -791,23 +795,46 @@ factory:
         role: Role
         rule_code: 'Business rule'
         runner: Runner
+        session_help: 'Record a tracked work session to log decisions, touched files and outcomes against the project.'
         start_submit: 'Start tracking'
         summary_placeholder: 'Summary of delivered work, PR link, tests passed…'
         title: Title
         title_placeholder: 'e.g. Implement RG-014 — tiered discount calculation'
     hooks:
-        claude_hint: 'Claude Code hook (.claude/settings.json) posting to {url}:'
-        mcp_hint: 'MCP tools directly available to your IDE/CLI agents:'
+        claude_hint: 'Paste into .claude/settings.json to automatically report session start and end to {url}:'
+        copy: Copy
+        mcp_hint: 'If your IDE/CLI is already connected to Mnemo’s MCP server, these tools work out of the box:'
+        option_hook_badge: 'Claude Code'
+        option_hook_title: 'Automatic local hook'
+        option_mcp_badge: Recommended
+        option_mcp_title: 'Native MCP tools'
         subtitle: 'Connect Claude Code, Cursor or Codex in 10 seconds'
-        title: 'Local hooks & MCP tools'
+        title: 'Connect your local agents (MCP & Hooks)'
+        tool_end: 'Closes the session with final status and summary.'
+        tool_list: 'Lists recent sessions for the project.'
+        tool_log: 'Appends a decision, milestone or touched file list.'
+        tool_start: 'Starts a tracked session linked to the project and branch.'
+        tool_swarm: 'Reads and posts messages on a swarm’s shared board.'
     kpi:
         active: Active
         failed: Failed
         last_24h: 'Last 24h'
         succeeded: Succeeded
         total: Total
-    lede: 'Centralized journal of agent sessions (IDE, local CLIs and upcoming swarm workers) linked to project memory and business rules.'
+    lede: 'Orchestrate multi-agent swarms grounded in your business rules and track your IDE/CLI agent sessions in real time.'
     new_session: 'New session'
+    no_project:
+        cta: 'Create a project'
+        text: 'Create a project in Mnemo first so multi-agent swarms and tracked sessions can be attached to it.'
+        title: 'No project available'
+    onboarding:
+        subtitle: 'Choose how you want to work: automated orchestration by Mnemo or live tracking of your local agents.'
+        title: 'How to use the Software Factory'
+    runners:
+        label: 'Available runners'
+        optional_missing: '{count, plural, one {# optional local CLI not installed} other {# optional local CLIs not installed}}'
+    sessions:
+        section_title: 'Agent sessions'
     show:
         close_session: 'Close session'
         duration: Duration
@@ -824,7 +851,24 @@ factory:
         sub_sessions: 'Sub-sessions (workers)'
         summary: Summary
         timeline: Timeline
+    start:
+        ide_badge: 'Automatic · MCP'
+        ide_cta: 'View setup'
+        ide_text: 'Connect Claude Code, Cursor or Codex to automatically record every session, decision and modified file.'
+        ide_title: 'Connect your IDE or CLI'
+        session_badge: 'Manual log'
+        session_cta: 'New session'
+        session_text: 'Open a tracked session linked to a branch and business rule to document milestones manually.'
+        session_title: 'Log a session'
+        swarm_badge: Recommended
+        swarm_cta: 'Launch a swarm'
+        swarm_text: 'Provide a goal: Mnemo injects your business rules, generates a reviewable plan, dispatches workers and runs a final review.'
+        swarm_title: 'Launch a multi-agent swarm'
     stats_label: 'Software Factory metrics'
+    stepper:
+        plan: '1. Plan'
+        review: '3. Review'
+        workers: '2. Workers'
     swarm:
         approve_and_run: 'Approve plan & run workers'
         available: ready
@@ -834,7 +878,8 @@ factory:
         board_reply_submit: 'Post to board'
         board_title: 'Shared swarm board'
         coordinator_session: 'Coordinator session'
-        empty: 'No swarm run yet. Launch a swarm on a project to orchestrate Plan → Isolated workers → Review.'
+        empty: 'Launch a swarm on a project to orchestrate Plan → Isolated workers → Business alignment review.'
+        empty_title: 'No swarm run yet'
         flash:
             approved: 'Plan approved: workers have been dispatched.'
             launched: 'Swarm created and planning triggered.'
@@ -843,28 +888,37 @@ factory:
             updated: 'Swarm status updated.'
         label: Swarm
         launch_button: 'Launch a swarm'
-        launch_help: 'Mnemo automatically injects validated business rules and decisions into the plan, creates an isolated git worktree per CLI worker, then runs a final review.'
+        launch_help: 'Mnemo automatically injects validated business rules and decisions into the plan, splits tasks for workers, then runs a final review.'
         launch_submit: 'Create swarm'
         pause: Pause
         plan_pending: 'Planning queued (or click “Run step now” if no Messenger worker is running).'
         plan_title: 'Architect plan breakdown'
         require_approval: 'Require human plan approval before launching workers'
         resume: Resume
+        review_plan_cta: 'Review plan'
         review_title: 'Final review & business alignment'
         run_plan_sync: 'Run planning immediately (without waiting for messenger:consume)'
         run_step_now: 'Run step now (sync)'
         runner_unavailable_text: 'Runner “{runner}” is not detected on this host. Workers will report unavailable until the CLI binary or API key is configured.'
         runner_unavailable_title: 'Runner not detected on this host'
-        section_title: 'Swarms (multi-agent orchestrator)'
+        section_title: 'Multi-agent swarms'
         strategy: Strategy
         tasks_unit: 'task(s)'
-        unavailable: missing
+        unavailable: 'not installed'
         worker_runner: 'Worker runner'
         workers_pending: 'No worker launched until the plan is approved.'
         workers_title: 'Swarm workers'
         worktree_no_git: 'No local git repository configured (analysis mode)'
         worktree_ready: 'Per-branch isolation active'
     title: 'Software Factory'
+    workflow:
+        label: 'Software Factory stages'
+        step1_text: 'Describe a task or target a rule (RG-…). Mnemo automatically injects project decisions and context.'
+        step1_title: 'Goal & business context'
+        step2_text: 'The architect breaks down tasks. Approve the plan, then let workers execute in parallel or pipeline.'
+        step2_title: 'Plan & isolated execution'
+        step3_text: 'Inspect every decision, touched file and the final business-alignment review in one place.'
+        step3_title: 'Review & traceability'
 flash:
     dashboard:
         saved: 'Dashboard preferences saved.'

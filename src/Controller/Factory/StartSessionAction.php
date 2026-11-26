@@ -6,6 +6,7 @@ use App\Entity\Project;
 use App\Enum\AgentRunnerKind;
 use App\Factory\AgentSessionRecorder;
 use App\Factory\FactoryGuard;
+use App\Security\ProjectScope;
 use Symfony\Bridge\Doctrine\Attribute\MapEntity;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\RedirectResponse;
@@ -17,25 +18,40 @@ final class StartSessionAction extends AbstractController
     public function __construct(
         private readonly FactoryGuard $factoryGuard,
         private readonly AgentSessionRecorder $recorder,
+        private readonly ProjectScope $projectScope,
     ) {
     }
 
+    #[Route('/factory/sessions', name: 'factory_workspace_session_start', methods: ['POST'])]
     #[Route('/projects/{slug}/factory/sessions', name: 'factory_session_start', methods: ['POST'])]
     public function __invoke(
-        #[MapEntity(mapping: ['slug' => 'slug'])]
-        Project $project,
         Request $request,
+        #[MapEntity(mapping: ['slug' => 'slug'])]
+        ?Project $project = null,
     ): RedirectResponse {
         $this->factoryGuard->requireAccess();
-        if (!$this->isCsrfTokenValid('factory_session_start_'.$project->getSlug(), $request->request->getString('_token'))) {
+        $csrfId = null === $project ? 'factory_session_start_workspace' : 'factory_session_start_'.$project->getSlug();
+        if (!$this->isCsrfTokenValid($csrfId, $request->request->getString('_token'))) {
             throw $this->createAccessDeniedException('Invalid CSRF token.');
+        }
+
+        $isWorkspace = null === $project;
+        if (null === $project) {
+            $project = $this->projectScope->bySlug(trim($request->request->getString('project')));
+            if (null === $project) {
+                $this->addFlash('error', 'factory.flash.project_required');
+
+                return $this->redirectToRoute('factory_index');
+            }
         }
 
         $title = trim($request->request->getString('title'));
         if ('' === $title) {
             $this->addFlash('error', 'factory.flash.title_required');
 
-            return $this->redirectToRoute('project_factory', ['slug' => $project->getSlug()]);
+            return $isWorkspace
+                ? $this->redirectToRoute('factory_index', ['project' => $project->getSlug()])
+                : $this->redirectToRoute('project_factory', ['slug' => $project->getSlug()]);
         }
 
         $runner = AgentRunnerKind::tryFrom($request->request->getString('runner')) ?? AgentRunnerKind::ExternalMcp;

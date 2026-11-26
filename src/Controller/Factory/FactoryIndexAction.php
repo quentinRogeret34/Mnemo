@@ -39,6 +39,14 @@ final class FactoryIndexAction extends AbstractController
     ): Response {
         $this->factoryGuard->requireAccess();
 
+        $routeProject = $project;
+        if (null === $project) {
+            $projectParam = trim($request->query->getString('project'));
+            if ('' !== $projectParam) {
+                $project = $this->projectScope->bySlug($projectParam);
+            }
+        }
+
         $statusParam = $request->query->getString('status');
         $statusFilter = '' !== $statusParam ? AgentSessionStatus::tryFrom($statusParam) : null;
         $allowed = null === $this->projectScope->slugs() ? null : $this->projectScope->projects();
@@ -49,6 +57,7 @@ final class FactoryIndexAction extends AbstractController
 
         return $this->render('factory/index.html.twig', [
             'project' => $project,
+            'route_project' => $routeProject,
             'projects' => $this->projectScope->projects(),
             'sessions' => $sessions,
             'swarms' => $swarms,

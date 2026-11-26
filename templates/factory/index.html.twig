@@ -3,231 +3,537 @@
 {% block title %}{{ 'factory.title'|trans }}{% if project %} — {{ project.name }}{% endif %}{% endblock %}
 
 {% block crumbs %}
-    {% if project %}
-        <a href="{{ path('project_show', {slug: project.slug}) }}">{{ project.name }}</a>
+    {% if route_project %}
+        <a href="{{ path('project_show', {slug: route_project.slug}) }}">{{ route_project.name }}</a>
         <span class="crumbs__sep" aria-hidden="true">/</span>
     {% endif %}
     <span class="crumbs__current">{{ 'factory.title'|trans }}</span>
 {% endblock %}
 
 {% block body %}
-    <div class="view-head" data-tone="teal">
-        <h1>
-            <twig:ux:icon name="lucide:kanban" />
-            {{ 'factory.title'|trans }}
+    {% set is_fresh_empty = swarms is empty and sessions is empty and status_filter is null %}
+    {% set base_route = route_project ? 'project_factory' : 'factory_index' %}
+    {% set base_params = route_project
+        ? {slug: route_project.slug}
+        : (project ? {project: project.slug} : {}) %}
+    {% set ready_runners = [] %}
+    {% set missing_runners = [] %}
+    {% for runner in runners %}
+        {% if runner.value != 'external_mcp' %}
+            {% if runner_availability[runner.value] ?? false %}
+                {% set ready_runners = ready_runners|merge([runner]) %}
+            {% else %}
+                {% set missing_runners = missing_runners|merge([runner]) %}
+            {% endif %}
+        {% endif %}
+    {% endfor %}
+
+    <div class="view-head view-head--split" data-tone="violet">
+        <div class="view-head__title">
+            <h1>
+                <twig:ux:icon name="lucide:kanban" />
+                {{ 'factory.title'|trans }}
+            </h1>
             <span class="tag tag--accent">{{ 'factory.dev_badge'|trans }}</span>
-        </h1>
-        {% if project %}
-            <div class="view-head__actions">
+            {% if project and not route_project %}
+                <span class="factory-scope-chip">
+                    <span class="project-dot" data-hue="{{ project.id % 8 }}" aria-hidden="true"></span>
+                    {{ project.name }}
+                    <a class="factory-scope-chip__clear" href="{{ path('factory_index', status_filter ? {status: status_filter.value} : {}) }}" title="{{ 'common.reset'|trans }}" aria-label="{{ 'common.reset'|trans }}">
+                        <twig:ux:icon name="lucide:x" />
+                    </a>
+                </span>
+            {% endif %}
+        </div>
+        <div class="view-head__actions">
+            {% if projects is not empty %}
                 <button class="button" type="button" commandfor="factory-new-session" command="show-modal">
-                    <twig:ux:icon name="lucide:plus" />
+                    <twig:ux:icon name="lucide:activity" />
                     {{ 'factory.new_session'|trans }}
                 </button>
                 <button class="button button--primary" type="button" commandfor="factory-new-swarm" command="show-modal">
                     <twig:ux:icon name="lucide:network" />
                     {{ 'factory.swarm.launch_button'|trans }}
                 </button>
-            </div>
-        {% endif %}
-    </div>
-
-    <div class="kpis" role="region" aria-label="{{ 'factory.stats_label'|trans }}">
-        <div class="kpi">
-            <span class="kpi__label">{{ 'factory.kpi.active'|trans }}</span>
-            <strong class="kpi__value">{{ stats.active }}</strong>
-        </div>
-        <div class="kpi">
-            <span class="kpi__label">{{ 'factory.kpi.last_24h'|trans }}</span>
-            <strong class="kpi__value">{{ stats.last24h }}</strong>
-        </div>
-        <div class="kpi">
-            <span class="kpi__label">{{ 'factory.kpi.succeeded'|trans }}</span>
-            <strong class="kpi__value">{{ stats.succeeded }}</strong>
-        </div>
-        <div class="kpi">
-            <span class="kpi__label">{{ 'factory.kpi.failed'|trans }}</span>
-            <strong class="kpi__value">{{ stats.failed }}</strong>
-        </div>
-        <div class="kpi">
-            <span class="kpi__label">{{ 'factory.kpi.total'|trans }}</span>
-            <strong class="kpi__value">{{ stats.total }}</strong>
+            {% else %}
+                <a class="button button--primary" href="{{ path('project_index') }}">
+                    <twig:ux:icon name="lucide:folder-plus" />
+                    {{ 'factory.no_project.cta'|trans }}
+                </a>
+            {% endif %}
         </div>
     </div>
 
-    <section class="panel swarm-section">
-        <div class="swarm-section__head">
-            <h2>
-                <twig:ux:icon name="lucide:network" />
-                {{ 'factory.swarm.section_title'|trans }} ({{ swarms|length }})
-            </h2>
-            <div class="swarm-runners">
-                {% for runner in runners %}
-                    {% if runner.value != 'external_mcp' %}
-                        <span class="tag{% if runner_availability[runner.value] ?? false %} tag--accent{% endif %}">
-                            {{ runner|trans }} : {{ (runner_availability[runner.value] ?? false) ? 'factory.swarm.available'|trans : 'factory.swarm.unavailable'|trans }}
+    <p class="page__lede factory-lede">{{ 'factory.lede'|trans }}</p>
+
+    {% if projects is empty %}
+        <div class="callout callout--warn factory-notice">
+            <strong>{{ 'factory.no_project.title'|trans }}</strong>
+            <p>{{ 'factory.no_project.text'|trans }}</p>
+        </div>
+    {% endif %}
+
+    {% if is_fresh_empty %}
+        <section class="panel factory-onboarding" aria-labelledby="factory-onboarding-title">
+            <div class="factory-onboarding__head">
+                <div>
+                    <h2 id="factory-onboarding-title">{{ 'factory.onboarding.title'|trans }}</h2>
+                    <p class="factory-onboarding__sub">{{ 'factory.onboarding.subtitle'|trans }}</p>
+                </div>
+                <div class="factory-runners-inline" aria-label="{{ 'factory.runners.label'|trans }}">
+                    {% for runner in ready_runners %}
+                        <span class="factory-runner-pill factory-runner-pill--ready">
+                            <span class="factory-runner-pill__dot" aria-hidden="true"></span>
+                            {{ runner|trans }}
+                        </span>
+                    {% endfor %}
+                    {% if missing_runners is not empty %}
+                        <span class="factory-runner-pill factory-runner-pill--muted" title="{{ missing_runners|map(r => r|trans)|join(', ') }}">
+                            {{ 'factory.runners.optional_missing'|trans({count: missing_runners|length}) }}
                         </span>
                     {% endif %}
-                {% endfor %}
+                </div>
+            </div>
+
+            <ol class="factory-workflow" aria-label="{{ 'factory.workflow.label'|trans }}">
+                <li class="factory-workflow__step">
+                    <span class="factory-workflow__num">1</span>
+                    <div class="factory-workflow__body">
+                        <strong>{{ 'factory.workflow.step1_title'|trans }}</strong>
+                        <p>{{ 'factory.workflow.step1_text'|trans }}</p>
+                    </div>
+                </li>
+                <li class="factory-workflow__step">
+                    <span class="factory-workflow__num">2</span>
+                    <div class="factory-workflow__body">
+                        <strong>{{ 'factory.workflow.step2_title'|trans }}</strong>
+                        <p>{{ 'factory.workflow.step2_text'|trans }}</p>
+                    </div>
+                </li>
+                <li class="factory-workflow__step">
+                    <span class="factory-workflow__num">3</span>
+                    <div class="factory-workflow__body">
+                        <strong>{{ 'factory.workflow.step3_title'|trans }}</strong>
+                        <p>{{ 'factory.workflow.step3_text'|trans }}</p>
+                    </div>
+                </li>
+            </ol>
+
+            <div class="factory-start-grid">
+                <article class="factory-start-card factory-start-card--featured">
+                    <div class="factory-start-card__head">
+                        <span class="factory-start-card__icon factory-start-card__icon--violet" aria-hidden="true">
+                            <twig:ux:icon name="lucide:network" />
+                        </span>
+                        <span class="tag tag--accent">{{ 'factory.start.swarm_badge'|trans }}</span>
+                    </div>
+                    <h3>{{ 'factory.start.swarm_title'|trans }}</h3>
+                    <p>{{ 'factory.start.swarm_text'|trans }}</p>
+                    <div class="factory-start-card__foot">
+                        {% if projects is not empty %}
+                            <button class="button button--primary" type="button" commandfor="factory-new-swarm" command="show-modal">
+                                <twig:ux:icon name="lucide:network" />
+                                {{ 'factory.start.swarm_cta'|trans }}
+                            </button>
+                        {% else %}
+                            <a class="button button--primary" href="{{ path('project_index') }}">
+                                <twig:ux:icon name="lucide:folder-plus" />
+                                {{ 'factory.no_project.cta'|trans }}
+                            </a>
+                        {% endif %}
+                    </div>
+                </article>
+
+                <article class="factory-start-card">
+                    <div class="factory-start-card__head">
+                        <span class="factory-start-card__icon factory-start-card__icon--teal" aria-hidden="true">
+                            <twig:ux:icon name="lucide:plug-zap" />
+                        </span>
+                        <span class="tag">{{ 'factory.start.ide_badge'|trans }}</span>
+                    </div>
+                    <h3>{{ 'factory.start.ide_title'|trans }}</h3>
+                    <p>{{ 'factory.start.ide_text'|trans }}</p>
+                    <div class="factory-start-card__foot">
+                        <a class="button" href="#factory-hooks">
+                            <twig:ux:icon name="lucide:code" />
+                            {{ 'factory.start.ide_cta'|trans }}
+                        </a>
+                    </div>
+                </article>
+
+                <article class="factory-start-card">
+                    <div class="factory-start-card__head">
+                        <span class="factory-start-card__icon factory-start-card__icon--amber" aria-hidden="true">
+                            <twig:ux:icon name="lucide:activity" />
+                        </span>
+                        <span class="tag">{{ 'factory.start.session_badge'|trans }}</span>
+                    </div>
+                    <h3>{{ 'factory.start.session_title'|trans }}</h3>
+                    <p>{{ 'factory.start.session_text'|trans }}</p>
+                    <div class="factory-start-card__foot">
+                        {% if projects is not empty %}
+                            <button class="button" type="button" commandfor="factory-new-session" command="show-modal">
+                                <twig:ux:icon name="lucide:plus" />
+                                {{ 'factory.start.session_cta'|trans }}
+                            </button>
+                        {% else %}
+                            <a class="button" href="{{ path('project_index') }}">
+                                {{ 'factory.no_project.cta'|trans }}
+                            </a>
+                        {% endif %}
+                    </div>
+                </article>
+            </div>
+        </section>
+    {% else %}
+        <div class="kpis factory-kpis" role="region" aria-label="{{ 'factory.stats_label'|trans }}">
+            <div class="kpi">
+                <span class="kpi__label">
+                    {% if stats.active > 0 %}<span class="factory-kpi-dot factory-kpi-dot--active" aria-hidden="true"></span>{% endif %}
+                    {{ 'factory.kpi.active'|trans }}
+                </span>
+                <strong class="kpi__value num">{{ stats.active }}</strong>
+            </div>
+            <div class="kpi">
+                <span class="kpi__label">{{ 'factory.kpi.last_24h'|trans }}</span>
+                <strong class="kpi__value num">{{ stats.last24h }}</strong>
+            </div>
+            <div class="kpi">
+                <span class="kpi__label">
+                    <span class="factory-kpi-dot factory-kpi-dot--success" aria-hidden="true"></span>
+                    {{ 'factory.kpi.succeeded'|trans }}
+                </span>
+                <strong class="kpi__value num">{{ stats.succeeded }}</strong>
+            </div>
+            <div class="kpi">
+                <span class="kpi__label">
+                    {% if stats.failed > 0 %}<span class="factory-kpi-dot factory-kpi-dot--danger" aria-hidden="true"></span>{% endif %}
+                    {{ 'factory.kpi.failed'|trans }}
+                </span>
+                <strong class="kpi__value num">{{ stats.failed }}</strong>
+            </div>
+            <div class="kpi">
+                <span class="kpi__label">{{ 'factory.kpi.total'|trans }}</span>
+                <strong class="kpi__value num">{{ stats.total }}</strong>
             </div>
         </div>
-        {% if swarms is empty %}
-            <p class="help-text">{{ 'factory.swarm.empty'|trans }}</p>
-        {% else %}
-            <ul class="list">
-                {% for swarm in swarms %}
-                    <li>
-                        <a class="row" href="{{ path('factory_swarm_show', {publicId: swarm.publicId}) }}">
-                            <span class="row__title">
-                                <strong>{{ swarm.title }}</strong>
-                                <span class="row__sub">
-                                    <code>{{ swarm.publicId }}</code>
-                                    {% if not project %}· {{ swarm.project.name }}{% endif %}
-                                    · {{ swarm.strategy|trans }} · {{ swarm.workerRunner|trans }}
-                                    · {{ swarm.plan|length }} {{ 'factory.swarm.tasks_unit'|trans }}
-                                </span>
-                            </span>
-                            <span class="factory-status factory-status--{{ swarm.status.value }}">{{ swarm.status|trans }}</span>
-                        </a>
-                    </li>
-                {% endfor %}
-            </ul>
-        {% endif %}
-    </section>
 
-    <div class="filter-bar" role="navigation" aria-label="{{ 'factory.filter_status'|trans }}">
-        {% set base_route = project ? 'project_factory' : 'factory_index' %}
-        {% set base_params = project ? {slug: project.slug} : {} %}
-        <a class="filter-chip{% if status_filter is null %} is-active{% endif %}" href="{{ path(base_route, base_params) }}">
-            {{ 'factory.filter.all'|trans }}
-        </a>
-        {% for st in statuses %}
-            <a class="filter-chip{% if status_filter == st %} is-active{% endif %}" href="{{ path(base_route, base_params|merge({status: st.value})) }}">
-                {{ st|trans }}
-            </a>
-        {% endfor %}
-    </div>
-
-    <div class="table-wrap table-wrap--framed factory-table">
-        {% if sessions is empty %}
-            <div class="empty">
-                <p class="empty__title">{{ 'factory.empty.title'|trans }}</p>
-                <p class="empty__text">{{ 'factory.empty.text'|trans }}</p>
+        <section class="factory-section" aria-labelledby="factory-swarms-title">
+            <div class="factory-section__head">
+                <div class="factory-section__title">
+                    <h2 id="factory-swarms-title">
+                        <twig:ux:icon name="lucide:network" />
+                        {{ 'factory.swarm.section_title'|trans }}
+                    </h2>
+                    <span class="count-badge num">{{ swarms|length }}</span>
+                </div>
+                <div class="factory-runners-inline" aria-label="{{ 'factory.runners.label'|trans }}">
+                    {% for runner in ready_runners %}
+                        <span class="factory-runner-pill factory-runner-pill--ready">
+                            <span class="factory-runner-pill__dot" aria-hidden="true"></span>
+                            {{ runner|trans }}
+                        </span>
+                    {% endfor %}
+                    {% if missing_runners is not empty %}
+                        <span class="factory-runner-pill factory-runner-pill--muted" title="{{ missing_runners|map(r => r|trans)|join(', ') }}">
+                            {{ 'factory.runners.optional_missing'|trans({count: missing_runners|length}) }}
+                        </span>
+                    {% endif %}
+                </div>
             </div>
-        {% else %}
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>{{ 'factory.col.session'|trans }}</th>
-                        {% if not project %}<th>{{ 'factory.col.project'|trans }}</th>{% endif %}
-                        <th>{{ 'factory.col.status'|trans }}</th>
-                        <th>{{ 'factory.col.runner'|trans }}</th>
-                        <th>{{ 'factory.col.context'|trans }}</th>
-                        <th>{{ 'factory.col.files'|trans }}</th>
-                        <th>{{ 'factory.col.started'|trans }}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for session in sessions %}
-                        <tr>
-                            <td>
-                                <a class="factory-session-link" href="{{ path('factory_session_show', {publicId: session.publicId}) }}">
-                                    <strong>{{ session.title }}</strong>
-                                    <span class="row__sub">
-                                        <code>{{ session.publicId }}</code> · {{ session.role }}
-                                        {% if session.client %}· {{ session.client }}{% endif %}
-                                    </span>
-                                </a>
-                            </td>
-                            {% if not project %}
-                                <td>
-                                    <a class="link" href="{{ path('project_factory', {slug: session.project.slug}) }}">{{ session.project.name }}</a>
-                                </td>
-                            {% endif %}
-                            <td>
-                                <span class="factory-status factory-status--{{ session.status.value }}">
-                                    {{ session.status|trans }}
+
+            {% if swarms is empty %}
+                <div class="panel factory-inline-empty">
+                    <div class="factory-inline-empty__copy">
+                        <strong>{{ 'factory.swarm.empty_title'|trans }}</strong>
+                        <p class="help-text">{{ 'factory.swarm.empty'|trans }}</p>
+                    </div>
+                    {% if projects is not empty %}
+                        <button class="button button--primary" type="button" commandfor="factory-new-swarm" command="show-modal">
+                            <twig:ux:icon name="lucide:network" />
+                            {{ 'factory.swarm.launch_button'|trans }}
+                        </button>
+                    {% endif %}
+                </div>
+            {% else %}
+                <div class="factory-swarm-grid">
+                    {% for swarm in swarms %}
+                        {% set st = swarm.status.value %}
+                        {% set is_live = st in ['planning', 'running', 'reviewing'] %}
+                        {% set step_plan = st == 'planning' ? 'current' : 'done' %}
+                        {% set step_workers = st in ['reviewing', 'completed'] ? 'done' : (st in ['running', 'awaiting_approval', 'paused'] ? 'current' : (st in ['failed', 'cancelled'] ? 'muted' : 'pending')) %}
+                        {% set step_review = st == 'completed' ? 'done' : (st == 'reviewing' ? 'current' : 'pending') %}
+                        <a class="factory-swarm-card{% if st == 'awaiting_approval' %} factory-swarm-card--attention{% endif %}" href="{{ path('factory_swarm_show', {publicId: swarm.publicId}) }}">
+                            <div class="factory-swarm-card__top">
+                                <span class="factory-status factory-status--{{ st }}{% if is_live %} factory-status--pulse{% endif %}">
+                                    {{ swarm.status|trans }}
                                 </span>
-                            </td>
-                            <td>
-                                <span class="tag">{{ session.runner|trans }}</span>
-                            </td>
-                            <td>
+                                {% if not project %}
+                                    <span class="factory-swarm-card__project">
+                                        <span class="project-dot" data-hue="{{ swarm.project.id % 8 }}" aria-hidden="true"></span>
+                                        {{ swarm.project.name }}
+                                    </span>
+                                {% endif %}
+                                <time class="factory-swarm-card__date row__sub num" datetime="{{ swarm.createdAt|date('c') }}">{{ swarm.createdAt|date('d/m H:i') }}</time>
+                            </div>
+
+                            <div class="factory-swarm-card__body">
+                                <strong class="factory-swarm-card__title">{{ swarm.title }}</strong>
+                                <p class="factory-swarm-card__goal">{{ swarm.goal }}</p>
+                            </div>
+
+                            <ol class="factory-stepper" aria-hidden="true">
+                                <li class="factory-stepper__step factory-stepper__step--{{ step_plan }}">{{ 'factory.stepper.plan'|trans }}</li>
+                                <li class="factory-stepper__step factory-stepper__step--{{ step_workers }}">{{ 'factory.stepper.workers'|trans }}</li>
+                                <li class="factory-stepper__step factory-stepper__step--{{ step_review }}">{{ 'factory.stepper.review'|trans }}</li>
+                            </ol>
+
+                            <div class="factory-swarm-card__foot">
                                 <div class="factory-context-chips">
-                                    {% if session.branch %}
-                                        <code class="code-chip">{{ session.branch }}</code>
-                                    {% endif %}
-                                    {% if session.sourceRuleCode %}
-                                        <span class="tag tag--accent">{{ session.sourceRuleCode }}</span>
-                                    {% endif %}
-                                    {% if not session.branch and not session.sourceRuleCode %}
-                                        <span class="row__sub">—</span>
+                                    <span class="tag">{{ swarm.workerRunner|trans }}</span>
+                                    <span class="tag">{{ swarm.plan|length }} {{ 'factory.swarm.tasks_unit'|trans }}</span>
+                                    {% if swarm.sourceRuleCode %}
+                                        <span class="tag tag--accent">{{ swarm.sourceRuleCode }}</span>
                                     {% endif %}
                                 </div>
-                            </td>
-                            <td>
-                                <span class="row__sub">{{ session.filesTouched|length }}</span>
-                            </td>
-                            <td>
-                                <span class="row__sub" title="{{ session.startedAt|date('Y-m-d H:i:s') }}">
-                                    {{ session.startedAt|date('d/m H:i') }}
-                                    · {{ session.durationSeconds }}s
+                                <span class="factory-swarm-card__cta">
+                                    {{ st == 'awaiting_approval' ? 'factory.swarm.review_plan_cta'|trans : 'common.open'|trans }}
+                                    <twig:ux:icon name="lucide:chevron-right" />
                                 </span>
-                            </td>
-                        </tr>
+                            </div>
+                        </a>
                     {% endfor %}
-                </tbody>
-            </table>
-        {% endif %}
-    </div>
+                </div>
+            {% endif %}
+        </section>
 
-    <details class="panel factory-hooks">
+        <section class="factory-section" aria-labelledby="factory-sessions-title">
+            <div class="factory-section__head">
+                <div class="factory-section__title">
+                    <h2 id="factory-sessions-title">
+                        <twig:ux:icon name="lucide:activity" />
+                        {{ 'factory.sessions.section_title'|trans }}
+                    </h2>
+                    <span class="count-badge num">{{ sessions|length }}</span>
+                </div>
+                {% if not route_project and projects|length > 1 %}
+                    <form class="factory-project-filter" method="get" action="{{ path('factory_index') }}" data-controller="autosubmit">
+                        {% if status_filter %}<input type="hidden" name="status" value="{{ status_filter.value }}">{% endif %}
+                        <select class="select" name="project" aria-label="{{ 'factory.col.project'|trans }}" data-action="autosubmit#submit">
+                            <option value="">{{ 'nav.all_projects'|trans }}</option>
+                            {% for item in projects %}
+                                <option value="{{ item.slug }}" {{ project and project.id == item.id ? 'selected' }}>{{ item.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </form>
+                {% endif %}
+            </div>
+
+            <nav class="factory-status-tabs" aria-label="{{ 'factory.filter_status'|trans }}">
+                <a class="factory-status-tab{% if status_filter is null %} is-active{% endif %}" href="{{ path(base_route, base_params) }}" {% if status_filter is null %}aria-current="page"{% endif %}>
+                    {{ 'factory.filter.all'|trans }}
+                </a>
+                {% for st in statuses %}
+                    <a class="factory-status-tab{% if status_filter == st %} is-active{% endif %}" href="{{ path(base_route, base_params|merge({status: st.value})) }}" {% if status_filter == st %}aria-current="page"{% endif %}>
+                        {{ st|trans }}
+                    </a>
+                {% endfor %}
+            </nav>
+
+            {% if sessions is empty %}
+                <twig:EmptyState
+                    :title="(status_filter ? 'factory.empty.filtered_title' : 'factory.empty.title')|trans"
+                    :text="(status_filter ? 'factory.empty.filtered_text' : 'factory.empty.text')|trans"
+                >
+                    <twig:block name="icon"><twig:ux:icon name="lucide:activity" /></twig:block>
+                    <twig:block name="actions">
+                        {% if status_filter %}
+                            <a class="button" href="{{ path(base_route, base_params) }}">{{ 'common.reset'|trans }}</a>
+                        {% elseif projects is not empty %}
+                            <button class="button button--primary" type="button" commandfor="factory-new-session" command="show-modal">
+                                <twig:ux:icon name="lucide:plus" />
+                                {{ 'factory.new_session'|trans }}
+                            </button>
+                            <a class="button" href="#factory-hooks">{{ 'factory.start.ide_cta'|trans }}</a>
+                        {% endif %}
+                    </twig:block>
+                </twig:EmptyState>
+            {% else %}
+                {% set runner_icons = {
+                    claude_cli: 'lucide:code',
+                    codex_cli: 'lucide:code',
+                    gemini_cli: 'lucide:code',
+                    internal_llm: 'lucide:wand-sparkles',
+                    external_mcp: 'lucide:plug-zap',
+                } %}
+                <div class="table-wrap table-wrap--framed factory-table">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th scope="col">{{ 'factory.col.session'|trans }}</th>
+                                {% if not project %}<th scope="col">{{ 'factory.col.project'|trans }}</th>{% endif %}
+                                <th scope="col">{{ 'factory.col.status'|trans }}</th>
+                                <th scope="col">{{ 'factory.col.runner'|trans }}</th>
+                                <th scope="col">{{ 'factory.col.context'|trans }}</th>
+                                <th scope="col" class="num">{{ 'factory.col.files'|trans }}</th>
+                                <th scope="col" class="num">{{ 'factory.col.started'|trans }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for session in sessions %}
+                                {% set secs = session.durationSeconds %}
+                                {% set duration_fmt = secs >= 3600
+                                    ? ((secs // 3600) ~ 'h ' ~ ('%02d'|format((secs % 3600) // 60)) ~ 'm')
+                                    : (secs >= 60 ? ((secs // 60) ~ 'm ' ~ ('%02d'|format(secs % 60)) ~ 's') : (secs ~ 's')) %}
+                                <tr>
+                                    <td class="data-table__fill">
+                                        <div class="factory-session-cell">
+                                            <span class="factory-cell__icon factory-cell__icon--{{ session.runner.value }}" aria-hidden="true">
+                                                {{ ux_icon(runner_icons[session.runner.value] ?? 'lucide:activity') }}
+                                            </span>
+                                            <a class="factory-session-link" href="{{ path('factory_session_show', {publicId: session.publicId}) }}">
+                                                <strong>{{ session.title }}</strong>
+                                                <span class="row__sub">
+                                                    <span>{{ session.role }}</span>
+                                                    {% if session.client %}· <span>{{ session.client }}</span>{% endif %}
+                                                    · <code>{{ session.publicId }}</code>
+                                                </span>
+                                            </a>
+                                        </div>
+                                    </td>
+                                    {% if not project %}
+                                        <td class="data-table__nowrap" data-label="{{ 'factory.col.project'|trans }}">
+                                            <a class="proposal-project" href="{{ path('project_factory', {slug: session.project.slug}) }}">
+                                                <span class="project-dot" data-hue="{{ session.project.id % 8 }}" aria-hidden="true"></span>
+                                                {{ session.project.name }}
+                                            </a>
+                                        </td>
+                                    {% endif %}
+                                    <td class="data-table__nowrap" data-label="{{ 'factory.col.status'|trans }}">
+                                        <span class="factory-status factory-status--{{ session.status.value }}{% if session.status.value == 'running' %} factory-status--pulse{% endif %}">
+                                            {{ session.status|trans }}
+                                        </span>
+                                    </td>
+                                    <td class="data-table__nowrap" data-label="{{ 'factory.col.runner'|trans }}">
+                                        <span class="tag">{{ session.runner|trans }}</span>
+                                    </td>
+                                    <td data-label="{{ 'factory.col.context'|trans }}">
+                                        <div class="factory-context-chips">
+                                            {% if session.branch %}
+                                                <code class="code-chip">{{ session.branch }}</code>
+                                            {% endif %}
+                                            {% if session.sourceRuleCode %}
+                                                <span class="tag tag--accent">{{ session.sourceRuleCode }}</span>
+                                            {% endif %}
+                                            {% if not session.branch and not session.sourceRuleCode %}
+                                                <span class="row__sub">—</span>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td class="num data-table__nowrap" data-label="{{ 'factory.col.files'|trans }}">
+                                        {% if session.filesTouched|length > 0 %}
+                                            <span class="count-badge num">{{ session.filesTouched|length }}</span>
+                                        {% else %}
+                                            <span class="row__sub num">0</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="num data-table__nowrap" data-label="{{ 'factory.col.started'|trans }}">
+                                        <span class="row__sub num" title="{{ session.startedAt|date('Y-m-d H:i:s') }}">
+                                            {{ session.startedAt|date('d/m H:i') }} · {{ duration_fmt }}
+                                        </span>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% endif %}
+        </section>
+    {% endif %}
+
+    <details class="panel factory-hooks" id="factory-hooks"{% if is_fresh_empty %} open{% endif %}>
         <summary class="factory-hooks__summary">
-            <twig:ux:icon name="lucide:plug-zap" />
-            <span>{{ 'factory.hooks.title'|trans }}</span>
+            <span class="factory-hooks__lead">
+                <twig:ux:icon name="lucide:plug-zap" />
+                <span>{{ 'factory.hooks.title'|trans }}</span>
+            </span>
             <span class="row__sub">{{ 'factory.hooks.subtitle'|trans }}</span>
+            <twig:ux:icon name="lucide:chevron-down" class="icon factory-hooks__chevron" />
         </summary>
         <div class="factory-hooks__body">
-            <p class="help-text">{{ 'factory.hooks.mcp_hint'|trans }}</p>
-            <div class="factory-mcp-tools">
-                <code class="code-chip">start_session</code>
-                <code class="code-chip">log_session_event</code>
-                <code class="code-chip">end_session</code>
-                <code class="code-chip">list_sessions</code>
-                <code class="code-chip">get_swarm_board</code>
-                <code class="code-chip">post_swarm_message</code>
+            <div class="factory-hooks__grid">
+                <div class="factory-hooks__col">
+                    <div class="factory-hooks__col-head">
+                        <span class="tag tag--accent">{{ 'factory.hooks.option_mcp_badge'|trans }}</span>
+                        <h3>{{ 'factory.hooks.option_mcp_title'|trans }}</h3>
+                    </div>
+                    <p class="help-text">{{ 'factory.hooks.mcp_hint'|trans }}</p>
+                    <dl class="factory-mcp-list">
+                        <div class="factory-mcp-list__row">
+                            <dt><code class="code-chip">start_session</code></dt>
+                            <dd>{{ 'factory.hooks.tool_start'|trans }}</dd>
+                        </div>
+                        <div class="factory-mcp-list__row">
+                            <dt><code class="code-chip">log_session_event</code></dt>
+                            <dd>{{ 'factory.hooks.tool_log'|trans }}</dd>
+                        </div>
+                        <div class="factory-mcp-list__row">
+                            <dt><code class="code-chip">end_session</code></dt>
+                            <dd>{{ 'factory.hooks.tool_end'|trans }}</dd>
+                        </div>
+                        <div class="factory-mcp-list__row">
+                            <dt><code class="code-chip">list_sessions</code></dt>
+                            <dd>{{ 'factory.hooks.tool_list'|trans }}</dd>
+                        </div>
+                        <div class="factory-mcp-list__row">
+                            <dt><code class="code-chip">get_swarm_board</code> <code class="code-chip">post_swarm_message</code></dt>
+                            <dd>{{ 'factory.hooks.tool_swarm'|trans }}</dd>
+                        </div>
+                    </dl>
+                </div>
+
+                <div class="factory-hooks__col" data-controller="clipboard">
+                    <div class="factory-hooks__col-head">
+                        <span class="tag">{{ 'factory.hooks.option_hook_badge'|trans }}</span>
+                        <h3>{{ 'factory.hooks.option_hook_title'|trans }}</h3>
+                        <button class="button button--ghost factory-copy-btn" type="button" data-action="clipboard#copy">
+                            <twig:ux:icon name="lucide:copy" />
+                            <span data-clipboard-target="label">{{ 'factory.hooks.copy'|trans }}</span>
+                        </button>
+                    </div>
+                    <p class="help-text">{{ 'factory.hooks.claude_hint'|trans({url: hook_url}) }}</p>
+                    <pre class="factory-code"><code data-clipboard-target="source">{{ hook_snippet }}</code></pre>
+                </div>
             </div>
-            <p class="help-text">{{ 'factory.hooks.claude_hint'|trans({url: hook_url}) }}</p>
-            <pre class="factory-code"><code>{{ hook_snippet }}</code></pre>
         </div>
     </details>
 
-    {% if project %}
-        <dialog id="factory-new-session" class="dialog">
-            <form method="post" action="{{ path('factory_session_start', {slug: project.slug}) }}" class="form-stack">
-                <input type="hidden" name="_token" value="{{ csrf_token('factory_session_start_' ~ project.slug) }}">
-                <h2>{{ 'factory.new_session'|trans }}</h2>
+    {% if projects is not empty %}
+        {% set session_action = project ? path('factory_session_start', {slug: project.slug}) : path('factory_workspace_session_start') %}
+        {% set session_csrf = project ? csrf_token('factory_session_start_' ~ project.slug) : csrf_token('factory_session_start_workspace') %}
+        <dialog id="factory-new-session" class="dialog dialog--form" closedby="any" aria-labelledby="factory-new-session-title" data-controller="dialog">
+            <h2 class="dialog__title" id="factory-new-session-title">{{ 'factory.new_session'|trans }}</h2>
+            <p class="dialog__text">{{ 'factory.form.session_help'|trans }}</p>
+            <form method="post" action="{{ session_action }}" class="form-stack">
+                <input type="hidden" name="_token" value="{{ session_csrf }}">
+                {% if not project %}
+                    <label>
+                        {{ 'factory.col.project'|trans }}
+                        <select class="select" name="project" required>
+                            {% for item in projects %}
+                                <option value="{{ item.slug }}">{{ item.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                {% endif %}
                 <label>
                     {{ 'factory.form.title'|trans }}
-                    <input class="input" type="text" name="title" required maxlength="255" placeholder="{{ 'factory.form.title_placeholder'|trans }}">
+                    <input class="input" type="text" name="title" required maxlength="255" placeholder="{{ 'factory.form.title_placeholder'|trans }}" autofocus>
                 </label>
                 <label>
                     {{ 'factory.form.goal'|trans }}
                     <textarea class="input" name="goal" rows="3" placeholder="{{ 'factory.form.goal_placeholder'|trans }}"></textarea>
                 </label>
-                <div class="factory-form-row">
-                    <label>
-                        {{ 'factory.form.role'|trans }}
-                        <input class="input" type="text" name="role" value="developer" maxlength="60">
-                    </label>
-                    <label>
-                        {{ 'factory.form.runner'|trans }}
-                        <select class="select" name="runner">
-                            {% for runner in runners %}
-                                <option value="{{ runner.value }}">{{ runner|trans }}</option>
-                            {% endfor %}
-                        </select>
-                    </label>
-                </div>
                 <div class="factory-form-row">
                     <label>
                         {{ 'factory.form.branch'|trans }}
@@ -238,10 +544,29 @@
                         <input class="input" type="text" name="rule_code" maxlength="50" placeholder="RG-001">
                     </label>
                 </div>
-                <label>
-                    {{ 'factory.form.client'|trans }}
-                    <input class="input" type="text" name="client" maxlength="100" placeholder="claude-code / codex / cursor">
-                </label>
+                <details class="factory-advanced">
+                    <summary>{{ 'factory.form.advanced'|trans }}</summary>
+                    <div class="factory-advanced__body">
+                        <div class="factory-form-row">
+                            <label>
+                                {{ 'factory.form.role'|trans }}
+                                <input class="input" type="text" name="role" value="developer" maxlength="60">
+                            </label>
+                            <label>
+                                {{ 'factory.form.runner'|trans }}
+                                <select class="select" name="runner">
+                                    {% for runner in runners %}
+                                        <option value="{{ runner.value }}">{{ runner|trans }}</option>
+                                    {% endfor %}
+                                </select>
+                            </label>
+                        </div>
+                        <label>
+                            {{ 'factory.form.client'|trans }}
+                            <input class="input" type="text" name="client" maxlength="100" placeholder="claude-code / codex / cursor">
+                        </label>
+                    </div>
+                </details>
                 <div class="dialog__actions">
                     <button class="button" type="button" commandfor="factory-new-session" command="close">{{ 'common.cancel'|trans }}</button>
                     <button class="button button--primary" type="submit">{{ 'factory.form.start_submit'|trans }}</button>
@@ -249,60 +574,81 @@
             </form>
         </dialog>
 
-        <dialog id="factory-new-swarm" class="dialog">
-            <form method="post" action="{{ path('factory_swarm_launch', {slug: project.slug}) }}" class="form-stack">
-                <input type="hidden" name="_token" value="{{ csrf_token('factory_swarm_launch_' ~ project.slug) }}">
-                <h2>{{ 'factory.swarm.launch_button'|trans }}</h2>
-                <p class="help-text">{{ 'factory.swarm.launch_help'|trans }}</p>
+        {% set swarm_action = project ? path('factory_swarm_launch', {slug: project.slug}) : path('factory_workspace_swarm_launch') %}
+        {% set swarm_csrf = project ? csrf_token('factory_swarm_launch_' ~ project.slug) : csrf_token('factory_swarm_launch_workspace') %}
+        <dialog id="factory-new-swarm" class="dialog dialog--form" closedby="any" aria-labelledby="factory-new-swarm-title" data-controller="dialog">
+            <h2 class="dialog__title" id="factory-new-swarm-title">{{ 'factory.swarm.launch_button'|trans }}</h2>
+            <p class="dialog__text">{{ 'factory.swarm.launch_help'|trans }}</p>
+            <form method="post" action="{{ swarm_action }}" class="form-stack">
+                <input type="hidden" name="_token" value="{{ swarm_csrf }}">
+                {% if not project %}
+                    <label>
+                        {{ 'factory.col.project'|trans }}
+                        <select class="select" name="project" required>
+                            {% for item in projects %}
+                                <option value="{{ item.slug }}">{{ item.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                {% endif %}
                 <label>
                     {{ 'factory.form.title'|trans }}
-                    <input class="input" type="text" name="title" required maxlength="255" placeholder="{{ 'factory.form.title_placeholder'|trans }}">
+                    <input class="input" type="text" name="title" required maxlength="255" placeholder="{{ 'factory.form.title_placeholder'|trans }}" autofocus>
                 </label>
                 <label>
                     {{ 'factory.form.goal'|trans }}
                     <textarea class="input" name="goal" rows="4" required placeholder="{{ 'factory.form.goal_placeholder'|trans }}"></textarea>
                 </label>
-                <div class="factory-form-row">
-                    <label>
-                        {{ 'factory.swarm.strategy'|trans }}
-                        <select class="select" name="strategy">
-                            {% for strategy in strategies %}
-                                <option value="{{ strategy.value }}">{{ strategy|trans }}</option>
-                            {% endfor %}
-                        </select>
-                    </label>
-                    <label>
-                        {{ 'factory.swarm.worker_runner'|trans }}
-                        <select class="select" name="worker_runner">
-                            {% for runner in runners %}
-                                {% if runner.value != 'external_mcp' %}
-                                    <option value="{{ runner.value }}"{% if runner.value == 'internal_llm' %} selected{% endif %}>{{ runner|trans }}</option>
-                                {% endif %}
-                            {% endfor %}
-                        </select>
-                    </label>
-                </div>
-                <div class="factory-form-row">
-                    <label>
-                        {{ 'factory.form.rule_code'|trans }}
-                        <input class="input" type="text" name="rule_code" maxlength="50" placeholder="RG-001">
-                    </label>
-                    <label>
-                        {{ 'factory.swarm.base_branch'|trans }}
-                        <input class="input" type="text" name="base_branch" maxlength="200" placeholder="main">
-                    </label>
-                </div>
-                <label class="checkbox-field__label">
-                    <input type="checkbox" name="require_plan_approval" value="1" checked>
-                    {{ 'factory.swarm.require_approval'|trans }}
+                <label>
+                    {{ 'factory.swarm.worker_runner'|trans }}
+                    <select class="select" name="worker_runner">
+                        {% for runner in runners %}
+                            {% if runner.value != 'external_mcp' %}
+                                {% set available = runner_availability[runner.value] ?? false %}
+                                <option value="{{ runner.value }}"{% if runner.value == 'internal_llm' %} selected{% endif %}>
+                                    {{ runner|trans }}{% if not available %} ({{ 'factory.swarm.unavailable'|trans }}){% endif %}
+                                </option>
+                            {% endif %}
+                        {% endfor %}
+                    </select>
                 </label>
-                <label class="checkbox-field__label">
-                    <input type="checkbox" name="run_sync" value="1" checked>
-                    {{ 'factory.swarm.run_plan_sync'|trans }}
-                </label>
+                <details class="factory-advanced">
+                    <summary>{{ 'factory.form.advanced'|trans }}</summary>
+                    <div class="factory-advanced__body">
+                        <div class="factory-form-row">
+                            <label>
+                                {{ 'factory.swarm.strategy'|trans }}
+                                <select class="select" name="strategy">
+                                    {% for strategy in strategies %}
+                                        <option value="{{ strategy.value }}">{{ strategy|trans }}</option>
+                                    {% endfor %}
+                                </select>
+                            </label>
+                            <label>
+                                {{ 'factory.form.rule_code'|trans }}
+                                <input class="input" type="text" name="rule_code" maxlength="50" placeholder="RG-001">
+                            </label>
+                        </div>
+                        <label>
+                            {{ 'factory.swarm.base_branch'|trans }}
+                            <input class="input" type="text" name="base_branch" maxlength="200" placeholder="main">
+                        </label>
+                        <label class="checkbox-field__label">
+                            <input type="checkbox" name="require_plan_approval" value="1" checked>
+                            {{ 'factory.swarm.require_approval'|trans }}
+                        </label>
+                        <label class="checkbox-field__label">
+                            <input type="checkbox" name="run_sync" value="1" checked>
+                            {{ 'factory.swarm.run_plan_sync'|trans }}
+                        </label>
+                    </div>
+                </details>
                 <div class="dialog__actions">
                     <button class="button" type="button" commandfor="factory-new-swarm" command="close">{{ 'common.cancel'|trans }}</button>
-                    <button class="button button--primary" type="submit">{{ 'factory.swarm.launch_submit'|trans }}</button>
+                    <button class="button button--primary" type="submit">
+                        <twig:ux:icon name="lucide:network" />
+                        {{ 'factory.swarm.launch_submit'|trans }}
+                    </button>
                 </div>
             </form>
         </dialog>

@@ -131,6 +131,69 @@ final class FactoryControllerTest extends WebTestCase
         self::assertSame(['src/Auth/TokenRotator.php'], $ended['files_touched']);
     }
 
+    public function testWorkspaceFactoryOnboardingAndLaunchFromRoot(): void
+    {
+        $client = self::createClient();
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        $em->getConnection()->executeStatement('TRUNCATE swarm_message, swarm_run, agent_session_event, agent_session, user_preference, project RESTART IDENTITY CASCADE');
+
+        $project = new Project('atlas', 'Atlas', '/tmp/no-git-atlas');
+        $em->persist($project);
+        $em->flush();
+
+        // 1. Empty workspace /factory shows guided onboarding + direct launch modals with project selector
+        $crawler = $client->request('GET', '/factory');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('.factory-onboarding');
+        self::assertSelectorCount(3, '.factory-start-card');
+        self::assertSelectorExists('#factory-new-swarm select[name="project"]');
+        self::assertSelectorExists('#factory-new-session select[name="project"]');
+
+        // 2. Start a session directly from /factory workspace modal
+        $sessionToken = (string) $crawler->filter('#factory-new-session input[name="_token"]')->attr('value');
+        $client->request('POST', '/factory/sessions', [
+            '_token' => $sessionToken,
+            'project' => 'atlas',
+            'title' => 'Audit endpoints API',
+            'goal' => 'Vérifier les statuts HTTP.',
+            'runner' => 'external_mcp',
+        ]);
+        self::assertResponseRedirects();
+        $client->followRedirect();
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('h1', 'Audit endpoints API');
+
+        // 3. Launch a swarm directly from /factory workspace modal
+        $crawler = $client->request('GET', '/factory');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorNotExists('.factory-onboarding');
+        self::assertSelectorExists('.factory-kpis');
+        self::assertSelectorTextContains('.factory-table', 'Audit endpoints API');
+
+        $swarmToken = (string) $crawler->filter('#factory-new-swarm input[name="_token"]')->attr('value');
+        $client->request('POST', '/factory/swarms', [
+            '_token' => $swarmToken,
+            'project' => 'atlas',
+            'title' => 'Refonte pagination',
+            'goal' => 'Standardiser la pagination sur les listes.',
+            'strategy' => 'parallel',
+            'worker_runner' => 'internal_llm',
+            'require_plan_approval' => '1',
+            'run_sync' => '1',
+        ]);
+        self::assertResponseRedirects();
+        $client->followRedirect();
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('h1', 'Refonte pagination');
+
+        // 4. Filter /factory by ?project=atlas and check swarm card + stepper
+        $client->request('GET', '/factory?project=atlas');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('.factory-scope-chip');
+        self::assertSelectorTextContains('.factory-swarm-card', 'Refonte pagination');
+        self::assertSelectorExists('.factory-stepper');
+    }
+
     public function testFactoryIsDeniedInBusinessOnlyMode(): void
     {
         $client = self::createClient();

@@ -765,7 +765,9 @@ factory:
         status: Statut
     dev_badge: 'Mode dev'
     empty:
-        text: 'Démarre une session depuis le bouton ci-dessus, via les outils MCP (start_session) ou avec un hook Claude Code ci-dessous.'
+        filtered_text: 'Aucune session ne correspond à ce statut. Réinitialise le filtre pour revoir tout l’historique.'
+        filtered_title: 'Aucune session pour ce statut'
+        text: 'Démarre une session manuelle ci-dessus ou branche ton IDE/CLI via MCP ou hook Claude Code ci-dessous.'
         title: 'Aucune session enregistrée'
     filter:
         all: Toutes
@@ -774,9 +776,11 @@ factory:
         event_added: 'Événement ajouté à la timeline de session.'
         finished: 'Session clôturée.'
         message_required: 'Renseigner un message pour enregistrer l’événement.'
+        project_required: 'Sélectionner un projet avant de démarrer.'
         started: 'Session démarrée et tracée.'
         title_required: 'Donner un titre à la session.'
     form:
+        advanced: 'Options avancées'
         branch: Branche
         client: 'Client / IDE'
         event_kind: Type
@@ -791,23 +795,46 @@ factory:
         role: Rôle
         rule_code: 'Règle métier'
         runner: Runner
+        session_help: 'Enregistre une session de travail pour tracer ses décisions, fichiers touchés et résultats dans le projet.'
         start_submit: 'Démarrer le suivi'
         summary_placeholder: 'Résumé du travail accompli, PR ouverte, tests validés…'
         title: Titre
         title_placeholder: 'ex. Implémenter RG-014 — calcul de remise dégressive'
     hooks:
-        claude_hint: 'Hook Claude Code (.claude/settings.json) vers {url} :'
-        mcp_hint: 'Outils MCP disponibles directement pour tes agents IDE/CLI :'
+        claude_hint: 'À coller dans .claude/settings.json pour envoyer automatiquement début et fin de session vers {url} :'
+        copy: Copier
+        mcp_hint: 'Si votre IDE/CLI est déjà relié au serveur MCP de Mnemo, ces outils sont prêts sans configuration supplémentaire :'
+        option_hook_badge: 'Claude Code'
+        option_hook_title: 'Hook local automatique'
+        option_mcp_badge: Recommandé
+        option_mcp_title: 'Outils MCP natifs'
         subtitle: 'Brancher Claude Code, Cursor ou Codex en 10 secondes'
-        title: 'Hooks locaux & outils MCP'
+        title: 'Connecter vos agents locaux (MCP & Hooks)'
+        tool_end: 'Clôture la session avec statut et résumé final.'
+        tool_list: 'Liste les sessions récentes du projet.'
+        tool_log: 'Ajoute une décision, étape ou liste de fichiers touchés.'
+        tool_start: 'Démarre une session tracée liée au projet et à la branche.'
+        tool_swarm: 'Lit et poste des messages sur le board d’une ruche.'
     kpi:
         active: 'En cours'
         failed: 'En échec'
         last_24h: 'Dernières 24 h'
         succeeded: Réussies
         total: Total
-    lede: 'Journal centralisé des sessions d’agents (IDE, CLI locaux et futurs workers de ruche) rattachées à la mémoire et aux règles métier du projet.'
+    lede: 'Orchestrez des ruches multi-agents nourries par vos règles métier et suivez en direct les sessions de vos agents IDE/CLI.'
     new_session: 'Nouvelle session'
+    no_project:
+        cta: 'Créer un projet'
+        text: 'Créez d’abord un projet dans Mnemo pour pouvoir y rattacher vos ruches multi-agents et sessions suivies.'
+        title: 'Aucun projet disponible'
+    onboarding:
+        subtitle: 'Choisissez votre mode de travail : orchestration automatique par Mnemo ou suivi de vos agents locaux.'
+        title: 'Comment utiliser la Software Factory'
+    runners:
+        label: 'Runners disponibles'
+        optional_missing: '{count, plural, one {# CLI local optionnel non installé} other {# CLIs locaux optionnels non installés}}'
+    sessions:
+        section_title: 'Sessions d’agents'
     show:
         close_session: 'Clôturer la session'
         duration: Durée
@@ -824,7 +851,24 @@ factory:
         sub_sessions: 'Sous-sessions (workers)'
         summary: Résumé
         timeline: Timeline
+    start:
+        ide_badge: 'Automatique · MCP'
+        ide_cta: 'Voir la configuration'
+        ide_text: 'Branchez Claude Code, Cursor ou Codex pour remonter automatiquement chaque session, décision et fichier modifié.'
+        ide_title: 'Connecter votre IDE ou CLI'
+        session_badge: 'Suivi manuel'
+        session_cta: 'Nouvelle session'
+        session_text: 'Ouvrez une fiche de suivi rattachée à une branche et une règle métier pour documenter vos étapes manuellement.'
+        session_title: 'Journaliser une session'
+        swarm_badge: Recommandé
+        swarm_cta: 'Lancer une ruche'
+        swarm_text: 'Donnez un objectif : Mnemo injecte vos règles métier, génère un plan validable puis délègue aux workers et réalise la revue.'
+        swarm_title: 'Lancer une ruche multi-agents'
     stats_label: 'Indicateurs de la Software Factory'
+    stepper:
+        plan: '1. Plan'
+        review: '3. Revue'
+        workers: '2. Workers'
     swarm:
         approve_and_run: 'Approuver le plan et lancer les workers'
         available: prêt
@@ -834,7 +878,8 @@ factory:
         board_reply_submit: 'Publier sur le board'
         board_title: 'Board partagé de la ruche'
         coordinator_session: 'Session coordinateur'
-        empty: 'Aucune ruche lancée pour le moment. Lance une ruche sur un projet pour orchestrer Plan → Workers isolés → Revue.'
+        empty: 'Lancez une ruche sur un projet pour orchestrer Plan → Workers isolés → Revue d’alignement.'
+        empty_title: 'Aucune ruche lancée'
         flash:
             approved: 'Plan approuvé : les workers ont été lancés.'
             launched: 'Ruche créée et planification déclenchée.'
@@ -843,28 +888,37 @@ factory:
             updated: 'État de la ruche mis à jour.'
         label: Ruche
         launch_button: 'Lancer une ruche'
-        launch_help: 'Mnemo injecte automatiquement les règles métier et décisions du projet dans le Plan, crée un git worktree isolé par worker CLI, puis lance une revue finale.'
+        launch_help: 'Mnemo injecte automatiquement les règles métier et décisions du projet dans le plan, découpe les tâches pour les workers, puis exécute une revue finale.'
         launch_submit: 'Créer la ruche'
         pause: Pause
         plan_pending: 'Planification en cours (ou clique sur « Exécuter l’étape maintenant » si aucun worker Messenger ne tourne).'
         plan_title: 'Plan découpé par l’architecte'
         require_approval: 'Valider le plan humainement avant de lancer les workers'
         resume: Reprendre
+        review_plan_cta: 'Valider le plan'
         review_title: 'Revue finale & alignement métier'
         run_plan_sync: 'Exécuter la planification immédiatement (sans attendre messenger:consume)'
         run_step_now: 'Exécuter l’étape maintenant (sync)'
         runner_unavailable_text: 'Le runner « {runner} » n’est pas détecté sur cette machine. Les workers basculeront en erreur tant que le binaire ou la clé API n’est pas disponible.'
         runner_unavailable_title: 'Runner non détecté sur cet hôte'
-        section_title: 'Ruches (orchestrateur multi-agents)'
+        section_title: 'Ruches multi-agents'
         strategy: Stratégie
         tasks_unit: 'tâche(s)'
-        unavailable: absent
+        unavailable: 'non installé'
         worker_runner: 'Runner des workers'
         workers_pending: 'Aucun worker lancé tant que le plan n’est pas approuvé.'
         workers_title: 'Workers de la ruche'
         worktree_no_git: 'Aucun dépôt git local configuré (mode analyse)'
         worktree_ready: 'Isolation par branche active'
     title: 'Software Factory'
+    workflow:
+        label: 'Étapes de la Software Factory'
+        step1_text: 'Décrivez la tâche ou ciblez une règle (RG-…). Mnemo injecte automatiquement les décisions du projet.'
+        step1_title: 'Objectif & contexte métier'
+        step2_text: 'L’architecte découpe les tâches. Validez le plan puis laissez les workers travailler en parallèle ou en pipeline.'
+        step2_title: 'Plan & exécution isolée'
+        step3_text: 'Retrouvez chaque décision, fichier modifié et la revue finale d’alignement métier au même endroit.'
+        step3_title: 'Revue & traçabilité'
 flash:
     dashboard:
         saved: 'Préférences du tableau de bord enregistrées.'
