@@ -2,7 +2,7 @@
 {% set scope = project ? {project: project.slug} : {} %}
 <aside{{ attributes.defaults({class: 'sidebar', id: 'app-sidebar', 'aria-label': 'nav.sidebar'|trans}) }} data-sidebar-target="panel">
     <div class="sidebar__top">
-        <a class="workspace" href="{{ path('dashboard') }}"><span class="workspace__mark" aria-hidden="true">M</span><span class="workspace__name">{{ 'app.name'|trans }}</span></a>
+        <a class="workspace" href="{{ path('dashboard') }}"><img class="workspace__mark" src="{{ asset('images/mnemo-mark.png') }}" alt="" width="22" height="22"><span class="workspace__name">{{ 'app.name'|trans }}</span></a>
         <button class="sidebar__toggle" type="button" aria-expanded="true" aria-label="{{ 'nav.collapse'|trans }}" title="{{ 'nav.collapse'|trans }}" data-sidebar-target="toggle" data-action="sidebar#toggle">
             {{ ux_icon('lucide:panel-left-close', {class: 'icon sidebar__toggle-close'}) }}{{ ux_icon('lucide:panel-left-open', {class: 'icon sidebar__toggle-open'}) }}
         </button>

@@ -18,6 +18,7 @@
         "symfony/ai-bundle": "^1.0",
         "symfony/ai-open-router-platform": "^1.0",
         "symfony/ai-postgres-store": "^1.0",
+        "symfony/asset": "8.1.*",
         "symfony/asset-mapper": "8.1.*",
         "symfony/console": "8.1.*",
         "symfony/doctrine-messenger": "8.1.*",

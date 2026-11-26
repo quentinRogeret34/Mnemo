@@ -2,6 +2,8 @@
 
 <img src="docs/header.png" alt="Mnemo, the memory dashboard for people and companies" width="100%">
 
+<img src="assets/images/mnemo-logo.png" alt="Mnemo logo" width="96">
+
 # Mnemo
 
 **The memory of your project, for humans and AI agents.**
