@@ -11,11 +11,13 @@
 {% endblock %}
 
 {% block body %}
-    {% set is_fresh_empty = swarms is empty and sessions is empty and status_filter is null %}
+    {% set is_fresh_empty = swarms is empty and sessions is empty and status_filter is null and not show_archived and archived_total_count == 0 %}
+    {% set return_scope = route_project ? 'project' : 'workspace' %}
     {% set base_route = route_project ? 'project_factory' : 'factory_index' %}
     {% set base_params = route_project
         ? {slug: route_project.slug}
         : (project ? {project: project.slug} : {}) %}
+    {% set view_params = show_archived ? base_params|merge({archived: 1}) : base_params %}
     {% set ready_runners = [] %}
     {% set missing_runners = [] %}
     {% for runner in runners %}
@@ -218,6 +220,23 @@
             </div>
         </div>
 
+        <div class="factory-archive-bar">
+            <nav class="tabs" aria-label="{{ 'factory.actions.col_label'|trans }}">
+                <a href="{{ path(base_route, base_params) }}" {% if not show_archived %}aria-current="page"{% endif %}>
+                    {{ 'factory.actions.active_tab'|trans }}
+                </a>
+                <a href="{{ path(base_route, base_params|merge({archived: 1})) }}" {% if show_archived %}aria-current="page"{% endif %}>
+                    {{ 'factory.actions.archived_tab'|trans }}
+                    {% if archived_total_count > 0 %}
+                        <span class="tab__count num">{{ archived_total_count }}</span>
+                    {% endif %}
+                </a>
+            </nav>
+            {% if show_archived %}
+                <span class="pill">{{ 'factory.actions.archived_banner'|trans }}</span>
+            {% endif %}
+        </div>
+
         <section class="factory-section" aria-labelledby="factory-swarms-title">
             <div class="factory-section__head">
                 <div class="factory-section__title">
@@ -263,48 +282,81 @@
                         {% set step_plan = st == 'planning' ? 'current' : 'done' %}
                         {% set step_workers = st in ['reviewing', 'completed'] ? 'done' : (st in ['running', 'awaiting_approval', 'paused'] ? 'current' : (st in ['failed', 'cancelled'] ? 'muted' : 'pending')) %}
                         {% set step_review = st == 'completed' ? 'done' : (st == 'reviewing' ? 'current' : 'pending') %}
-                        <a class="factory-swarm-card{% if st == 'awaiting_approval' %} factory-swarm-card--attention{% endif %}" href="{{ path('factory_swarm_show', {publicId: swarm.publicId}) }}">
-                            <div class="factory-swarm-card__top">
-                                <span class="factory-status factory-status--{{ st }}{% if is_live %} factory-status--pulse{% endif %}">
-                                    {{ swarm.status|trans }}
-                                </span>
-                                {% if not project %}
-                                    <span class="factory-swarm-card__project">
-                                        <span class="project-dot" data-hue="{{ swarm.project.id % 8 }}" aria-hidden="true"></span>
-                                        {{ swarm.project.name }}
+                        <article class="factory-swarm-card{% if st == 'awaiting_approval' %} factory-swarm-card--attention{% endif %}{% if swarm.isArchived %} factory-swarm-card--archived{% endif %}">
+                            <a class="factory-swarm-card__link" href="{{ path('factory_swarm_show', {publicId: swarm.publicId}) }}">
+                                <div class="factory-swarm-card__top">
+                                    <span class="factory-status factory-status--{{ st }}{% if is_live %} factory-status--pulse{% endif %}">
+                                        {{ swarm.status|trans }}
                                     </span>
-                                {% endif %}
-                                <time class="factory-swarm-card__date row__sub num" datetime="{{ swarm.createdAt|date('c') }}">{{ swarm.createdAt|date('d/m H:i') }}</time>
-                            </div>
+                                    {% if not project %}
+                                        <span class="factory-swarm-card__project">
+                                            <span class="project-dot" data-hue="{{ swarm.project.id % 8 }}" aria-hidden="true"></span>
+                                            {{ swarm.project.name }}
+                                        </span>
+                                    {% endif %}
+                                    <time class="factory-swarm-card__date row__sub num" datetime="{{ swarm.createdAt|date('c') }}">{{ swarm.createdAt|date('d/m H:i') }}</time>
+                                </div>
 
-                            <div class="factory-swarm-card__body">
-                                <strong class="factory-swarm-card__title">{{ swarm.title }}</strong>
-                                <p class="factory-swarm-card__goal">{{ swarm.goal }}</p>
-                            </div>
+                                <div class="factory-swarm-card__body">
+                                    <strong class="factory-swarm-card__title">{{ swarm.title }}</strong>
+                                    <p class="factory-swarm-card__goal">{{ swarm.goal }}</p>
+                                </div>
 
-                            <ol class="factory-stepper" aria-hidden="true">
-                                <li class="factory-stepper__step factory-stepper__step--{{ step_plan }}">{{ 'factory.stepper.plan'|trans }}</li>
-                                <li class="factory-stepper__step factory-stepper__step--{{ step_workers }}">{{ 'factory.stepper.workers'|trans }}</li>
-                                <li class="factory-stepper__step factory-stepper__step--{{ step_review }}">{{ 'factory.stepper.review'|trans }}</li>
-                            </ol>
+                                <ol class="factory-stepper" aria-hidden="true">
+                                    <li class="factory-stepper__step factory-stepper__step--{{ step_plan }}">{{ 'factory.stepper.plan'|trans }}</li>
+                                    <li class="factory-stepper__step factory-stepper__step--{{ step_workers }}">{{ 'factory.stepper.workers'|trans }}</li>
+                                    <li class="factory-stepper__step factory-stepper__step--{{ step_review }}">{{ 'factory.stepper.review'|trans }}</li>
+                                </ol>
+                            </a>
 
                             <div class="factory-swarm-card__foot">
                                 <div class="factory-context-chips">
                                     {% if swarm.isHubMode %}
                                         <span class="tag tag--accent">{{ 'factory.hub.badge'|trans }}</span>
                                     {% endif %}
-                                    <span class="tag">{{ swarm.workerRunner|trans }}</span>
+                                    {% if not (swarm.isHubMode and swarm.workerRunner.value == 'external_hub') %}
+                                        <span class="tag">{{ ('factory.runner_short.' ~ swarm.workerRunner.value)|trans }}</span>
+                                    {% endif %}
                                     <span class="tag">{{ swarm.plan|length }} {{ 'factory.swarm.tasks_unit'|trans }}</span>
                                     {% if swarm.sourceRuleCode %}
                                         <span class="tag tag--accent">{{ swarm.sourceRuleCode }}</span>
                                     {% endif %}
                                 </div>
-                                <span class="factory-swarm-card__cta">
-                                    {{ st == 'awaiting_approval' ? 'factory.swarm.review_plan_cta'|trans : 'common.open'|trans }}
-                                    <twig:ux:icon name="lucide:chevron-right" />
-                                </span>
+                                <div class="factory-card-acts">
+                                    <form method="post" action="{{ path('factory_swarm_archive', {publicId: swarm.publicId}) }}" class="factory-act-form">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('factory_swarm_archive_' ~ swarm.publicId) }}">
+                                        <input type="hidden" name="action" value="{{ swarm.isArchived ? 'unarchive' : 'archive' }}">
+                                        <input type="hidden" name="return_scope" value="{{ return_scope }}">
+                                        <button
+                                            class="factory-act"
+                                            type="submit"
+                                            title="{{ (swarm.isArchived ? 'factory.actions.restore' : 'factory.actions.archive')|trans }}"
+                                            aria-label="{{ (swarm.isArchived ? 'factory.actions.restore' : 'factory.actions.archive')|trans }}"
+                                        >
+                                            <twig:ux:icon name="{{ swarm.isArchived ? 'lucide:archive-restore' : 'lucide:archive' }}" />
+                                        </button>
+                                    </form>
+                                    <form method="post" action="{{ path('factory_swarm_delete', {publicId: swarm.publicId}) }}" class="factory-act-form">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('factory_swarm_delete_' ~ swarm.publicId) }}">
+                                        <input type="hidden" name="return_scope" value="{{ return_scope }}">
+                                        <button
+                                            class="factory-act factory-act--danger"
+                                            type="submit"
+                                            title="{{ 'factory.actions.delete'|trans }}"
+                                            aria-label="{{ 'factory.actions.delete'|trans }}"
+                                            data-confirm="{{ 'factory.actions.delete_swarm_confirm'|trans({title: swarm.title}) }}"
+                                            data-confirm-label="{{ 'factory.actions.delete'|trans }}"
+                                        >
+                                            <twig:ux:icon name="lucide:trash-2" />
+                                        </button>
+                                    </form>
+                                    <a class="factory-swarm-card__cta" href="{{ path('factory_swarm_show', {publicId: swarm.publicId}) }}">
+                                        {{ st == 'awaiting_approval' ? 'factory.swarm.review_plan_cta'|trans : 'common.open'|trans }}
+                                        <twig:ux:icon name="lucide:chevron-right" />
+                                    </a>
+                                </div>
                             </div>
-                        </a>
+                        </article>
                     {% endfor %}
                 </div>
             {% endif %}
@@ -333,11 +385,11 @@
             </div>
 
             <nav class="factory-status-tabs" aria-label="{{ 'factory.filter_status'|trans }}">
-                <a class="factory-status-tab{% if status_filter is null %} is-active{% endif %}" href="{{ path(base_route, base_params) }}" {% if status_filter is null %}aria-current="page"{% endif %}>
+                <a class="factory-status-tab{% if status_filter is null %} is-active{% endif %}" href="{{ path(base_route, view_params) }}" {% if status_filter is null %}aria-current="page"{% endif %}>
                     {{ 'factory.filter.all'|trans }}
                 </a>
                 {% for st in statuses %}
-                    <a class="factory-status-tab{% if status_filter == st %} is-active{% endif %}" href="{{ path(base_route, base_params|merge({status: st.value})) }}" {% if status_filter == st %}aria-current="page"{% endif %}>
+                    <a class="factory-status-tab{% if status_filter == st %} is-active{% endif %}" href="{{ path(base_route, view_params|merge({status: st.value})) }}" {% if status_filter == st %}aria-current="page"{% endif %}>
                         {{ st|trans }}
                     </a>
                 {% endfor %}
@@ -381,6 +433,7 @@
                                 <th scope="col">{{ 'factory.col.context'|trans }}</th>
                                 <th scope="col" class="num">{{ 'factory.col.files'|trans }}</th>
                                 <th scope="col" class="num">{{ 'factory.col.started'|trans }}</th>
+                                <th scope="col" class="factory-table__actions-head"><span class="visually-hidden">{{ 'factory.actions.col_label'|trans }}</span></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -419,9 +472,11 @@
                                         </span>
                                     </td>
                                     <td class="data-table__nowrap" data-label="{{ 'factory.col.runner'|trans }}">
-                                        <span class="tag">{{ session.runner|trans }}</span>
+                                        <span class="tag factory-runner-badge factory-runner-badge--{{ session.runner.value }}" title="{{ session.runner|trans }}">
+                                            {{ ('factory.runner_short.' ~ session.runner.value)|trans }}
+                                        </span>
                                     </td>
-                                    <td data-label="{{ 'factory.col.context'|trans }}">
+                                    <td class="data-table__nowrap" data-label="{{ 'factory.col.context'|trans }}">
                                         <div class="factory-context-chips">
                                             {% if session.branch %}
                                                 <code class="code-chip">{{ session.branch }}</code>
@@ -445,6 +500,37 @@
                                         <span class="row__sub num" title="{{ session.startedAt|date('Y-m-d H:i:s') }}">
                                             {{ session.startedAt|date('d/m H:i') }} · {{ duration_fmt }}
                                         </span>
+                                    </td>
+                                    <td class="data-table__nowrap factory-table__actions" data-label="{{ 'factory.actions.col_label'|trans }}">
+                                        <div class="factory-card-acts">
+                                            <form method="post" action="{{ path('factory_session_archive', {publicId: session.publicId}) }}" class="factory-act-form">
+                                                <input type="hidden" name="_token" value="{{ csrf_token('factory_session_archive_' ~ session.publicId) }}">
+                                                <input type="hidden" name="action" value="{{ session.isArchived ? 'unarchive' : 'archive' }}">
+                                                <input type="hidden" name="return_scope" value="{{ return_scope }}">
+                                                <button
+                                                    class="factory-act"
+                                                    type="submit"
+                                                    title="{{ (session.isArchived ? 'factory.actions.restore' : 'factory.actions.archive')|trans }}"
+                                                    aria-label="{{ (session.isArchived ? 'factory.actions.restore' : 'factory.actions.archive')|trans }}"
+                                                >
+                                                    <twig:ux:icon name="{{ session.isArchived ? 'lucide:archive-restore' : 'lucide:archive' }}" />
+                                                </button>
+                                            </form>
+                                            <form method="post" action="{{ path('factory_session_delete', {publicId: session.publicId}) }}" class="factory-act-form">
+                                                <input type="hidden" name="_token" value="{{ csrf_token('factory_session_delete_' ~ session.publicId) }}">
+                                                <input type="hidden" name="return_scope" value="{{ return_scope }}">
+                                                <button
+                                                    class="factory-act factory-act--danger"
+                                                    type="submit"
+                                                    title="{{ 'factory.actions.delete'|trans }}"
+                                                    aria-label="{{ 'factory.actions.delete'|trans }}"
+                                                    data-confirm="{{ 'factory.actions.delete_session_confirm'|trans({title: session.title}) }}"
+                                                    data-confirm-label="{{ 'factory.actions.delete'|trans }}"
+                                                >
+                                                    <twig:ux:icon name="lucide:trash-2" />
+                                                </button>
+                                            </form>
+                                        </div>
                                     </td>
                                 </tr>
                             {% endfor %}

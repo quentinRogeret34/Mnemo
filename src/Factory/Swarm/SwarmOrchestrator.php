@@ -538,6 +538,55 @@ final class SwarmOrchestrator
         $this->entityManager->flush();
     }
 
+    public function archive(SwarmRun $swarm, string $actor = 'human'): void
+    {
+        if ($swarm->getStatus()->isActive()) {
+            $this->cancel($swarm, $actor);
+        }
+
+        $swarm->archive();
+        $coordinator = $swarm->getCoordinatorSession();
+        if (null !== $coordinator) {
+            $coordinator->archive();
+            foreach ($this->sessionRepository->childrenOf($coordinator) as $child) {
+                $child->archive();
+            }
+        }
+
+        $this->entityManager->flush();
+    }
+
+    public function unarchive(SwarmRun $swarm): void
+    {
+        $swarm->unarchive();
+        $coordinator = $swarm->getCoordinatorSession();
+        if (null !== $coordinator) {
+            $coordinator->unarchive();
+            foreach ($this->sessionRepository->childrenOf($coordinator) as $child) {
+                $child->unarchive();
+            }
+        }
+
+        $this->entityManager->flush();
+    }
+
+    public function delete(SwarmRun $swarm): void
+    {
+        $coordinator = $swarm->getCoordinatorSession();
+        $children = null !== $coordinator ? $this->sessionRepository->childrenOf($coordinator) : [];
+
+        $this->entityManager->remove($swarm);
+        $this->entityManager->flush();
+
+        foreach ($children as $child) {
+            $this->entityManager->remove($child);
+        }
+        if (null !== $coordinator) {
+            $this->entityManager->remove($coordinator);
+        }
+        $this->entityManager->flush();
+    }
+
     public function postMessage(
         SwarmRun $swarm,
         string $author,

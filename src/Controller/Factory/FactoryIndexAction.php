@@ -49,11 +49,14 @@ final class FactoryIndexAction extends AbstractController
 
         $statusParam = $request->query->getString('status');
         $statusFilter = '' !== $statusParam ? AgentSessionStatus::tryFrom($statusParam) : null;
+        $showArchived = $request->query->getBoolean('archived');
         $allowed = null === $this->projectScope->slugs() ? null : $this->projectScope->projects();
 
-        $sessions = $this->sessionRepository->recent($project, $statusFilter, 60, $allowed);
-        $swarms = $this->swarmRepository->recent($project, null, 20, $allowed);
+        $sessions = $this->sessionRepository->recent($project, $statusFilter, 60, $allowed, $showArchived);
+        $swarms = $this->swarmRepository->recent($project, null, 20, $allowed, $showArchived);
         $stats = $this->sessionRepository->summaryStats($project, $allowed);
+        $archivedSwarmsCount = $this->swarmRepository->countArchived($project, $allowed);
+        $archivedSessionsCount = $this->sessionRepository->countArchived($project, $allowed);
 
         return $this->render('factory/index.html.twig', [
             'project' => $project,
@@ -62,6 +65,10 @@ final class FactoryIndexAction extends AbstractController
             'sessions' => $sessions,
             'swarms' => $swarms,
             'stats' => $stats,
+            'show_archived' => $showArchived,
+            'archived_swarms_count' => $archivedSwarmsCount,
+            'archived_sessions_count' => $archivedSessionsCount,
+            'archived_total_count' => $archivedSwarmsCount + $archivedSessionsCount,
             'status_filter' => $statusFilter,
             'statuses' => AgentSessionStatus::cases(),
             'runners' => AgentRunnerKind::cases(),

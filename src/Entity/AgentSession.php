@@ -74,6 +74,9 @@ class AgentSession
     #[ORM\Column(nullable: true)]
     private ?\DateTimeImmutable $finishedAt = null;
 
+    #[ORM\Column(nullable: true)]
+    private ?\DateTimeImmutable $archivedAt = null;
+
     public function __construct(
         #[ORM\ManyToOne]
         #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
@@ -270,6 +273,26 @@ class AgentSession
     public function getFinishedAt(): ?\DateTimeImmutable
     {
         return $this->finishedAt;
+    }
+
+    public function getArchivedAt(): ?\DateTimeImmutable
+    {
+        return $this->archivedAt;
+    }
+
+    public function isArchived(): bool
+    {
+        return null !== $this->archivedAt;
+    }
+
+    public function archive(): void
+    {
+        $this->archivedAt ??= new \DateTimeImmutable();
+    }
+
+    public function unarchive(): void
+    {
+        $this->archivedAt = null;
     }
 
     public function touch(?\DateTimeImmutable $at = null): void

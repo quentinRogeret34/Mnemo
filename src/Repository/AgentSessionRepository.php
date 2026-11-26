@@ -37,11 +37,13 @@ final class AgentSessionRepository
         ?AgentSessionStatus $status = null,
         int $limit = 50,
         ?array $allowedProjects = null,
+        bool $archived = false,
     ): array {
         $qb = $this->entityManager->createQueryBuilder()
             ->select('s', 'p')
             ->from(AgentSession::class, 's')
             ->innerJoin('s.project', 'p')
+            ->andWhere($archived ? 's.archivedAt IS NOT NULL' : 's.archivedAt IS NULL')
             ->orderBy('s.startedAt', 'DESC')
             ->addOrderBy('s.id', 'DESC')
             ->setMaxResults(max(1, min(200, $limit)));
@@ -63,6 +65,28 @@ final class AgentSessionRepository
         $rows = $qb->getQuery()->getResult();
 
         return $rows;
+    }
+
+    /**
+     * @param list<Project>|null $allowedProjects
+     */
+    public function countArchived(?Project $project = null, ?array $allowedProjects = null): int
+    {
+        $qb = $this->entityManager->createQueryBuilder()
+            ->select('COUNT(s.id)')
+            ->from(AgentSession::class, 's')
+            ->andWhere('s.archivedAt IS NOT NULL');
+
+        if (null !== $project) {
+            $qb->andWhere('s.project = :project')->setParameter('project', $project);
+        } elseif (null !== $allowedProjects) {
+            if ([] === $allowedProjects) {
+                return 0;
+            }
+            $qb->andWhere('s.project IN (:projects)')->setParameter('projects', $allowedProjects);
+        }
+
+        return (int) $qb->getQuery()->getSingleScalarResult();
     }
 
     /**
@@ -109,7 +133,7 @@ final class AgentSessionRepository
      */
     public function summaryStats(?Project $project = null, ?array $allowedProjects = null): FactoryStats
     {
-        $where = [];
+        $where = ['archived_at IS NULL'];
         $params = [
             'since' => (new \DateTimeImmutable('-24 hours'))->format('Y-m-d H:i:s'),
         ];

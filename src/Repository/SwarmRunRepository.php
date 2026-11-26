@@ -33,11 +33,13 @@ final class SwarmRunRepository
         ?SwarmStatus $status = null,
         int $limit = 30,
         ?array $allowedProjects = null,
+        bool $archived = false,
     ): array {
         $qb = $this->entityManager->createQueryBuilder()
             ->select('r', 'p')
             ->from(SwarmRun::class, 'r')
             ->innerJoin('r.project', 'p')
+            ->andWhere($archived ? 'r.archivedAt IS NOT NULL' : 'r.archivedAt IS NULL')
             ->orderBy('r.createdAt', 'DESC')
             ->addOrderBy('r.id', 'DESC')
             ->setMaxResults(max(1, min(100, $limit)));
@@ -59,6 +61,28 @@ final class SwarmRunRepository
         $rows = $qb->getQuery()->getResult();
 
         return $rows;
+    }
+
+    /**
+     * @param list<Project>|null $allowedProjects
+     */
+    public function countArchived(?Project $project = null, ?array $allowedProjects = null): int
+    {
+        $qb = $this->entityManager->createQueryBuilder()
+            ->select('COUNT(r.id)')
+            ->from(SwarmRun::class, 'r')
+            ->andWhere('r.archivedAt IS NOT NULL');
+
+        if (null !== $project) {
+            $qb->andWhere('r.project = :project')->setParameter('project', $project);
+        } elseif (null !== $allowedProjects) {
+            if ([] === $allowedProjects) {
+                return 0;
+            }
+            $qb->andWhere('r.project IN (:projects)')->setParameter('projects', $allowedProjects);
+        }
+
+        return (int) $qb->getQuery()->getSingleScalarResult();
     }
 
     /**

@@ -234,6 +234,29 @@
                         </form>
                     {% endif %}
 
+                    {% if not swarm.status.isActive %}
+                        <form method="post" action="{{ path('factory_swarm_archive', {publicId: swarm.publicId}) }}">
+                            <input type="hidden" name="_token" value="{{ csrf_token('factory_swarm_archive_' ~ swarm.publicId) }}">
+                            <input type="hidden" name="action" value="{{ swarm.isArchived ? 'unarchive' : 'archive' }}">
+                            <button class="button button--ghost" type="submit">
+                                <twig:ux:icon name="{{ swarm.isArchived ? 'lucide:archive-restore' : 'lucide:archive' }}" />
+                                <span>{{ (swarm.isArchived ? 'factory.actions.restore' : 'factory.actions.archive')|trans }}</span>
+                            </button>
+                        </form>
+                        <form method="post" action="{{ path('factory_swarm_delete', {publicId: swarm.publicId}) }}">
+                            <input type="hidden" name="_token" value="{{ csrf_token('factory_swarm_delete_' ~ swarm.publicId) }}">
+                            <button
+                                class="button button--ghost hub-order-btn--danger"
+                                type="submit"
+                                data-confirm="{{ 'factory.actions.delete_swarm_confirm'|trans({title: swarm.title}) }}"
+                                data-confirm-label="{{ 'factory.actions.delete'|trans }}"
+                            >
+                                <twig:ux:icon name="lucide:trash-2" />
+                                <span>{{ 'factory.actions.delete'|trans }}</span>
+                            </button>
+                        </form>
+                    {% endif %}
+
                     <button
                         class="button button--ghost chat-icon-btn"
                         type="button"

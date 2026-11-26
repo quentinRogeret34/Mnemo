@@ -123,4 +123,107 @@ final class SwarmControllerTest extends WebTestCase
         $em->clear();
         self::assertSame(SwarmStatus::Cancelled, $em->getRepository(SwarmRun::class)->findOneBy(['publicId' => $swarm->getPublicId()])?->getStatus());
     }
+
+    public function testSwarmAndSessionCanBeArchivedRestoredAndDeleted(): void
+    {
+        $client = self::createClient();
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        $em->getConnection()->executeStatement('TRUNCATE swarm_order, swarm_node, swarm_message, swarm_run, agent_session_event, agent_session, user_preference, project RESTART IDENTITY CASCADE');
+
+        $project = new Project('cleanup', 'Cleanup', '/tmp/cleanup');
+        $em->persist($project);
+        $em->flush();
+
+        // 1. Create a swarm + standalone session via UI
+        $crawler = $client->request('GET', '/projects/cleanup/factory');
+        $swarmLaunchToken = (string) $crawler->filter('#factory-new-swarm input[name="_token"]')->attr('value');
+        $sessionStartToken = (string) $crawler->filter('#factory-new-session input[name="_token"]')->attr('value');
+
+        $client->request('POST', '/projects/cleanup/factory/swarms', [
+            '_token' => $swarmLaunchToken,
+            'title' => 'Ruche temporaire',
+            'goal' => 'Tester archivage et suppression.',
+            'strategy' => 'parallel',
+            'worker_runner' => 'external_hub',
+            'skip_initial_plan' => '1',
+        ]);
+        self::assertResponseRedirects();
+
+        $client->request('POST', '/projects/cleanup/factory/sessions', [
+            '_token' => $sessionStartToken,
+            'title' => 'Session temporaire',
+            'role' => 'developer',
+            'runner' => 'external_mcp',
+        ]);
+        self::assertResponseRedirects();
+
+        $crawler = $client->request('GET', '/projects/cleanup/factory');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('body', 'Ruche temporaire');
+        self::assertSelectorTextContains('.factory-table', 'Session temporaire');
+
+        // 2. Archive the swarm -> hidden from active list, visible in ?archived=1
+        $swarmArchiveForm = $crawler->filter('form[action$="/archive"]')->first();
+        $swarmArchiveAction = (string) $swarmArchiveForm->attr('action');
+        $swarmArchiveToken = (string) $swarmArchiveForm->filter('input[name="_token"]')->attr('value');
+
+        $client->request('POST', $swarmArchiveAction, [
+            '_token' => $swarmArchiveToken,
+            'action' => 'archive',
+            'return_scope' => 'project',
+        ]);
+        self::assertResponseRedirects('/projects/cleanup/factory');
+
+        $client->request('GET', '/projects/cleanup/factory');
+        self::assertSelectorTextNotContains('.factory-section', 'Ruche temporaire');
+
+        $archivedCrawler = $client->request('GET', '/projects/cleanup/factory?archived=1');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('body', 'Ruche temporaire');
+
+        // 3. Restore the swarm -> back in active list
+        $restoreForm = $archivedCrawler->filter('form[action$="/archive"]')->first();
+        $client->request('POST', (string) $restoreForm->attr('action'), [
+            '_token' => (string) $restoreForm->filter('input[name="_token"]')->attr('value'),
+            'action' => 'unarchive',
+            'return_scope' => 'project',
+        ]);
+        self::assertResponseRedirects('/projects/cleanup/factory?archived=1');
+
+        $activeCrawler = $client->request('GET', '/projects/cleanup/factory');
+        self::assertSelectorTextContains('body', 'Ruche temporaire');
+
+        // 4. Delete the swarm -> gone completely
+        $swarmDeleteForm = $activeCrawler->filter('form[action^="/factory/swarms/"][action$="/delete"]')->first();
+        $client->request('POST', (string) $swarmDeleteForm->attr('action'), [
+            '_token' => (string) $swarmDeleteForm->filter('input[name="_token"]')->attr('value'),
+            'return_scope' => 'project',
+        ]);
+        self::assertResponseRedirects('/projects/cleanup/factory');
+
+        $afterSwarmDelete = $client->request('GET', '/projects/cleanup/factory');
+        self::assertSelectorTextNotContains('body', 'Ruche temporaire');
+
+        // 5. Archive and delete the standalone session
+        $sessionArchiveForm = $afterSwarmDelete->filter('form[action^="/factory/sessions/"][action$="/archive"]')->first();
+        $client->request('POST', (string) $sessionArchiveForm->attr('action'), [
+            '_token' => (string) $sessionArchiveForm->filter('input[name="_token"]')->attr('value'),
+            'action' => 'archive',
+            'return_scope' => 'project',
+        ]);
+        self::assertResponseRedirects('/projects/cleanup/factory');
+
+        $archivedSessionsCrawler = $client->request('GET', '/projects/cleanup/factory?archived=1');
+        self::assertSelectorTextContains('.factory-table', 'Session temporaire');
+
+        $sessionDeleteForm = $archivedSessionsCrawler->filter('form[action^="/factory/sessions/"][action$="/delete"]')->first();
+        $client->request('POST', (string) $sessionDeleteForm->attr('action'), [
+            '_token' => (string) $sessionDeleteForm->filter('input[name="_token"]')->attr('value'),
+            'return_scope' => 'project',
+        ]);
+        self::assertResponseRedirects('/projects/cleanup/factory?archived=1');
+
+        $client->request('GET', '/projects/cleanup/factory?archived=1');
+        self::assertSelectorTextNotContains('body', 'Session temporaire');
+    }
 }

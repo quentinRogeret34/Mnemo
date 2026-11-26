@@ -799,6 +799,16 @@ file:
     unused: 'No other file uses it.'
     used_by: 'Used by'
 factory:
+    actions:
+        active_tab: Active
+        archive: Archive
+        archived_banner: 'Viewing archived swarms and sessions.'
+        archived_tab: Archived
+        col_label: Actions
+        delete: Delete
+        delete_session_confirm: 'Permanently delete session “{title}” and its timeline?'
+        delete_swarm_confirm: 'Permanently delete swarm “{title}”, its orders and linked sessions?'
+        restore: Restore
     back_to_list: 'Back to sessions'
     col:
         context: Context
@@ -818,12 +828,15 @@ factory:
         all: All
     filter_status: 'Filter by status'
     flash:
+        archived: 'Session archived.'
+        deleted: 'Session deleted.'
         event_added: 'Event appended to session timeline.'
         finished: 'Session closed.'
         message_required: 'Provide a message to record the event.'
         project_required: 'Select a project before starting.'
         started: 'Session started and tracked.'
         title_required: 'Provide a title for the session.'
+        unarchived: 'Session restored.'
     form:
         advanced: 'Advanced options'
         branch: Branch
@@ -958,6 +971,13 @@ factory:
     onboarding:
         subtitle: 'Choose how you want to work: automated orchestration by Mnemo or live tracking of your local agents.'
         title: 'How to use the Software Factory'
+    runner_short:
+        claude_cli: 'Claude CLI'
+        codex_cli: 'Codex CLI'
+        external_hub: 'Interactive Hub'
+        external_mcp: 'MCP / IDE'
+        gemini_cli: 'Gemini CLI'
+        internal_llm: 'Internal LLM'
     runners:
         label: 'Available runners'
         optional_missing: '{count, plural, one {# optional local CLI not installed} other {# optional local CLIs not installed}}'
@@ -1010,9 +1030,12 @@ factory:
         empty_title: 'No swarm run yet'
         flash:
             approved: 'Plan approved: workers have been dispatched.'
+            archived: 'Swarm archived.'
+            deleted: 'Swarm deleted.'
             launched: 'Swarm created and planning triggered.'
             message_posted: 'Message posted on the swarm board.'
             title_goal_required: 'Provide a title and goal for the swarm.'
+            unarchived: 'Swarm restored.'
             updated: 'Swarm status updated.'
         label: Swarm
         launch_button: 'Launch a swarm'

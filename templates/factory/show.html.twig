@@ -26,6 +26,26 @@
             </p>
         </div>
         <div class="view-head__actions">
+            <form method="post" action="{{ path('factory_session_archive', {publicId: session.publicId}) }}">
+                <input type="hidden" name="_token" value="{{ csrf_token('factory_session_archive_' ~ session.publicId) }}">
+                <input type="hidden" name="action" value="{{ session.isArchived ? 'unarchive' : 'archive' }}">
+                <button class="button button--ghost" type="submit">
+                    <twig:ux:icon name="{{ session.isArchived ? 'lucide:archive-restore' : 'lucide:archive' }}" />
+                    {{ (session.isArchived ? 'factory.actions.restore' : 'factory.actions.archive')|trans }}
+                </button>
+            </form>
+            <form method="post" action="{{ path('factory_session_delete', {publicId: session.publicId}) }}">
+                <input type="hidden" name="_token" value="{{ csrf_token('factory_session_delete_' ~ session.publicId) }}">
+                <button
+                    class="button button--ghost hub-order-btn--danger"
+                    type="submit"
+                    data-confirm="{{ 'factory.actions.delete_session_confirm'|trans({title: session.title}) }}"
+                    data-confirm-label="{{ 'factory.actions.delete'|trans }}"
+                >
+                    <twig:ux:icon name="lucide:trash-2" />
+                    {{ 'factory.actions.delete'|trans }}
+                </button>
+            </form>
             <a class="button" href="{{ path('project_factory', {slug: project.slug}) }}">{{ 'factory.back_to_list'|trans }}</a>
         </div>
     </div>

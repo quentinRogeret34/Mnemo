@@ -799,6 +799,16 @@ file:
     unused: "Aucun autre fichier ne l'utilise."
     used_by: 'Utilisé par'
 factory:
+    actions:
+        active_tab: Actives
+        archive: Archiver
+        archived_banner: 'Vous consultez les ruches et sessions archivées.'
+        archived_tab: Archivées
+        col_label: Actions
+        delete: Supprimer
+        delete_session_confirm: 'Supprimer définitivement la session « {title} » et sa timeline ?'
+        delete_swarm_confirm: 'Supprimer définitivement la ruche « {title} », ses ordres et ses sessions liées ?'
+        restore: Restaurer
     back_to_list: 'Retour aux sessions'
     col:
         context: Contexte
@@ -818,12 +828,15 @@ factory:
         all: Toutes
     filter_status: 'Filtrer par statut'
     flash:
+        archived: 'Session archivée.'
+        deleted: 'Session supprimée.'
         event_added: 'Événement ajouté à la timeline de session.'
         finished: 'Session clôturée.'
         message_required: 'Renseigner un message pour enregistrer l’événement.'
         project_required: 'Sélectionner un projet avant de démarrer.'
         started: 'Session démarrée et tracée.'
         title_required: 'Donner un titre à la session.'
+        unarchived: 'Session restaurée.'
     form:
         advanced: 'Options avancées'
         branch: Branche
@@ -958,6 +971,13 @@ factory:
     onboarding:
         subtitle: 'Choisissez votre mode de travail : orchestration automatique par Mnemo ou suivi de vos agents locaux.'
         title: 'Comment utiliser la Software Factory'
+    runner_short:
+        claude_cli: 'Claude CLI'
+        codex_cli: 'Codex CLI'
+        external_hub: 'Hub interactif'
+        external_mcp: 'MCP / IDE'
+        gemini_cli: 'Gemini CLI'
+        internal_llm: 'LLM interne'
     runners:
         label: 'Runners disponibles'
         optional_missing: '{count, plural, one {# CLI local optionnel non installé} other {# CLIs locaux optionnels non installés}}'
@@ -1010,9 +1030,12 @@ factory:
         empty_title: 'Aucune ruche lancée'
         flash:
             approved: 'Plan approuvé : les workers ont été lancés.'
+            archived: 'Ruche archivée.'
+            deleted: 'Ruche supprimée.'
             launched: 'Ruche créée et planification déclenchée.'
             message_posted: 'Message publié sur le board de la ruche.'
             title_goal_required: 'Donner un titre et un objectif à la ruche.'
+            unarchived: 'Ruche restaurée.'
             updated: 'État de la ruche mis à jour.'
         label: Ruche
         launch_button: 'Lancer une ruche'
