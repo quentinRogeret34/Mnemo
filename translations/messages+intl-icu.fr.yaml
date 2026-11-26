@@ -141,17 +141,34 @@ appearance:
     text_size: 'Taille du texte'
     theme: Thème
 briefing:
+    ai_empty: 'Aucune synthèse générée pour cette période.'
     ai_summary: 'Synthèse métier (IA)'
+    blockers_title: '{count, plural, one {# point bloquant à arbitrer} other {# points bloquants à arbitrer}}'
+    commits_toggle: '{count, plural, one {# commit récent} other {# commits récents}}'
     configure_webhook: 'Configurer un webhook Slack / Discord / Teams'
     copy_markdown: 'Copier en Markdown'
     decisions: 'Décisions actées'
+    decisions_clarifications: 'Décisions & clarifications'
+    decisions_clarifications_empty: 'Aucune décision ni clarification sur cette période.'
     decisions_empty: 'Aucune décision enregistrée sur cette période.'
-    dev_activity: 'Activité technique récente'
+    dev_activity: 'Livraisons techniques'
     dev_counts: '{prs} PR/tickets · {commits} commits'
     dev_empty: 'Aucun commit ni PR synchronisé sur cette période.'
     export_desc: 'Prêt à coller dans Slack, Notion ou un compte-rendu de sprint.'
     export_title: 'Export Markdown'
+    gauge:
+        aria: 'Alignement métier et code : {score} %'
+        aria_empty: 'Alignement métier et code non calculé'
+        label: Alignement
+        no_rules: 'Aucune règle métier définie'
+        to_review: '{count} à valider'
+        validated: '{count} validées'
+        without_code: '{count} sans code'
     generate: 'Générer le résumé IA'
+    health:
+        aligned: Aligné
+        attention: 'À arbitrer'
+        blocked: Bloqué
     kpi:
         alignment: 'Alignement Métier ↔ Dev'
         clarifications: '{count, plural, =0 {aucune clarification} one {# clarification} other {# clarifications}}'
@@ -159,9 +176,16 @@ briefing:
         rules_touched: 'Règles évoluées'
     lede: 'Résumé en langage métier des règles touchées, décisions actées, questions ouvertes et livraisons récentes du projet.'
     open_questions: 'Questions en attente'
+    other_questions: 'Autres questions en attente'
     rules_empty: 'Aucune règle métier modifiée ou touchée sur cette période.'
-    rules_touched: 'Règles métier évoluées ou touchées'
+    rules_touched: 'Règles métier évoluées'
+    scorecard:
+        dev: 'Livraisons dev'
+        documents: Documents
+        documents_added: '+{count} sur la période'
+        title: 'Repères de la période'
     send_webhook: 'Envoyer sur {format}'
+    view_all_questions: 'Voir tout'
 chat:
     action:
         memory: 'Mémoire #{id} enregistrée'

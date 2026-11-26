@@ -13,7 +13,7 @@
     <form method="post" action="{{ path('project_briefing_generate', {slug: project.slug}) }}">
         <input type="hidden" name="_token" value="{{ briefing_token }}">
         <input type="hidden" name="period" value="{{ period }}">
-        <button class="button button--primary" type="submit"><twig:ux:icon name="lucide:file-text" />{{ 'briefing.generate'|trans }}</button>
+        <button class="button button--primary" type="submit"><twig:ux:icon name="lucide:wand-sparkles" />{{ 'briefing.generate'|trans }}</button>
     </form>
     {% if project.hasWebhook %}
         <form method="post" action="{{ path('project_briefing_send', {slug: project.slug}) }}">
@@ -27,158 +27,429 @@
 {% block body %}
     {% set alignment = data.alignment %}
     {% set period_labels = {'7d': 'period.7d', '30d': 'period.30d'} %}
+    {% set briefing_token = csrf_token('briefing-' ~ project.id) %}
 
-    <div class="view-head" data-tone="violet">
-        <h1><twig:ux:icon name="lucide:library" />{{ 'nav.briefing'|trans }}</h1>
-        <span class="view-head__meta">{{ project.name }}</span>
-    </div>
-
-    <div class="filter-bar">
-        <nav class="tabs" aria-label="{{ 'period.label'|trans }}">
-            {% for item in periods %}
-                <a href="{{ path('project_briefing', {slug: project.slug, period: item}) }}" {% if item == period %}aria-current="page"{% endif %}>{{ period_labels[item]|trans }}</a>
-            {% endfor %}
-        </nav>
-        {% if not project.hasWebhook %}
-            <a class="link" href="{{ path('project_settings', {slug: project.slug}) }}#notifications">{{ 'briefing.configure_webhook'|trans }}</a>
-        {% endif %}
-    </div>
-
-    <section class="kpis" aria-label="{{ 'dashboard.key_figures'|trans }}">
-        <div class="kpi">
-            <span class="kpi__label">{{ ux_icon('lucide:scale') }}{{ 'briefing.kpi.alignment'|trans }}</span>
-            <span class="kpi__value">{{ alignment.alignment_score is not null ? alignment.alignment_score ~ ' %' : '—' }}</span>
-            <div class="kpi__foot"><span class="kpi__delta"><span>{{ 'dashboard.business.rules_sub'|trans({validated: alignment.rules_validated, to_review: alignment.rules_to_review}) }}</span></span></div>
-        </div>
-        <div class="kpi">
-            <span class="kpi__label">{{ ux_icon('lucide:clipboard-check') }}{{ 'briefing.kpi.rules_touched'|trans }}</span>
-            <span class="kpi__value">{{ data.rulesTouched|length }}</span>
-            <div class="kpi__foot"><span class="kpi__delta"><span>{{ ('dashboard.period.' ~ period)|trans }}</span></span></div>
-        </div>
-        <div class="kpi">
-            <span class="kpi__label">{{ ux_icon('lucide:gavel') }}{{ 'briefing.kpi.decisions'|trans }}</span>
-            <span class="kpi__value">{{ data.decisions|length }}</span>
-            <div class="kpi__foot"><span class="kpi__delta"><span>{{ 'briefing.kpi.clarifications'|trans({count: data.answeredQuestions|length}) }}</span></span></div>
-        </div>
-        <a class="kpi kpi--link" href="{{ path('project_questions', {slug: project.slug}) }}">
-            <span class="kpi__label">{{ ux_icon('lucide:triangle-alert') }}{{ 'dashboard.business.shadow_open'|trans }}</span>
-            <span class="kpi__value">{{ alignment.shadow_open }}</span>
-            <div class="kpi__foot"><span class="kpi__delta"><span>{{ 'dashboard.business.shadow_blockers'|trans({count: alignment.shadow_blockers}) }}</span></span></div>
-        </a>
-    </section>
-
-    {% if narrative %}
-        <section class="panel briefing-narrative" aria-labelledby="briefing-ai-title">
-            <div class="panel__head">
-                <h2 id="briefing-ai-title"><twig:ux:icon name="lucide:file-text" />{{ 'briefing.ai_summary'|trans }}</h2>
-            </div>
-            <div class="prose">{{ narrative|markdown_to_html }}</div>
-        </section>
+    {% set score = alignment.alignment_score %}
+    {% if alignment.shadow_blockers > 0 %}
+        {% set health = {tone: 'danger', icon: 'lucide:shield-alert', label: 'briefing.health.blocked'|trans} %}
+    {% elseif alignment.shadow_open > 0 or alignment.rules_to_review > 0 or (score is not null and score < 80) %}
+        {% set health = {tone: 'warning', icon: 'lucide:triangle-alert', label: 'briefing.health.attention'|trans} %}
+    {% else %}
+        {% set health = {tone: 'success', icon: 'lucide:shield-check', label: 'briefing.health.aligned'|trans} %}
     {% endif %}
 
-    <div class="panels">
-        <section class="panel" aria-labelledby="briefing-rules-title">
-            <div class="panel__head">
-                <h2 id="briefing-rules-title">{{ 'briefing.rules_touched'|trans }}</h2>
-                <span class="block__count num">{{ data.rulesTouched|length }}</span>
-            </div>
-            {% if data.rulesTouched is empty %}
-                <p class="block__empty">{{ 'briefing.rules_empty'|trans }}</p>
-            {% else %}
-                <ul class="list">
-                    {% for rule in data.rulesTouched %}
-                        <li>
-                            <a class="row" href="{{ path('rule_show', {slug: project.slug, code: rule.code}) }}">
-                                <span class="code-chip">{{ rule.code }}</span>
-                                <span class="row__title"><span>{{ rule.title }}</span></span>
-                                <span class="row__meta"><span class="status status--{{ rule.status }}">{{ (rule.status == 'validated' ? 'rule.validated' : 'nav.to_review')|trans }}</span></span>
-                            </a>
-                        </li>
-                    {% endfor %}
-                </ul>
-            {% endif %}
-        </section>
+    {% set gauge_tone = score is null ? 'empty' : (score >= 80 ? 'good' : (score >= 50 ? 'warn' : 'bad')) %}
+    {% set gauge_arc = 216.77 %}
+    {% set gauge_fill = score is not null ? ((score / 100) * gauge_arc)|number_format(2, '.', '') : '0' %}
 
-        <section class="panel" aria-labelledby="briefing-decisions-title">
-            <div class="panel__head">
-                <h2 id="briefing-decisions-title">{{ 'briefing.decisions'|trans }}</h2>
-                <span class="block__count num">{{ data.decisions|length }}</span>
-            </div>
-            {% if data.decisions is empty %}
-                <p class="block__empty">{{ 'briefing.decisions_empty'|trans }}</p>
-            {% else %}
-                <ul class="list">
-                    {% for item in data.decisions %}
-                        <li>
-                            <a class="row" href="{{ path('memory_show', {id: item.id}) }}">
-                                <span class="row__title"><span>{{ item.text }}</span></span>
-                                <span class="row__meta"><span class="num">{{ item.created_at|format_date('short') }}</span></span>
-                            </a>
-                        </li>
-                    {% endfor %}
-                </ul>
-            {% endif %}
-        </section>
+    {% set blocker_questions = data.openQuestions|filter(q => q.severity == 'blocker') %}
+    {% set other_questions = data.openQuestions|filter(q => q.severity != 'blocker') %}
 
-        <section class="panel" aria-labelledby="briefing-questions-title">
-            <div class="panel__head">
-                <h2 id="briefing-questions-title">{{ 'briefing.open_questions'|trans }}</h2>
-                <span class="block__count num">{{ data.openQuestions|length }}</span>
-            </div>
-            {% if data.openQuestions is empty %}
-                <p class="block__empty">{{ 'dashboard.business.no_shadow'|trans }}</p>
-            {% else %}
-                <ul class="shadow-list">
-                    {% for item in data.openQuestions %}
-                        <li class="shadow-list__item">
-                            <span class="pill pill--{{ item.severity == 'blocker' ? 'danger' : (item.severity == 'major' ? 'warning' : 'neutral') }}">{{ item.severity }}</span>
-                            <div class="shadow-list__body">
-                                <a class="shadow-list__question" href="{{ path('rule_show', {slug: project.slug, code: item.rule_code}) }}#shadow-title">{{ item.question ?: item.gap }}</a>
-                                <span class="row__sub"><span class="mono">{{ item.rule_code }}</span> · {{ item.rule_title }}</span>
-                            </div>
-                        </li>
-                    {% endfor %}
-                </ul>
-            {% endif %}
-        </section>
+    {% set timeline_items = [] %}
+    {% for item in data.decisions %}
+        {% set timeline_items = timeline_items|merge([{
+            kind: 'decision',
+            ts: item.created_at ? (item.created_at|date('U') + 0) : 0,
+            date: item.created_at,
+            id: item.id,
+            text: item.text
+        }]) %}
+    {% endfor %}
+    {% for item in data.answeredQuestions %}
+        {% set timeline_items = timeline_items|merge([{
+            kind: 'clarification',
+            ts: item.resolved_at ? (item.resolved_at|date('U') + 0) : 0,
+            date: item.resolved_at,
+            rule_code: item.rule_code,
+            rule_title: item.rule_title,
+            question: item.question,
+            answer: item.answer,
+            resolved_by: item.resolved_by
+        }]) %}
+    {% endfor %}
+    {% set timeline_items = timeline_items|sort((a, b) => b.ts <=> a.ts) %}
 
-        <section class="panel" aria-labelledby="briefing-activity-title">
-            <div class="panel__head">
-                <h2 id="briefing-activity-title">{{ 'briefing.dev_activity'|trans }}</h2>
-                <span class="row__sub num">{{ 'briefing.dev_counts'|trans({prs: data.tickets|length, commits: data.commitsTotal}) }}</span>
-            </div>
-            {% if data.tickets is empty and data.commits is empty %}
-                <p class="block__empty">{{ 'briefing.dev_empty'|trans }}</p>
-            {% else %}
-                <ul class="list">
-                    {% for ticket in data.tickets|slice(0, 8) %}
-                        <li class="row">
-                            <twig:ux:icon name="lucide:git-pull-request" class="icon nav-item__icon" />
-                            <span class="code-chip">{{ ticket.ref }}</span>
-                            <span class="row__title"><span>{{ ticket.label }}</span></span>
-                            {% if ticket.state %}<span class="tag">{{ ticket.state }}</span>{% endif %}
-                        </li>
-                    {% endfor %}
-                    {% for commit in data.commits|slice(0, 5) %}
-                        <li class="row">
-                            <twig:ux:icon name="lucide:git-commit-horizontal" class="icon nav-item__icon" />
-                            <span class="code-chip mono">{{ commit.ref|slice(0, 7) }}</span>
-                            <span class="row__title"><span>{{ commit.label }}</span></span>
-                        </li>
-                    {% endfor %}
-                </ul>
-            {% endif %}
-        </section>
-    </div>
-
-    <section class="panel briefing-export" aria-labelledby="briefing-export-title" data-controller="clipboard">
-        <div class="panel__head">
-            <h2 id="briefing-export-title">{{ 'briefing.export_title'|trans }}</h2>
-            <button class="button" type="button" data-action="clipboard#copy">
-                <twig:ux:icon name="lucide:copy" />
-                <span data-clipboard-target="label">{{ 'briefing.copy_markdown'|trans }}</span>
-            </button>
+    <div class="briefing-page" data-controller="clipboard">
+        <div class="view-head" data-tone="violet">
+            <h1><twig:ux:icon name="lucide:library" />{{ 'nav.briefing'|trans }}</h1>
+            <span class="view-head__meta">{{ project.name }}</span>
+            <span class="pill pill--{{ health.tone }} briefing-health">
+                <twig:ux:icon name="{{ health.icon }}" />
+                <span>{{ health.label }}</span>
+            </span>
         </div>
-        <pre class="briefing-export__code mono" data-clipboard-target="source">{{ markdown }}</pre>
-    </section>
+
+        <div class="filter-bar">
+            <nav class="tabs" aria-label="{{ 'period.label'|trans }}">
+                {% for item in periods %}
+                    <a href="{{ path('project_briefing', {slug: project.slug, period: item}) }}" {% if item == period %}aria-current="page"{% endif %}>{{ period_labels[item]|trans }}</a>
+                {% endfor %}
+            </nav>
+            <div class="briefing-bar__actions">
+                {% if not project.hasWebhook %}
+                    <a class="link briefing-bar__webhook" href="{{ path('project_settings', {slug: project.slug}) }}#notifications">
+                        <twig:ux:icon name="lucide:plug" />
+                        <span>{{ 'briefing.configure_webhook'|trans }}</span>
+                    </a>
+                {% endif %}
+                <button class="button button--ghost briefing-copy-btn" type="button" data-action="clipboard#copy">
+                    <twig:ux:icon name="lucide:copy" />
+                    <span data-clipboard-target="label">{{ 'briefing.copy_markdown'|trans }}</span>
+                </button>
+            </div>
+        </div>
+
+        <section class="briefing-hero" aria-label="{{ 'dashboard.key_figures'|trans }}">
+            <div class="panel briefing-gauge-card">
+                <div class="briefing-gauge-card__top">
+                    <div class="briefing-gauge briefing-gauge--{{ gauge_tone }}" role="img" aria-label="{{ score is not null ? 'briefing.gauge.aria'|trans({score: score}) : 'briefing.gauge.aria_empty'|trans }}">
+                        <svg class="briefing-gauge__svg" viewBox="0 0 120 120" aria-hidden="true">
+                            <circle class="briefing-gauge__track" cx="60" cy="60" r="46" fill="none" stroke-width="9" stroke-linecap="round" stroke-dasharray="216.77 289.03" transform="rotate(135 60 60)" />
+                            {% if score is not null and score > 0 %}
+                                <circle class="briefing-gauge__fill" cx="60" cy="60" r="46" fill="none" stroke-width="9" stroke-linecap="round" stroke-dasharray="{{ gauge_fill }} 289.03" transform="rotate(135 60 60)" />
+                            {% endif %}
+                        </svg>
+                        <div class="briefing-gauge__center">
+                            <span class="briefing-gauge__value num">{{ score is not null ? score ~ ' %' : '—' }}</span>
+                            <span class="briefing-gauge__label">{{ 'briefing.gauge.label'|trans }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                {% if alignment.rules_total > 0 %}
+                    {% set remainder = alignment.rules_total - alignment.rules_validated - alignment.rules_to_review %}
+                    <div class="briefing-segments" aria-hidden="true">
+                        {% if alignment.rules_validated > 0 %}
+                            <span class="briefing-segments__part briefing-segments__part--validated" style="flex-grow: {{ alignment.rules_validated }}"></span>
+                        {% endif %}
+                        {% if alignment.rules_to_review > 0 %}
+                            <span class="briefing-segments__part briefing-segments__part--review" style="flex-grow: {{ alignment.rules_to_review }}"></span>
+                        {% endif %}
+                        {% if remainder > 0 %}
+                            <span class="briefing-segments__part briefing-segments__part--other" style="flex-grow: {{ remainder }}"></span>
+                        {% endif %}
+                    </div>
+                    <ul class="briefing-legend">
+                        <li class="briefing-legend__item">
+                            <span class="briefing-legend__dot briefing-legend__dot--validated" aria-hidden="true"></span>
+                            <span class="num">{{ 'briefing.gauge.validated'|trans({count: alignment.rules_validated}) }}</span>
+                        </li>
+                        <li class="briefing-legend__item">
+                            <span class="briefing-legend__dot briefing-legend__dot--review" aria-hidden="true"></span>
+                            <span class="num">{{ 'briefing.gauge.to_review'|trans({count: alignment.rules_to_review}) }}</span>
+                        </li>
+                        <li class="briefing-legend__item">
+                            <span class="briefing-legend__dot briefing-legend__dot--unlinked" aria-hidden="true"></span>
+                            <span class="num">{{ 'briefing.gauge.without_code'|trans({count: alignment.rules_without_code}) }}</span>
+                        </li>
+                    </ul>
+                {% else %}
+                    <p class="briefing-gauge-card__empty">{{ 'briefing.gauge.no_rules'|trans }}</p>
+                {% endif %}
+            </div>
+
+            <section class="panel briefing-narrative{{ narrative ? ' briefing-narrative--filled' : ' briefing-narrative--empty' }}" aria-labelledby="briefing-ai-title">
+                <div class="briefing-panel__head">
+                    <div class="briefing-panel__title">
+                        <span class="briefing-icon-tile briefing-icon-tile--accent" aria-hidden="true"><twig:ux:icon name="lucide:wand-sparkles" /></span>
+                        <h2 id="briefing-ai-title">{{ 'briefing.ai_summary'|trans }}</h2>
+                    </div>
+                    <span class="pill">{{ period_labels[period]|trans }}</span>
+                </div>
+                {% if narrative %}
+                    <div class="prose briefing-narrative__prose">{{ narrative|markdown_to_html }}</div>
+                {% else %}
+                    <div class="briefing-narrative__placeholder">
+                        <p>{{ 'briefing.ai_empty'|trans }}</p>
+                        <form method="post" action="{{ path('project_briefing_generate', {slug: project.slug}) }}">
+                            <input type="hidden" name="_token" value="{{ briefing_token }}">
+                            <input type="hidden" name="period" value="{{ period }}">
+                            <button class="button" type="submit"><twig:ux:icon name="lucide:wand-sparkles" />{{ 'briefing.generate'|trans }}</button>
+                        </form>
+                    </div>
+                {% endif %}
+            </section>
+        </section>
+
+        {% if alignment.shadow_blockers > 0 %}
+            <section class="panel briefing-blockers" aria-labelledby="briefing-blockers-title">
+                <div class="briefing-panel__head">
+                    <div class="briefing-panel__title">
+                        <span class="briefing-icon-tile briefing-icon-tile--danger" aria-hidden="true"><twig:ux:icon name="lucide:shield-alert" /></span>
+                        <h2 id="briefing-blockers-title">{{ 'briefing.blockers_title'|trans({count: alignment.shadow_blockers}) }}</h2>
+                    </div>
+                    <a class="link briefing-panel__more" href="{{ path('project_questions', {slug: project.slug}) }}">
+                        <span>{{ 'briefing.view_all_questions'|trans }}</span>
+                        <twig:ux:icon name="lucide:arrow-up-right" />
+                    </a>
+                </div>
+                {% if blocker_questions is not empty %}
+                    <ul class="briefing-blocker-list">
+                        {% for item in blocker_questions %}
+                            <li class="briefing-blocker-item">
+                                <a class="briefing-blocker-item__link" href="{{ path('rule_show', {slug: project.slug, code: item.rule_code}) }}#shadow-title">
+                                    <span class="code-chip">{{ item.rule_code }}</span>
+                                    <span class="briefing-blocker-item__body">
+                                        <span class="briefing-blocker-item__question">{{ item.question ?: item.gap }}</span>
+                                        <span class="briefing-blocker-item__rule">{{ item.rule_title }}</span>
+                                    </span>
+                                    <twig:ux:icon name="lucide:arrow-up-right" class="icon briefing-blocker-item__arrow" />
+                                </a>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+            </section>
+        {% endif %}
+
+        <div class="briefing-grid">
+            <div class="briefing-main">
+                <section class="panel" aria-labelledby="briefing-rules-title">
+                    <div class="briefing-panel__head">
+                        <div class="briefing-panel__title">
+                            <span class="briefing-icon-tile briefing-icon-tile--rule" aria-hidden="true"><twig:ux:icon name="lucide:clipboard-check" /></span>
+                            <h2 id="briefing-rules-title">{{ 'briefing.rules_touched'|trans }}</h2>
+                        </div>
+                        <span class="block__count num">{{ data.rulesTouched|length }}</span>
+                    </div>
+                    {% if data.rulesTouched is empty %}
+                        <p class="briefing-empty">{{ 'briefing.rules_empty'|trans }}</p>
+                    {% else %}
+                        <ul class="list briefing-rules">
+                            {% for rule in data.rulesTouched %}
+                                <li>
+                                    <a class="row briefing-rule" href="{{ path('rule_show', {slug: project.slug, code: rule.code}) }}">
+                                        <span class="code-chip">{{ rule.code }}</span>
+                                        <span class="briefing-rule__main">
+                                            <span class="briefing-rule__title">{{ rule.title }}</span>
+                                            {% if rule.statement %}
+                                                <span class="briefing-rule__statement">{{ rule.statement }}</span>
+                                            {% endif %}
+                                        </span>
+                                        <span class="row__meta"><span class="status status--{{ rule.status }}">{{ (rule.status == 'validated' ? 'rule.validated' : 'nav.to_review')|trans }}</span></span>
+                                    </a>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                </section>
+
+                <section class="panel" aria-labelledby="briefing-decisions-title">
+                    <div class="briefing-panel__head">
+                        <div class="briefing-panel__title">
+                            <span class="briefing-icon-tile briefing-icon-tile--accent" aria-hidden="true"><twig:ux:icon name="lucide:gavel" /></span>
+                            <h2 id="briefing-decisions-title">{{ 'briefing.decisions_clarifications'|trans }}</h2>
+                        </div>
+                        <span class="block__count num">{{ timeline_items|length }}</span>
+                    </div>
+                    {% if timeline_items is empty %}
+                        <p class="briefing-empty">{{ 'briefing.decisions_clarifications_empty'|trans }}</p>
+                    {% else %}
+                        <ol class="briefing-timeline">
+                            {% for entry in timeline_items %}
+                                <li class="briefing-timeline__item">
+                                    {% if entry.kind == 'decision' %}
+                                        <span class="briefing-timeline__dot briefing-timeline__dot--decision" aria-hidden="true"><twig:ux:icon name="lucide:gavel" /></span>
+                                        <div class="briefing-timeline__body">
+                                            <a class="briefing-timeline__title" href="{{ path('memory_show', {id: entry.id}) }}">{{ entry.text }}</a>
+                                        </div>
+                                        {% if entry.date %}
+                                            <span class="briefing-timeline__date num">{{ entry.date|format_date('short') }}</span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="briefing-timeline__dot briefing-timeline__dot--clarification" aria-hidden="true"><twig:ux:icon name="lucide:circle-check" /></span>
+                                        <div class="briefing-timeline__body">
+                                            <div class="briefing-timeline__head">
+                                                <a class="code-chip" href="{{ path('rule_show', {slug: project.slug, code: entry.rule_code}) }}">{{ entry.rule_code }}</a>
+                                                <span class="briefing-timeline__question">{{ entry.question }}</span>
+                                            </div>
+                                            {% if entry.answer %}
+                                                <p class="briefing-timeline__answer">{{ entry.answer }}</p>
+                                            {% endif %}
+                                            {% if entry.resolved_by %}
+                                                <span class="briefing-timeline__meta">{{ entry.resolved_by }}</span>
+                                            {% endif %}
+                                        </div>
+                                        {% if entry.date %}
+                                            <span class="briefing-timeline__date num">{{ entry.date|format_date('short') }}</span>
+                                        {% endif %}
+                                    {% endif %}
+                                </li>
+                            {% endfor %}
+                        </ol>
+                    {% endif %}
+                </section>
+
+                <section class="panel" aria-labelledby="briefing-activity-title">
+                    <div class="briefing-panel__head">
+                        <div class="briefing-panel__title">
+                            <span class="briefing-icon-tile briefing-icon-tile--file" aria-hidden="true"><twig:ux:icon name="lucide:git-pull-request" /></span>
+                            <h2 id="briefing-activity-title">{{ 'briefing.dev_activity'|trans }}</h2>
+                        </div>
+                        <span class="row__sub num">{{ 'briefing.dev_counts'|trans({prs: data.tickets|length, commits: data.commitsTotal}) }}</span>
+                    </div>
+                    {% if data.tickets is empty and data.commits is empty %}
+                        <p class="briefing-empty">{{ 'briefing.dev_empty'|trans }}</p>
+                    {% else %}
+                        {% if data.tickets is not empty %}
+                            <ul class="list briefing-tickets">
+                                {% for ticket in data.tickets|slice(0, 8) %}
+                                    <li>
+                                        {% if ticket.url %}
+                                            <a class="row briefing-ticket" href="{{ ticket.url }}" target="_blank" rel="noopener noreferrer">
+                                                <span class="code-chip">{{ ticket.ref }}</span>
+                                                <span class="briefing-ticket__main">
+                                                    <span class="briefing-ticket__title">{{ ticket.label }}</span>
+                                                    {% if ticket.author %}<span class="briefing-ticket__author">{{ ticket.author }}</span>{% endif %}
+                                                </span>
+                                                <span class="row__meta">
+                                                    {% if ticket.state %}<span class="tag">{{ ticket.state }}</span>{% endif %}
+                                                    <twig:ux:icon name="lucide:arrow-up-right" class="icon briefing-ticket__ext" />
+                                                </span>
+                                            </a>
+                                        {% else %}
+                                            <div class="row briefing-ticket">
+                                                <span class="code-chip">{{ ticket.ref }}</span>
+                                                <span class="briefing-ticket__main">
+                                                    <span class="briefing-ticket__title">{{ ticket.label }}</span>
+                                                    {% if ticket.author %}<span class="briefing-ticket__author">{{ ticket.author }}</span>{% endif %}
+                                                </span>
+                                                {% if ticket.state %}<span class="row__meta"><span class="tag">{{ ticket.state }}</span></span>{% endif %}
+                                            </div>
+                                        {% endif %}
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+
+                        {% if data.commits is not empty %}
+                            {% if data.tickets is not empty %}
+                                <details class="briefing-commits">
+                                    <summary class="briefing-commits__summary">
+                                        <twig:ux:icon name="lucide:git-commit-horizontal" />
+                                        <span class="num">{{ 'briefing.commits_toggle'|trans({count: data.commitsTotal}) }}</span>
+                                        <twig:ux:icon name="lucide:chevron-down" class="icon briefing-commits__chevron" />
+                                    </summary>
+                                    <ul class="list briefing-commits__list">
+                                        {% for commit in data.commits|slice(0, 5) %}
+                                            <li class="row briefing-commit">
+                                                <span class="code-chip mono">{{ commit.ref|slice(0, 7) }}</span>
+                                                <span class="row__title"><span>{{ commit.label }}</span></span>
+                                                {% if commit.author %}<span class="row__meta briefing-commit__author">{{ commit.author }}</span>{% endif %}
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                </details>
+                            {% else %}
+                                <ul class="list briefing-commits__list briefing-commits__list--standalone">
+                                    {% for commit in data.commits|slice(0, 5) %}
+                                        <li class="row briefing-commit">
+                                            <twig:ux:icon name="lucide:git-commit-horizontal" class="icon nav-item__icon" />
+                                            <span class="code-chip mono">{{ commit.ref|slice(0, 7) }}</span>
+                                            <span class="row__title"><span>{{ commit.label }}</span></span>
+                                            {% if commit.author %}<span class="row__meta briefing-commit__author">{{ commit.author }}</span>{% endif %}
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            {% endif %}
+                        {% endif %}
+                    {% endif %}
+                </section>
+            </div>
+
+            <aside class="briefing-rail" aria-label="{{ 'briefing.scorecard.title'|trans }}">
+                {% if data.openQuestions is empty %}
+                    <section class="panel briefing-all-clear" aria-labelledby="briefing-questions-title">
+                        <span class="briefing-icon-tile briefing-icon-tile--success" aria-hidden="true"><twig:ux:icon name="lucide:shield-check" /></span>
+                        <div class="briefing-all-clear__body">
+                            <h2 id="briefing-questions-title">{{ 'briefing.open_questions'|trans }}</h2>
+                            <p>{{ 'dashboard.business.no_shadow'|trans }}</p>
+                        </div>
+                    </section>
+                {% elseif other_questions is not empty %}
+                    <section class="panel" aria-labelledby="briefing-questions-title">
+                        <div class="briefing-panel__head">
+                            <div class="briefing-panel__title">
+                                <span class="briefing-icon-tile briefing-icon-tile--warning" aria-hidden="true"><twig:ux:icon name="lucide:triangle-alert" /></span>
+                                <h2 id="briefing-questions-title">{{ (blocker_questions is not empty ? 'briefing.other_questions' : 'briefing.open_questions')|trans }}</h2>
+                            </div>
+                            <a class="link briefing-panel__more" href="{{ path('project_questions', {slug: project.slug}) }}">
+                                <span>{{ 'briefing.view_all_questions'|trans }}</span>
+                                <twig:ux:icon name="lucide:arrow-up-right" />
+                            </a>
+                        </div>
+                        <ul class="shadow-list briefing-shadow-list">
+                            {% for item in other_questions %}
+                                <li class="shadow-list__item briefing-shadow-item briefing-shadow-item--{{ item.severity }}">
+                                    <span class="pill pill--{{ item.severity == 'major' ? 'warning' : 'neutral' }}">{{ item.severity }}</span>
+                                    <div class="shadow-list__body">
+                                        <a class="shadow-list__question" href="{{ path('rule_show', {slug: project.slug, code: item.rule_code}) }}#shadow-title">{{ item.question ?: item.gap }}</a>
+                                        <span class="row__sub"><span class="mono">{{ item.rule_code }}</span> · {{ item.rule_title }}</span>
+                                    </div>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </section>
+                {% endif %}
+
+                <section class="panel briefing-scorecard" aria-labelledby="briefing-scorecard-title">
+                    <h2 id="briefing-scorecard-title" class="briefing-scorecard__title">{{ 'briefing.scorecard.title'|trans }}</h2>
+                    <dl class="briefing-scorecard__grid">
+                        <div class="briefing-metric">
+                            <dt class="briefing-metric__label">
+                                <twig:ux:icon name="lucide:clipboard-check" class="icon briefing-metric__icon--rule" />
+                                <span>{{ 'briefing.kpi.rules_touched'|trans }}</span>
+                            </dt>
+                            <dd class="briefing-metric__value num">{{ data.rulesTouched|length }}</dd>
+                        </div>
+                        <div class="briefing-metric">
+                            <dt class="briefing-metric__label">
+                                <twig:ux:icon name="lucide:gavel" class="icon briefing-metric__icon--accent" />
+                                <span>{{ 'briefing.kpi.decisions'|trans }}</span>
+                            </dt>
+                            <dd class="briefing-metric__value num">{{ data.decisions|length }}</dd>
+                            {% if data.answeredQuestions|length > 0 %}
+                                <dd class="briefing-metric__sub num">{{ 'briefing.kpi.clarifications'|trans({count: data.answeredQuestions|length}) }}</dd>
+                            {% endif %}
+                        </div>
+                        <div class="briefing-metric">
+                            <dt class="briefing-metric__label">
+                                <twig:ux:icon name="lucide:file-text" class="icon briefing-metric__icon--document" />
+                                <span>{{ 'briefing.scorecard.documents'|trans }}</span>
+                            </dt>
+                            <dd class="briefing-metric__value num">{{ alignment.documents_total }}</dd>
+                            {% if alignment.documents_added > 0 %}
+                                <dd class="briefing-metric__sub"><span class="delta delta--up">{{ 'briefing.scorecard.documents_added'|trans({count: alignment.documents_added}) }}</span></dd>
+                            {% endif %}
+                        </div>
+                        <div class="briefing-metric">
+                            <dt class="briefing-metric__label">
+                                <twig:ux:icon name="lucide:git-pull-request" class="icon briefing-metric__icon--file" />
+                                <span>{{ 'briefing.scorecard.dev'|trans }}</span>
+                            </dt>
+                            <dd class="briefing-metric__value num">{{ data.tickets|length }}<span class="briefing-metric__slash">/</span>{{ data.commitsTotal }}</dd>
+                            <dd class="briefing-metric__sub">{{ 'briefing.dev_counts'|trans({prs: data.tickets|length, commits: data.commitsTotal}) }}</dd>
+                        </div>
+                    </dl>
+                </section>
+
+                <details class="panel briefing-export">
+                    <summary class="briefing-export__summary">
+                        <span class="briefing-panel__title">
+                            <span class="briefing-icon-tile briefing-icon-tile--neutral" aria-hidden="true"><twig:ux:icon name="lucide:file-text" /></span>
+                            <span id="briefing-export-title" class="briefing-export__title">{{ 'briefing.export_title'|trans }}</span>
+                        </span>
+                        <span class="briefing-export__controls">
+                            <button class="button briefing-export__copy" type="button" data-action="click->clipboard#copy:prevent:stop">
+                                <twig:ux:icon name="lucide:copy" />
+                                <span data-clipboard-target="label">{{ 'briefing.copy_markdown'|trans }}</span>
+                            </button>
+                            <twig:ux:icon name="lucide:chevron-down" class="icon briefing-export__chevron" />
+                        </span>
+                    </summary>
+                    <pre class="briefing-export__code mono" data-clipboard-target="source">{{ markdown }}</pre>
+                </details>
+            </aside>
+        </div>
+    </div>
 {% endblock %}

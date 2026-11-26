@@ -5,21 +5,27 @@ export default class extends Controller {
     static targets = ['source', 'label'];
 
     connect() {
-        this.originalLabel = this.labelTarget.textContent;
+        this.timers = new WeakMap();
     }
 
     disconnect() {
-        clearTimeout(this.timer);
+        for (const label of this.labelTargets) {
+            clearTimeout(this.timers.get(label));
+        }
     }
 
-    async copy() {
+    async copy(event) {
         try {
             await navigator.clipboard.writeText(this.sourceTarget.textContent.trim());
-            this.labelTarget.textContent = trans('js.copied');
-            clearTimeout(this.timer);
-            this.timer = setTimeout(() => {
-                this.labelTarget.textContent = this.originalLabel;
-            }, 2000);
+            const label = event?.currentTarget?.querySelector('[data-clipboard-target="label"]') ?? this.labelTarget;
+            if (!label.dataset.originalLabel) {
+                label.dataset.originalLabel = label.textContent;
+            }
+            label.textContent = trans('js.copied');
+            clearTimeout(this.timers.get(label));
+            this.timers.set(label, setTimeout(() => {
+                label.textContent = label.dataset.originalLabel;
+            }, 2000));
         } catch {
             // Clipboard API may be unavailable on non-HTTPS origins or denied by browser permissions.
         }

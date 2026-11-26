@@ -78,6 +78,9 @@ final class BriefingAndNotifierTest extends WebTestCase
         self::assertSelectorTextContains('body', 'RG-010');
         self::assertSelectorTextContains('body', 'Relance facture J+30');
         self::assertSelectorTextContains('body', 'Les relances partent uniquement les jours ouvrés.');
+        self::assertSelectorTextContains('.briefing-health', 'Bloqué');
+        self::assertSelectorExists('.briefing-blockers');
+        self::assertSelectorTextContains('.briefing-blockers', 'Les 30 jours sont-ils calendaires ou ouvrés ?');
         self::assertSelectorTextContains('.briefing-export__code', '# Briefing métier · Demo project');
 
         $this->client->submit($crawler->selectButton('Générer le résumé IA')->form());
@@ -85,6 +88,32 @@ final class BriefingAndNotifierTest extends WebTestCase
         $this->client->followRedirect();
         self::assertSelectorTextContains('.flash', 'Synthèse métier générée');
         self::assertSelectorTextContains('.briefing-narrative', 'La relance automatique J+30 est en place.');
+    }
+
+    public function testBriefingPageHidesBlockersAndShowsAlignedHealthWhenProjectIsClean(): void
+    {
+        $file = new Node($this->project, NodeType::CodeFile, 'file:src/Billing/Tax.php', 'Tax.php', 'src/Billing/Tax.php');
+        $rule = new Node($this->project, NodeType::BusinessRule, 'RG-020', 'TVA standard', null, null, [
+            'statement' => 'Le taux de TVA standard est de 20 %.',
+            'status' => 'validated',
+            'resolved_shadow_areas' => [[
+                'question' => 'La TVA s applique-t-elle aux frais de port ?',
+                'answer' => 'Oui, au taux standard de 20 %.',
+                'resolved_by' => 'Claire',
+                'resolved_at' => (new \DateTimeImmutable('-1 day'))->format(\DateTimeInterface::ATOM),
+            ]],
+        ]);
+        $this->entityManager->persist($file);
+        $this->entityManager->persist($rule);
+        $this->entityManager->persist(new Edge($rule, $file, 'implemented_by', Confidence::Verified, EdgeOrigin::Human));
+        $this->entityManager->flush();
+
+        $this->client->request('GET', '/projects/demo/briefing?period=7d');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorNotExists('.briefing-blockers');
+        self::assertSelectorTextContains('.briefing-health', 'Aligné');
+        self::assertSelectorExists('.briefing-all-clear');
+        self::assertSelectorTextContains('.briefing-timeline', 'Oui, au taux standard de 20 %.');
     }
 
     public function testProjectSettingsRejectsUnsafeWebhookAndEncryptsValidHttpsWebhook(): void

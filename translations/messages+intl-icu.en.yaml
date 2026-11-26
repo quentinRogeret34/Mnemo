@@ -141,17 +141,34 @@ appearance:
     text_size: 'Text size'
     theme: Theme
 briefing:
+    ai_empty: 'No summary generated for this period yet.'
     ai_summary: 'AI business summary'
+    blockers_title: '{count, plural, one {# blocking issue to resolve} other {# blocking issues to resolve}}'
+    commits_toggle: '{count, plural, one {# recent commit} other {# recent commits}}'
     configure_webhook: 'Configure a Slack / Discord / Teams webhook'
     copy_markdown: 'Copy Markdown'
     decisions: 'Decisions recorded'
+    decisions_clarifications: 'Decisions & clarifications'
+    decisions_clarifications_empty: 'No decision or clarification recorded over this period.'
     decisions_empty: 'No decision recorded over this period.'
-    dev_activity: 'Recent engineering activity'
+    dev_activity: 'Engineering deliveries'
     dev_counts: '{prs} PRs/tickets · {commits} commits'
     dev_empty: 'No commit or PR synced over this period.'
     export_desc: 'Ready to paste into Slack, Notion or a sprint demo.'
     export_title: 'Markdown export'
+    gauge:
+        aria: 'Business and code alignment: {score}%'
+        aria_empty: 'Business and code alignment not computed'
+        label: Alignment
+        no_rules: 'No business rule defined'
+        to_review: '{count} to review'
+        validated: '{count} validated'
+        without_code: '{count} unlinked'
     generate: 'Generate AI summary'
+    health:
+        aligned: Aligned
+        attention: 'Needs review'
+        blocked: Blocked
     kpi:
         alignment: 'Business ↔ Dev alignment'
         clarifications: '{count, plural, =0 {no clarification} one {# clarification} other {# clarifications}}'
@@ -159,9 +176,16 @@ briefing:
         rules_touched: 'Rules evolved'
     lede: 'Plain-language summary of touched business rules, recorded decisions, open questions and recent deliveries.'
     open_questions: 'Open questions'
+    other_questions: 'Other open questions'
     rules_empty: 'No business rule modified or touched over this period.'
-    rules_touched: 'Evolved or touched business rules'
+    rules_touched: 'Evolved business rules'
+    scorecard:
+        dev: 'Dev deliveries'
+        documents: Documents
+        documents_added: '+{count} in period'
+        title: 'Period snapshot'
     send_webhook: 'Send to {format}'
+    view_all_questions: 'View all'
 chat:
     action:
         memory: 'Memory #{id} saved'
