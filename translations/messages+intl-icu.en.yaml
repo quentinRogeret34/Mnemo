@@ -862,6 +862,29 @@ factory:
         tool_swarm: 'Reads and posts messages on a swarm’s shared board.'
     hub:
         badge: 'Interactive Hub'
+        chat:
+            agent_not_found: 'No matching agent found. Type /agent to pick from the list.'
+            closed_banner: 'Session closed — conversation stays available in read-only mode.'
+            cmd_agent: 'Target a single agent (autocomplete)'
+            cmd_all: 'Broadcast instruction to all connected agents'
+            cmd_end: 'Finish and close this swarm session'
+            cmd_note: 'Post a board note without creating a task order'
+            cmd_pause: 'Pause this swarm'
+            collapse: Collapse
+            composer_hint: 'Enter to send · Shift+Enter newline · /all · /agent · /end'
+            composer_placeholder: 'Message agents… Type /all, /agent or /end'
+            connected_label: '{count, plural, =0 {online} one {online} other {online}}'
+            copy_output: Copy
+            end_button: End session
+            expand: Expand
+            note_target: 'Board note'
+            options: Options
+            output_badge: 'Response · CodeMirror'
+            pending_hint: 'Queued for an agent…'
+            rail_toggle: 'Agents & details'
+            running_hint: 'Agent working on this instruction…'
+            send_error: 'Unable to send command.'
+            waiting_agent: 'Waiting for an agent…'
         connect:
             copy_prompt: 'Copy prompt'
             enable_token: 'Enable external link'
@@ -894,6 +917,7 @@ factory:
             order_required: 'Provide a title and instructions to dispatch an order.'
             orders_broadcast: 'Order broadcast to all connected nodes.'
             swarm_closed: 'Cannot dispatch an order to a closed swarm.'
+            swarm_completed: 'Swarm session completed.'
             token_enabled: 'External link enabled for this swarm.'
             token_revoked: 'External link revoked.'
             token_rotated: 'Hub token rotated. Previous links are now invalid.'

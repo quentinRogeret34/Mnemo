@@ -484,6 +484,36 @@ final class SwarmOrchestrator
         $this->approveAndDispatch($swarm);
     }
 
+    public function complete(SwarmRun $swarm, string $actor = 'human', ?string $summary = null): void
+    {
+        if ($swarm->getStatus()->isTerminal()) {
+            return;
+        }
+
+        $finalSummary = null !== $summary && '' !== trim($summary)
+            ? trim($summary)
+            : 'Session clôturée par l’opérateur (/end).';
+
+        $swarm->complete($finalSummary);
+        $this->hubManager->cancelPendingOrders($swarm);
+        $this->hubManager->disconnectAllNodes($swarm);
+
+        $coordinator = $swarm->getCoordinatorSession();
+        if (null !== $coordinator) {
+            foreach ($this->sessionRepository->childrenOf($coordinator) as $child) {
+                if ($child->getStatus()->isActive()) {
+                    $this->sessionRecorder->finish($child, AgentSessionStatus::Succeeded, 'Terminé avec la ruche parente.');
+                }
+            }
+            if ($coordinator->getStatus()->isActive()) {
+                $this->sessionRecorder->finish($coordinator, AgentSessionStatus::Succeeded, $finalSummary);
+            }
+        }
+
+        $this->postMessage($swarm, $actor, SwarmMessageKind::System, $finalSummary);
+        $this->entityManager->flush();
+    }
+
     public function cancel(SwarmRun $swarm, string $actor = 'human'): void
     {
         if ($swarm->getStatus()->isTerminal()) {
@@ -492,6 +522,7 @@ final class SwarmOrchestrator
         $swarm->cancel('Ruche annulée manuellement.');
         $swarm->clearHubToken();
         $this->hubManager->cancelPendingOrders($swarm);
+        $this->hubManager->disconnectAllNodes($swarm);
         $coordinator = $swarm->getCoordinatorSession();
         if (null !== $coordinator) {
             foreach ($this->sessionRepository->childrenOf($coordinator) as $child) {

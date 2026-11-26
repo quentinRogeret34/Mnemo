@@ -53,8 +53,12 @@ final class DispatchSwarmOrderAction extends AbstractController
         }
 
         $kind = SwarmOrderKind::tryFrom($request->request->getString('kind')) ?? SwarmOrderKind::Custom;
-        $title = trim($request->request->getString('title'));
         $instructions = trim($request->request->getString('instructions'));
+        $title = trim($request->request->getString('title'));
+        if ('' === $title && '' !== $instructions) {
+            $firstLine = trim(strtok($instructions, "\r\n") ?: $instructions);
+            $title = mb_strimwidth($firstLine, 0, 120, '…');
+        }
         if ('' === $title || '' === $instructions) {
             if ($wantsJson) {
                 return new JsonResponse(['error' => 'Title and instructions are required.'], Response::HTTP_UNPROCESSABLE_ENTITY);

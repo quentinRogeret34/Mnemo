@@ -862,6 +862,29 @@ factory:
         tool_swarm: 'Lit et poste des messages sur le board d’une ruche.'
     hub:
         badge: 'Hub interactif'
+        chat:
+            agent_not_found: 'Aucun agent correspondant. Tapez /agent pour choisir dans la liste.'
+            closed_banner: 'Session clôturée — le fil reste consultable en lecture seule.'
+            cmd_agent: 'Cibler un agent précis (autocomplétion)'
+            cmd_all: 'Diffuser l’instruction à tous les agents connectés'
+            cmd_end: 'Terminer et clôturer la session'
+            cmd_note: 'Publier une note sur le board sans créer d’ordre'
+            cmd_pause: 'Mettre la ruche en pause'
+            collapse: Réduire
+            composer_hint: 'Entrée pour envoyer · Maj+Entrée nouvelle ligne · /all · /agent · /end'
+            composer_placeholder: 'Message aux agents… Tapez /all, /agent ou /end'
+            connected_label: '{count, plural, =0 {connecté} one {connecté} other {connectés}}'
+            copy_output: Copier
+            end_button: Terminer
+            expand: Agrandir
+            note_target: 'Note board'
+            options: Options
+            output_badge: 'Réponse · CodeMirror'
+            pending_hint: 'En attente de prise en charge…'
+            rail_toggle: 'Agents & infos'
+            running_hint: 'Agent en cours d’exécution…'
+            send_error: 'Impossible d’envoyer la commande.'
+            waiting_agent: 'En attente d’un agent…'
         connect:
             copy_prompt: 'Copier le prompt'
             enable_token: 'Activer le lien externe'
@@ -894,6 +917,7 @@ factory:
             order_required: 'Renseignez un titre et des instructions pour envoyer un ordre.'
             orders_broadcast: 'Ordre diffusé à tous les nœuds connectés.'
             swarm_closed: 'Impossible d’envoyer un ordre sur une ruche clôturée.'
+            swarm_completed: 'Session de la ruche clôturée.'
             token_enabled: 'Lien externe activé pour cette ruche.'
             token_revoked: 'Lien externe révoqué.'
             token_rotated: 'Jeton du Hub régénéré. Les anciens liens sont désormais invalides.'

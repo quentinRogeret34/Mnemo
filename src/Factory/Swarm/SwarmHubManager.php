@@ -590,6 +590,20 @@ final class SwarmHubManager
         $this->entityManager->flush();
     }
 
+    public function disconnectAllNodes(SwarmRun $swarm): void
+    {
+        $nodes = $this->nodeRepository->activeForSwarm($swarm);
+        if ([] === $nodes) {
+            return;
+        }
+
+        foreach ($nodes as $node) {
+            $node->disconnect();
+        }
+
+        $this->entityManager->flush();
+    }
+
     private function persistBoardMessage(
         SwarmRun $swarm,
         string $author,

@@ -518,6 +518,72 @@ final class SwarmHubControllerTest extends WebTestCase
         }
     }
 
+    public function testChatDispatchAutoTitleCodeMirrorOutputAndEndSession(): void
+    {
+        $client = self::createClient();
+        [$swarm, $token, $hubManager] = $this->createRunningHubSwarm();
+        $swarmId = $swarm->getPublicId();
+
+        $node = $hubManager->joinNode($swarm, 'Antigravity · symfony-ai', 'antigravity', 'developer', 'main');
+        $nodeId = $node->getPublicId();
+
+        $crawler = $client->request('GET', '/factory/swarms/'.$swarmId);
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('.swarm-presence.is-online');
+        self::assertSelectorExists('[data-swarm-hub-target="composerInput"]');
+        $orderCsrf = (string) $crawler->filter('form[action$="/orders"] input[name="_token"]')->attr('value');
+        $controlCsrf = (string) $crawler->filter('form[action$="/control"] input[name="_token"]')->first()->attr('value');
+
+        // Dispatch via chat JSON without explicit title (auto-derived from first line of instructions)
+        $client->request('POST', '/factory/swarms/'.$swarmId.'/orders', [
+            '_token' => $orderCsrf,
+            'target' => $nodeId,
+            'kind' => 'custom',
+            'instructions' => "Propose la maquette du chatbot\nAvec /all et /end.",
+        ], server: ['HTTP_ACCEPT' => 'application/json', 'HTTP_X_REQUESTED_WITH' => 'XMLHttpRequest']);
+        self::assertResponseStatusCodeSame(Response::HTTP_CREATED);
+        $dispatched = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertCount(1, $dispatched['orders']);
+        self::assertSame('Propose la maquette du chatbot', $dispatched['orders'][0]['title']);
+        $orderId = (string) $dispatched['orders'][0]['public_id'];
+
+        // Complete the order with Markdown output and verify CodeMirror viewer renders in chat
+        $this->jsonRequest($client, 'POST', '/hub/swarms/'.$swarmId.'/orders/'.$orderId.'/complete', [
+            'nodeId' => $nodeId,
+            'status' => 'completed',
+            'summary' => 'Maquette livrée.',
+            'output' => "# Maquette Chatbot\n\n- `/all`\n- `/agent`\n- `/end`",
+        ], ['CONTENT_TYPE' => 'application/json', 'HTTP_AUTHORIZATION' => 'Bearer '.$token]);
+
+        $client->request('GET', '/factory/swarms/'.$swarmId);
+        self::assertResponseIsSuccessful();
+        self::assertSelectorExists('.swarm-cm[data-controller="code-viewer"]');
+        self::assertSelectorTextContains('.swarm-cm__fallback', '# Maquette Chatbot');
+
+        // /end completes the swarm cleanly, disconnects active nodes, and returns JSON
+        $client->request('POST', '/factory/swarms/'.$swarmId.'/control', [
+            '_token' => $controlCsrf,
+            'action' => 'complete',
+            'summary' => 'Session terminée avec succès.',
+        ], server: ['HTTP_ACCEPT' => 'application/json', 'HTTP_X_REQUESTED_WITH' => 'XMLHttpRequest']);
+        self::assertResponseIsSuccessful();
+        $ended = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertSame('completed', $ended['status']);
+        self::assertFalse($ended['is_active']);
+
+        /** @var SwarmRunRepository $swarmRepo */
+        $swarmRepo = self::getContainer()->get(SwarmRunRepository::class);
+        /** @var SwarmNodeRepository $nodeRepo */
+        $nodeRepo = self::getContainer()->get(SwarmNodeRepository::class);
+        $finishedSwarm = $swarmRepo->findByPublicId($swarmId);
+        self::assertNotNull($finishedSwarm);
+        self::assertSame(SwarmStatus::Completed, $finishedSwarm->getStatus());
+        self::assertSame('Session terminée avec succès.', $finishedSwarm->getReviewSummary());
+        $disconnectedNode = $nodeRepo->findByPublicId($nodeId);
+        self::assertNotNull($disconnectedNode);
+        self::assertSame(SwarmNodeStatus::Offline, $disconnectedNode->getStatus());
+    }
+
     /**
      * @return array{SwarmRun, string, SwarmHubManager}
      */

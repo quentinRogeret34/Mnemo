@@ -12,24 +12,36 @@
 
 {% block body %}
     {% set online_nodes_count = 0 %}
+    {% set nodes_payload = [] %}
     {% for node in nodes %}
+        {% set eff = node.effectiveStatus %}
         {% if node.isOnline %}
             {% set online_nodes_count = online_nodes_count + 1 %}
         {% endif %}
+        {% set nodes_payload = nodes_payload|merge([{
+            public_id: node.publicId,
+            name: node.name,
+            client: node.client,
+            role: node.role,
+            branch: node.branch,
+            status: eff,
+            is_online: node.isOnline,
+        }]) %}
     {% endfor %}
 
-    {% set orders_pending_count = 0 %}
-    {% set orders_running_count = 0 %}
+    {% set orders_active_count = 0 %}
     {% set orders_completed_count = 0 %}
     {% for order in orders %}
-        {% if order.status.value == 'pending' %}
-            {% set orders_pending_count = orders_pending_count + 1 %}
-        {% elseif order.status.value in ['claimed', 'running'] %}
-            {% set orders_running_count = orders_running_count + 1 %}
+        {% if order.status.value in ['pending', 'claimed', 'running'] %}
+            {% set orders_active_count = orders_active_count + 1 %}
         {% elseif order.status.value == 'completed' %}
             {% set orders_completed_count = orders_completed_count + 1 %}
         {% endif %}
     {% endfor %}
+
+    {% set order_csrf = csrf_token('factory_swarm_order_' ~ swarm.publicId) %}
+    {% set message_csrf = csrf_token('factory_swarm_message_' ~ swarm.publicId) %}
+    {% set control_csrf = csrf_token('factory_swarm_control_' ~ swarm.publicId) %}
 
     {% set hub_labels = {
         target: 'factory.hub.nodes.target_cta'|trans,
@@ -44,141 +56,524 @@
         targetedAt: 'factory.hub.orders.targeted_at'|trans,
         filesTouched: 'factory.hub.orders.files_touched'|trans,
         outputToggle: 'factory.hub.orders.view_output'|trans,
+        outputBadge: 'factory.hub.chat.output_badge'|trans,
+        copyOutput: 'factory.hub.chat.copy_output'|trans,
+        expand: 'factory.hub.chat.expand'|trans,
+        collapse: 'factory.hub.chat.collapse'|trans,
+        cmdAll: 'factory.hub.chat.cmd_all'|trans,
+        cmdAgent: 'factory.hub.chat.cmd_agent'|trans,
+        cmdEnd: 'factory.hub.chat.cmd_end'|trans,
+        cmdPause: 'factory.hub.chat.cmd_pause'|trans,
+        cmdNote: 'factory.hub.chat.cmd_note'|trans,
+        noteTarget: 'factory.hub.chat.note_target'|trans,
+        agentNotFound: 'factory.hub.chat.agent_not_found'|trans,
+        sendError: 'factory.hub.chat.send_error'|trans,
+        waitingAgent: 'factory.hub.chat.waiting_agent'|trans,
+        pendingHint: 'factory.hub.chat.pending_hint'|trans,
+        runningHint: 'factory.hub.chat.running_hint'|trans,
     } %}
 
-    <div
-        class="hub-shell"
-        data-controller="swarm-hub"
-        data-swarm-hub-state-url-value="{{ path('factory_swarm_state', {publicId: swarm.publicId}) }}"
-        data-swarm-hub-active-value="{{ swarm.status.isActive ? 'true' : 'false' }}"
-        data-swarm-hub-labels-value="{{ hub_labels|json_encode|e('html_attr') }}"
-    >
-        <div class="view-head view-head--split" data-tone="violet">
-            <div>
-                <h1>
-                    <twig:ux:icon name="lucide:network" />
-                    {{ swarm.title }}
-                </h1>
-                <p class="page__lede hub-head-meta">
-                    <code>{{ swarm.publicId }}</code>
-                    <span class="hub-head-meta__sep" aria-hidden="true">·</span>
-                    <span
-                        class="factory-status factory-status--{{ swarm.status.value }}{% if swarm.status.value in ['planning', 'running', 'reviewing'] %} factory-status--pulse{% endif %}"
-                        data-swarm-hub-target="statusBadge"
-                    >{{ swarm.status|trans }}</span>
-                    {% if swarm.status.isActive %}
-                        <span class="hub-live-badge" data-swarm-hub-target="liveBadge">
-                            <span class="hub-live-badge__dot" aria-hidden="true"></span>
-                            {{ 'factory.hub.live_badge'|trans }}
-                        </span>
-                    {% endif %}
-                    <span class="hub-head-meta__sep" aria-hidden="true">·</span>
-                    <span class="tag">{{ swarm.strategy|trans }}</span>
-                    <span class="tag">{{ swarm.workerRunner|trans }}</span>
-                    {% if swarm.isHubMode %}
-                        <span class="tag tag--accent">{{ 'factory.hub.badge'|trans }}</span>
-                    {% endif %}
-                    {% if swarm.sourceRuleCode %}
-                        <span class="tag tag--accent">{{ swarm.sourceRuleCode }}</span>
-                    {% endif %}
-                </p>
-            </div>
-            <div class="view-head__actions">
-                {% if swarm.status.value == 'awaiting_approval' %}
-                    <form method="post" action="{{ path('factory_swarm_approve', {publicId: swarm.publicId}) }}">
-                        <input type="hidden" name="_token" value="{{ csrf_token('factory_swarm_approve_' ~ swarm.publicId) }}">
-                        <input type="hidden" name="run_sync" value="1">
-                        <button class="button button--primary" type="submit">
-                            <twig:ux:icon name="lucide:check" />
-                            {{ 'factory.swarm.approve_and_run'|trans }}
-                        </button>
-                    </form>
-                {% elseif swarm.status.value in ['planning', 'running', 'reviewing'] and not (swarm.isHubMode and swarm.status.value == 'running') %}
-                    <form method="post" action="{{ path('factory_swarm_control', {publicId: swarm.publicId}) }}">
-                        <input type="hidden" name="_token" value="{{ csrf_token('factory_swarm_control_' ~ swarm.publicId) }}">
-                        <input type="hidden" name="action" value="run_now">
-                        <button class="button button--primary" type="submit">
-                            <twig:ux:icon name="lucide:refresh-cw" />
-                            {{ 'factory.swarm.run_step_now'|trans }}
-                        </button>
-                    </form>
-                {% elseif swarm.status.value == 'paused' %}
-                    <form method="post" action="{{ path('factory_swarm_control', {publicId: swarm.publicId}) }}">
-                        <input type="hidden" name="_token" value="{{ csrf_token('factory_swarm_control_' ~ swarm.publicId) }}">
-                        <input type="hidden" name="action" value="resume">
-                        <button class="button button--primary" type="submit">{{ 'factory.swarm.resume'|trans }}</button>
-                    </form>
-                {% endif %}
+    {# Build chronological grouped feed for instant SSR matching JS polling #}
+    {% set chrono_orders = orders|sort((a, b) => a.createdAt <=> b.createdAt) %}
+    {% set order_groups = [] %}
+    {% for order in chrono_orders %}
+        {% set order_ts = order.createdAt|date('U') + 0 %}
+        {% set last_idx = order_groups|length - 1 %}
+        {% if last_idx >= 0
+            and order_groups[last_idx].kind == order.kind.value
+            and order_groups[last_idx].title == order.title
+            and order_groups[last_idx].instructions == order.instructions
+            and (order_ts - order_groups[last_idx].ts)|abs <= 8
+        %}
+            {% set prev_group = order_groups[last_idx] %}
+            {% set updated_group = prev_group|merge({orders: prev_group.orders|merge([order])}) %}
+            {% set order_groups = order_groups|slice(0, last_idx)|merge([updated_group]) %}
+        {% else %}
+            {% set order_groups = order_groups|merge([{
+                type: 'order_group',
+                ts: order_ts,
+                kind: order.kind.value,
+                kindLabel: order.kind|trans,
+                title: order.title,
+                instructions: order.instructions,
+                ruleCode: order.ruleCode,
+                filesHint: order.filesHint,
+                createdAt: order.createdAt,
+                orders: [order],
+            }]) %}
+        {% endif %}
+    {% endfor %}
 
-                {% if swarm.status.isActive %}
-                    {% if swarm.status.value != 'paused' %}
+    {% set feed_items = order_groups %}
+    {% set has_orders = chrono_orders is not empty %}
+    {% for msg in messages %}
+        {% if not (has_orders and msg.kind.value in ['handoff', 'progress']) and msg.kind.value != 'brief' %}
+            {% set feed_items = feed_items|merge([{
+                type: 'message',
+                ts: msg.createdAt|date('U') + 0,
+                message: msg,
+            }]) %}
+        {% endif %}
+    {% endfor %}
+    {% set feed_items = feed_items|sort((a, b) => a.ts <=> b.ts) %}
+
+    <div
+        class="chat-shell swarm-chat"
+        data-controller="swarm-hub"
+        data-swarm-hub-target="shell"
+        data-swarm-hub-state-url-value="{{ path('factory_swarm_state', {publicId: swarm.publicId}) }}"
+        data-swarm-hub-order-url-value="{{ path('factory_swarm_orders_create', {publicId: swarm.publicId}) }}"
+        data-swarm-hub-order-csrf-value="{{ order_csrf }}"
+        data-swarm-hub-message-url-value="{{ path('factory_swarm_message', {publicId: swarm.publicId}) }}"
+        data-swarm-hub-message-csrf-value="{{ message_csrf }}"
+        data-swarm-hub-control-url-value="{{ path('factory_swarm_control', {publicId: swarm.publicId}) }}"
+        data-swarm-hub-control-csrf-value="{{ control_csrf }}"
+        data-swarm-hub-active-value="{{ swarm.status.isActive ? 'true' : 'false' }}"
+        data-swarm-hub-hub-mode-value="{{ swarm.isHubMode ? 'true' : 'false' }}"
+        data-swarm-hub-labels-value="{{ hub_labels|json_encode|e('html_attr') }}"
+        data-swarm-hub-nodes-value="{{ nodes_payload|json_encode|e('html_attr') }}"
+    >
+        <section class="chat-main swarm-chat__main" aria-label="{{ swarm.title }}">
+            <header class="chat-main__head swarm-chat__head">
+                <div class="chat-main__identity swarm-chat__identity">
+                    <span class="chat-main__icon swarm-chat__icon" aria-hidden="true">
+                        <twig:ux:icon name="lucide:network" />
+                    </span>
+                    <div class="chat-main__titles">
+                        <div class="swarm-chat__title-row">
+                            <h1 class="chat-main__title">{{ swarm.title }}</h1>
+                            <span
+                                class="factory-status factory-status--{{ swarm.status.value }}{% if swarm.status.value in ['planning', 'running', 'reviewing'] %} factory-status--pulse{% endif %}"
+                                data-swarm-hub-target="statusBadge"
+                            >{{ swarm.status|trans }}</span>
+                        </div>
+                        <div class="swarm-chat__badges">
+                            <button
+                                type="button"
+                                class="swarm-presence{{ online_nodes_count > 0 ? ' is-online' : '' }}"
+                                data-swarm-hub-target="presenceBadge"
+                                data-action="swarm-hub#openRail"
+                                title="{{ 'factory.hub.nodes.title'|trans }}"
+                            >
+                                <span
+                                    class="swarm-presence__dot{{ online_nodes_count > 0 ? ' swarm-presence__dot--online' : '' }}"
+                                    data-swarm-hub-target="presenceDot"
+                                    aria-hidden="true"
+                                ></span>
+                                <strong class="num" data-swarm-hub-target="nodesOnline">{{ online_nodes_count }}</strong>
+                                <span>{{ 'factory.hub.chat.connected_label'|trans({count: online_nodes_count}) }}</span>
+                            </button>
+                            <code class="code-chip">{{ swarm.publicId }}</code>
+                            <span class="tag">{{ swarm.strategy|trans }}</span>
+                            {% if swarm.sourceRuleCode %}
+                                <span class="tag tag--accent">{{ swarm.sourceRuleCode }}</span>
+                            {% endif %}
+                            {% if orders_active_count > 0 or orders_completed_count > 0 %}
+                                <span class="pill swarm-mini-stat">
+                                    <span class="num" data-swarm-hub-target="ordersCompleted">{{ orders_completed_count }}</span>
+                                    <span>{{ 'factory.hub.kpi.orders_completed'|trans|lower }}</span>
+                                    <span aria-hidden="true">·</span>
+                                    <span class="num" data-swarm-hub-target="ordersActive">{{ orders_active_count }}</span>
+                                    <span>{{ 'factory.hub.kpi.orders_running'|trans|lower }}</span>
+                                </span>
+                            {% else %}
+                                <span class="visually-hidden" data-swarm-hub-target="ordersCompleted">0</span>
+                                <span class="visually-hidden" data-swarm-hub-target="ordersActive">0</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chat-main__controls swarm-chat__controls">
+                    {% if swarm.status.value == 'awaiting_approval' %}
+                        <form method="post" action="{{ path('factory_swarm_approve', {publicId: swarm.publicId}) }}">
+                            <input type="hidden" name="_token" value="{{ csrf_token('factory_swarm_approve_' ~ swarm.publicId) }}">
+                            <input type="hidden" name="run_sync" value="1">
+                            <button class="button button--primary" type="submit">
+                                <twig:ux:icon name="lucide:check" />
+                                {{ 'factory.swarm.approve_and_run'|trans }}
+                            </button>
+                        </form>
+                    {% elseif swarm.status.value in ['planning', 'running', 'reviewing'] and not (swarm.isHubMode and swarm.status.value == 'running') %}
                         <form method="post" action="{{ path('factory_swarm_control', {publicId: swarm.publicId}) }}">
-                            <input type="hidden" name="_token" value="{{ csrf_token('factory_swarm_control_' ~ swarm.publicId) }}">
-                            <input type="hidden" name="action" value="pause">
-                            <button class="button" type="submit">{{ 'factory.swarm.pause'|trans }}</button>
+                            <input type="hidden" name="_token" value="{{ control_csrf }}">
+                            <input type="hidden" name="action" value="run_now">
+                            <button class="button button--primary" type="submit">
+                                <twig:ux:icon name="lucide:refresh-cw" />
+                                {{ 'factory.swarm.run_step_now'|trans }}
+                            </button>
+                        </form>
+                    {% elseif swarm.status.value == 'paused' %}
+                        <form method="post" action="{{ path('factory_swarm_control', {publicId: swarm.publicId}) }}">
+                            <input type="hidden" name="_token" value="{{ control_csrf }}">
+                            <input type="hidden" name="action" value="resume">
+                            <button class="button button--primary" type="submit">{{ 'factory.swarm.resume'|trans }}</button>
                         </form>
                     {% endif %}
-                    <form method="post" action="{{ path('factory_swarm_control', {publicId: swarm.publicId}) }}">
-                        <input type="hidden" name="_token" value="{{ csrf_token('factory_swarm_control_' ~ swarm.publicId) }}">
-                        <input type="hidden" name="action" value="cancel">
-                        <button class="button button--danger" type="submit">{{ 'common.cancel'|trans }}</button>
-                    </form>
+
+                    {% if swarm.status.isActive %}
+                        <form method="post" action="{{ path('factory_swarm_control', {publicId: swarm.publicId}) }}">
+                            <input type="hidden" name="_token" value="{{ control_csrf }}">
+                            <input type="hidden" name="action" value="complete">
+                            <button class="button swarm-end-btn" type="submit" title="/end">
+                                <twig:ux:icon name="lucide:circle-check" />
+                                <span>{{ 'factory.hub.chat.end_button'|trans }}</span>
+                            </button>
+                        </form>
+                        {% if swarm.status.value != 'paused' %}
+                            <form method="post" action="{{ path('factory_swarm_control', {publicId: swarm.publicId}) }}">
+                                <input type="hidden" name="_token" value="{{ control_csrf }}">
+                                <input type="hidden" name="action" value="pause">
+                                <button class="button button--ghost" type="submit">{{ 'factory.swarm.pause'|trans }}</button>
+                            </form>
+                        {% endif %}
+                        <form method="post" action="{{ path('factory_swarm_control', {publicId: swarm.publicId}) }}">
+                            <input type="hidden" name="_token" value="{{ control_csrf }}">
+                            <input type="hidden" name="action" value="cancel">
+                            <button class="button button--ghost hub-order-btn--danger" type="submit">{{ 'common.cancel'|trans }}</button>
+                        </form>
+                    {% endif %}
+
+                    <button
+                        class="button button--ghost chat-icon-btn"
+                        type="button"
+                        data-action="swarm-hub#toggleRail"
+                        aria-label="{{ 'factory.hub.chat.rail_toggle'|trans }}"
+                        title="{{ 'factory.hub.chat.rail_toggle'|trans }}"
+                    >
+                        <twig:ux:icon name="lucide:panel-right-close" />
+                    </button>
+                </div>
+            </header>
+
+            <div class="chat-stream swarm-stream" data-swarm-hub-target="stream">
+                <div class="swarm-stream__inner">
+                    <div class="swarm-goal-bar">
+                        <span class="pill pill--accent">{{ 'factory.show.goal'|trans }}</span>
+                        <p class="swarm-goal-bar__text">{{ swarm.goal }}</p>
+                    </div>
+
+                    {% if not runner_available and swarm.status.isActive %}
+                        <div class="callout callout--warn">
+                            <strong>{{ 'factory.swarm.runner_unavailable_title'|trans }}</strong>
+                            <p>{{ 'factory.swarm.runner_unavailable_text'|trans({runner: swarm.workerRunner|trans}) }}</p>
+                        </div>
+                    {% endif %}
+
+                    {% if swarm.reviewSummary %}
+                        <section class="callout callout--info swarm-review-callout">
+                            <strong>{{ 'factory.swarm.review_title'|trans }}</strong>
+                            <div class="prose">{{ swarm.reviewSummary|markdown_to_html }}</div>
+                        </section>
+                    {% endif %}
+
+                    <ol class="swarm-thread factory-timeline" data-swarm-hub-target="thread" aria-live="polite">
+                        {% if feed_items is empty %}
+                            <li class="swarm-thread__empty">
+                                {{ 'factory.hub.orders.empty'|trans }}
+                            </li>
+                        {% else %}
+                            {% for item in feed_items %}
+                                {% if item.type == 'order_group' %}
+                                    {% set is_broadcast = item.orders|length > 1 %}
+                                    {% set first_order = item.orders[0] %}
+                                    <li class="swarm-turn">
+                                        <div class="swarm-msg swarm-msg--user">
+                                            <div class="swarm-bubble swarm-bubble--user">
+                                                <div class="swarm-bubble__head">
+                                                    {% if is_broadcast %}
+                                                        <span class="pill pill--accent">/all · {{ item.orders|length }}</span>
+                                                    {% elseif first_order.targetNode %}
+                                                        <span class="pill pill--accent">@{{ first_order.targetNode.name }}</span>
+                                                    {% else %}
+                                                        <span class="pill">{{ 'factory.hub.console.target_any'|trans }}</span>
+                                                    {% endif %}
+                                                    <span class="tag">{{ item.kindLabel }}</span>
+                                                    {% if item.ruleCode %}
+                                                        <span class="tag tag--accent">{{ item.ruleCode }}</span>
+                                                    {% endif %}
+                                                    <time class="swarm-bubble__time num" datetime="{{ item.createdAt|date('c') }}">{{ item.createdAt|date('d/m H:i:s') }}</time>
+                                                </div>
+                                                {% set clean_title = item.title|trim('…') %}
+                                                {% if item.title and item.instructions and not (item.instructions starts with clean_title) %}
+                                                    <p class="swarm-bubble__title">{{ item.title }}</p>
+                                                {% endif %}
+                                                <p class="swarm-bubble__text">{{ item.instructions ?: item.title }}</p>
+                                                {% if item.filesHint is not empty %}
+                                                    <div class="swarm-chip-row">
+                                                        {% for file in item.filesHint %}
+                                                            <code class="code-chip">{{ file }}</code>
+                                                        {% endfor %}
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+
+                                        <div class="swarm-replies">
+                                            {% for order in item.orders %}
+                                                {% set ost = order.status.value %}
+                                                {% set agent_name = order.claimedByNode ? order.claimedByNode.name : (order.targetNode ? order.targetNode.name : null) %}
+                                                <article class="swarm-reply swarm-reply--{{ ost }}" data-order-id="{{ order.publicId }}">
+                                                    <header class="swarm-reply__head">
+                                                        <div class="swarm-reply__identity">
+                                                            <span class="swarm-reply__avatar swarm-reply__avatar--{{ ost }}" aria-hidden="true">{{ agent_name ? agent_name|slice(0, 2)|upper : 'AI' }}</span>
+                                                            <strong class="swarm-reply__author">{{ agent_name ? '@' ~ agent_name : 'factory.hub.chat.waiting_agent'|trans }}</strong>
+                                                            <span class="factory-status factory-status--{{ ost }}{% if ost in ['claimed', 'running'] %} factory-status--pulse{% endif %}">
+                                                                {{ order.status|trans }}
+                                                            </span>
+                                                            {% if order.branch %}
+                                                                <code class="code-chip">{{ order.branch }}</code>
+                                                            {% endif %}
+                                                            <code class="code-chip swarm-reply__id">{{ order.publicId }}</code>
+                                                        </div>
+                                                        <div class="swarm-reply__actions">
+                                                            {% if order_urls[order.publicId] is defined %}
+                                                                <button
+                                                                    class="button button--ghost hub-order-btn"
+                                                                    type="button"
+                                                                    data-action="swarm-hub#copyDirectUrl"
+                                                                    data-url="{{ order_urls[order.publicId] }}"
+                                                                >
+                                                                    <twig:ux:icon name="lucide:link" />
+                                                                    <span data-copy-label>{{ 'factory.hub.orders.copy_url'|trans }}</span>
+                                                                </button>
+                                                            {% endif %}
+                                                            {% if ost == 'pending' and swarm.status.isActive %}
+                                                                <form method="post" action="{{ path('factory_swarm_orders_cancel', {publicId: swarm.publicId, orderPublicId: order.publicId}) }}">
+                                                                    <input type="hidden" name="_token" value="{{ csrf_token('factory_swarm_order_cancel_' ~ order.publicId) }}">
+                                                                    <button class="button button--ghost hub-order-btn hub-order-btn--danger" type="submit">
+                                                                        <twig:ux:icon name="lucide:x" />
+                                                                        {{ 'common.cancel'|trans }}
+                                                                    </button>
+                                                                </form>
+                                                            {% endif %}
+                                                        </div>
+                                                    </header>
+
+                                                    {% if order.resultSummary %}
+                                                        <p class="swarm-reply__summary">{{ order.resultSummary }}</p>
+                                                    {% elseif ost in ['pending', 'claimed', 'running'] %}
+                                                        <p class="swarm-reply__waiting">
+                                                            {{ (ost == 'pending' ? 'factory.hub.chat.pending_hint' : 'factory.hub.chat.running_hint')|trans }}
+                                                        </p>
+                                                    {% endif %}
+
+                                                    {% if order.filesTouched is not empty %}
+                                                        <div class="swarm-chip-row">
+                                                            <span class="row__sub">{{ 'factory.hub.orders.files_touched'|trans }}:</span>
+                                                            {% for file in order.filesTouched %}
+                                                                <code class="code-chip">{{ file }}</code>
+                                                            {% endfor %}
+                                                        </div>
+                                                    {% endif %}
+
+                                                    {% if order.resultOutput %}
+                                                        <div
+                                                            class="swarm-cm"
+                                                            data-controller="code-viewer"
+                                                            data-code-viewer-copied-label-value="{{ 'factory.hub.orders.copied'|trans }}"
+                                                            data-code-viewer-expand-label-value="{{ 'factory.hub.chat.expand'|trans }}"
+                                                            data-code-viewer-collapse-label-value="{{ 'factory.hub.chat.collapse'|trans }}"
+                                                        >
+                                                            <div class="swarm-cm__bar">
+                                                                <span class="swarm-cm__label">
+                                                                    <twig:ux:icon name="lucide:code" />
+                                                                    <span>{{ 'factory.hub.chat.output_badge'|trans }}</span>
+                                                                </span>
+                                                                <div class="swarm-cm__actions">
+                                                                    <button class="button button--ghost swarm-cm__btn" type="button" data-action="code-viewer#toggleExpand">
+                                                                        <span data-code-viewer-target="expandLabel">{{ 'factory.hub.chat.expand'|trans }}</span>
+                                                                    </button>
+                                                                    <button class="button button--ghost swarm-cm__btn" type="button" data-action="code-viewer#copy">
+                                                                        <twig:ux:icon name="lucide:copy" />
+                                                                        <span data-code-viewer-target="copyLabel">{{ 'factory.hub.chat.copy_output'|trans }}</span>
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                            <div class="swarm-cm__mount" data-code-viewer-target="mount"></div>
+                                                            <pre class="swarm-cm__fallback" data-code-viewer-target="source">{{ order.resultOutput }}</pre>
+                                                        </div>
+                                                    {% endif %}
+                                                </article>
+                                            {% endfor %}
+                                        </div>
+                                    </li>
+                                {% else %}
+                                    {% set msg = item.message %}
+                                    {% if msg.kind.value == 'system' %}
+                                        <li class="swarm-system-event" data-message-id="{{ msg.id }}">
+                                            <span class="swarm-system-event__pill">{{ msg.author }} · {{ msg.body }}</span>
+                                            <time class="swarm-system-event__time num" datetime="{{ msg.createdAt|date('c') }}">{{ msg.createdAt|date('d/m H:i:s') }}</time>
+                                        </li>
+                                    {% else %}
+                                        {% set is_human = msg.kind.value == 'human' %}
+                                        <li class="swarm-msg {{ is_human ? 'swarm-msg--user' : 'swarm-msg--board' }}" data-message-id="{{ msg.id }}">
+                                            <div class="swarm-bubble {{ is_human ? 'swarm-bubble--user' : 'swarm-bubble--board' }}">
+                                                <div class="swarm-bubble__head">
+                                                    <strong>{{ msg.author }}</strong>
+                                                    <span class="tag">{{ msg.kind|trans }}</span>
+                                                    <time class="swarm-bubble__time num" datetime="{{ msg.createdAt|date('c') }}">{{ msg.createdAt|date('d/m H:i:s') }}</time>
+                                                </div>
+                                                <p class="swarm-bubble__text">{{ msg.body }}</p>
+                                            </div>
+                                        </li>
+                                    {% endif %}
+                                {% endif %}
+                            {% endfor %}
+                        {% endif %}
+                    </ol>
+                </div>
+            </div>
+
+            <footer class="chat-composer-area swarm-composer-area" data-swarm-hub-target="composerArea">
+                {% if swarm.status.isActive %}
+                    <div class="swarm-composer-wrap">
+                        <div class="swarm-autocomplete" data-swarm-hub-target="autocomplete" hidden>
+                            <ul class="swarm-ac__list" data-swarm-hub-target="autocompleteList" role="listbox"></ul>
+                        </div>
+
+                        <p class="swarm-composer__error" data-swarm-hub-target="composerError" role="alert" hidden></p>
+
+                        <div class="swarm-composer__bar">
+                            <div class="swarm-quick-cmds">
+                                <button type="button" class="swarm-cmd-chip" data-action="swarm-hub#insertCommand" data-command="all">/all</button>
+                                <button type="button" class="swarm-cmd-chip" data-action="swarm-hub#insertCommand" data-command="agent">/agent</button>
+                                <button type="button" class="swarm-cmd-chip" data-action="swarm-hub#insertCommand" data-command="note">/note</button>
+                                <button type="button" class="swarm-cmd-chip swarm-cmd-chip--end" data-action="swarm-hub#insertCommand" data-command="end">/end</button>
+                            </div>
+
+                            <div class="swarm-composer__meta">
+                                <select class="swarm-kind-select" aria-label="{{ 'factory.hub.console.kind'|trans }}" data-swarm-hub-target="kindSelect">
+                                    {% for kind in order_kinds %}
+                                        <option value="{{ kind.value }}"{% if kind.value == 'custom' %} selected{% endif %}>{{ kind|trans }}</option>
+                                    {% endfor %}
+                                </select>
+                                <button type="button" class="button button--ghost swarm-options-btn" data-action="swarm-hub#toggleOptions">
+                                    <twig:ux:icon name="lucide:sliders-horizontal" />
+                                    <span>{{ 'factory.hub.chat.options'|trans }}</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="swarm-composer__options" data-swarm-hub-target="optionsPanel" hidden>
+                            <label>
+                                <span>{{ 'factory.form.rule_code'|trans }}</span>
+                                <input class="input" type="text" maxlength="50" value="{{ swarm.sourceRuleCode ?? '' }}" placeholder="RG-001" data-swarm-hub-target="ruleCodeInput">
+                            </label>
+                            <label>
+                                <span>{{ 'factory.hub.console.files_hint'|trans }}</span>
+                                <input class="input" type="text" placeholder="src/..., tests/..." data-swarm-hub-target="filesHintInput">
+                            </label>
+                        </div>
+
+                        <form
+                            method="post"
+                            action="{{ path('factory_swarm_orders_create', {publicId: swarm.publicId}) }}"
+                            class="chat__form swarm-composer__form"
+                            data-action="submit->swarm-hub#submitComposer"
+                        >
+                            <input type="hidden" name="_token" value="{{ order_csrf }}">
+                            <span class="swarm-target-chip" data-swarm-hub-target="targetChip" hidden>
+                                <span data-swarm-hub-target="targetChipLabel"></span>
+                                <button type="button" class="swarm-target-chip__clear" data-action="swarm-hub#clearTarget" aria-label="{{ 'common.cancel'|trans }}">
+                                    <twig:ux:icon name="lucide:x" />
+                                </button>
+                            </span>
+                            <textarea
+                                class="chat__input"
+                                name="instructions"
+                                rows="1"
+                                placeholder="{{ 'factory.hub.chat.composer_placeholder'|trans }}"
+                                data-swarm-hub-target="composerInput"
+                                data-action="input->swarm-hub#onComposerInput keydown->swarm-hub#onComposerKeydown"
+                            ></textarea>
+                            <button class="chat__send" type="submit" data-swarm-hub-target="sendButton" aria-label="{{ 'factory.hub.console.submit'|trans }}">
+                                <twig:ux:icon name="lucide:send-horizontal" />
+                            </button>
+                        </form>
+
+                        <p class="chat__footnote">{{ 'factory.hub.chat.composer_hint'|trans }}</p>
+                    </div>
+                {% else %}
+                    <div class="swarm-closed-bar">
+                        <span class="factory-status factory-status--{{ swarm.status.value }}">{{ swarm.status|trans }}</span>
+                        <span>{{ 'factory.hub.chat.closed_banner'|trans }}</span>
+                    </div>
                 {% endif %}
-            </div>
-        </div>
 
-        {% if not runner_available and swarm.status.isActive %}
-            <div class="callout callout--warn">
-                <strong>{{ 'factory.swarm.runner_unavailable_title'|trans }}</strong>
-                <p>{{ 'factory.swarm.runner_unavailable_text'|trans({runner: swarm.workerRunner|trans}) }}</p>
-            </div>
-        {% endif %}
+                {# Hidden form preserving direct POST /messages CSRF token & non-JS compatibility #}
+                <form method="post" action="{{ path('factory_swarm_message', {publicId: swarm.publicId}) }}" hidden>
+                    <input type="hidden" name="_token" value="{{ message_csrf }}">
+                    <input type="hidden" name="body" value="">
+                </form>
+            </footer>
+        </section>
 
-        {% if swarm.isHubMode or nodes is not empty or orders is not empty %}
-            <div class="kpis hub-kpis" role="region" aria-label="{{ 'factory.hub.badge'|trans }}">
-                <div class="kpi">
-                    <span class="kpi__label">
-                        <span class="hub-node-dot hub-node-dot--idle" aria-hidden="true"></span>
-                        {{ 'factory.hub.kpi.nodes_online'|trans }}
-                    </span>
-                    <strong class="kpi__value num" data-swarm-hub-target="nodesOnline">{{ online_nodes_count }}</strong>
-                </div>
-                <div class="kpi">
-                    <span class="kpi__label">{{ 'factory.hub.kpi.orders_pending'|trans }}</span>
-                    <strong class="kpi__value num" data-swarm-hub-target="ordersPending">{{ orders_pending_count }}</strong>
-                </div>
-                <div class="kpi">
-                    <span class="kpi__label">{{ 'factory.hub.kpi.orders_running'|trans }}</span>
-                    <strong class="kpi__value num" data-swarm-hub-target="ordersRunning">{{ orders_running_count }}</strong>
-                </div>
-                <div class="kpi">
-                    <span class="kpi__label">{{ 'factory.hub.kpi.orders_completed'|trans }}</span>
-                    <strong class="kpi__value num" data-swarm-hub-target="ordersCompleted">{{ orders_completed_count }}</strong>
-                </div>
-            </div>
-        {% endif %}
+        <aside class="chat-history swarm-rail" aria-label="{{ 'factory.hub.nodes.title'|trans }}">
+            <button
+                class="chat-history__rail-toggle"
+                type="button"
+                data-action="swarm-hub#toggleRail"
+                aria-label="{{ 'factory.hub.chat.rail_toggle'|trans }}"
+            >
+                <twig:ux:icon name="lucide:panel-right-close" class="icon chat-history__icon-close" />
+                <twig:ux:icon name="lucide:panel-right-open" class="icon chat-history__icon-open" />
+            </button>
 
-        <div class="factory-detail-grid">
-            <div class="factory-detail-main">
-                <section class="panel">
-                    <h2>{{ 'factory.show.goal'|trans }}</h2>
-                    <p class="factory-goal">{{ swarm.goal }}</p>
+            <div class="swarm-rail__scroll">
+                <section class="swarm-rail__section" aria-labelledby="hub-nodes-title">
+                    <div class="hub-section-head">
+                        <h2 id="hub-nodes-title">
+                            <twig:ux:icon name="lucide:users" />
+                            {{ 'factory.hub.nodes.title'|trans }}
+                        </h2>
+                        <span class="count-badge num" data-swarm-hub-target="nodesOnline">{{ online_nodes_count }}</span>
+                    </div>
+                    <ul class="hub-nodes__list" data-swarm-hub-target="nodesList">
+                        {% if nodes is empty %}
+                            <li class="hub-nodes__empty help-text">{{ 'factory.hub.nodes.empty'|trans }}</li>
+                        {% else %}
+                            {% for node in nodes %}
+                                {% set eff = node.effectiveStatus %}
+                                <li class="hub-node hub-node--{{ eff }}">
+                                    <div class="hub-node__main">
+                                        <div class="hub-node__head">
+                                            <span class="hub-node-dot hub-node-dot--{{ eff }}" aria-hidden="true"></span>
+                                            <strong class="hub-node__name">@{{ node.name }}</strong>
+                                            <span class="hub-node__status hub-node__status--{{ eff }}">
+                                                {{ ('enum.swarm_node_status.' ~ eff)|trans }}
+                                            </span>
+                                        </div>
+                                        <div class="hub-node__meta row__sub">
+                                            {{ node.role }}
+                                            {% if node.client %}· {{ node.client }}{% endif %}
+                                            {% if node.branch %}· {{ node.branch }}{% endif %}
+                                            · {{ node.lastHeartbeatAt|date('H:i:s') }}
+                                        </div>
+                                    </div>
+                                    {% if swarm.status.isActive %}
+                                        <button
+                                            class="button button--ghost hub-node-target-btn"
+                                            type="button"
+                                            data-action="swarm-hub#selectTarget"
+                                            data-node-id="{{ node.publicId }}"
+                                            data-node-name="{{ node.name }}"
+                                        >
+                                            /agent
+                                        </button>
+                                    {% endif %}
+                                </li>
+                            {% endfor %}
+                        {% endif %}
+                    </ul>
                 </section>
 
-                {% if swarm.reviewSummary %}
-                    <section class="callout callout--info">
-                        <strong>{{ 'factory.swarm.review_title'|trans }}</strong>
-                        <div class="prose">{{ swarm.reviewSummary|markdown_to_html }}</div>
-                    </section>
-                {% endif %}
-
-                <details class="panel hub-connect"{% if swarm.isHubMode and nodes is empty and swarm.status.isActive %} open{% endif %}>
+                <details class="swarm-rail__section hub-connect"{% if swarm.isHubMode and nodes is empty and swarm.status.isActive %} open{% endif %}>
                     <summary class="hub-connect__summary">
                         <span class="hub-connect__lead">
                             <twig:ux:icon name="lucide:plug-zap" />
                             <span>{{ 'factory.hub.connect.title'|trans }}</span>
                         </span>
-                        <span class="row__sub">{{ 'factory.hub.connect.subtitle'|trans }}</span>
                         <twig:ux:icon name="lucide:chevron-down" class="icon hub-connect__chevron" />
                     </summary>
                     <div class="hub-connect__body">
@@ -271,340 +666,95 @@
                     </div>
                 </details>
 
-                {% if swarm.status.isActive %}
-                    <section class="panel hub-console" aria-labelledby="hub-console-title">
-                        <div class="hub-section-head">
-                            <h2 id="hub-console-title">
-                                <twig:ux:icon name="lucide:send-horizontal" />
-                                {{ 'factory.hub.console.title'|trans }}
-                            </h2>
-                        </div>
-                        <form method="post" action="{{ path('factory_swarm_orders_create', {publicId: swarm.publicId}) }}" class="form-stack">
-                            <input type="hidden" name="_token" value="{{ csrf_token('factory_swarm_order_' ~ swarm.publicId) }}">
-                            <div class="factory-form-row">
-                                <label>
-                                    {{ 'factory.hub.console.kind'|trans }}
-                                    <select class="select" name="kind">
-                                        {% for kind in order_kinds %}
-                                            <option value="{{ kind.value }}"{% if kind.value == 'edit' %} selected{% endif %}>{{ kind|trans }}</option>
-                                        {% endfor %}
-                                    </select>
-                                </label>
-                                <label>
-                                    {{ 'factory.hub.console.target'|trans }}
-                                    <select class="select" name="target" data-swarm-hub-target="targetSelect">
-                                        <option value="any">{{ 'factory.hub.console.target_any'|trans }}</option>
-                                        <option value="all">{{ 'factory.hub.console.target_all'|trans }}</option>
-                                        {% for node in nodes %}
-                                            <option value="{{ node.publicId }}">@{{ node.name }}{% if node.client %} ({{ node.client }}){% endif %}</option>
-                                        {% endfor %}
-                                    </select>
-                                </label>
-                            </div>
-                            <label>
-                                {{ 'factory.hub.console.order_title'|trans }}
-                                <input class="input" type="text" name="title" required maxlength="255" placeholder="{{ 'factory.hub.console.order_title_placeholder'|trans }}">
-                            </label>
-                            <label>
-                                {{ 'factory.hub.console.instructions'|trans }}
-                                <textarea
-                                    class="input"
-                                    name="instructions"
-                                    rows="3"
-                                    required
-                                    data-swarm-hub-target="instructionsInput"
-                                    placeholder="{{ 'factory.hub.console.instructions_placeholder'|trans }}"
-                                ></textarea>
-                            </label>
-                            <div class="factory-form-row">
-                                <label>
-                                    {{ 'factory.form.rule_code'|trans }}
-                                    <input class="input" type="text" name="rule_code" maxlength="50" value="{{ swarm.sourceRuleCode ?? '' }}" placeholder="RG-001">
-                                </label>
-                                <label>
-                                    {{ 'factory.hub.console.files_hint'|trans }}
-                                    <input class="input" type="text" name="files_hint" placeholder="src/..., tests/...">
-                                </label>
-                            </div>
-                            <div class="hub-console__foot">
-                                <button class="button button--primary" type="submit">
-                                    <twig:ux:icon name="lucide:send-horizontal" />
-                                    {{ 'factory.hub.console.submit'|trans }}
-                                </button>
-                            </div>
-                        </form>
-                    </section>
-                {% endif %}
-
-                <section class="panel hub-orders" aria-labelledby="hub-orders-title">
-                    <div class="hub-section-head">
-                        <h2 id="hub-orders-title">
-                            <twig:ux:icon name="lucide:inbox" />
-                            {{ 'factory.hub.orders.title'|trans }}
-                        </h2>
-                        <span class="count-badge num" data-swarm-hub-target="ordersTotal">{{ orders|length }}</span>
-                    </div>
-                    <div class="hub-orders__list" data-swarm-hub-target="ordersList">
-                        {% if orders is empty %}
-                            <p class="help-text hub-orders__empty">{{ 'factory.hub.orders.empty'|trans }}</p>
-                        {% else %}
-                            {% for order in orders %}
-                                {% set ost = order.status.value %}
-                                <article class="hub-order-card hub-order-card--{{ ost }}" data-order-id="{{ order.publicId }}">
-                                    <div class="hub-order-card__head">
-                                        <div class="hub-order-card__badges">
-                                            <span class="tag">{{ order.kind|trans }}</span>
-                                            <span class="factory-status factory-status--{{ ost }}{% if ost in ['claimed', 'running'] %} factory-status--pulse{% endif %}">
-                                                {{ order.status|trans }}
-                                            </span>
-                                            <code class="code-chip">{{ order.publicId }}</code>
-                                            <time class="row__sub num" datetime="{{ order.createdAt|date('c') }}">{{ order.createdAt|date('d/m H:i:s') }}</time>
-                                        </div>
-                                        <div class="hub-order-card__actions">
-                                            {% if order_urls[order.publicId] is defined %}
-                                                <button
-                                                    class="button button--ghost hub-order-btn"
-                                                    type="button"
-                                                    data-action="swarm-hub#copyDirectUrl"
-                                                    data-url="{{ order_urls[order.publicId] }}"
-                                                >
-                                                    <twig:ux:icon name="lucide:link" />
-                                                    <span data-copy-label>{{ 'factory.hub.orders.copy_url'|trans }}</span>
-                                                </button>
-                                            {% endif %}
-                                            {% if ost == 'pending' and swarm.status.isActive %}
-                                                <form method="post" action="{{ path('factory_swarm_orders_cancel', {publicId: swarm.publicId, orderPublicId: order.publicId}) }}">
-                                                    <input type="hidden" name="_token" value="{{ csrf_token('factory_swarm_order_cancel_' ~ order.publicId) }}">
-                                                    <button class="button button--ghost hub-order-btn hub-order-btn--danger" type="submit">
-                                                        <twig:ux:icon name="lucide:x" />
-                                                        {{ 'common.cancel'|trans }}
-                                                    </button>
-                                                </form>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-
-                                    <h3 class="hub-order-card__title">{{ order.title }}</h3>
-                                    <p class="hub-order-card__instructions">{{ order.instructions }}</p>
-
-                                    {% if order.claimedByNode or order.targetNode or order.ruleCode or order.branch or order.filesHint is not empty %}
-                                        <div class="factory-context-chips">
-                                            {% if order.claimedByNode %}
-                                                <span class="tag tag--accent">{{ 'factory.hub.orders.assigned_to'|trans }} @{{ order.claimedByNode.name }}</span>
-                                            {% elseif order.targetNode %}
-                                                <span class="tag">{{ 'factory.hub.orders.targeted_at'|trans }} @{{ order.targetNode.name }}</span>
-                                            {% endif %}
-                                            {% if order.ruleCode %}
-                                                <span class="tag tag--accent">{{ order.ruleCode }}</span>
-                                            {% endif %}
-                                            {% if order.branch %}
-                                                <code class="code-chip">{{ order.branch }}</code>
-                                            {% endif %}
-                                            {% for file in order.filesHint %}
-                                                <code class="code-chip">{{ file }}</code>
-                                            {% endfor %}
-                                        </div>
-                                    {% endif %}
-
-                                    {% if order.resultSummary or order.filesTouched is not empty or order.resultOutput %}
-                                        <div class="hub-order-card__result{% if ost == 'failed' %} hub-order-card__result--failed{% endif %}">
-                                            {% if order.resultSummary %}
-                                                <p class="hub-order-card__summary">{{ order.resultSummary }}</p>
-                                            {% endif %}
-                                            {% if order.filesTouched is not empty %}
-                                                <div class="hub-order-card__files">
-                                                    <span class="row__sub">{{ 'factory.hub.orders.files_touched'|trans }}:</span>
-                                                    {% for file in order.filesTouched %}
-                                                        <code class="code-chip">{{ file }}</code>
-                                                    {% endfor %}
-                                                </div>
-                                            {% endif %}
-                                            {% if order.resultOutput %}
-                                                <details class="factory-timeline__payload" data-order-output="{{ order.publicId }}">
-                                                    <summary>{{ 'factory.hub.orders.view_output'|trans }}</summary>
-                                                    <pre class="factory-code"><code>{{ order.resultOutput }}</code></pre>
-                                                </details>
-                                            {% endif %}
-                                        </div>
-                                    {% endif %}
-                                </article>
-                            {% endfor %}
-                        {% endif %}
-                    </div>
-                </section>
-
-                {% if swarm.plan is not empty or not swarm.isHubMode %}
-                    <section class="panel">
-                        <h2>{{ 'factory.swarm.plan_title'|trans }} ({{ swarm.plan|length }})</h2>
-                        {% if swarm.plan is empty %}
-                            <p class="help-text">{{ 'factory.swarm.plan_pending'|trans }}</p>
-                        {% else %}
-                            <ol class="swarm-plan-list">
-                                {% for task in swarm.plan %}
-                                    <li class="swarm-plan-item">
-                                        <div class="swarm-plan-item__head">
-                                            <strong>{{ task.title }}</strong>
-                                            <span class="tag">{{ task.role }}</span>
-                                            <code class="code-chip">{{ task.slug }}</code>
-                                        </div>
-                                        <p class="factory-goal">{{ task.instructions }}</p>
-                                        {% if task.files_hint is not empty %}
-                                            <div class="factory-context-chips">
-                                                {% for file in task.files_hint %}
-                                                    <code class="code-chip">{{ file }}</code>
-                                                {% endfor %}
-                                            </div>
-                                        {% endif %}
-                                    </li>
-                                {% endfor %}
-                            </ol>
-                        {% endif %}
-                    </section>
-                {% endif %}
-
-                {% if workers is not empty or not swarm.isHubMode %}
-                    <section class="panel">
-                        <h2>{{ 'factory.swarm.workers_title'|trans }} ({{ workers|length }})</h2>
-                        {% if workers is empty %}
-                            <p class="help-text">{{ 'factory.swarm.workers_pending'|trans }}</p>
-                        {% else %}
-                            <ul class="list">
-                                {% for worker in workers %}
-                                    <li>
-                                        <a class="row" href="{{ path('factory_session_show', {publicId: worker.publicId}) }}">
-                                            <span class="row__title">
-                                                {{ worker.title }}
-                                                <span class="row__sub">
-                                                    {{ worker.role }}
-                                                    {% if worker.branch %}· <code>{{ worker.branch }}</code>{% endif %}
-                                                    · {{ worker.filesTouched|length }} {{ 'factory.col.files'|trans|lower }}
-                                                </span>
-                                            </span>
-                                            <span class="factory-status factory-status--{{ worker.status.value }}">{{ worker.status|trans }}</span>
-                                        </a>
-                                    </li>
-                                {% endfor %}
-                            </ul>
-                        {% endif %}
-                    </section>
-                {% endif %}
-
-                <section class="panel">
-                    <div class="hub-section-head">
-                        <h2>{{ 'factory.swarm.board_title'|trans }}</h2>
-                        <span class="count-badge num" data-swarm-hub-target="messagesCount">{{ messages|length }}</span>
-                    </div>
-                    <ol class="factory-timeline" data-swarm-hub-target="messagesList">
-                        {% for msg in messages %}
-                            <li class="factory-timeline__item swarm-msg--{{ msg.kind.value }}" data-message-id="{{ msg.id }}">
-                                <div class="factory-timeline__head">
-                                    <span>
-                                        <strong>{{ msg.author }}</strong>
-                                        <span class="tag">{{ msg.kind|trans }}</span>
-                                    </span>
-                                    <time class="row__sub" datetime="{{ msg.createdAt|date('c') }}">{{ msg.createdAt|date('d/m/Y H:i:s') }}</time>
-                                </div>
-                                <p class="factory-timeline__msg">{{ msg.body }}</p>
-                            </li>
-                        {% endfor %}
-                    </ol>
-
-                    <form method="post" action="{{ path('factory_swarm_message', {publicId: swarm.publicId}) }}" class="form-stack swarm-reply-form">
-                        <input type="hidden" name="_token" value="{{ csrf_token('factory_swarm_message_' ~ swarm.publicId) }}">
-                        <label>
-                            {{ 'factory.swarm.board_reply_label'|trans }}
-                            <textarea class="input" name="body" rows="2" required placeholder="{{ 'factory.swarm.board_reply_placeholder'|trans }}"></textarea>
-                        </label>
-                        <div>
-                            <button class="button button--primary" type="submit">{{ 'factory.swarm.board_reply_submit'|trans }}</button>
-                        </div>
-                    </form>
-                </section>
-            </div>
-
-            <aside class="factory-detail-aside">
-                <section class="panel hub-nodes" aria-labelledby="hub-nodes-title">
-                    <div class="hub-section-head">
-                        <h2 id="hub-nodes-title">
-                            <twig:ux:icon name="lucide:users" />
-                            {{ 'factory.hub.nodes.title'|trans }}
-                        </h2>
-                        <span class="count-badge num" data-swarm-hub-target="nodesOnline">{{ online_nodes_count }}</span>
-                    </div>
-                    <ul class="hub-nodes__list" data-swarm-hub-target="nodesList">
-                        {% if nodes is empty %}
-                            <li class="hub-nodes__empty help-text">{{ 'factory.hub.nodes.empty'|trans }}</li>
-                        {% else %}
-                            {% for node in nodes %}
-                                {% set eff = node.effectiveStatus %}
-                                <li class="hub-node hub-node--{{ eff }}">
-                                    <div class="hub-node__main">
-                                        <div class="hub-node__head">
-                                            <span class="hub-node-dot hub-node-dot--{{ eff }}" aria-hidden="true"></span>
-                                            <strong class="hub-node__name">@{{ node.name }}</strong>
-                                            <span class="hub-node__status hub-node__status--{{ eff }}">
-                                                {{ ('enum.swarm_node_status.' ~ eff)|trans }}
-                                            </span>
-                                        </div>
-                                        <div class="hub-node__meta row__sub">
-                                            {{ node.role }}
-                                            {% if node.client %}· {{ node.client }}{% endif %}
-                                            {% if node.branch %}· {{ node.branch }}{% endif %}
-                                            · {{ node.lastHeartbeatAt|date('H:i:s') }}
-                                        </div>
-                                    </div>
-                                    {% if swarm.status.isActive %}
-                                        <button
-                                            class="button button--ghost hub-node-target-btn"
-                                            type="button"
-                                            data-action="swarm-hub#selectTarget"
-                                            data-node-id="{{ node.publicId }}"
-                                            data-node-name="{{ node.name }}"
-                                        >
-                                            <twig:ux:icon name="lucide:arrow-up-right" />
-                                            {{ 'factory.hub.nodes.target_cta'|trans }}
-                                        </button>
-                                    {% endif %}
-                                </li>
-                            {% endfor %}
-                        {% endif %}
-                    </ul>
-                </section>
-
-                <section class="panel">
-                    <h2>{{ 'factory.show.metadata'|trans }}</h2>
-                    <dl class="props">
-                        <dt>{{ 'factory.col.project'|trans }}</dt>
-                        <dd><a class="link" href="{{ path('project_show', {slug: project.slug}) }}">{{ project.name }}</a></dd>
-                        <dt>{{ 'factory.col.status'|trans }}</dt>
-                        <dd>
-                            <span class="factory-status factory-status--{{ swarm.status.value }}" data-swarm-hub-target="statusBadge">
-                                {{ swarm.status|trans }}
+                {% if swarm.plan is not empty or workers is not empty %}
+                    <details class="swarm-rail__section"{% if swarm.status.value == 'awaiting_approval' %} open{% endif %}>
+                        <summary class="hub-connect__summary">
+                            <span class="hub-connect__lead">
+                                <span>{{ 'factory.swarm.plan_title'|trans }} ({{ swarm.plan|length }})</span>
                             </span>
-                        </dd>
-                        <dt>{{ 'factory.swarm.strategy'|trans }}</dt>
-                        <dd>{{ swarm.strategy|trans }}</dd>
-                        <dt>{{ 'factory.swarm.worker_runner'|trans }}</dt>
-                        <dd>{{ swarm.workerRunner|trans }}</dd>
-                        <dt>Git worktree</dt>
-                        <dd>{{ is_git_repo ? 'factory.swarm.worktree_ready'|trans : 'factory.swarm.worktree_no_git'|trans }}</dd>
-                        {% if swarm.baseBranch %}
-                            <dt>{{ 'factory.swarm.base_branch'|trans }}</dt>
-                            <dd><code class="code-chip">{{ swarm.baseBranch }}</code></dd>
-                        {% endif %}
-                        {% if swarm.coordinatorSession %}
-                            <dt>{{ 'factory.swarm.coordinator_session'|trans }}</dt>
-                            <dd><a class="link" href="{{ path('factory_session_show', {publicId: swarm.coordinatorSession.publicId}) }}">{{ swarm.coordinatorSession.publicId }}</a></dd>
-                        {% endif %}
-                        <dt>{{ 'factory.col.started'|trans }}</dt>
-                        <dd>{{ swarm.createdAt|date('d/m/Y H:i:s') }}</dd>
-                        {% if swarm.finishedAt %}
-                            <dt>{{ 'factory.show.finished_at'|trans }}</dt>
-                            <dd>{{ swarm.finishedAt|date('d/m/Y H:i:s') }}</dd>
-                        {% endif %}
-                    </dl>
-                </section>
-            </aside>
-        </div>
+                            <twig:ux:icon name="lucide:chevron-down" class="icon hub-connect__chevron" />
+                        </summary>
+                        <div class="hub-connect__body">
+                            {% if swarm.plan is not empty %}
+                                <ol class="swarm-plan-list">
+                                    {% for task in swarm.plan %}
+                                        <li class="swarm-plan-item">
+                                            <div class="swarm-plan-item__head">
+                                                <strong>{{ task.title }}</strong>
+                                                <span class="tag">{{ task.role }}</span>
+                                            </div>
+                                            <p class="row__sub">{{ task.instructions }}</p>
+                                        </li>
+                                    {% endfor %}
+                                </ol>
+                            {% endif %}
+                            {% if workers is not empty %}
+                                <ul class="list">
+                                    {% for worker in workers %}
+                                        <li>
+                                            <a class="row" href="{{ path('factory_session_show', {publicId: worker.publicId}) }}">
+                                                <span class="row__title">{{ worker.title }}</span>
+                                                <span class="factory-status factory-status--{{ worker.status.value }}">{{ worker.status|trans }}</span>
+                                            </a>
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            {% endif %}
+                        </div>
+                    </details>
+                {% endif %}
+
+                <details class="swarm-rail__section">
+                    <summary class="hub-connect__summary">
+                        <span class="hub-connect__lead">
+                            <span>{{ 'factory.show.metadata'|trans }}</span>
+                        </span>
+                        <twig:ux:icon name="lucide:chevron-down" class="icon hub-connect__chevron" />
+                    </summary>
+                    <div class="hub-connect__body">
+                        <dl class="kv__group">
+                            <div class="kv__row">
+                                <dt>{{ 'factory.col.project'|trans }}</dt>
+                                <dd><a class="link" href="{{ path('project_show', {slug: project.slug}) }}">{{ project.name }}</a></dd>
+                            </div>
+                            <div class="kv__row">
+                                <dt>{{ 'factory.swarm.strategy'|trans }}</dt>
+                                <dd>{{ swarm.strategy|trans }}</dd>
+                            </div>
+                            <div class="kv__row">
+                                <dt>{{ 'factory.swarm.worker_runner'|trans }}</dt>
+                                <dd>{{ swarm.workerRunner|trans }}</dd>
+                            </div>
+                            <div class="kv__row">
+                                <dt>Git worktree</dt>
+                                <dd>{{ is_git_repo ? 'factory.swarm.worktree_ready'|trans : 'factory.swarm.worktree_no_git'|trans }}</dd>
+                            </div>
+                            {% if swarm.baseBranch %}
+                                <div class="kv__row">
+                                    <dt>{{ 'factory.swarm.base_branch'|trans }}</dt>
+                                    <dd><code class="code-chip">{{ swarm.baseBranch }}</code></dd>
+                                </div>
+                            {% endif %}
+                            {% if swarm.coordinatorSession %}
+                                <div class="kv__row">
+                                    <dt>{{ 'factory.swarm.coordinator_session'|trans }}</dt>
+                                    <dd><a class="link" href="{{ path('factory_session_show', {publicId: swarm.coordinatorSession.publicId}) }}">{{ swarm.coordinatorSession.publicId }}</a></dd>
+                                </div>
+                            {% endif %}
+                            <div class="kv__row">
+                                <dt>{{ 'factory.col.started'|trans }}</dt>
+                                <dd class="num">{{ swarm.createdAt|date('d/m/Y H:i') }}</dd>
+                            </div>
+                            {% if swarm.finishedAt %}
+                                <div class="kv__row">
+                                    <dt>{{ 'factory.show.finished_at'|trans }}</dt>
+                                    <dd class="num">{{ swarm.finishedAt|date('d/m/Y H:i') }}</dd>
+                                </div>
+                            {% endif %}
+                        </dl>
+                    </div>
+                </details>
+            </div>
+        </aside>
     </div>
 {% endblock %}
