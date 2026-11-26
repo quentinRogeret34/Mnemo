@@ -20,13 +20,14 @@ use App\Message\PlanSwarm;
 use App\Message\ReviewSwarm;
 use App\Message\RunSwarmWorker;
 use App\Repository\AgentSessionRepository;
+use App\Repository\SwarmOrderRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Lock\LockFactory;
 use Symfony\Component\Messenger\MessageBusInterface;
 
 /**
  * Coordinates the full lifecycle of a multi-agent SwarmRun:
- * Launch -> Plan (LLM) -> Optional Human Approval -> Isolated Workers (CLI worktree / Internal LLM) -> Review (LLM).
+ * Plan (internal LLM) -> Optional Human Approval -> Isolated Workers (CLI worktree / Internal LLM / Interactive Hub) -> Review (internal LLM).
  */
 final class SwarmOrchestrator
 {
@@ -41,6 +42,8 @@ final class SwarmOrchestrator
         private readonly WorktreeManager $worktreeManager,
         private readonly LockFactory $lockFactory,
         private readonly MessageBusInterface $messageBus,
+        private readonly SwarmHubManager $hubManager,
+        private readonly SwarmOrderRepository $orderRepository,
     ) {
     }
 
@@ -54,6 +57,7 @@ final class SwarmOrchestrator
         ?string $sourceRuleCode = null,
         ?string $baseBranch = null,
         ?string $startedBy = null,
+        bool $skipInitialPlan = false,
     ): SwarmRun {
         $coordinator = $this->sessionRecorder->start(
             project: $project,
@@ -67,6 +71,8 @@ final class SwarmOrchestrator
             startedBy: $startedBy,
         );
 
+        $isHubMode = AgentRunnerKind::ExternalHub === $workerRunner || $skipInitialPlan;
+
         $swarm = new SwarmRun(
             project: $project,
             title: $title,
@@ -74,14 +80,23 @@ final class SwarmOrchestrator
             strategy: $strategy,
             workerRunner: $workerRunner,
             requirePlanApproval: $requirePlanApproval,
+            hubMode: $isHubMode,
         );
         $swarm->setCoordinatorSession($coordinator);
         $swarm->setSourceRuleCode($sourceRuleCode);
         $swarm->setBaseBranch($baseBranch);
         $swarm->setCreatedBy($startedBy);
 
+        if ($skipInitialPlan) {
+            $swarm->markRunning();
+        }
+
         $this->entityManager->persist($swarm);
         $this->entityManager->flush();
+
+        if ($swarm->isHubMode()) {
+            $this->hubManager->enableHubToken($swarm);
+        }
 
         $this->postMessage(
             $swarm,
@@ -90,6 +105,18 @@ final class SwarmOrchestrator
             $goal,
             $coordinator,
         );
+
+        if ($skipInitialPlan) {
+            $this->postMessage(
+                $swarm,
+                'coordinator',
+                SwarmMessageKind::System,
+                'Hub interactif ouvert en direct : connecte un ou plusieurs clients externes et envoie tes ordres.',
+                $coordinator,
+            );
+
+            return $swarm;
+        }
 
         $swarmId = $swarm->getId();
         if (null !== $swarmId) {
@@ -157,6 +184,17 @@ final class SwarmOrchestrator
             return;
         }
 
+        if ($swarm->isHubMode() && [] === $swarm->getPlan() && SwarmStatus::Paused === $swarm->getStatus()) {
+            $swarm->markRunning();
+            $swarm->getCoordinatorSession()?->markRunning();
+            if (!$swarm->hasHubToken()) {
+                $this->hubManager->enableHubToken($swarm);
+            }
+            $this->entityManager->flush();
+
+            return;
+        }
+
         $plan = $swarm->getPlan();
         if ([] === $plan) {
             $this->plan($swarm);
@@ -174,6 +212,28 @@ final class SwarmOrchestrator
         $this->entityManager->flush();
 
         $coordinator = $swarm->getCoordinatorSession();
+
+        if (AgentRunnerKind::ExternalHub === $swarm->getWorkerRunner()) {
+            $swarm->setHubMode(true);
+            if (!$swarm->hasHubToken()) {
+                $this->hubManager->enableHubToken($swarm);
+            }
+            $this->entityManager->flush();
+
+            if ([] === $this->orderRepository->forSwarm($swarm)) {
+                $orders = $this->hubManager->publishPlanAsOrders($swarm);
+                $this->postMessage(
+                    $swarm,
+                    'coordinator',
+                    SwarmMessageKind::Handoff,
+                    \sprintf('Plan approuvé : %d ordre(s) publié(s) dans le Hub interactif.', \count($orders)),
+                    $coordinator,
+                );
+            }
+
+            return;
+        }
+
         $existingChildren = null !== $coordinator ? $this->sessionRepository->childrenOf($coordinator) : [];
         if ([] !== $existingChildren) {
             // Resuming a previously dispatched swarm: re-enqueue only queued/running workers.
@@ -346,11 +406,15 @@ final class SwarmOrchestrator
 
             if ($anySucceeded || [] === $workers) {
                 $swarm->complete($summary);
+                $swarm->clearHubToken();
+                $this->hubManager->cancelPendingOrders($swarm);
                 if (null !== $coordinator && $coordinator->getStatus()->isActive()) {
                     $this->sessionRecorder->finish($coordinator, AgentSessionStatus::Succeeded, $summary, $allFiles);
                 }
             } else {
                 $swarm->fail($summary);
+                $swarm->clearHubToken();
+                $this->hubManager->cancelPendingOrders($swarm);
                 if ($coordinator->getStatus()->isActive()) {
                     $this->sessionRecorder->finish($coordinator, AgentSessionStatus::Failed, $summary, $allFiles);
                 }
@@ -374,6 +438,10 @@ final class SwarmOrchestrator
         }
 
         if (SwarmStatus::Running === $swarm->getStatus()) {
+            if ($swarm->isHubMode() || AgentRunnerKind::ExternalHub === $swarm->getWorkerRunner()) {
+                return;
+            }
+
             $coordinator = $swarm->getCoordinatorSession();
             $workers = null !== $coordinator ? $this->sessionRepository->childrenOf($coordinator) : [];
             foreach ($workers as $index => $worker) {
@@ -422,6 +490,8 @@ final class SwarmOrchestrator
             return;
         }
         $swarm->cancel('Ruche annulée manuellement.');
+        $swarm->clearHubToken();
+        $this->hubManager->cancelPendingOrders($swarm);
         $coordinator = $swarm->getCoordinatorSession();
         if (null !== $coordinator) {
             foreach ($this->sessionRepository->childrenOf($coordinator) as $child) {

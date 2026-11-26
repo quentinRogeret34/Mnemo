@@ -5,6 +5,8 @@ namespace App\Mcp;
 use App\Entity\AgentSession;
 use App\Entity\Project;
 use App\Entity\SwarmMessage;
+use App\Entity\SwarmNode;
+use App\Entity\SwarmOrder;
 use App\Entity\SwarmRun;
 use App\Enum\AgentRunnerKind;
 use App\Enum\AgentSessionEventKind;
@@ -12,8 +14,12 @@ use App\Enum\AgentSessionStatus;
 use App\Enum\SwarmMessageKind;
 use App\Factory\AgentSessionRecorder;
 use App\Factory\FactoryGuard;
+use App\Factory\Swarm\ProjectContextBuilder;
+use App\Factory\Swarm\SwarmHubManager;
 use App\Factory\Swarm\SwarmOrchestrator;
 use App\Repository\AgentSessionRepository;
+use App\Repository\SwarmNodeRepository;
+use App\Repository\SwarmOrderRepository;
 use App\Repository\SwarmRunRepository;
 use App\Security\ProjectScope;
 use Doctrine\ORM\EntityManagerInterface;
@@ -35,6 +41,10 @@ final class FactoryTools
         private readonly AgentSessionRepository $sessionRepository,
         private readonly SwarmRunRepository $swarmRepository,
         private readonly SwarmOrchestrator $swarmOrchestrator,
+        private readonly SwarmHubManager $hubManager,
+        private readonly SwarmNodeRepository $nodeRepository,
+        private readonly SwarmOrderRepository $orderRepository,
+        private readonly ProjectContextBuilder $contextBuilder,
         private readonly EntityManagerInterface $entityManager,
         private readonly ProjectScope $projectScope,
         private readonly UrlGeneratorInterface $urlGenerator,
@@ -295,6 +305,211 @@ final class FactoryTools
         ];
     }
 
+    /**
+     * @return array<string, mixed>
+     */
+    #[McpTool(
+        name: 'join_swarm',
+        description: 'Join an active interactive Swarm Hub as an external worker node to receive live work orders and Mnemo project context.',
+        annotations: new ToolAnnotations(readOnlyHint: false, destructiveHint: false),
+    )]
+    public function joinSwarm(
+        string $swarmId,
+        #[Schema(minLength: 1, maxLength: 100)]
+        string $name,
+        #[Schema(maxLength: 100)]
+        ?string $client = null,
+        #[Schema(minLength: 1, maxLength: 60)]
+        string $role = 'developer',
+        #[Schema(maxLength: 200)]
+        ?string $branch = null,
+    ): array {
+        $this->assertEnabled();
+        $swarm = $this->swarm($swarmId);
+        if (!$swarm->getStatus()->isActive()) {
+            throw new ToolCallException(\sprintf('Swarm "%s" is no longer active (%s).', $swarm->getPublicId(), $swarm->getStatus()->value));
+        }
+
+        $cleanName = trim($name);
+        if ('' === $cleanName) {
+            throw new ToolCallException('Node name must not be blank.');
+        }
+
+        $node = $this->hubManager->joinNode(
+            swarm: $swarm,
+            name: $cleanName,
+            client: $client,
+            role: $role,
+            branch: $branch,
+            startedBy: $this->projectScope->key()?->getName() ?? 'mcp',
+        );
+
+        $pendingOrders = $this->orderRepository->pendingForSwarm($swarm);
+
+        return [
+            'node_id' => $node->getPublicId(),
+            'session_id' => $node->getSession()?->getPublicId(),
+            'swarm_id' => $swarm->getPublicId(),
+            'swarm_status' => $swarm->getStatus()->value,
+            'project' => $swarm->getProject()->getSlug(),
+            'project_context' => $this->contextBuilder->build($swarm->getProject(), $swarm->getSourceRuleCode()),
+            'pending_orders' => array_map(static fn (SwarmOrder $order): array => [
+                'order_id' => $order->getPublicId(),
+                'kind' => $order->getKind()->value,
+                'title' => $order->getTitle(),
+                'target_node_id' => $order->getTargetNode()?->getPublicId(),
+                'files_hint' => $order->getFilesHint(),
+                'rule_code' => $order->getRuleCode(),
+            ], $pendingOrders),
+            'url' => $this->urlGenerator->generate('factory_swarm_show', ['publicId' => $swarm->getPublicId()], UrlGeneratorInterface::ABSOLUTE_URL),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    #[McpTool(
+        name: 'wait_swarm_order',
+        description: 'Long-poll an interactive Swarm Hub for the next eligible work order. Loop while status is "idle", execute when "order", stop when "closed".',
+        annotations: new ToolAnnotations(readOnlyHint: false, destructiveHint: false),
+    )]
+    public function waitSwarmOrder(
+        string $swarmId,
+        string $nodeId,
+        #[Schema(minimum: 0, maximum: 25)]
+        int $timeout = 20,
+    ): array {
+        $this->assertEnabled();
+        $swarm = $this->swarm($swarmId);
+        $node = $this->swarmNode($swarm, $nodeId);
+
+        $order = $swarm->getStatus()->isActive() ? $this->hubManager->waitForOrder($node, $timeout) : null;
+
+        if (null !== $order) {
+            return [
+                'status' => 'order',
+                'swarm_status' => $swarm->getStatus()->value,
+                'order' => [
+                    'order_id' => $order->getPublicId(),
+                    'kind' => $order->getKind()->value,
+                    'title' => $order->getTitle(),
+                    'instructions' => $order->getInstructions(),
+                    'files_hint' => $order->getFilesHint(),
+                    'rule_code' => $order->getRuleCode(),
+                    'project_context' => $this->contextBuilder->build(
+                        $swarm->getProject(),
+                        $order->getRuleCode() ?? $swarm->getSourceRuleCode(),
+                    ),
+                ],
+            ];
+        }
+
+        if (!$swarm->getStatus()->isActive()) {
+            return [
+                'status' => 'closed',
+                'swarm_status' => $swarm->getStatus()->value,
+            ];
+        }
+
+        return [
+            'status' => 'idle',
+            'swarm_status' => $swarm->getStatus()->value,
+        ];
+    }
+
+    /**
+     * @param list<string> $files
+     *
+     * @return array<string, mixed>
+     */
+    #[McpTool(
+        name: 'report_swarm_order',
+        description: 'Report an intermediate progress update and touched files while executing a Swarm Hub work order.',
+        annotations: new ToolAnnotations(readOnlyHint: false, destructiveHint: false),
+    )]
+    public function reportSwarmOrder(
+        string $swarmId,
+        string $orderId,
+        #[Schema(minLength: 1)]
+        string $message,
+        ?string $nodeId = null,
+        #[Schema(items: ['type' => 'string'])]
+        array $files = [],
+    ): array {
+        $this->assertEnabled();
+        $swarm = $this->swarm($swarmId);
+        $order = $this->swarmOrder($swarm, $orderId);
+
+        $message = trim($message);
+        if ('' === $message) {
+            throw new ToolCallException('Progress message must not be blank.');
+        }
+
+        $node = null !== $nodeId && '' !== trim($nodeId) ? $this->swarmNode($swarm, $nodeId) : $order->getClaimedByNode();
+        $this->hubManager->reportProgress($node, $order, $message, $files);
+
+        return [
+            'order_id' => $order->getPublicId(),
+            'status' => $order->getStatus()->value,
+            'files_touched' => $order->getFilesTouched(),
+        ];
+    }
+
+    /**
+     * @param list<string> $files
+     *
+     * @return array<string, mixed>
+     */
+    #[McpTool(
+        name: 'complete_swarm_order',
+        description: 'Complete or fail a Swarm Hub work order with a summary, optional Markdown output, touched files and branch.',
+        annotations: new ToolAnnotations(readOnlyHint: false, destructiveHint: false, idempotentHint: true),
+    )]
+    public function completeSwarmOrder(
+        string $swarmId,
+        string $orderId,
+        #[Schema(minLength: 1)]
+        string $summary,
+        #[Schema(enum: ['completed', 'failed'])]
+        string $status = 'completed',
+        ?string $output = null,
+        #[Schema(items: ['type' => 'string'])]
+        array $files = [],
+        ?string $branch = null,
+        ?string $nodeId = null,
+    ): array {
+        $this->assertEnabled();
+        $swarm = $this->swarm($swarmId);
+        $order = $this->swarmOrder($swarm, $orderId);
+
+        $summary = trim($summary);
+        if ('' === $summary) {
+            throw new ToolCallException('Order summary must not be blank.');
+        }
+
+        if (!\in_array($status, ['completed', 'failed'], true)) {
+            throw new ToolCallException(\sprintf('Invalid order status "%s". Use completed or failed.', $status));
+        }
+
+        $node = null !== $nodeId && '' !== trim($nodeId) ? $this->swarmNode($swarm, $nodeId) : $order->getClaimedByNode();
+        $this->hubManager->completeOrder(
+            node: $node,
+            order: $order,
+            succeeded: 'completed' === $status,
+            summary: $summary,
+            output: $output,
+            filesTouched: $files,
+            branch: $branch,
+        );
+
+        return [
+            'order_id' => $order->getPublicId(),
+            'status' => $order->getStatus()->value,
+            'files_touched' => $order->getFilesTouched(),
+            'branch' => $order->getBranch(),
+        ];
+    }
+
     private function assertEnabled(): void
     {
         if (!$this->factoryGuard->isEnabled()) {
@@ -310,6 +525,26 @@ final class FactoryTools
         }
 
         return $swarm;
+    }
+
+    private function swarmNode(SwarmRun $swarm, string $publicId): SwarmNode
+    {
+        $node = $this->nodeRepository->findByPublicId($publicId);
+        if (null === $node || $node->getSwarm()->getId() !== $swarm->getId()) {
+            throw new ToolCallException(\sprintf('Unknown node "%s" for swarm "%s".', $publicId, $swarm->getPublicId()));
+        }
+
+        return $node;
+    }
+
+    private function swarmOrder(SwarmRun $swarm, string $publicId): SwarmOrder
+    {
+        $order = $this->orderRepository->findByPublicId($publicId);
+        if (null === $order || $order->getSwarm()->getId() !== $swarm->getId()) {
+            throw new ToolCallException(\sprintf('Unknown order "%s" for swarm "%s".', $publicId, $swarm->getPublicId()));
+        }
+
+        return $order;
     }
 
     private function project(string $slug): Project

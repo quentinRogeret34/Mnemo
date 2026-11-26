@@ -12,6 +12,7 @@ enum AgentRunnerKind: string implements TranslatableInterface
     case CodexCli = 'codex_cli';
     case GeminiCli = 'gemini_cli';
     case InternalLlm = 'internal_llm';
+    case ExternalHub = 'external_hub';
 
     public function trans(TranslatorInterface $translator, ?string $locale = null): string
     {

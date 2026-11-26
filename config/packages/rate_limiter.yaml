@@ -1,0 +1,6 @@
+framework:
+    rate_limiter:
+        swarm_hub:
+            policy: 'sliding_window'
+            limit: 120
+            interval: '1 minute'

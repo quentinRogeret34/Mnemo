@@ -60,7 +60,7 @@ final class McpServerTest extends WebTestCase
         $tools = $this->rpc('tools/list')['tools'];
 
         self::assertEqualsCanonicalizing(
-            ['list_projects', 'search', 'file_context', 'get_document', 'add_memory', 'import_document', 'learn', 'memory_block', 'start_session', 'log_session_event', 'end_session', 'list_sessions', 'get_swarm_board', 'post_swarm_message'],
+            ['list_projects', 'search', 'file_context', 'get_document', 'add_memory', 'import_document', 'learn', 'memory_block', 'start_session', 'log_session_event', 'end_session', 'list_sessions', 'get_swarm_board', 'post_swarm_message', 'join_swarm', 'wait_swarm_order', 'report_swarm_order', 'complete_swarm_order'],
             array_column($tools, 'name'),
         );
     }

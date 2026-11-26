@@ -17,6 +17,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\UniqueConstraint(name: 'swarm_run_public_id_uidx', columns: ['public_id'])]
 #[ORM\Index(name: 'swarm_run_project_created_idx', columns: ['project_id', 'created_at'])]
 #[ORM\Index(name: 'swarm_run_status_idx', columns: ['status'])]
+#[ORM\Index(name: 'swarm_run_hub_token_hash_idx', columns: ['hub_token_hash'])]
 class SwarmRun
 {
     #[ORM\Id]
@@ -42,6 +43,15 @@ class SwarmRun
 
     #[ORM\Column(options: ['default' => true])]
     private bool $requirePlanApproval = true;
+
+    #[ORM\Column(options: ['default' => false])]
+    private bool $hubMode = false;
+
+    #[ORM\Column(length: 64, nullable: true)]
+    private ?string $hubTokenHash = null;
+
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    private ?string $hubTokenCipher = null;
 
     /**
      * Structured worker tasks produced by SwarmPlanner.
@@ -80,12 +90,14 @@ class SwarmRun
         private AgentRunnerKind $workerRunner = AgentRunnerKind::ClaudeCli,
         bool $requirePlanApproval = true,
         ?string $publicId = null,
+        bool $hubMode = false,
     ) {
         $now = new \DateTimeImmutable();
         $this->publicId = $publicId ?? 'swarm_'.bin2hex(random_bytes(6));
         $this->title = mb_substr(trim($title), 0, 255);
         $this->goal = trim($goal);
         $this->requirePlanApproval = $requirePlanApproval;
+        $this->hubMode = $hubMode;
         $this->createdAt = $now;
         $this->updatedAt = $now;
     }
@@ -144,6 +156,48 @@ class SwarmRun
     public function requiresPlanApproval(): bool
     {
         return $this->requirePlanApproval;
+    }
+
+    public function isHubMode(): bool
+    {
+        return $this->hubMode;
+    }
+
+    public function setHubMode(bool $hubMode): void
+    {
+        $this->hubMode = $hubMode;
+        $this->touch();
+    }
+
+    public function getHubTokenHash(): ?string
+    {
+        return $this->hubTokenHash;
+    }
+
+    public function getHubTokenCipher(): ?string
+    {
+        return $this->hubTokenCipher;
+    }
+
+    public function hasHubToken(): bool
+    {
+        return null !== $this->hubTokenHash && '' !== $this->hubTokenHash;
+    }
+
+    public function setHubToken(?string $hash, ?string $cipher): void
+    {
+        $trimmedHash = null === $hash ? null : trim($hash);
+        $trimmedCipher = null === $cipher ? null : trim($cipher);
+        $this->hubTokenHash = '' === $trimmedHash ? null : $trimmedHash;
+        $this->hubTokenCipher = '' === $trimmedCipher ? null : $trimmedCipher;
+        $this->touch();
+    }
+
+    public function clearHubToken(): void
+    {
+        $this->hubTokenHash = null;
+        $this->hubTokenCipher = null;
+        $this->touch();
     }
 
     public function getSourceRuleCode(): ?string
@@ -250,6 +304,8 @@ class SwarmRun
         if (null !== $reviewSummary && '' !== trim($reviewSummary)) {
             $this->reviewSummary = trim($reviewSummary);
         }
+        $this->hubTokenHash = null;
+        $this->hubTokenCipher = null;
         $this->updatedAt = $now;
         $this->finishedAt = $now;
     }
@@ -261,6 +317,8 @@ class SwarmRun
         if (null !== $reason && '' !== trim($reason)) {
             $this->reviewSummary = trim($reason);
         }
+        $this->hubTokenHash = null;
+        $this->hubTokenCipher = null;
         $this->updatedAt = $now;
         $this->finishedAt = $now;
     }
@@ -272,6 +330,8 @@ class SwarmRun
         if (null !== $reason && '' !== trim($reason)) {
             $this->reviewSummary = trim($reason);
         }
+        $this->hubTokenHash = null;
+        $this->hubTokenCipher = null;
         $this->updatedAt = $now;
         $this->finishedAt = $now;
     }

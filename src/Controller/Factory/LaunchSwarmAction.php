@@ -59,6 +59,7 @@ final class LaunchSwarmAction extends AbstractController
         $strategy = SwarmStrategy::tryFrom($request->request->getString('strategy')) ?? SwarmStrategy::Parallel;
         $runner = AgentRunnerKind::tryFrom($request->request->getString('worker_runner')) ?? AgentRunnerKind::InternalLlm;
         $requireApproval = '1' === $request->request->getString('require_plan_approval');
+        $skipInitialPlan = '1' === $request->request->getString('skip_initial_plan');
         $ruleCode = trim($request->request->getString('rule_code')) ?: null;
         $baseBranch = trim($request->request->getString('base_branch')) ?: null;
         $runSync = '1' === $request->request->getString('run_sync');
@@ -73,13 +74,14 @@ final class LaunchSwarmAction extends AbstractController
             sourceRuleCode: $ruleCode,
             baseBranch: $baseBranch,
             startedBy: $this->getUser()?->getUserIdentifier() ?? 'local',
+            skipInitialPlan: $skipInitialPlan,
         );
 
-        if ($runSync) {
+        if ($runSync && !$skipInitialPlan) {
             $this->orchestrator->advanceSynchronously($swarm);
         }
 
-        $this->addFlash('notice', 'factory.swarm.flash.launched');
+        $this->addFlash('notice', $skipInitialPlan ? 'factory.hub.flash.launched' : 'factory.swarm.flash.launched');
 
         return $this->redirectToRoute('factory_swarm_show', ['publicId' => $swarm->getPublicId()]);
     }

@@ -20,7 +20,7 @@
     {% set missing_runners = [] %}
     {% for runner in runners %}
         {% if runner.value != 'external_mcp' %}
-            {% if runner_availability[runner.value] ?? false %}
+            {% if (runner_availability[runner.value] ?? false) or runner.value == 'external_hub' %}
                 {% set ready_runners = ready_runners|merge([runner]) %}
             {% else %}
                 {% set missing_runners = missing_runners|merge([runner]) %}
@@ -290,6 +290,9 @@
 
                             <div class="factory-swarm-card__foot">
                                 <div class="factory-context-chips">
+                                    {% if swarm.isHubMode %}
+                                        <span class="tag tag--accent">{{ 'factory.hub.badge'|trans }}</span>
+                                    {% endif %}
                                     <span class="tag">{{ swarm.workerRunner|trans }}</span>
                                     <span class="tag">{{ swarm.plan|length }} {{ 'factory.swarm.tasks_unit'|trans }}</span>
                                     {% if swarm.sourceRuleCode %}
@@ -365,6 +368,7 @@
                     gemini_cli: 'lucide:code',
                     internal_llm: 'lucide:wand-sparkles',
                     external_mcp: 'lucide:plug-zap',
+                    external_hub: 'lucide:plug-zap',
                 } %}
                 <div class="table-wrap table-wrap--framed factory-table">
                     <table class="data-table">
@@ -603,14 +607,28 @@
                     {{ 'factory.swarm.worker_runner'|trans }}
                     <select class="select" name="worker_runner">
                         {% for runner in runners %}
-                            {% if runner.value != 'external_mcp' %}
+                            {% if runner.value == 'external_hub' %}
+                                <option value="{{ runner.value }}" selected>
+                                    {{ runner|trans }}
+                                </option>
+                            {% endif %}
+                        {% endfor %}
+                        {% for runner in runners %}
+                            {% if runner.value != 'external_mcp' and runner.value != 'external_hub' %}
                                 {% set available = runner_availability[runner.value] ?? false %}
-                                <option value="{{ runner.value }}"{% if runner.value == 'internal_llm' %} selected{% endif %}>
+                                <option value="{{ runner.value }}">
                                     {{ runner|trans }}{% if not available %} ({{ 'factory.swarm.unavailable'|trans }}){% endif %}
                                 </option>
                             {% endif %}
                         {% endfor %}
                     </select>
+                </label>
+                <label class="checkbox-field__label hub-launch-toggle">
+                    <input type="checkbox" name="skip_initial_plan" value="1">
+                    <span class="hub-launch-toggle__copy">
+                        <strong>{{ 'factory.hub.skip_initial_plan'|trans }}</strong>
+                        <span class="row__sub">{{ 'factory.hub.skip_initial_plan_help'|trans }}</span>
+                    </span>
                 </label>
                 <details class="factory-advanced">
                     <summary>{{ 'factory.form.advanced'|trans }}</summary>

@@ -613,6 +613,7 @@ enum:
     agent_runner_kind:
         claude_cli: 'Claude Code CLI'
         codex_cli: 'Codex CLI'
+        external_hub: 'Hub interactif — clients externes'
         external_mcp: 'Agent MCP / IDE'
         gemini_cli: 'Gemini CLI'
         internal_llm: 'Agent LLM interne'
@@ -641,6 +642,23 @@ enum:
         progress: Avancement
         review: Revue
         system: Système
+    swarm_node_status:
+        busy: Occupé
+        idle: Disponible
+        offline: 'Hors ligne'
+        stale: Inactif
+    swarm_order_kind:
+        custom: Instruction
+        edit: Modification
+        research: Recherche
+        review: 'Revue / Tests'
+    swarm_order_status:
+        cancelled: Annulé
+        claimed: 'Pris en charge'
+        completed: Terminé
+        failed: Échec
+        pending: 'En attente'
+        running: 'En cours'
     swarm_status:
         awaiting_approval: 'Plan à valider'
         cancelled: Annulée
@@ -818,6 +836,65 @@ factory:
         tool_log: 'Ajoute une décision, étape ou liste de fichiers touchés.'
         tool_start: 'Démarre une session tracée liée au projet et à la branche.'
         tool_swarm: 'Lit et poste des messages sur le board d’une ruche.'
+    hub:
+        badge: 'Hub interactif'
+        connect:
+            copy_prompt: 'Copier le prompt'
+            enable_token: 'Activer le lien externe'
+            mcp_help: 'À coller dans un client déjà connecté au serveur MCP Mnemo (Claude Code, Cursor, Antigravity) :'
+            revoke_token: 'Révoquer le lien'
+            rotate_token: 'Régénérer le jeton'
+            subtitle: 'Claude Code, Cursor, Codex, Antigravity ou n’importe quel agent curl'
+            tab_mcp: 'Prompt MCP'
+            tab_url: 'Prompt URL universel'
+            title: 'Connecter un client externe'
+            token_disabled_help: 'Le lien externe signé n’est pas encore activé pour cette ruche. Activez-le pour obtenir un prompt URL partageable et des URLs directes par tâche.'
+            url_help: 'À coller dans n’importe quel agent externe capable de lire une URL et d’exécuter curl (sans configuration MCP) :'
+        console:
+            files_hint: 'Fichiers suggérés (optionnel, séparés par virgule)'
+            instructions: Instructions
+            instructions_placeholder: 'Décrivez précisément la tâche, les contraintes métier et le résultat attendu…'
+            kind: Type
+            order_title: 'Titre de l’ordre'
+            order_title_placeholder: 'ex. Auditer le calcul de remise dans PricingService'
+            submit: 'Envoyer l’ordre'
+            target: Cible
+            target_all: 'Tous les nœuds connectés'
+            target_any: 'Premier nœud libre'
+            title: 'Envoyer un ordre aux clients'
+        flash:
+            launched: 'Hub interactif ouvert : connectez vos clients externes et envoyez vos ordres.'
+            node_not_found: 'Nœud cible introuvable dans cette ruche.'
+            order_cancelled: 'Ordre annulé.'
+            order_created: 'Ordre ajouté à la file du Hub.'
+            order_required: 'Renseignez un titre et des instructions pour envoyer un ordre.'
+            orders_broadcast: 'Ordre diffusé à tous les nœuds connectés.'
+            swarm_closed: 'Impossible d’envoyer un ordre sur une ruche clôturée.'
+            token_enabled: 'Lien externe activé pour cette ruche.'
+            token_revoked: 'Lien externe révoqué.'
+            token_rotated: 'Jeton du Hub régénéré. Les anciens liens sont désormais invalides.'
+        kpi:
+            nodes_online: 'Nœuds en ligne'
+            orders_completed: Terminés
+            orders_pending: 'En attente'
+            orders_running: 'En cours'
+        live_badge: 'En direct'
+        nodes:
+            empty: 'Aucun client externe connecté pour le moment.'
+            online_count: '{count, plural, =0 {Aucun nœud en ligne} one {# nœud en ligne} other {# nœuds en ligne}}'
+            target_cta: Cibler
+            title: 'Nœuds connectés'
+        orders:
+            assigned_to: 'Pris en charge par'
+            copied: Copié
+            copy_url: 'Copier l’URL de tâche'
+            empty: 'Aucun ordre envoyé pour le moment. Utilisez la console ci-dessus pour piloter vos clients connectés.'
+            files_touched: 'Fichiers touchés'
+            targeted_at: 'Ciblé :'
+            title: 'File d’ordres'
+            view_output: 'Voir la sortie complète'
+        skip_initial_plan: 'Démarrer en Hub libre sans planification LLM initiale'
+        skip_initial_plan_help: 'Ouvre immédiatement la ruche pour connecter des clients externes et envoyer des ordres en direct.'
     kpi:
         active: 'En cours'
         failed: 'En échec'

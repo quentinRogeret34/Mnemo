@@ -613,6 +613,7 @@ enum:
     agent_runner_kind:
         claude_cli: 'Claude Code CLI'
         codex_cli: 'Codex CLI'
+        external_hub: 'Interactive Hub — external clients'
         external_mcp: 'MCP / IDE agent'
         gemini_cli: 'Gemini CLI'
         internal_llm: 'Internal LLM agent'
@@ -641,6 +642,23 @@ enum:
         progress: Progress
         review: Review
         system: System
+    swarm_node_status:
+        busy: Busy
+        idle: Idle
+        offline: Offline
+        stale: Stale
+    swarm_order_kind:
+        custom: Instruction
+        edit: Edit
+        research: Research
+        review: 'Review / Tests'
+    swarm_order_status:
+        cancelled: Cancelled
+        claimed: Claimed
+        completed: Completed
+        failed: Failed
+        pending: Pending
+        running: Running
     swarm_status:
         awaiting_approval: 'Awaiting plan approval'
         cancelled: Cancelled
@@ -818,6 +836,65 @@ factory:
         tool_log: 'Appends a decision, milestone or touched file list.'
         tool_start: 'Starts a tracked session linked to the project and branch.'
         tool_swarm: 'Reads and posts messages on a swarm’s shared board.'
+    hub:
+        badge: 'Interactive Hub'
+        connect:
+            copy_prompt: 'Copy prompt'
+            enable_token: 'Enable external link'
+            mcp_help: 'Paste into any client already connected to Mnemo’s MCP server (Claude Code, Cursor, Antigravity):'
+            revoke_token: 'Revoke link'
+            rotate_token: 'Rotate token'
+            subtitle: 'Claude Code, Cursor, Codex, Antigravity or any curl-capable agent'
+            tab_mcp: 'MCP Prompt'
+            tab_url: 'Universal URL Prompt'
+            title: 'Connect an external client'
+            token_disabled_help: 'The signed external link is not enabled yet for this swarm. Enable it to get a shareable URL prompt and one-shot per-task URLs.'
+            url_help: 'Paste into any external agent able to fetch a URL and run curl (zero MCP setup):'
+        console:
+            files_hint: 'Suggested files (optional, comma-separated)'
+            instructions: Instructions
+            instructions_placeholder: 'Describe the task, business constraints and expected deliverable…'
+            kind: Type
+            order_title: 'Order title'
+            order_title_placeholder: 'e.g. Audit discount calculation in PricingService'
+            submit: 'Send order'
+            target: Target
+            target_all: 'All connected nodes'
+            target_any: 'First free node'
+            title: 'Dispatch an order to clients'
+        flash:
+            launched: 'Interactive Hub opened: connect external clients and dispatch orders.'
+            node_not_found: 'Target node not found in this swarm.'
+            order_cancelled: 'Order cancelled.'
+            order_created: 'Order added to the Hub queue.'
+            order_required: 'Provide a title and instructions to dispatch an order.'
+            orders_broadcast: 'Order broadcast to all connected nodes.'
+            swarm_closed: 'Cannot dispatch an order to a closed swarm.'
+            token_enabled: 'External link enabled for this swarm.'
+            token_revoked: 'External link revoked.'
+            token_rotated: 'Hub token rotated. Previous links are now invalid.'
+        kpi:
+            nodes_online: 'Nodes online'
+            orders_completed: Completed
+            orders_pending: Pending
+            orders_running: Running
+        live_badge: Live
+        nodes:
+            empty: 'No external client connected yet.'
+            online_count: '{count, plural, =0 {No node online} one {# node online} other {# nodes online}}'
+            target_cta: Target
+            title: 'Connected nodes'
+        orders:
+            assigned_to: 'Claimed by'
+            copied: Copied
+            copy_url: 'Copy task URL'
+            empty: 'No order dispatched yet. Use the console above to drive your connected clients.'
+            files_touched: 'Files touched'
+            targeted_at: 'Target:'
+            title: 'Order queue'
+            view_output: 'View full output'
+        skip_initial_plan: 'Start as a live Hub without initial LLM planning'
+        skip_initial_plan_help: 'Opens the swarm immediately so you can connect external clients and dispatch live orders.'
     kpi:
         active: Active
         failed: Failed
