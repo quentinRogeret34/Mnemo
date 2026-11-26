@@ -161,9 +161,7 @@ final class AgentSessionRepository
                 COUNT(*) FILTER (WHERE started_at >= :since)::int AS last_24h
             FROM agent_session
         SQL;
-        if ([] !== $where) {
-            $sql .= ' WHERE '.implode(' AND ', $where);
-        }
+        $sql .= ' WHERE '.implode(' AND ', $where);
 
         $row = $this->connection->fetchAssociative($sql, $params, $types);
         if (!\is_array($row)) {
