@@ -62,6 +62,9 @@ admin:
 agent:
     content: Content
     delete_confirm: 'Delete {name}?'
+    draft: 'Generate from a request'
+    draft_submit: 'Draft the proposal'
+    draft_text: 'Describe the need: AI drafts the file from the memories, documents and business rules of the project closest to it. It lands in “To review” before being served to the agents.'
     edit: 'Edit {name}'
     empty: 'No skill'
     empty_text: 'Write a skill, a command or a subagent here: every machine connected to the project gets it, without committing anything to the repository.'
@@ -931,6 +934,8 @@ flash:
         user_updated: 'Account of {name} updated.'
     agent_asset:
         deleted: '“{name}” deleted: its file is removed from the connected agents at their next session.'
+        drafted: 'Proposal drafted: review it before it is served to the agents.'
+        drafted_none: 'AI proposed nothing for this request: make it more precise and try again.'
         proposed: '{count, plural, one {# skill update queued for review.} other {# skill updates queued for review.}}'
         proposed_none: 'No skill update to propose right now.'
         saved: '{kind} “{name}” saved: the connected agents get it at their next session.'
@@ -1021,6 +1026,9 @@ form:
         kind: Type
         name: Name
         name_help: 'File name and, for a command, what you type after “/”. E.g. pr-review.'
+    agent_asset_draft:
+        request: Request
+        request_help: 'E.g. “A skill to review a PR touching billing, checking the business rules involved.”'
     connector:
         arguments: 'Tool arguments (JSON)'
         credentials: 'HTTP headers or environment variables'

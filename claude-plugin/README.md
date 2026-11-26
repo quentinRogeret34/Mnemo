@@ -4,6 +4,9 @@ Branche Claude Code sur Mnemo, la mémoire du projet :
 
 - serveur MCP `mnemo` (`search`, `file_context`, `add_memory`, `learn`...) ;
 - `SessionStart` : mémoire du projet (conventions, décisions, règles validées) dans le contexte ;
+- `SessionStart` aussi : skills, commandes et sous-agents du projet (page « Fichiers d'agents ») écrits dans `.claude/`.
+  Seuls les fichiers écrits par le plugin sont mis à jour ou retirés, un fichier local du même nom n'est jamais touché.
+  Ils sont listés dans `.git/info/exclude` : git les ignore, rien à commiter ;
 - `PostToolUse` sur `Read` : règles, documents et mémoires liés au fichier lu ;
 - `SessionEnd` et `PreCompact` : la partie nouvelle du transcript part vers `learn`, secrets masqués.
   Les apprentissages arrivent dans « À valider », rien n'est stocké sans relecture.

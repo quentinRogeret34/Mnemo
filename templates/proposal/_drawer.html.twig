@@ -72,6 +72,12 @@
                         <dt>{{ ux_icon('lucide:circle-dashed') }}{{ 'proposal.type'|trans }}</dt>
                         <dd>{{ ('enum.agent_asset_kind.' ~ (p.kind ?? 'skill'))|trans }}</dd>
                     </div>
+                    {% if p.request is defined and p.request %}
+                        <div class="drawer__meta-row">
+                            <dt>{{ ux_icon('lucide:message-circle') }}{{ 'form.agent_asset_draft.request'|trans }}</dt>
+                            <dd>{{ p.request }}</dd>
+                        </div>
+                    {% endif %}
                 {% elseif kind_value == 'refuted' %}
                     <div class="drawer__meta-row">
                         <dt>{{ ux_icon('lucide:shield-alert') }}{{ 'proposal.verdict_label'|trans }}</dt>

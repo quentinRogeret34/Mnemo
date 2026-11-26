@@ -1,7 +1,8 @@
 """Branche Claude Code sur Mnemo, la mémoire du projet.
 
-  session-start  SessionStart : ligne de statut, consigne d'enregistrer les mémoires via `add_memory` sans attendre
-                 qu'on le demande, puis mémoire du projet (conventions, décisions, règles validées)
+  session-start  SessionStart : écrit les skills, commandes et sous-agents du projet dans .claude/, puis ligne de
+                 statut, consigne d'enregistrer les mémoires via `add_memory` sans attendre qu'on le demande, puis
+                 mémoire du projet (conventions, décisions, règles validées)
   file-read      PostToolUse Read : injecte règles, documents et mémoires liés au fichier lu
   capture        SessionEnd, PreCompact : envoie la partie nouvelle du transcript à `learn`, en arrière-plan
   capture-run    le travail de capture lui-même, lancé détaché par `capture`
@@ -10,6 +11,10 @@ Le projet est celui que nomme MNEMO_PROJECT (son slug dans le graphe). Sans cett
 distant `origin`, sinon celui dont le chemin contient le dossier courant (même machine que le serveur seulement).
 Un projet inconnu est créé par le serveur au début de la session, nommé d'après le slug, le dépôt ou le dossier.
 Serveur absent ou erreur : le hook ne dit rien et sort en 0, il ne gêne jamais la session.
+
+Les fichiers de .claude/ écrits par le plugin sont notés dans un manifeste (dossier d'état du plugin) : seuls ceux-là
+sont réécrits ou retirés quand ils changent ou disparaissent dans Mnemo, un fichier local du même nom n'est jamais
+touché. Ils sont listés dans .git/info/exclude, entre deux marqueurs : git les ignore sans rien commiter.
 
 Variables, à poser dans le bloc "env" de .claude/settings.json du projet (la clé dans settings.local.json) :
   MNEMO_URL       adresse du serveur, défaut http://localhost:8080
@@ -20,6 +25,7 @@ Variables, à poser dans le bloc "env" de .claude/settings.json du projet (la cl
 Bibliothèque standard seulement.
 """
 
+import hashlib
 import json
 import os
 import re
@@ -47,6 +53,8 @@ SECRETS = [
     (re.compile(r"\b(?![0-9a-f]{40}\b)(?=[A-Za-z0-9+_-]*\d)(?=[A-Za-z0-9+_-]*[A-Za-z])[A-Za-z0-9+_-]{40,}={0,2}"), "[MASQUÉ]"),
 ]
 NOISE = re.compile(r"<system-reminder>.*?</system-reminder>", re.S)
+ASSET_PATH = re.compile(r"^\.claude/(?:skills/[a-z0-9-]+/SKILL|commands/[a-z0-9-]+|agents/[a-z0-9-]+)\.md$")
+EXCLUDE_BEGIN, EXCLUDE_END = "# mnemo:begin", "# mnemo:end"
 REMOTE = re.compile(r"^(?:[a-z][a-z0-9+.-]*://)?(?:[^@/]+@)?(?P<host>[a-z0-9][a-z0-9.-]+)(?::\d+(?=/))?[:/](?P<path>[^/?#][^?#]*?)(?:\.git)?/?$", re.I)
 
 
@@ -109,7 +117,62 @@ def repository_of(cwd: str) -> str:
     return f"{match['host']}/{match['path']}".lower() if match else ""
 
 
+def sync_assets(data: dict) -> None:
+    cwd = cwd_of(data)
+    status, body = request("/api/agent-assets", scope(data))
+    files = body.get("files")
+    if status != 200 or not isinstance(files, list):
+        return
+    root = Path(git(cwd, "rev-parse", "--show-toplevel") or cwd).resolve()
+    manifest = state_dir() / f"assets-{hashlib.sha1(str(root).encode('utf-8')).hexdigest()}.json"
+    try:
+        managed = set(json.loads(manifest.read_text(encoding="utf-8")))
+    except (OSError, ValueError, TypeError):
+        managed = set()
+
+    served = {}
+    for file in files:
+        if isinstance(file, dict) and isinstance(file.get("path"), str) and isinstance(file.get("content"), str) and ASSET_PATH.match(file["path"]):
+            served[file["path"]] = file["content"]
+
+    kept = set()
+    for path, content in served.items():
+        target = root / path
+        if target.exists() and path not in managed:
+            continue
+        if not target.exists() or target.read_text(encoding="utf-8") != content:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(content, encoding="utf-8")
+        kept.add(path)
+
+    for path in managed - kept:
+        target = root / path
+        target.unlink(missing_ok=True)
+        if target.parent.name not in ("commands", "agents") and target.parent.is_dir() and not any(target.parent.iterdir()):
+            target.parent.rmdir()
+
+    manifest.write_text(json.dumps(sorted(kept)), encoding="utf-8")
+    exclude_assets(root, sorted(kept))
+
+
+def exclude_assets(root: Path, paths: list[str]) -> None:
+    git_path = git(str(root), "rev-parse", "--git-path", "info/exclude")
+    if not git_path:
+        return
+    exclude = Path(git_path) if Path(git_path).is_absolute() else root / git_path
+    text = exclude.read_text(encoding="utf-8") if exclude.exists() else ""
+    text = re.sub(rf"\n?{EXCLUDE_BEGIN}\n.*?{EXCLUDE_END}\n?", "\n", text, flags=re.S).rstrip("\n")
+    if paths:
+        text += ("\n" if text else "") + "\n".join([EXCLUDE_BEGIN, *("/" + path for path in paths), EXCLUDE_END])
+    exclude.parent.mkdir(parents=True, exist_ok=True)
+    exclude.write_text(text + "\n" if text else "", encoding="utf-8")
+
+
 def session_start(data: dict) -> None:
+    try:
+        sync_assets(data)
+    except Exception:  # une sync ratée ne doit pas priver la session de sa mémoire
+        pass
     cwd = cwd_of(data)
     status, body = request("/api/context", scope(data))
     project = body.get("project")

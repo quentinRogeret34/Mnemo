@@ -124,4 +124,58 @@ final class SkillEvolutionAdvisorTest extends WebTestCase
         self::assertTrue((bool) ($applied[0]->getPayload()['human_feedback']['edited'] ?? false));
         self::assertFalse((bool) ($applied[1]->getPayload()['human_feedback']['edited'] ?? true));
     }
+
+    public function testDraftsASkillFromARequestGroundedInTheProjectContext(): void
+    {
+        $store = self::getContainer()->get(MemoryStore::class);
+        $memory = $store->add('Une facture validée ne se modifie jamais : on émet un avoir.', MemoryType::Convention, 'manual');
+        $memory->addProject($this->project);
+
+        $existing = new AgentAsset($this->project);
+        $existing->setKind(AgentAssetKind::Skill);
+        $existing->setName('revue-facturation');
+        $existing->setDescription('Relire une PR de facturation.');
+        $existing->setContent('Lire le diff.');
+        $this->entityManager->persist($existing);
+        $this->entityManager->flush();
+
+        $this->scriptLlm(static fn (): array => ['proposals' => [[
+            'action' => 'create',
+            'kind' => 'command',
+            'name' => 'Revue Facturation',
+            'description' => 'Relire une PR qui touche à la facturation.',
+            'content' => "Lire le diff.\n\nVérifier qu'aucune facture validée n'est modifiée : émettre un avoir.",
+            'reason' => 'Demande de l\'équipe.',
+            'memory_ids' => [$memory->getId(), 999],
+        ]]]);
+        $crawler = $this->client->request('GET', '/projects/demo/agent-assets');
+        $this->client->submit($crawler->selectButton('Rédiger la proposition')->form(['agent_asset_draft[request]' => '']));
+        self::assertResponseStatusCodeSame(422);
+        self::assertSelectorTextContains('#skill-draft', 'Décrire le besoin.');
+
+        self::assertSame(0, $this->entityManager->getRepository(Proposal::class)->count(['project' => $this->project]));
+
+        $crawler = $this->client->request('GET', '/projects/demo/agent-assets');
+        $this->client->submit($crawler->selectButton('Rédiger la proposition')->form([
+            'agent_asset_draft[request]' => 'Un skill pour relire les PR de facturation',
+            'agent_asset_draft[kind]' => 'skill',
+        ]));
+        self::assertResponseRedirects('/proposals?project=demo&kind=skill_update');
+        $crawler = $this->client->followRedirect();
+        self::assertSelectorTextContains('.flash', 'Proposition rédigée');
+        self::assertStringContainsString('Un skill pour relire les PR de facturation', $crawler->filter('.proposal-drawer')->text());
+
+        self::assertStringContainsString('Un skill pour relire les PR de facturation', $this->llmCalls[0]['user']);
+        self::assertStringContainsString('revue-facturation', $this->llmCalls[0]['user']);
+
+        $proposal = $this->entityManager->getRepository(Proposal::class)->findOneBy(['project' => $this->project, 'kind' => ProposalKind::SkillUpdate]);
+        $payload = $proposal->getPayload();
+        self::assertSame('update', $payload['action']);
+        self::assertSame($existing->getId(), $payload['asset_id']);
+        self::assertSame('skill', $payload['kind']);
+        self::assertSame('revue-facturation', $payload['name']);
+        self::assertSame('Lire le diff.', $payload['previous_content']);
+        self::assertSame('Un skill pour relire les PR de facturation', $payload['request']);
+        self::assertSame([$memory->getId()], $payload['memory_ids']);
+    }
 }

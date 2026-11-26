@@ -7,6 +7,8 @@ agent_asset:
         blank: 'Donner un nom.'
         format: "Minuscules, chiffres et tirets seulement, ex. « revue-de-pr » : c'est le nom du fichier."
         taken: 'Ce nom est déjà pris pour ce type dans le projet.'
+    request:
+        blank: 'Décrire le besoin.'
 connector:
     arguments:
         invalid: 'Arguments JSON invalides : un objet est attendu, ex. {"limit": 50}.'

@@ -62,6 +62,9 @@ admin:
 agent:
     content: Contenu
     delete_confirm: 'Supprimer {name} ?'
+    draft: 'Générer depuis une demande'
+    draft_submit: 'Rédiger la proposition'
+    draft_text: "Décrire le besoin : l'IA rédige le fichier à partir des mémoires, documents et règles métier du projet qui s'en rapprochent. Il arrive dans « À valider » avant d'être servi aux agents."
     edit: 'Modifier {name}'
     empty: 'Aucun skill'
     empty_text: 'Écrire ici un skill, une commande ou un sous-agent : tous les postes connectés au projet le reçoivent, sans rien commiter dans le dépôt.'
@@ -931,6 +934,8 @@ flash:
         user_updated: 'Compte de {name} mis à jour.'
     agent_asset:
         deleted: '« {name} » supprimé : son fichier est retiré des agents connectés à leur prochaine session.'
+        drafted: 'Proposition rédigée : à relire avant de la servir aux agents.'
+        drafted_none: "L'IA n'a rien proposé pour cette demande : la préciser et réessayer."
         proposed: '{count, plural, one {# proposition de skill ajoutée à valider.} other {# propositions de skills ajoutées à valider.}}'
         proposed_none: 'Aucune évolution de skill à proposer pour le moment.'
         saved: '{kind} « {name} » enregistré : les agents connectés le reçoivent à leur prochaine session.'
@@ -1021,6 +1026,9 @@ form:
         kind: Type
         name: Nom
         name_help: "Nom du fichier et, pour une commande, ce qu'on tape après « / ». Ex. revue-de-pr."
+    agent_asset_draft:
+        request: Demande
+        request_help: 'Ex. « Un skill pour relire une PR qui touche à la facturation, en vérifiant les règles métier concernées. »'
     connector:
         arguments: "Arguments de l'outil (JSON)"
         credentials: "En-têtes HTTP ou variables d'environnement"

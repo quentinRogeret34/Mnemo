@@ -13,6 +13,7 @@
         <input type="hidden" name="_token" value="{{ csrf_token('agent-asset-propose-' ~ project.id) }}">
         <button class="button" type="submit"><twig:ux:icon name="lucide:refresh-cw" />{{ 'agent.propose'|trans }}</button>
     </form>
+    <button class="button" type="button" commandfor="skill-draft" command="show-modal"><twig:ux:icon name="lucide:wand-sparkles" />{{ 'agent.draft'|trans }}</button>
     <a class="button button--primary" href="{{ path('agent_asset_new', {slug: project.slug}) }}"><twig:ux:icon name="lucide:plus" />{{ 'common.add'|trans }}</a>
 {% endblock %}
 
@@ -21,6 +22,19 @@
         <h1><twig:ux:icon name="lucide:graduation-cap" />{{ 'nav.agent_assets'|trans }}</h1>
         <span class="view-head__meta">{{ assets|length }}</span>
     </div>
+
+    <dialog class="dialog dialog--form" id="skill-draft" closedby="any" aria-labelledby="skill-draft-title" data-controller="dialog" {{ draft.vars.submitted ? 'open' }}>
+        <h2 class="dialog__title" id="skill-draft-title">{{ 'agent.draft'|trans }}</h2>
+        <p class="row__sub">{{ 'agent.draft_text'|trans }}</p>
+        {{ form_start(draft, {attr: {class: 'form-stack', novalidate: 'novalidate'}}) }}
+            {{ form_row(draft.request, {attr: {class: 'input'}}) }}
+            {{ form_row(draft.kind, {attr: {class: 'select'}}) }}
+            <div class="dialog__actions">
+                <button class="button" type="button" commandfor="skill-draft" command="close">{{ 'common.cancel'|trans }}</button>
+                <button class="button button--primary" type="submit"><twig:ux:icon name="lucide:wand-sparkles" />{{ 'agent.draft_submit'|trans }}</button>
+            </div>
+        {{ form_end(draft) }}
+    </dialog>
 
     {% if assets is empty %}
         <twig:EmptyState :title="'agent.empty'|trans" :text="'agent.empty_text'|trans">
