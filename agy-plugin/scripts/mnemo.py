@@ -1,10 +1,11 @@
 """Branche Antigravity (agy) sur Mnemo, la mémoire du projet.
 
-  session-start   SessionStart : ligne de statut, consigne d'enregistrer les mémoires via `add_memory` sans attendre
-                  qu'on le demande, puis mémoire du projet (conventions, décisions, règles validées)
-  file-read       PostToolUse (read_file|view_file) : récupère règles, documents et mémoires liés au fichier lu
+  session-start   SessionStart : ligne de statut, consignes de recherche (`search`, `file_context`) et
+                  d'enregistrement (`add_memory`), puis mémoire du projet (conventions, décisions, règles validées)
+  file-read       PostToolUse (read/view/edit/write) : récupère règles, documents et mémoires liés au fichier
                   et les met en file pour le prochain appel modèle
-  pre-invocation  PreInvocation : injecte les contextes de fichiers mis en file par `file-read`
+  pre-invocation  PreInvocation : interroge `/api/prompt-context` une fois par nouveau prompt utilisateur et
+                  injecte ce contexte ainsi que les contextes de fichiers mis en file par `file-read`
   capture         Stop : rend la main aussitôt et lance `capture-run` en arrière-plan pour envoyer la partie
                   nouvelle du transcript à `learn`
   capture-run     le travail de capture lui-même, lancé détaché par `capture`
@@ -14,8 +15,8 @@ distant `origin`, sinon celui dont le chemin contient le dossier courant (même 
 Un projet inconnu est créé par le serveur au début de la session, nommé d'après le slug, le dépôt ou le dossier.
 Serveur absent ou erreur : le hook sort proprement en 0 avec un JSON valide, il ne gêne jamais la session.
 
-Variables d'environnement :
-  MNEMO_URL       adresse du serveur, défaut http://localhost:8080
+Variables d'environnement (avec repli automatique sur `../mcp_config.json` pour l'URL et le jeton Bearer) :
+  MNEMO_URL       adresse du serveur, défaut tiré de mcp_config.json sinon http://localhost:8080
   MNEMO_PROJECT   slug du projet dans le graphe, pour ne pas le déduire du dépôt
   MNEMO_API_KEY   clé d'API, quand le serveur en demande une
   MNEMO_DISABLED  1 coupe tout
@@ -23,20 +24,26 @@ Variables d'environnement :
 Bibliothèque standard seulement.
 """
 
+import hashlib
 import json
 import os
 import re
 import subprocess
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
 
-READ_TIMEOUT = 2
+PLUGIN_VERSION = "0.2.0"
+READ_TIMEOUT = 5
+PROMPT_TIMEOUT = 5
 LEARN_TIMEOUT = 300
 MAX_CHARS = 60_000
 MIN_CHARS = 400
+MIN_PROMPT_CHARS = 12
+MAX_PROMPT_CHARS = 20_000
 
 # Les transcripts contiennent des secrets : masqués avant l'envoi, le serveur les transmet ensuite au LLM.
 SECRETS = [
@@ -53,34 +60,99 @@ USER_REQUEST_RE = re.compile(r"<USER_REQUEST>\s*(.*?)\s*</USER_REQUEST>", re.S)
 NOISE_RE = re.compile(r"<(?:ADDITIONAL_METADATA|USER_SETTINGS_CHANGE|SYSTEM_MESSAGE|system-reminder)>.*?</(?:ADDITIONAL_METADATA|USER_SETTINGS_CHANGE|SYSTEM_MESSAGE|system-reminder)>", re.S)
 REMOTE = re.compile(r"^(?:[a-z][a-z0-9+.-]*://)?(?:[^@/]+@)?(?P<host>[a-z0-9][a-z0-9.-]+)(?::\d+(?=/))?[:/](?P<path>[^/?#][^?#]*?)(?:\.git)?/?$", re.I)
 
+_MCP_CFG_CACHE: dict | None = None
+
+
+def mcp_config() -> dict:
+    """Lit `../mcp_config.json` du plugin comme repli quand l'environnement shell n'expose pas MNEMO_URL/MNEMO_API_KEY."""
+    global _MCP_CFG_CACHE
+    if _MCP_CFG_CACHE is not None:
+        return _MCP_CFG_CACHE
+    try:
+        cfg_path = Path(__file__).resolve().parent.parent / "mcp_config.json"
+        raw = json.loads(cfg_path.read_text(encoding="utf-8"))
+        server = (raw.get("mcpServers") or {}).get("mnemo")
+        _MCP_CFG_CACHE = server if isinstance(server, dict) else {}
+    except (OSError, ValueError, TypeError):
+        _MCP_CFG_CACHE = {}
+    return _MCP_CFG_CACHE
+
 
 def base_url() -> str:
-    return (os.environ.get("MNEMO_URL") or "http://localhost:8080").rstrip("/")
+    env_url = (os.environ.get("MNEMO_URL") or "").strip()
+    if env_url:
+        return env_url.rstrip("/")
+    cfg_url = mcp_config().get("url") or mcp_config().get("serverUrl")
+    if isinstance(cfg_url, str) and cfg_url.strip():
+        url = cfg_url.strip().rstrip("/")
+        if url.endswith("/mcp"):
+            url = url[:-4]
+        return url.rstrip("/")
+    return "http://localhost:8080"
 
 
-def scope(data: dict) -> dict:
+def api_key() -> str:
+    env_key = (os.environ.get("MNEMO_API_KEY") or "").strip()
+    if env_key:
+        return env_key
+    headers = mcp_config().get("headers")
+    if isinstance(headers, dict):
+        for name, value in headers.items():
+            if isinstance(name, str) and name.lower() == "authorization" and isinstance(value, str):
+                auth = value.strip()
+                if auth.lower().startswith("bearer "):
+                    return auth[7:].strip()
+                return auth
+    return ""
+
+
+def record_error(path: str, status: int, detail: str) -> None:
+    try:
+        payload = {
+            "at": int(time.time()),
+            "url": base_url() + path,
+            "status": status,
+            "detail": detail[:500],
+        }
+        (state_dir() / "last_error.json").write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+    except OSError:
+        pass
+
+
+def scope(data: dict, prefer_repo_root: bool = False) -> dict:
     """Ce qui désigne le projet au serveur : le dossier de travail, le dépôt distant, et le slug s'il est configuré."""
     cwd = cwd_of(data)
     project, repository = os.environ.get("MNEMO_PROJECT"), repository_of(cwd)
+    if prefer_repo_root and (repository or project):
+        cwd = git(cwd, "rev-parse", "--show-toplevel") or cwd
     return {"cwd": cwd} | ({"repository": repository} if repository else {}) | ({"project": project} if project else {})
 
 
 def request(path: str, params: dict | None = None, payload: dict | None = None, timeout: float = READ_TIMEOUT) -> tuple[int, dict]:
     url = base_url() + path + ("?" + urllib.parse.urlencode(params) if params else "")
     data = None if payload is None else json.dumps(payload).encode("utf-8")
-    headers = {"Accept": "application/json", "Content-Type": "application/json"}
-    if os.environ.get("MNEMO_API_KEY"):
-        headers["Authorization"] = "Bearer " + os.environ["MNEMO_API_KEY"]
+    headers = {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+        "User-Agent": f"mnemo-agy-plugin/{PLUGIN_VERSION}",
+        "X-Mnemo-Client": "antigravity",
+    }
+    token = api_key()
+    if token:
+        headers["Authorization"] = "Bearer " + token
     req = urllib.request.Request(url, data=data, headers=headers)
     try:
         with urllib.request.urlopen(req, timeout=timeout) as response:
             return response.status, json.loads(response.read() or b"{}")
     except urllib.error.HTTPError as e:
+        raw = e.read() or b"{}"
+        record_error(path, e.code, raw.decode("utf-8", errors="replace"))
         try:
-            return e.code, json.loads(e.read() or b"{}")
+            return e.code, json.loads(raw)
         except ValueError:
             return e.code, {}
-    except (OSError, ValueError):
+    except (OSError, ValueError) as e:
+        record_error(path, 0, str(e))
         return 0, {}
 
 
@@ -158,24 +230,28 @@ IMPORTANT : dans ta PREMIÈRE réponse, affiche cette ligne de statut telle quel
 {line}
 ```
 
-N'attends pas que l'utilisateur le demande : après chaque tâche, décision ou échange qui apprend quelque chose de durable sur ce projet, enregistre-le toi-même avec l'outil MCP `add_memory` du serveur mnemo, au fil de l'eau et pas seulement en fin de session.
-- Toujours `projects: ["{project}"]` et `agent: "antigravity"` ; `files` : chemins relatifs au dépôt concernés.
-- `type` : `decision`, `convention`, `task_learning` (bug corrigé, piège, solution), `preference` (de l'utilisateur) ou `fact`.
-- Une mémoire = un fait autonome en une ou deux phrases, compréhensible sans la conversation. Jamais de secret.
-- Vise 1 à 3 mémoires par échange substantiel ; rien pour une simple question ou un fait déjà présent ci-dessous.
-- Avant une tâche non triviale ou quand l'utilisateur évoque un travail passé, cherche d'abord avec l'outil `search` (`project: "{project}"`).
+### Consignes d'utilisation du graphe Mnemo (outils MCP `mnemo`)
+
+1. **Chercher le contexte AVANT d'agir** (ne te fie pas uniquement au résumé ci-dessous, il est tronqué) :
+   - Avant toute tâche non triviale, décision d'architecture, question métier ou référence à un travail passé, appelle `search(project="{project}", query="...")` avec **1 à 3 mots-clés ciblés** (évite les longues phrases).
+   - Avant de modifier un fichier clé ou pour connaître ses règles métier, documents, dépendances (`depends_on`/`used_by`) et commits/PRs récents, appelle `file_context(project="{project}", path="<chemin relatif>")`.
+   - Pour lire le contenu complet d'une spécification trouvée par `search`, appelle `get_document(id=...)`.
+2. **Enregistrer les apprentissages au fil de l'eau** (sans attendre que l'utilisateur le demande) :
+   - Après chaque tâche, décision, piège résolu ou convention durable, appelle `add_memory` avec `projects: ["{project}"]`, `agent: "antigravity"`, `files`: chemins relatifs concernés.
+   - `type` : `decision`, `convention`, `task_learning`, `preference` ou `fact`.
+   - Une mémoire = un fait autonome en une ou deux phrases, compréhensible sans la conversation. Jamais de secret. Vise 1 à 3 mémoires par échange substantiel ; rien pour une simple question ou un fait déjà connu.
 
 {body.get("context") or ""}""")
 
 
 def file_read(data: dict) -> None:
-    """PostToolUse sur read_file|view_file : met en file le contexte Mnemo pour PreInvocation."""
+    """PostToolUse sur read/view/edit/write : met en file le contexte Mnemo pour PreInvocation."""
     try:
         tool_call = data.get("toolCall")
         args = tool_call.get("args") if isinstance(tool_call, dict) else None
         path = None
         if isinstance(args, dict):
-            for key in ("Path", "AbsolutePath", "path", "file_path"):
+            for key in ("Path", "TargetFile", "AbsolutePath", "path", "file_path"):
                 candidate = args.get(key)
                 if isinstance(candidate, str) and candidate:
                     path = candidate
@@ -192,7 +268,7 @@ def file_read(data: dict) -> None:
         if path in seen:
             return
 
-        status, body = request("/api/file-context", scope(data) | {"path": path})
+        status, body = request("/api/file-context", scope(data, prefer_repo_root=True) | {"path": path})
         if status != 200:
             return
 
@@ -216,26 +292,67 @@ def file_read(data: dict) -> None:
         emit_json({})
 
 
+def prompt_context_for(data: dict, cid: str) -> str:
+    """Interroge POST /api/prompt-context une seule fois par nouveau prompt utilisateur dans la conversation."""
+    raw = data.get("lastUserInput")
+    if not isinstance(raw, str) or not raw.strip():
+        return ""
+    prompt = extract_user_text(raw)
+    if len(prompt) < MIN_PROMPT_CHARS or prompt.startswith("/"):
+        return ""
+
+    digest = hashlib.sha1(prompt.encode("utf-8")).hexdigest()
+    state_file = state_dir() / f"prompt_{safe_id(cid)}.json"
+    try:
+        last_digest = json.loads(state_file.read_text(encoding="utf-8")).get("sha1")
+    except (OSError, ValueError, TypeError, AttributeError):
+        last_digest = None
+    if last_digest == digest:
+        return ""
+
+    # Marqué vu même en cas d'échec pour éviter de répéter un timeout à chaque tour d'outil du même prompt.
+    try:
+        state_file.write_text(json.dumps({"sha1": digest}), encoding="utf-8")
+    except OSError:
+        pass
+
+    status, body = request(
+        "/api/prompt-context",
+        payload=scope(data) | {"prompt": prompt[:MAX_PROMPT_CHARS]},
+        timeout=PROMPT_TIMEOUT,
+    )
+    if status != 200:
+        return ""
+    return str(body.get("context") or "").strip()
+
+
 def pre_invocation(data: dict) -> None:
-    """PreInvocation : injecte les contextes de fichiers mis en attente par PostToolUse."""
+    """PreInvocation : injecte le contexte lié au prompt utilisateur et les contextes de fichiers en attente."""
     cid = conversation_id_of(data)
     if not cid:
         emit_json({})
         return
+
+    chunks: list[str] = []
+
+    prompt_ctx = prompt_context_for(data, cid)
+    if prompt_ctx:
+        chunks.append(prompt_ctx)
+
     pending_file = state_dir() / f"pending_{safe_id(cid)}.json"
-    if not pending_file.is_file():
+    if pending_file.is_file():
+        try:
+            pending = json.loads(pending_file.read_text(encoding="utf-8"))
+            pending_file.unlink(missing_ok=True)
+        except (OSError, ValueError):
+            pending = []
+        if isinstance(pending, list):
+            chunks.extend(str(item).strip() for item in pending if str(item).strip())
+
+    if not chunks:
         emit_json({})
         return
-    try:
-        pending = json.loads(pending_file.read_text(encoding="utf-8"))
-        pending_file.unlink(missing_ok=True)
-    except (OSError, ValueError):
-        emit_json({})
-        return
-    if not isinstance(pending, list) or not pending:
-        emit_json({})
-        return
-    emit_system_message("\n\n".join(str(item) for item in pending if item))
+    emit_system_message("\n\n".join(chunks))
 
 
 def capture(data: dict) -> None:

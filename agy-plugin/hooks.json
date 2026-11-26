@@ -4,17 +4,17 @@
       {
         "type": "command",
         "command": "python3 ./scripts/mnemo.py session-start",
-        "timeout": 5
+        "timeout": 8
       }
     ],
     "PostToolUse": [
       {
-        "matcher": "read_file|view_file",
+        "matcher": "read_file|view_file|edit_file|write_file|replace_file_content|multi_replace_file_content",
         "hooks": [
           {
             "type": "command",
             "command": "python3 ./scripts/mnemo.py file-read",
-            "timeout": 5
+            "timeout": 8
           }
         ]
       }
@@ -23,7 +23,7 @@
       {
         "type": "command",
         "command": "python3 ./scripts/mnemo.py pre-invocation",
-        "timeout": 5
+        "timeout": 8
       }
     ],
     "Stop": [

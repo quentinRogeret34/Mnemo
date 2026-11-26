@@ -3,8 +3,9 @@
 Branche Antigravity (`agy` CLI, IDE et App) sur Mnemo, la mémoire du projet :
 
 - serveur MCP `mnemo` (`search`, `file_context`, `add_memory`, `learn`...) ;
-- `SessionStart` : mémoire du projet (conventions, décisions, règles validées) injectée au démarrage de session ;
-- `PostToolUse` (`read_file|view_file`) + `PreInvocation` : règles, documents et mémoires liés aux fichiers lus ;
+- `SessionStart` : mémoire du projet (conventions, décisions, règles validées) et consignes de recherche (`search`, `file_context`) / capture (`add_memory`) injectées au démarrage de session ;
+- `PreInvocation` : recherche automatique du contexte proche de chaque nouveau prompt utilisateur (`POST /api/prompt-context`, dédupliqué par prompt) + injection des contextes de fichiers en attente ;
+- `PostToolUse` (`read_file|view_file|edit_file|write_file|replace_file_content|multi_replace_file_content`) : règles, documents et mémoires liés aux fichiers lus ou édités ;
 - `Stop` : la partie nouvelle du transcript part vers `learn` en arrière-plan, secrets masqués.
   Les apprentissages arrivent dans « À valider », rien n'est stocké sans relecture.
 
@@ -40,7 +41,7 @@ Dans `.agents/plugins.json` à la racine du projet :
 
 ## Variables d'environnement (hooks)
 
-Exposez ces variables dans votre shell (ou votre environnement de projet) avant de lancer `agy` :
+Exposez ces variables dans votre shell (ou votre environnement de projet) avant de lancer `agy`, **ou** renseignez directement `url` et `headers.Authorization` dans `mcp_config.json` du plugin installé (`~/.gemini/config/plugins/mnemo/mcp_config.json`) : les hooks s'y replient automatiquement si `MNEMO_URL` ou `MNEMO_API_KEY` ne sont pas définies dans le shell (utile pour Antigravity IDE/App).
 
 ```bash
 export MNEMO_URL="https://mnemo.exemple.com"

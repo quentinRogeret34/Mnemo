@@ -1,7 +1,7 @@
 {
   "name": "mnemo",
-  "version": "0.1.0",
-  "description": "Mémoire de projet Mnemo : contexte au démarrage, contexte par fichier, capture des apprentissages et serveur MCP",
+  "version": "0.2.0",
+  "description": "Mémoire de projet Mnemo : contexte au démarrage, contexte par prompt et par fichier, capture des apprentissages et serveur MCP",
   "logo": "assets/logo.svg",
   "author": {
     "name": "Quentin Rogeret"
