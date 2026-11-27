@@ -1088,7 +1088,9 @@ flash:
         proposed_none: 'Aucune évolution de skill à proposer pour le moment.'
         saved: '{kind} « {name} » enregistré : les agents connectés le reçoivent à leur prochaine session.'
     api_key:
+        projects_updated: 'Projets de la clé « {name} » mis à jour.'
         revoked: 'Clé « {name} » révoquée.'
+        revoked_readonly: 'La clé « {name} » est révoquée et ne peut plus être modifiée.'
     briefing:
         generated: 'Synthèse métier générée par l’IA.'
         no_webhook: 'Configurez d’abord un webhook dans les réglages du projet.'
@@ -1318,10 +1320,14 @@ js:
         no_results: 'Aucune option ne correspond.'
 keys:
     all: Tous
+    all_projects: 'Tous les projets'
     copy: Copier
     create: 'Créer la clé'
     created: 'Clé créée. Elle ne sera plus affichée : la copier maintenant.'
     created_at: Créée
+    edit_projects: Projets
+    edit_projects_help: 'Choisissez les projets auxquels cette clé a accès, ou sélectionnez « Tous les projets ».'
+    edit_projects_title: 'Projets autorisés pour « {name} »'
     empty: 'Aucune clé'
     empty_text: "Tant que l'accès n'est pas restreint (APP_ACCESS_ROLE=ROLE_USER), les agents appellent le serveur sans clé."
     error_name: 'Donner un nom (100 caractères au plus).'

@@ -24,10 +24,17 @@
         <input class="input" id="key-name" type="text" name="name" maxlength="100" placeholder="{{ 'keys.placeholder'|trans }}" required{% if error %} aria-invalid="true" aria-describedby="key-name-error"{% endif %}>
         {% if error %}<p class="form-errors" id="key-name-error" role="alert">{{ error }}</p>{% endif %}
         {% if projects is not empty %}
-            <fieldset class="key-form__projects">
-                <legend>{{ 'keys.projects'|trans }} <span class="row__sub">{{ 'keys.projects_help'|trans }}</span></legend>
+            <fieldset class="key-form__projects" data-controller="key-projects">
+                <legend>{{ 'keys.projects'|trans }}</legend>
+                <label class="key-form__check key-form__check--all">
+                    <input type="checkbox" name="all_projects" value="1" checked data-key-projects-target="all" data-action="change->key-projects#toggleAll">
+                    {{ 'keys.all_projects'|trans }}
+                </label>
                 {% for project in projects %}
-                    <label class="key-form__check"><input type="checkbox" name="projects[]" value="{{ project.slug }}"> {{ project.name }}</label>
+                    <label class="key-form__check">
+                        <input type="checkbox" name="projects[]" value="{{ project.slug }}" data-key-projects-target="project" data-action="change->key-projects#toggleProject">
+                        {{ project.name }}
+                    </label>
                 {% endfor %}
             </fieldset>
         {% endif %}
@@ -47,17 +54,28 @@
                         <tr class="{{ key.revoked ? 'row--archived' }}">
                             <td data-label="{{ 'form.project.name'|trans }}">{{ key.name }}</td>
                             <td class="mono" data-label="{{ 'llm.key'|trans }}">{{ key.prefix }}…</td>
-                            <td data-label="{{ 'nav.projects'|trans }}">{{ key.projects is empty ? 'keys.all'|trans : key.projects|map(project => project.name)|join(', ') }}</td>
+                            <td data-label="{{ 'nav.projects'|trans }}">
+                                {% if key.projects is empty %}
+                                    <span class="tag">{{ 'keys.all_projects'|trans }}</span>
+                                {% else %}
+                                    {{ key.projects|map(project => project.name)|join(', ') }}
+                                {% endif %}
+                            </td>
                             <td class="num" data-label="{{ 'keys.created_at'|trans }}">{{ key.createdAt|format_date('short') }}</td>
                             <td class="num" data-label="{{ 'keys.last_used'|trans }}">{{ key.lastUsedAt ? key.lastUsedAt|format_datetime('short', 'short') : '-' }}</td>
                             <td class="num">
                                 {% if key.revoked %}
                                     <span class="tag">{{ 'keys.revoked'|trans }}</span>
                                 {% else %}
-                                    <form method="post" action="{{ path('api_key_revoke', {id: key.id}) }}">
-                                        <input type="hidden" name="_token" value="{{ csrf_token('api-key-revoke-' ~ key.id) }}">
-                                        <button class="button button--danger" type="submit" data-confirm="{{ 'keys.revoke_confirm'|trans({name: key.name}) }}" data-confirm-label="{{ 'keys.revoke_key'|trans }}">{{ 'keys.revoke'|trans }}</button>
-                                    </form>
+                                    <div class="keys-table__actions">
+                                        {% if projects is not empty or key.projects is not empty %}
+                                            <button class="button" type="button" commandfor="key-projects-{{ key.id }}" command="show-modal" title="{{ 'keys.edit_projects_title'|trans({name: key.name}) }}"><twig:ux:icon name="lucide:pencil" />{{ 'keys.edit_projects'|trans }}</button>
+                                        {% endif %}
+                                        <form method="post" action="{{ path('api_key_revoke', {id: key.id}) }}">
+                                            <input type="hidden" name="_token" value="{{ csrf_token('api-key-revoke-' ~ key.id) }}">
+                                            <button class="button button--danger" type="submit" data-confirm="{{ 'keys.revoke_confirm'|trans({name: key.name}) }}" data-confirm-label="{{ 'keys.revoke_key'|trans }}">{{ 'keys.revoke'|trans }}</button>
+                                        </form>
+                                    </div>
                                 {% endif %}
                             </td>
                         </tr>
@@ -65,5 +83,34 @@
                 </tbody>
             </table>
         </div>
+
+        {% for key in keys %}
+            {% if not key.revoked and (projects is not empty or key.projects is not empty) %}
+                <dialog class="dialog dialog--form" id="key-projects-{{ key.id }}" closedby="any" aria-labelledby="key-projects-{{ key.id }}-title" data-controller="dialog">
+                    <h2 class="dialog__title" id="key-projects-{{ key.id }}-title">{{ 'keys.edit_projects_title'|trans({name: key.name}) }}</h2>
+                    <p class="dialog__text row__sub">{{ 'keys.edit_projects_help'|trans }}</p>
+                    <form class="form-stack" method="post" action="{{ path('api_key_projects', {id: key.id}) }}">
+                        <input type="hidden" name="_token" value="{{ csrf_token('api-key-projects-' ~ key.id) }}">
+                        <fieldset class="key-form__projects" data-controller="key-projects">
+                            <legend class="visually-hidden">{{ 'keys.projects'|trans }}</legend>
+                            <label class="key-form__check key-form__check--all">
+                                <input type="checkbox" name="all_projects" value="1" {{ key.projects is empty ? 'checked' }} data-key-projects-target="all" data-action="change->key-projects#toggleAll">
+                                {{ 'keys.all_projects'|trans }}
+                            </label>
+                            {% for project in projects %}
+                                <label class="key-form__check">
+                                    <input type="checkbox" name="projects[]" value="{{ project.slug }}" {{ key.projects.contains(project) ? 'checked' }} data-key-projects-target="project" data-action="change->key-projects#toggleProject">
+                                    {{ project.name }}
+                                </label>
+                            {% endfor %}
+                        </fieldset>
+                        <div class="dialog__actions">
+                            <button class="button" type="button" commandfor="key-projects-{{ key.id }}" command="close">{{ 'common.cancel'|trans }}</button>
+                            <button class="button button--primary" type="submit">{{ 'common.save'|trans }}</button>
+                        </div>
+                    </form>
+                </dialog>
+            {% endif %}
+        {% endfor %}
     {% endif %}
 {% endblock %}

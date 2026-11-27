@@ -100,6 +100,22 @@ class ApiKey implements UserInterface
         }
     }
 
+    public function removeProject(Project $project): void
+    {
+        $this->projects->removeElement($project);
+    }
+
+    /**
+     * @param iterable<Project> $projects
+     */
+    public function setProjects(iterable $projects): void
+    {
+        $this->projects->clear();
+        foreach ($projects as $project) {
+            $this->addProject($project);
+        }
+    }
+
     public function getOwner(): ?User
     {
         return $this->owner;

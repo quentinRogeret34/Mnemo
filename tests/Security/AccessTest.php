@@ -94,6 +94,94 @@ final class AccessTest extends WebTestCase
         self::assertResponseStatusCodeSame(401);
     }
 
+    public function testApiKeyProjectsCanBeUpdatedAfterCreationAndSwitchedToAllProjects(): void
+    {
+        $this->entityManager->persist(new Project('third', 'Third', '/repos/third'));
+        $this->entityManager->flush();
+
+        $this->client->loginUser(new InMemoryUser('admin', '', ['ROLE_USER', 'ROLE_SUPER_ADMIN']));
+        $crawler = $this->client->request('GET', '/settings/keys');
+        $crawler = $this->client->submit($crawler->selectButton('Créer la clé')->form(['name' => 'agent', 'projects' => ['demo']]));
+        $token = $crawler->filter('#new-token')->text();
+        $key = $this->entityManager->getRepository(ApiKey::class)->findOneBy(['name' => 'agent']);
+        self::assertNotNull($key);
+        $keyId = $key->getId();
+
+        // Add a second project a posteriori
+        $form = $crawler->filter('#key-projects-'.$keyId.' form')->selectButton('Enregistrer')->form(['projects' => ['demo', 'other']]);
+        $this->client->submit($form);
+        self::assertResponseRedirects('/settings/keys');
+        $crawler = $this->client->followRedirect();
+        self::assertSelectorTextContains('.keys-table tbody tr', 'Demo, Other');
+
+        $this->client->restart();
+        $this->client->request('GET', '/api/context?cwd=/repos/other', server: ['HTTP_AUTHORIZATION' => 'Bearer '.$token]);
+        self::assertSame('other', json_decode((string) $this->client->getResponse()->getContent(), true)['project']);
+        $this->client->request('GET', '/api/context?cwd=/repos/third', server: ['HTTP_AUTHORIZATION' => 'Bearer '.$token]);
+        self::assertNull(json_decode((string) $this->client->getResponse()->getContent(), true)['project']);
+
+        // Switch the key to "All projects"
+        $this->client->loginUser(new InMemoryUser('admin', '', ['ROLE_USER', 'ROLE_SUPER_ADMIN']));
+        $crawler = $this->client->request('GET', '/settings/keys');
+        $form = $crawler->filter('#key-projects-'.$keyId.' form')->selectButton('Enregistrer')->form(['all_projects' => '1']);
+        $this->client->submit($form);
+        self::assertResponseRedirects('/settings/keys');
+        $crawler = $this->client->followRedirect();
+        self::assertSelectorTextContains('.keys-table tbody tr', 'Tous les projets');
+
+        $this->client->restart();
+        $this->client->request('GET', '/api/context?cwd=/repos/third', server: ['HTTP_AUTHORIZATION' => 'Bearer '.$token]);
+        self::assertSame('third', json_decode((string) $this->client->getResponse()->getContent(), true)['project']);
+
+        // Narrow an "All projects" key back down to a single project
+        $this->client->loginUser(new InMemoryUser('admin', '', ['ROLE_USER', 'ROLE_SUPER_ADMIN']));
+        $crawler = $this->client->request('GET', '/settings/keys');
+        $form = $crawler->filter('#key-projects-'.$keyId.' form')->selectButton('Enregistrer')->form(['projects' => [false, 'other']]);
+        $this->client->submit($form);
+        self::assertResponseRedirects('/settings/keys');
+        $crawler = $this->client->followRedirect();
+        self::assertSelectorTextContains('.keys-table tbody tr', 'Other');
+
+        $this->client->restart();
+        $this->client->request('GET', '/api/context?cwd=/repos/demo', server: ['HTTP_AUTHORIZATION' => 'Bearer '.$token]);
+        self::assertNull(json_decode((string) $this->client->getResponse()->getContent(), true)['project']);
+        $this->client->request('GET', '/api/context?cwd=/repos/other', server: ['HTTP_AUTHORIZATION' => 'Bearer '.$token]);
+        self::assertSame('other', json_decode((string) $this->client->getResponse()->getContent(), true)['project']);
+
+        // A scoped user cannot edit someone else's key nor attach an out-of-scope project to their own key
+        $bob = $this->member('bob', 'demo');
+        [$bobKey] = ApiKey::generate('bob-key');
+        $bobKey->setOwner($bob);
+        $bobKey->addProject($this->entityManager->getRepository(Project::class)->findOneBy(['slug' => 'demo']));
+        $this->entityManager->persist($bobKey);
+        $this->entityManager->flush();
+        $bobKeyId = $bobKey->getId();
+        $this->entityManager->clear();
+
+        $this->client->loginUser($this->entityManager->find(User::class, $bob->getId()));
+        $crawler = $this->client->request('GET', '/settings/keys');
+        $bobCsrf = (string) $crawler->filter('#key-projects-'.$bobKeyId.' input[name="_token"]')->attr('value');
+
+        // Cannot touch admin's key
+        $this->client->request('POST', '/settings/keys/'.$keyId.'/projects', ['_token' => $bobCsrf, 'all_projects' => '1']);
+        self::assertResponseStatusCodeSame(404);
+
+        // Submitting an out-of-scope project slug does not attach it
+        $this->client->request('POST', '/settings/keys/'.$bobKeyId.'/projects', ['_token' => $bobCsrf, 'projects' => ['demo', 'other']]);
+        self::assertResponseRedirects('/settings/keys');
+        $this->entityManager->clear();
+        $reloaded = $this->entityManager->find(ApiKey::class, $bobKeyId);
+        self::assertSame(['demo'], $reloaded->getProjects()->map(static fn (Project $p): string => $p->getSlug())->getValues());
+
+        // A revoked key cannot have its projects modified
+        $reloaded->revoke();
+        $this->entityManager->flush();
+        $this->client->request('POST', '/settings/keys/'.$bobKeyId.'/projects', ['_token' => $bobCsrf, 'all_projects' => '1']);
+        self::assertResponseRedirects('/settings/keys');
+        $this->entityManager->clear();
+        self::assertSame(['demo'], $this->entityManager->find(ApiKey::class, $bobKeyId)->getProjects()->map(static fn (Project $p): string => $p->getSlug())->getValues());
+    }
+
     public function testAUserLimitedToSomeProjectsReachesNoConnector(): void
     {
         $connector = new Connector();

@@ -48,10 +48,7 @@ final class ApiKeyController extends AbstractController
             } else {
                 [$key, $token] = ApiKey::generate($name);
                 $key->setOwner($this->projectScope->viewer());
-                $slugs = $request->getPayload()->all('projects');
-                foreach (array_filter($this->projectScope->projects(), static fn (Project $project): bool => \in_array($project->getSlug(), $slugs, true)) as $project) {
-                    $key->addProject($project);
-                }
+                $key->setProjects($this->resolveProjects($request, true));
                 $this->entityManager->persist($key);
                 $this->entityManager->flush();
             }
@@ -63,6 +60,46 @@ final class ApiKeyController extends AbstractController
             'token' => $token,
             'error' => $error,
         ], new Response(status: null === $error ? Response::HTTP_OK : Response::HTTP_UNPROCESSABLE_ENTITY));
+    }
+
+    #[Route('/settings/keys/{id}/projects', name: 'api_key_projects', requirements: ['id' => '\d+'], methods: ['POST'])]
+    public function updateProjects(ApiKey $key, Request $request): Response
+    {
+        if ($this->ownKeysOnly() && $key->getOwner() !== $this->projectScope->viewer()) {
+            throw $this->createNotFoundException('Key not found.');
+        }
+        if (!$this->isCsrfTokenValid('api-key-projects-'.$key->getId(), $request->getPayload()->getString('_token'))) {
+            throw new AccessDeniedHttpException('Invalid CSRF token.');
+        }
+        if ($key->isRevoked()) {
+            $this->addFlash('error', new TranslatableMessage('flash.api_key.revoked_readonly', ['name' => $key->getName()]));
+
+            return $this->redirectToRoute('api_key_index');
+        }
+
+        $key->setProjects($this->resolveProjects($request, $key->getProjects()->isEmpty()));
+        $this->entityManager->flush();
+        $this->addFlash('success', new TranslatableMessage('flash.api_key.projects_updated', ['name' => $key->getName()]));
+
+        return $this->redirectToRoute('api_key_index');
+    }
+
+    /**
+     * @return list<Project> empty list means all projects allowed for the owner
+     */
+    private function resolveProjects(Request $request, bool $wasAll): array
+    {
+        $payload = $request->getPayload();
+        $allProjects = $payload->getBoolean('all_projects');
+        $slugs = $payload->all('projects');
+        if ($allProjects && ([] === $slugs || !$wasAll)) {
+            return [];
+        }
+
+        return array_values(array_filter(
+            $this->projectScope->projects(),
+            static fn (Project $project): bool => \in_array($project->getSlug(), $slugs, true),
+        ));
     }
 
     #[Route('/settings/keys/{id}/revoke', name: 'api_key_revoke', requirements: ['id' => '\d+'], methods: ['POST'])]
