@@ -16,6 +16,7 @@ use App\Grooming\Dto\GroomingReport;
 use App\Grooming\Dto\GroomingStep;
 use App\Llm\Chat;
 use App\Llm\LlmUnavailable;
+use App\Proposal\ProposalApplier;
 use App\Repository\MemoryRepository;
 use App\Search\HybridSearch;
 use Doctrine\ORM\EntityManagerInterface;
@@ -107,6 +108,7 @@ final readonly class GroomingSwarmRunner
         private HybridSearch $hybridSearch,
         private MemoryRepository $memoryRepository,
         private EntityManagerInterface $entityManager,
+        private ProposalApplier $proposalApplier,
     ) {
     }
 
@@ -596,6 +598,7 @@ final readonly class GroomingSwarmRunner
                 'source' => ['kind' => 'grooming', 'label' => $topic],
             ]);
             $this->entityManager->persist($proposal);
+            $this->proposalApplier->autoApply($proposal);
             $created[] = $proposal;
         }
 

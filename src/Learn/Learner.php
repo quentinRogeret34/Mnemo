@@ -6,10 +6,13 @@ use App\Entity\Project;
 use App\Entity\Proposal;
 use App\Enum\ProposalKind;
 use App\Enum\ProposalStatus;
+use App\Proposal\ProposalApplier;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
- * Source to proposals: extraction, scoring, reconciliation. Nothing enters the graph before a human applies a proposal.
+ * Source to proposals: extraction, scoring, reconciliation.
+ * Learnings whose signal exceeds ProposalApplier::AUTO_APPLY_SCORE_THRESHOLD are auto-applied;
+ * the rest wait in /proposals for human review.
  */
 final class Learner
 {
@@ -17,11 +20,12 @@ final class Learner
         private readonly LearningExtractor $extractor,
         private readonly LearningReconciler $reconciler,
         private readonly EntityManagerInterface $entityManager,
+        private readonly ProposalApplier $applier,
     ) {
     }
 
     /**
-     * @return array{extracted: int, dropped_low_score: int, covered: int, already_proposed: int, proposed: int, truncated: bool}
+     * @return array{extracted: int, dropped_low_score: int, covered: int, already_proposed: int, proposed: int, auto_applied: int, truncated: bool}
      */
     public function learn(SourceKind $kind, string $label, string $text, Project $project): array
     {
@@ -32,6 +36,7 @@ final class Learner
             'covered' => 0,
             'already_proposed' => 0,
             'proposed' => 0,
+            'auto_applied' => 0,
             'truncated' => $extraction['truncated'],
         ];
 
@@ -49,7 +54,7 @@ final class Learner
                 continue;
             }
 
-            $this->entityManager->persist(new Proposal($project, ProposalKind::Learning, [
+            $proposal = new Proposal($project, ProposalKind::Learning, [
                 'lesson' => $candidate->lesson,
                 'evidence' => $candidate->evidence,
                 'type' => $candidate->type->value,
@@ -63,9 +68,15 @@ final class Learner
                 'target_text' => $reconciliation['target_text'],
                 'reason' => $reconciliation['reason'],
                 'source' => ['kind' => $kind->value, 'label' => $label],
-            ]));
+            ]);
+            $this->entityManager->persist($proposal);
             $pending[$key] = true;
-            ++$report['proposed'];
+
+            if ($this->applier->autoApply($proposal)) {
+                ++$report['auto_applied'];
+            } else {
+                ++$report['proposed'];
+            }
         }
         $this->entityManager->flush();
 

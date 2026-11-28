@@ -10,6 +10,19 @@
     <span class="crumbs__current">{{ 'nav.to_review'|trans }}</span>
 {% endblock %}
 
+{% block header_actions %}
+    {% if auto_applicable_count > 0 %}
+        {% set action_query = {project: project ? project.slug : null, kind: kind ? kind.value : null, grooming: grooming_run ? grooming_run.id : null}|filter(v => v is not null) %}
+        <form method="post" action="{{ path('proposal_auto_apply', action_query) }}" class="proposal-auto-apply-form">
+            <input type="hidden" name="_token" value="{{ csrf_token('proposal-auto-apply') }}">
+            <button class="button button--primary" type="submit">
+                <twig:ux:icon name="lucide:check" />
+                {{ 'proposal.auto_apply_button'|trans({count: auto_applicable_count, threshold: auto_apply_threshold}) }}
+            </button>
+        </form>
+    {% endif %}
+{% endblock %}
+
 {% block body %}
     {% set scoped = app.user and not is_granted('ROLE_SUPER_ADMIN') %}
     {% set filters = {project: project ? project.slug : null, grooming: grooming_run ? grooming_run.id : null} %}

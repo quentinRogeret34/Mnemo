@@ -1159,6 +1159,9 @@ flash:
         applied_memory: 'Proposition appliquée : « {memory} ».'
         applied_rule: 'Règle {code} validée et créée : « {title} ».'
         applied_skill: 'Skill « {name} » appliqué : les agents connectés le recevront à leur prochaine session.'
+        auto_applied: '{count, plural, one {# proposition (signal > {threshold}) auto-validée.} other {# propositions (signal > {threshold}) auto-validées.}}'
+        auto_apply_none: 'Aucune proposition en attente avec un signal > {threshold}.'
+        auto_apply_skipped: '{count, plural, one {# proposition non applicable (mémoire cible archivée).} other {# propositions non applicables (mémoire cible archivée).}}'
         rejected: 'Proposition rejetée.'
     rule:
         created: 'Règle {code} créée.'
@@ -1692,6 +1695,7 @@ proposal:
     apply_rule: 'Valider et créer la règle'
     apply_skill: 'Appliquer ce skill'
     archives: 'Archive :'
+    auto_apply_button: 'Valider les signaux > {threshold} ({count})'
     axes: 'durabilité {durability}, réutilisation {reuse}, adéquation {fit}, risque {risk}'
     back_to_grooming: 'Retour à la ruche'
     choose_apply: 'Choisir et appliquer'

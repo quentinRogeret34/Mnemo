@@ -12,6 +12,7 @@ use App\Entity\UserGroup;
 use App\Enum\MemoryType;
 use App\Enum\NodeType;
 use App\Enum\ProposalKind;
+use App\Enum\ProposalStatus;
 use App\Enum\UserStatus;
 use App\Message\RunGroomingSwarm;
 use App\MessageHandler\RunGroomingSwarmHandler;
@@ -283,6 +284,64 @@ final class GroomingSwarmTest extends WebTestCase
         // Invalid CSRF token on allowed project is rejected.
         $this->client->request('POST', '/projects/demo/grooming', ['topic' => 'Remises', '_token' => 'invalid-token']);
         self::assertResponseStatusCodeSame(403);
+    }
+
+    public function testHighSignalLearningFromGroomingIsAutoApplied(): void
+    {
+        $call = 0;
+        $this->scriptLlm(static function () use (&$call): array {
+            ++$call;
+            if (1 === $call) {
+                return ['stance' => 'OK', 'summary' => 'Produit', 'findings' => ['F1']];
+            }
+            if (2 === $call) {
+                return ['stance' => 'OK', 'summary' => 'Archi', 'findings' => ['F2']];
+            }
+            if (3 === $call) {
+                return ['stance' => 'OK', 'summary' => 'Critique', 'findings' => ['F3'], 'questions' => []];
+            }
+
+            return [
+                'readiness_score' => 92,
+                'executive_summary' => 'Sujet clair et validé.',
+                'step_summary' => 'Synthèse prête.',
+                'findings' => ['Tout est aligné.'],
+                'proposed_rules' => [],
+                'proposed_learnings' => [
+                    [
+                        'lesson' => 'Toujours journaliser les remises directionnelles.',
+                        'type' => 'decision',
+                        'evidence' => 'Consensus unanime.',
+                        'reason' => 'Audit légal.',
+                        'score' => 10,
+                        'files' => ['src/Pricing/DiscountPolicy.php'],
+                        'rules' => ['RG-001'],
+                    ],
+                    [
+                        'lesson' => 'Signal à 9 reste en attente de validation.',
+                        'type' => 'fact',
+                        'evidence' => 'Débat.',
+                        'reason' => 'Seuil exact.',
+                        'score' => 9,
+                        'files' => [],
+                        'rules' => [],
+                    ],
+                ],
+            ];
+        });
+
+        $run = self::getContainer()->get(\App\Grooming\GroomingSwarmRunner::class)->run($this->project, 'Remises VIP', rounds: 1);
+
+        $this->entityManager->clear();
+        $proposals = $this->entityManager->getRepository(Proposal::class)->findBy(['id' => $run->run->getCreatedProposalIds()], ['id' => 'ASC']);
+        self::assertCount(2, $proposals);
+        self::assertSame(ProposalStatus::Applied, $proposals[0]->getStatus());
+        self::assertTrue($proposals[0]->getPayload()['auto_applied'] ?? false);
+        self::assertSame(ProposalStatus::Pending, $proposals[1]->getStatus());
+        self::assertNotNull($this->entityManager->getRepository(Node::class)->findOneBy([
+            'type' => NodeType::Memory,
+            'label' => 'Toujours journaliser les remises directionnelles.',
+        ]));
     }
 
     private function executeGrooming(RunGroomingSwarm $message): void

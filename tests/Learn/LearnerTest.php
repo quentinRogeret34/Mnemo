@@ -10,6 +10,7 @@ use App\Enum\Confidence;
 use App\Enum\EdgeOrigin;
 use App\Enum\MemoryType;
 use App\Enum\NodeType;
+use App\Enum\ProposalStatus;
 use App\Graph\KnowledgeReader;
 use App\Ingest\GraphifyImporter;
 use App\Learn\Learner;
@@ -48,7 +49,7 @@ final class LearnerTest extends KernelTestCase
 
         $report = $this->learn('conversation text');
 
-        self::assertSame(['extracted' => 2, 'dropped_low_score' => 1, 'covered' => 0, 'already_proposed' => 0, 'proposed' => 1, 'truncated' => false], $report);
+        self::assertSame(['extracted' => 2, 'dropped_low_score' => 1, 'covered' => 0, 'already_proposed' => 0, 'proposed' => 1, 'auto_applied' => 0, 'truncated' => false], $report);
         self::assertCount(1, $this->llmCalls, 'No neighbour memory: reconciliation must not call the LLM.');
         self::assertSame(0, $this->entityManager->getRepository(Node::class)->count(['type' => NodeType::Memory]));
 
@@ -172,8 +173,73 @@ final class LearnerTest extends KernelTestCase
         self::assertStringContainsString('Le cache catalogue expire après 10 minutes dans PriceCache.', $this->llmCalls[1]['user']);
     }
 
+    public function testLearningsAboveNineAreAutoAppliedAcrossAllReconciliations(): void
+    {
+        $toUpdate = $this->givenMemory('Les remises sont plafonnées à 10 %.');
+        $toSupersede = $this->givenMemory('Les sessions expirent après 1 heure.');
+        $toRetract = $this->givenMemory('Le mode maintenance coupe les webhooks.');
+
+        $this->scriptLlm(function (string $system, string $user) use ($toUpdate, $toSupersede, $toRetract): array {
+            if (str_contains($system, 'Tu compares')) {
+                return match (true) {
+                    str_contains($user, 'plafonnées à 10 % hors VIP') => ['verdict' => 'updates', 'target_id' => $toUpdate->getId(), 'reason' => 'Précision VIP.'],
+                    str_contains($user, 'expirent après 2 heures') => ['verdict' => 'supersedes', 'target_id' => $toSupersede->getId(), 'reason' => 'Nouvelle politique.'],
+                    str_contains($user, 'mode maintenance ne coupe plus') => ['verdict' => 'retracts', 'target_id' => $toRetract->getId(), 'reason' => 'Obsolète.'],
+                    default => ['verdict' => 'new', 'target_id' => 0, 'reason' => 'Nouveau.'],
+                };
+            }
+
+            return $this->extraction([
+                $this->candidateAxes('Seuil exact à 9 reste en attente.', 9, 9, 9, 9),
+                $this->candidateAxes('Le catalogue est chargé au démarrage.', 10, 9, 9, 9, files: ['src/domain/catalog.ts']),
+                $this->candidateAxes('Les remises sont plafonnées à 10 % hors VIP.', 10, 10, 9, 9),
+                $this->candidateAxes('Les sessions expirent après 2 heures.', 10, 10, 10, 9, type: 'decision'),
+                $this->candidateAxes('Le mode maintenance ne coupe plus les webhooks.', 10, 10, 10, 10),
+            ]);
+        });
+
+        $report = $this->learn('conversation text');
+
+        self::assertSame([
+            'extracted' => 5,
+            'dropped_low_score' => 0,
+            'covered' => 0,
+            'already_proposed' => 0,
+            'proposed' => 1,
+            'auto_applied' => 4,
+            'truncated' => false,
+        ], $report);
+
+        $proposals = $this->entityManager->getRepository(Proposal::class)->findBy([], ['id' => 'ASC']);
+        self::assertCount(5, $proposals);
+        self::assertSame(ProposalStatus::Pending, $proposals[0]->getStatus());
+        self::assertSame(9.0, $proposals[0]->getPayload()['score']);
+        self::assertArrayNotHasKey('auto_applied', $proposals[0]->getPayload());
+
+        foreach (\array_slice($proposals, 1) as $autoProposal) {
+            self::assertSame(ProposalStatus::Applied, $autoProposal->getStatus());
+            self::assertTrue($autoProposal->getPayload()['auto_applied'] ?? false);
+        }
+
+        // new: created and linked to catalog.ts
+        $created = $this->entityManager->getRepository(Node::class)->findOneBy(['type' => NodeType::Memory, 'label' => 'Le catalogue est chargé au démarrage.']);
+        self::assertNotNull($created);
+        $edge = $this->entityManager->getRepository(Edge::class)->findOneBy(['source' => $created, 'relation' => 'about']);
+        self::assertSame('src/domain/catalog.ts', $edge?->getTarget()->getPath());
+
+        // updates: target updated in place
+        self::assertSame('Les remises sont plafonnées à 10 % hors VIP.', $toUpdate->getLabel());
+
+        // supersedes: old archived, new created
+        self::assertSame(MemoryStore::STATUS_SUPERSEDED, $toSupersede->getMetadata()['status']);
+        self::assertNotNull($this->entityManager->getRepository(Node::class)->findOneBy(['type' => NodeType::Memory, 'label' => 'Les sessions expirent après 2 heures.']));
+
+        // retracts: target archived
+        self::assertSame(MemoryStore::STATUS_RETRACTED, $toRetract->getMetadata()['status']);
+    }
+
     /**
-     * @return array{extracted: int, dropped_low_score: int, covered: int, already_proposed: int, proposed: int, truncated: bool}
+     * @return array{extracted: int, dropped_low_score: int, covered: int, already_proposed: int, proposed: int, auto_applied: int, truncated: bool}
      */
     private function learn(string $text): array
     {
@@ -207,14 +273,25 @@ final class LearnerTest extends KernelTestCase
      */
     private function candidate(string $lesson, int $score = 8, string $type = 'convention', array $files = [], array $adr = []): array
     {
+        return $this->candidateAxes($lesson, $score, $score, $score, $score, $type, $files, $adr);
+    }
+
+    /**
+     * @param list<string>          $files
+     * @param array<string, string> $adr
+     *
+     * @return array<string, mixed>
+     */
+    private function candidateAxes(string $lesson, int $durability, int $reuse, int $projectFit, int $risk, string $type = 'convention', array $files = [], array $adr = []): array
+    {
         return [
             'lesson' => $lesson,
             'evidence' => 'cité dans la source',
             'type' => $type,
-            'durability' => $score,
-            'reuse' => $score,
-            'project_fit' => $score,
-            'risk' => $score,
+            'durability' => $durability,
+            'reuse' => $reuse,
+            'project_fit' => $projectFit,
+            'risk' => $risk,
             'files' => $files,
             'rules' => [],
             'adr' => $adr + ['context' => '', 'decision' => '', 'alternatives' => '', 'consequences' => ''],

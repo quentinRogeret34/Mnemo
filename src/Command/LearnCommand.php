@@ -70,11 +70,12 @@ final class LearnCommand
             $io->warning('The source was truncated before extraction.');
         }
         $io->success(\sprintf(
-            '%d learnings extracted: %d dropped (low score), %d already covered, %d already proposed, %d new proposals to validate in /proposals.',
+            '%d learnings extracted: %d dropped (low score), %d already covered, %d already proposed, %d auto-applied (score > 9), %d new proposals to validate in /proposals.',
             $report['extracted'],
             $report['dropped_low_score'],
             $report['covered'],
             $report['already_proposed'],
+            $report['auto_applied'],
             $report['proposed'],
         ));
 

@@ -43,7 +43,7 @@ final class WriteTools
      *
      * @return array<string, mixed>
      */
-    #[McpTool(name: 'learn', description: 'Send a conversation, diff, file or code review to extract the durable learnings (decisions, conventions, pitfalls). Learnings are scored and compared to existing memories, then queued as proposals that a human validates: nothing is stored directly. Call it at the end of a session or after a merge.', annotations: new ToolAnnotations(readOnlyHint: false, destructiveHint: false))]
+    #[McpTool(name: 'learn', description: 'Send a conversation, diff, file or code review to extract the durable learnings (decisions, conventions, pitfalls). Learnings are scored and compared to existing memories: those scoring above 9 are auto-applied, and the rest are queued as proposals for human validation. Call it at the end of a session or after a merge.', annotations: new ToolAnnotations(readOnlyHint: false, destructiveHint: false))]
     public function learn(
         string $text,
         #[Schema(enum: ['conversation', 'file', 'diff', 'review'])]

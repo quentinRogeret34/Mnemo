@@ -6,11 +6,14 @@ use App\Entity\Edge;
 use App\Entity\Node;
 use App\Entity\Project;
 use App\Entity\Proposal;
+use App\Entity\User;
+use App\Entity\UserGroup;
 use App\Enum\EdgeStatus;
 use App\Enum\MemoryType;
 use App\Enum\NodeType;
 use App\Enum\ProposalKind;
 use App\Enum\ProposalStatus;
+use App\Enum\UserStatus;
 use App\Ingest\GraphifyImporter;
 use App\Memory\MemoryStore;
 use Doctrine\ORM\EntityManagerInterface;
@@ -25,14 +28,21 @@ final class ProposalTest extends WebTestCase
 
     protected function setUp(): void
     {
+        $_SERVER['APP_ACCESS_ROLE'] = $_ENV['APP_ACCESS_ROLE'] = 'PUBLIC_ACCESS';
         $this->client = self::createClient();
         $this->entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        $this->entityManager->getConnection()->executeStatement('TRUNCATE project, node, edge, folder RESTART IDENTITY CASCADE');
+        $this->entityManager->getConnection()->executeStatement('TRUNCATE project, node, edge, folder, proposal, app_user, user_group RESTART IDENTITY CASCADE');
 
         $this->project = new Project('demo', 'Demo project', '/repos/demo');
         $this->entityManager->persist($this->project);
         $this->entityManager->flush();
         self::getContainer()->get(GraphifyImporter::class)->import($this->project, __DIR__.'/../Fixtures/graphify/graph-v1.json');
+    }
+
+    protected function tearDown(): void
+    {
+        $_SERVER['APP_ACCESS_ROLE'] = $_ENV['APP_ACCESS_ROLE'] = 'PUBLIC_ACCESS';
+        parent::tearDown();
     }
 
     public function testLatestProposalsAppearFirst(): void
@@ -163,6 +173,96 @@ final class ProposalTest extends WebTestCase
         self::assertSame(ProposalStatus::Pending, $this->entityManager->getRepository(Proposal::class)->findOneBy([])->getStatus());
     }
 
+    public function testBatchAutoApplyValidatesPendingProposalsAboveNine(): void
+    {
+        $store = self::getContainer()->get(MemoryStore::class);
+        $existing = $store->add('Ancienne convention de cache.', MemoryType::Convention, 'manual');
+        $existing->addProject($this->project);
+        $this->entityManager->flush();
+
+        $this->givenProposal(ProposalKind::Learning, $this->learning('Signal 9.5 auto-validé.', score: 9.5));
+        $this->givenProposal(ProposalKind::Learning, [
+            'reconciliation' => 'updates',
+            'target_id' => $existing->getId(),
+            'target_text' => $existing->getLabel(),
+        ] + $this->learning('Convention de cache mise à jour.', score: 10.0));
+        $this->givenProposal(ProposalKind::Learning, $this->learning('Signal exactement à 9 reste manuel.', score: 9.0));
+        $this->givenProposal(ProposalKind::RuleDraft, [
+            'title' => 'Règle manuelle',
+            'statement' => 'Reste toujours en attente.',
+            'excerpt' => 'extrait',
+            'files' => [],
+        ]);
+
+        $crawler = $this->client->request('GET', '/proposals?project=demo');
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('.proposal-auto-apply-form button', 'Valider les signaux > 9 (2)');
+
+        $this->client->submit($crawler->filter('.proposal-auto-apply-form button')->form());
+        self::assertResponseRedirects('/proposals?project=demo');
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('.flash', '2 propositions (signal > 9) auto-validées.');
+        self::assertSelectorNotExists('.proposal-auto-apply-form');
+
+        $this->entityManager->clear();
+        $proposals = $this->entityManager->getRepository(Proposal::class)->findBy([], ['id' => 'ASC']);
+        self::assertSame(ProposalStatus::Applied, $proposals[0]->getStatus());
+        self::assertTrue($proposals[0]->getPayload()['auto_applied'] ?? false);
+        self::assertSame(ProposalStatus::Applied, $proposals[1]->getStatus());
+        self::assertTrue($proposals[1]->getPayload()['auto_applied'] ?? false);
+        self::assertSame(ProposalStatus::Pending, $proposals[2]->getStatus());
+        self::assertSame(ProposalStatus::Pending, $proposals[3]->getStatus());
+
+        self::assertNotNull($this->entityManager->getRepository(Node::class)->findOneBy(['type' => NodeType::Memory, 'label' => 'Signal 9.5 auto-validé.']));
+        self::assertSame('Convention de cache mise à jour.', $this->entityManager->find(Node::class, $existing->getId())?->getLabel());
+    }
+
+    public function testBatchAutoApplyEnforcesCsrfAndProjectScope(): void
+    {
+        $otherProject = new Project('other', 'Other project', '/repos/other');
+        $this->entityManager->persist($otherProject);
+        $this->entityManager->persist(new Proposal($this->project, ProposalKind::Learning, $this->learning('Demo > 9.', score: 9.5)));
+        $this->entityManager->persist(new Proposal($otherProject, ProposalKind::Learning, $this->learning('Other > 9.', score: 9.8)));
+
+        $bob = new User('bob@example.com', 'Bob', 'github', 'bob-1');
+        $bob->setStatus(UserStatus::Active);
+        $group = new UserGroup('Demo team');
+        $group->setUsers([$bob]);
+        $group->setProjects([$this->project]);
+        $this->entityManager->persist($bob);
+        $this->entityManager->persist($group);
+        $this->entityManager->flush();
+
+        $bobId = $bob->getId();
+        $_SERVER['APP_ACCESS_ROLE'] = $_ENV['APP_ACCESS_ROLE'] = 'ROLE_USER';
+        $this->entityManager->clear();
+        $this->client->loginUser($this->entityManager->find(User::class, $bobId));
+
+        // Invalid CSRF token is rejected.
+        $this->client->request('POST', '/proposals/auto-apply?project=demo', ['_token' => 'bad']);
+        self::assertResponseStatusCodeSame(403);
+
+        // Fetching a valid CSRF token from /proposals?project=demo.
+        $crawler = $this->client->request('GET', '/proposals?project=demo');
+        self::assertResponseIsSuccessful();
+        $token = (string) $crawler->filter('.proposal-auto-apply-form input[name="_token"]')->attr('value');
+
+        // Scoped user cannot auto-apply across all projects or on a forbidden project.
+        $this->client->request('POST', '/proposals/auto-apply', ['_token' => $token]);
+        self::assertResponseStatusCodeSame(403);
+        $this->client->request('POST', '/proposals/auto-apply?project=other', ['_token' => $token]);
+        self::assertResponseStatusCodeSame(404);
+
+        // Submitting on the allowed project applies only demo's proposal.
+        $this->client->request('POST', '/proposals/auto-apply?project=demo', ['_token' => $token]);
+        self::assertResponseRedirects('/proposals?project=demo');
+
+        $this->entityManager->clear();
+        $proposals = $this->entityManager->getRepository(Proposal::class)->findBy([], ['id' => 'ASC']);
+        self::assertSame(ProposalStatus::Applied, $proposals[0]->getStatus());
+        self::assertSame(ProposalStatus::Pending, $proposals[1]->getStatus());
+    }
+
     /**
      * @param array<string, mixed> $payload
      */
@@ -175,10 +275,10 @@ final class ProposalTest extends WebTestCase
     /**
      * @return array<string, mixed>
      */
-    private function learning(string $lesson): array
+    private function learning(string $lesson, float $score = 7.5): array
     {
         return [
-            'lesson' => $lesson, 'evidence' => 'source', 'type' => 'fact', 'score' => 7.5,
+            'lesson' => $lesson, 'evidence' => 'source', 'type' => 'fact', 'score' => $score,
             'axes' => ['durability' => 8, 'reuse' => 7, 'project_fit' => 8, 'risk' => 7],
             'files' => ['src/domain/catalog.ts'], 'rules' => [], 'adr' => [],
             'reconciliation' => 'new', 'target_id' => null, 'target_text' => null, 'reason' => '',

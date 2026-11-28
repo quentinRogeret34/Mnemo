@@ -1159,6 +1159,9 @@ flash:
         applied_memory: 'Proposal applied: “{memory}”.'
         applied_rule: 'Rule {code} validated and created: “{title}”.'
         applied_skill: 'Skill “{name}” applied: connected agents will receive it at their next session.'
+        auto_applied: '{count, plural, one {# proposal (signal > {threshold}) auto-validated.} other {# proposals (signal > {threshold}) auto-validated.}}'
+        auto_apply_none: 'No pending proposals with a signal > {threshold}.'
+        auto_apply_skipped: '{count, plural, one {# proposal could not be applied (target memory archived).} other {# proposals could not be applied (target memory archived).}}'
         rejected: 'Proposal rejected.'
     rule:
         created: 'Rule {code} created.'
@@ -1692,6 +1695,7 @@ proposal:
     apply_rule: 'Validate and create rule'
     apply_skill: 'Apply skill'
     archives: 'Archives:'
+    auto_apply_button: 'Validate signals > {threshold} ({count})'
     axes: 'durability {durability}, reuse {reuse}, project fit {fit}, risk {risk}'
     back_to_grooming: 'Back to grooming'
     choose_apply: 'Choose and apply'

@@ -58,6 +58,8 @@ final class ProposalController extends AbstractController
             'kinds' => ProposalKind::cases(),
             'kind_counts' => $kindCounts,
             'all_count' => array_sum($kindCounts),
+            'auto_applicable_count' => $this->proposalRepository->countPendingAutoApplicable($projectEntity, $onlyIds),
+            'auto_apply_threshold' => (int) ProposalApplier::AUTO_APPLY_SCORE_THRESHOLD,
             'grooming_run' => $groomingRun,
             'proposals' => new Page(
                 $this->proposalRepository->findPending($projectEntity, $kindEnum, self::PAGE_SIZE, Page::offset($page, self::PAGE_SIZE), $onlyIds),
@@ -66,6 +68,63 @@ final class ProposalController extends AbstractController
                 self::PAGE_SIZE,
             ),
         ]);
+    }
+
+    #[Route('/proposals/auto-apply', name: 'proposal_auto_apply', methods: ['POST'])]
+    public function autoApply(
+        Request $request,
+        #[MapQueryParameter] ?string $project = null,
+        #[MapQueryParameter] ?int $grooming = null,
+    ): Response {
+        if (!$this->isCsrfTokenValid('proposal-auto-apply', $request->getPayload()->getString('_token'))) {
+            throw new AccessDeniedHttpException('Invalid CSRF token.');
+        }
+
+        $projectEntity = $this->projectScope->bySlug($project);
+        $onlyIds = null;
+        if (null !== $grooming) {
+            $groomingRun = $this->resolveGroomingRun($grooming, $projectEntity);
+            $projectEntity ??= $groomingRun->getProject();
+            $onlyIds = $groomingRun->getCreatedProposalIds();
+        }
+        if (null === $projectEntity && null !== $this->projectScope->slugs()) {
+            throw new AccessDeniedHttpException('Project scope required.');
+        }
+
+        $applied = 0;
+        $skipped = 0;
+        foreach ($this->proposalRepository->findPendingAutoApplicable($projectEntity, $onlyIds) as $proposal) {
+            $allowed = null === $proposal->getProject()
+                ? null === $this->projectScope->slugs()
+                : $this->projectScope->allows($proposal->getProject());
+            if (!$allowed) {
+                continue;
+            }
+
+            if ($this->applier->autoApply($proposal)) {
+                ++$applied;
+            } else {
+                ++$skipped;
+            }
+        }
+
+        $threshold = (int) ProposalApplier::AUTO_APPLY_SCORE_THRESHOLD;
+        if ($applied > 0) {
+            $this->addFlash('success', new TranslatableMessage('flash.proposal.auto_applied', [
+                'count' => $applied,
+                'threshold' => $threshold,
+            ]));
+        } elseif ($skipped > 0) {
+            $this->addFlash('error', new TranslatableMessage('flash.proposal.auto_apply_skipped', [
+                'count' => $skipped,
+            ]));
+        } else {
+            $this->addFlash('success', new TranslatableMessage('flash.proposal.auto_apply_none', [
+                'threshold' => $threshold,
+            ]));
+        }
+
+        return $this->back($request);
     }
 
     #[Route('/proposals/{id}/apply', name: 'proposal_apply', requirements: ['id' => '\d+'], methods: ['POST'])]
